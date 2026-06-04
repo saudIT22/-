@@ -80,18 +80,22 @@
   .field.full{grid-column:1/-1}
   .field label{font-weight:600;font-size:14px;color:var(--ink)}
   .field label .opt{font-weight:400;color:var(--ink-muted);font-size:12.5px;margin-right:5px}
-  .field input,.field textarea{
+  .field input,.field textarea,.field select{
     font-family:'Tajawal';background:#fff;border:1.5px solid var(--line);border-radius:12px;
     padding:12px 14px;font-size:15px;color:var(--ink);
     transition:border-color .2s,box-shadow .2s;width:100%}
-  .field input:focus,.field textarea:focus{
+  .field input:focus,.field textarea:focus,.field select:focus{
     outline:none;border-color:var(--mint);box-shadow:0 0 0 4px var(--mint-soft)}
   .field textarea{resize:vertical;min-height:80px}
   .field input::placeholder,.field textarea::placeholder{color:var(--ink-muted)}
+
+  /* branch saved list */
   .saved-branches{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px}
   .branch-tag{background:var(--mint-soft);color:var(--mint-darker);border:1px solid var(--mint-soft2);
     font-size:13px;font-weight:600;padding:5px 12px;border-radius:100px;cursor:pointer;transition:all .2s}
   .branch-tag:hover{background:var(--mint-soft2)}
+
+  /* hourly orders grid */
   .hours-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
   @media(max-width:620px){.hours-grid{grid-template-columns:1fr 1fr}}
   .hour-slot{background:var(--bg);border:1.5px solid var(--line);border-radius:12px;
@@ -99,9 +103,10 @@
   .hour-slot:focus-within{border-color:var(--mint)}
   .hour-slot .hs-label{font-size:12.5px;font-weight:700;color:var(--ink-soft);margin-bottom:8px}
   .hour-slot input{border:none;background:transparent;text-align:center;font-size:20px;
-    font-weight:900;color:var(--mint-darker);width:100%;padding:0}
-  .hour-slot input:focus{outline:none}
+    font-weight:900;color:var(--mint-darker);width:100%;padding:0;box-shadow:none}
+  .hour-slot input:focus{outline:none;box-shadow:none;border:none}
   .hour-slot .hs-unit{font-size:12px;color:var(--ink-muted);margin-top:4px}
+
   .analyze-btn{width:100%;padding:17px;background:var(--mint);color:#fff;border:none;
     border-radius:14px;font-family:'Tajawal';font-size:17px;font-weight:800;cursor:pointer;
     display:flex;align-items:center;justify-content:center;gap:10px;
@@ -155,6 +160,7 @@
     <p>اختر الباقة، أدخل أرقامك، ونبّاه يحللها فوراً.</p>
   </div>
 
+  <!-- PLANS -->
   <div class="plans">
     <div class="plan p-basic" data-plan="basic" onclick="selectPlan('basic')">
       <div class="check">✓</div>
@@ -176,6 +182,7 @@
     </div>
   </div>
 
+  <!-- SECTION 1: المنشأة -->
   <div class="card">
     <div class="section-label"><span class="sl-ic">🏢</span> المنشأة والفرع</div>
     <div class="form-grid">
@@ -187,6 +194,7 @@
     </div>
   </div>
 
+  <!-- SECTION 2: مبيعات اليوم -->
   <div class="card">
     <div class="section-label"><span class="sl-ic">📊</span> نشاط وتفاصيل اليوم</div>
     <div class="form-grid">
@@ -200,42 +208,66 @@
         <input id="items_count" type="number" placeholder="28"></div>
     </div>
 
+    <!-- الأصناف الأكثر مبيعاً -->
     <div style="margin-top:20px;padding-top:18px;border-top:1px solid var(--line-soft)">
       <div class="section-label" style="margin-bottom:14px;border:none;padding:0">
         <span class="sl-ic">🏆</span> الأصناف / الخدمات الأكثر مبيعاً
       </div>
       <div class="form-grid three">
-        <div class="field"><label>الأول <span class="opt">(الأعلى)</span></label>
-          <input id="top_item" placeholder="مثال: المنتج الرئيسي"></div>
-        <div class="field"><label>الثاني <span class="opt">(اختياري)</span></label>
-          <input id="top_item_2" placeholder="مثال: المنتج الثاني"></div>
-        <div class="field"><label>الثالث <span class="opt">(اختياري)</span></label>
-          <input id="top_item_3" placeholder="مثال: المنتج الثالث"></div>
+        <div class="field">
+          <label>الأول <span class="opt">(الأعلى)</span></label>
+          <input id="top_item" placeholder="مثال: المنتج الرئيسي">
+        </div>
+        <div class="field">
+          <label>الثاني <span class="opt">(اختياري)</span></label>
+          <input id="top_item_2" placeholder="مثال: المنتج الثاني">
+        </div>
+        <div class="field">
+          <label>الثالث <span class="opt">(اختياري)</span></label>
+          <input id="top_item_3" placeholder="مثال: المنتج الثالث">
+        </div>
       </div>
     </div>
 
+    <!-- توزيع الطلبات بالوقت -->
     <div style="margin-top:20px;padding-top:18px;border-top:1px solid var(--line-soft)">
       <div class="section-label" style="margin-bottom:14px;border:none;padding:0">
         <span class="sl-ic">⏰</span> توزيع الطلبات حسب الوقت <span style="color:var(--ink-muted);font-size:13px;font-weight:400">(اختياري — يقوّي التحليل)</span>
       </div>
       <div class="hours-grid">
-        <div class="hour-slot"><div class="hs-label">8ص – 12م</div>
-          <input id="h1" type="number" placeholder="0" min="0"><div class="hs-unit">طلب</div></div>
-        <div class="hour-slot"><div class="hs-label">12م – 4م</div>
-          <input id="h2" type="number" placeholder="0" min="0"><div class="hs-unit">طلب</div></div>
-        <div class="hour-slot"><div class="hs-label">4م – 8م</div>
-          <input id="h3" type="number" placeholder="0" min="0"><div class="hs-unit">طلب</div></div>
-        <div class="hour-slot"><div class="hs-label">8م – 12ل</div>
-          <input id="h4" type="number" placeholder="0" min="0"><div class="hs-unit">طلب</div></div>
+        <div class="hour-slot">
+          <div class="hs-label">8ص – 12م</div>
+          <input id="h1" type="number" placeholder="0" min="0">
+          <div class="hs-unit">طلب</div>
+        </div>
+        <div class="hour-slot">
+          <div class="hs-label">12م – 4م</div>
+          <input id="h2" type="number" placeholder="0" min="0">
+          <div class="hs-unit">طلب</div>
+        </div>
+        <div class="hour-slot">
+          <div class="hs-label">4م – 8م</div>
+          <input id="h3" type="number" placeholder="0" min="0">
+          <div class="hs-unit">طلب</div>
+        </div>
+        <div class="hour-slot">
+          <div class="hs-label">8م – 12ل</div>
+          <input id="h4" type="number" placeholder="0" min="0">
+          <div class="hs-unit">طلب</div>
+        </div>
       </div>
     </div>
 
+    <!-- ساعة الذروة -->
     <div class="form-grid" style="margin-top:16px">
-      <div class="field"><label>أوقات الذروة <span class="opt">(وصف حر)</span></label>
-        <input id="peak_hours" placeholder="مثال: 12م – 3م"></div>
+      <div class="field">
+        <label>أوقات الذروة <span class="opt">(وصف حر)</span></label>
+        <input id="peak_hours" placeholder="مثال: 12م – 3م">
+      </div>
     </div>
   </div>
 
+  <!-- SECTION 3: البيانات المالية -->
   <div class="card">
     <div class="section-label"><span class="sl-ic">💰</span> البيانات المالية</div>
     <div class="form-grid">
@@ -252,6 +284,7 @@
     </button>
   </div>
 
+  <!-- RESULT -->
   <div id="result">
     <div class="result-meta"><div id="result-meta"></div></div>
     <div id="result-msg"></div>
@@ -263,8 +296,14 @@
 </div>
 
 <script>
+  // حماية الصفحة: لازم يكون مسجّل دخول
+  if (!localStorage.getItem("nabbah_token")) {
+    window.location.href = "login.html";
+  }
+
   let selectedPlan = "executive";
 
+  /* ===== BRANCHES (localStorage) ===== */
   function loadBranches() {
     const branches = JSON.parse(localStorage.getItem("nabbah_branches") || "[]");
     const container = document.getElementById("saved-branches");
@@ -303,6 +342,7 @@
     return filled.map(s => s.label + ": " + s.val + " طلب").join(" | ");
   }
 
+  /* ===== PLAN SELECTOR ===== */
   function selectPlan(plan) {
     selectedPlan = plan;
     document.querySelectorAll(".plan").forEach(p => {
@@ -310,6 +350,7 @@
     });
   }
 
+  /* ===== DATA VALIDATION (original — unchanged) ===== */
   function checkData(d) {
     const warnings = [];
     if (d.revenue <= 0) warnings.push("الإيرادات لازم تكون أكبر من صفر");
@@ -330,6 +371,7 @@
     return warnings;
   }
 
+  /* ===== ANALYZE (original logic + new fields) ===== */
   async function analyze() {
     saveBranch();
     const data = {
@@ -355,14 +397,14 @@
       if (!confirm(warnMsg)) return;
     }
 
-    const result = document.getElementById("result");
-    const meta   = document.getElementById("result-meta");
-    const msg    = document.getElementById("result-msg");
-    const dash   = document.getElementById("dash-link");
-    const charts = document.getElementById("charts-link");
-    const spin   = document.getElementById("spin");
-    const btnTxt = document.getElementById("btn-txt");
-    const btn    = document.querySelector(".analyze-btn");
+    const result   = document.getElementById("result");
+    const meta     = document.getElementById("result-meta");
+    const msg      = document.getElementById("result-msg");
+    const dash     = document.getElementById("dash-link");
+    const charts   = document.getElementById("charts-link");
+    const spin     = document.getElementById("spin");
+    const btnTxt   = document.getElementById("btn-txt");
+    const btn      = document.querySelector(".analyze-btn");
 
     result.style.display = "block";
     meta.innerText = "⏳ نبّاه يحلل... (التحليل يأخذ لحظات)";
@@ -375,11 +417,21 @@
     result.scrollIntoView({ behavior: "smooth", block: "start" });
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/analyze", {
+      const res = await fetch("/analyze", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + (localStorage.getItem("nabbah_token") || "")
+        },
         body: JSON.stringify(data)
       });
+      if (res.status === 401) { window.location.href = "login.html"; return; }
+      if (res.status === 403) {
+        const err = await res.json();
+        meta.innerText = "🔒 " + (err.detail || "يجب الاشتراك أولاً");
+        msg.innerHTML = '<p style="text-align:center">للاستفادة من التحليل، يرجى <a href="index.html#plans" style="color:#065f46;font-weight:700">الاشتراك في إحدى الباقات</a>.</p>';
+        return;
+      }
       const out = await res.json();
       const planNames = { basic: "الأساسية", pro: "الاحترافية", executive: "التنفيذية" };
       meta.innerText = out.icon + " " + out.level + " — الربح: " + out.profit.toLocaleString() + " ريال (هامش " + out.margin + "٪) · باقة " + (planNames[out.plan] || "");
