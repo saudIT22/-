@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نبّاه — لوحة القيادة</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --mint:#10b981;--mint-deep:#047857;--mint-darker:#065f46;
+    --mint-soft:#ecfdf5;--mint-soft2:#d1fae5;
+    --ink:#0f1d18;--ink-soft:#475a52;--ink-muted:#8ba89f;
+    --bg:#f4f9f7;--bg-card:#ffffff;
+    --line:#e0ece8;--line-soft:#eef5f2;
+    --red:#ef4444;--red-soft:#fef2f2;
+    --amber:#f59e0b;--amber-soft:#fffbeb;
+    --blue:#3b82f6;--blue-soft:#eff6ff;
+    --shadow:0 1px 3px rgba(6,95,70,.04),0 8px 24px rgba(6,95,70,.07);
+    --shadow-lg:0 16px 50px rgba(6,95,70,.14);--r:16px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--ink);
+    line-height:1.75;-webkit-font-smoothing:antialiased;min-height:100vh}
+  body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+    background:radial-gradient(circle at 1px 1px,rgba(16,185,129,.055) 1px,transparent 0);
+    background-size:24px 24px;opacity:.6}
+  nav{position:sticky;top:0;z-index:50;background:rgba(244,249,247,.88);
+    backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+  .nav-in{max-width:1060px;margin:0 auto;padding:0 22px;
+    display:flex;align-items:center;justify-content:space-between;height:68px}
+  .logo{display:flex;align-items:center;gap:10px;font-weight:900;font-size:22px;
+    color:var(--mint-darker);text-decoration:none}
+  .logo .bell{width:38px;height:38px;border-radius:12px;background:var(--mint);
+    display:grid;place-items:center;font-size:18px;transform:rotate(-5deg);
+    box-shadow:0 3px 12px rgba(16,185,129,.35)}
+  .nav-links{display:flex;align-items:center;gap:6px}
+  .nav-links a{color:var(--ink-soft);font-weight:500;font-size:14px;padding:7px 14px;
+    border-radius:10px;text-decoration:none;transition:background .2s,color .2s}
+  .nav-links a:hover{background:var(--mint-soft);color:var(--mint-darker)}
+  .nav-links a.active{background:var(--mint-soft);color:var(--mint-darker);font-weight:700}
+  .btn{display:inline-flex;align-items:center;gap:7px;font-family:'Tajawal';
+    font-weight:700;font-size:14px;padding:10px 20px;border-radius:11px;
+    border:none;cursor:pointer;text-decoration:none;transition:all .2s}
+  .btn-primary{background:var(--mint);color:#fff;box-shadow:0 3px 10px rgba(16,185,129,.28)}
+  .btn-primary:hover{background:var(--mint-deep)}
+  @media(max-width:600px){.nav-links a:not(.btn-primary){display:none}}
+  .wrap{max-width:1060px;margin:0 auto;padding:36px 22px 60px;position:relative;z-index:1}
+  .page-header{display:flex;align-items:flex-end;justify-content:space-between;
+    flex-wrap:wrap;gap:16px;margin-bottom:30px}
+  .ph-left .breadcrumb{display:flex;align-items:center;gap:6px;
+    font-size:13px;color:var(--ink-muted);margin-bottom:8px}
+  .ph-left .breadcrumb a{color:var(--ink-muted);text-decoration:none}
+  .ph-left .breadcrumb a:hover{color:var(--mint)}
+  .ph-left .breadcrumb span{opacity:.5}
+  .ph-left h1{font-size:27px;font-weight:900;color:var(--ink)}
+  .ph-left p{color:var(--ink-soft);font-size:15px}
+  .g2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+  .g4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  @media(max-width:760px){.g2,.g3{grid-template-columns:1fr}.g4{grid-template-columns:1fr 1fr}}
+  @media(max-width:420px){.g4{grid-template-columns:1fr}}
+  .mb{margin-bottom:20px}
+  .health-card{border-radius:22px;padding:30px;text-align:center;color:#fff;
+    box-shadow:var(--shadow-lg);display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .ring-wrap{position:relative;width:130px;height:130px;margin:0 auto 18px}
+  .ring-bg{fill:none;stroke:rgba(255,255,255,.2);stroke-width:12}
+  .ring-fg{fill:none;stroke:#fff;stroke-width:12;stroke-linecap:round;
+    transition:stroke-dashoffset 1.2s ease}
+  .ring-num{position:absolute;inset:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;line-height:1}
+  .ring-num .big{font-weight:900;font-size:42px}
+  .ring-num .of{font-size:14px;opacity:.85}
+  .health-tag{margin-top:4px;background:rgba(255,255,255,.22);padding:7px 18px;
+    border-radius:100px;font-weight:800;font-size:15px;display:inline-block}
+  .health-lbl{margin-bottom:14px;font-size:15px;opacity:.9}
+  .score-card{background:var(--bg-card);border:1px solid var(--line);border-radius:var(--r);
+    padding:20px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:10px}
+  .score-top{display:flex;justify-content:space-between;align-items:center}
+  .score-lbl{color:var(--ink-muted);font-size:13.5px;font-weight:600}
+  .score-val{font-weight:900;font-size:28px}
+  .bar{height:8px;background:var(--line-soft);border-radius:100px;overflow:hidden}
+  .bar-fill{height:100%;border-radius:100px;transition:width 1s ease .2s}
+  .kpi{background:var(--bg-card);border:1px solid var(--line);border-radius:var(--r);
+    padding:20px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+  .kpi::after{content:"";position:absolute;bottom:0;right:0;left:0;height:3px}
+  .kpi.k-sales::after{background:var(--mint);opacity:.6}
+  .kpi.k-profit::after{background:var(--mint);opacity:1}
+  .kpi.k-margin::after{background:var(--amber)}
+  .kpi.k-change::after{background:var(--blue)}
+  .kpi .k-lbl{color:var(--ink-muted);font-size:13px;margin-bottom:7px}
+  .kpi .k-val{font-weight:900;font-size:24px;color:var(--ink)}
+  .kpi .k-ic{position:absolute;top:18px;left:18px;font-size:20px;opacity:.15}
+  .cover-card{background:var(--bg-card);border:1px solid var(--line);border-radius:20px;
+    padding:26px;box-shadow:var(--shadow);border-right:4px solid var(--mint)}
+  .cover-card.bad{border-right-color:var(--red)}
+  .cover-title{display:flex;align-items:center;gap:9px;font-weight:800;font-size:16px;
+    margin-bottom:20px;color:var(--ink)}
+  .cover-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:16px}
+  @media(max-width:560px){.cover-row{grid-template-columns:1fr}}
+  .c-item{text-align:center;padding:16px;background:var(--bg);border:1px solid var(--line);border-radius:14px}
+  .c-item .cl{color:var(--ink-muted);font-size:13px;margin-bottom:6px}
+  .c-item .cv{font-size:21px;font-weight:900}
+  .cover-msg{padding:13px 18px;border-radius:12px;font-weight:700;font-size:14.5px;text-align:center;margin-bottom:10px}
+  .cover-msg.ok{background:var(--mint-soft);color:var(--mint-darker)}
+  .cover-msg.bad{background:var(--red-soft);color:var(--red)}
+  .cover-formula{text-align:center;color:var(--ink-muted);font-size:12.5px}
+  .win-card{border-radius:20px;padding:26px;background:linear-gradient(135deg,var(--mint),var(--mint-deep));
+    color:#fff;box-shadow:var(--shadow-lg)}
+  .win-card .wc-ttl{font-weight:800;font-size:15px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+  .win-card .wc-big{font-size:30px;font-weight:900;margin:8px 0}
+  .win-card .wc-meta{font-size:13px;opacity:.88;margin-top:6px}
+  .status-card{background:var(--bg-card);border:1.5px solid var(--line);
+    border-radius:20px;padding:26px;box-shadow:var(--shadow)}
+  .status-card.danger{border-color:#fecaca;background:var(--red-soft)}
+  .status-card.safe{border-color:var(--mint-soft2);background:var(--mint-soft)}
+  .status-card .sc-ttl{font-weight:800;font-size:15px;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+  .status-card.danger .sc-ttl{color:var(--red)}
+  .status-card.safe .sc-ttl{color:var(--mint-darker)}
+  .status-card .sc-body{color:var(--ink-soft);font-size:15px;line-height:1.85}
+  .status-card .sc-meta{font-size:13px;margin-top:8px;color:var(--ink-muted)}
+  .ins{background:var(--bg-card);border:1px solid var(--line);border-radius:var(--r);
+    padding:22px;box-shadow:var(--shadow);border-top:4px solid var(--line)}
+  .ins.alert{border-top-color:var(--red)}
+  .ins.decision{border-top-color:var(--blue)}
+  .ins.opp{border-top-color:var(--mint)}
+  .ins .it{font-weight:800;font-size:15px;margin-bottom:10px;display:flex;align-items:center;gap:7px}
+  .ins.alert .it{color:var(--red)}
+  .ins.decision .it{color:var(--blue)}
+  .ins.opp .it{color:var(--mint-darker)}
+  .ins .ib{color:var(--ink-soft);font-size:15px;line-height:1.85}
+  .quality-card{background:var(--bg-card);border:1px solid var(--line);border-radius:var(--r);
+    padding:22px 26px;box-shadow:var(--shadow);display:flex;align-items:center;
+    justify-content:space-between;flex-wrap:wrap;gap:16px}
+  .ql-left .ql-t{font-weight:800;font-size:15px}
+  .ql-left .ql-sub{color:var(--ink-muted);font-size:14px;margin-top:3px}
+  .ql-val{font-weight:900;font-size:32px}
+  .empty-state{background:var(--bg-card);border:1px solid var(--line);border-radius:20px;
+    padding:64px 30px;text-align:center;box-shadow:var(--shadow)}
+  .empty-state .em-ic{font-size:52px;margin-bottom:16px}
+  .empty-state h3{font-size:22px;font-weight:900;color:var(--ink-soft);margin-bottom:8px}
+  .empty-state p{color:var(--ink-muted);font-size:15.5px;margin-bottom:22px}
+</style>
+</head>
+<body>
+<nav><div class="nav-in">
+  <a href="index.html" class="logo"><span class="bell">🔔</span> نبّاه</a>
+  <div class="nav-links">
+    <a href="index.html">الرئيسية</a>
+    <a href="input.html">إدخال البيانات</a>
+    <a href="dashboard.html" class="active">لوحة القيادة</a>
+    <a href="charts.html">التحليلات</a>
+    <a href="input.html" class="btn btn-primary">➕ تحليل جديد</a>
+  </div>
+</div></nav>
+
+<div class="wrap">
+  <div class="page-header">
+    <div class="ph-left">
+      <div class="breadcrumb">
+        <a href="index.html">الرئيسية</a><span>/</span><span>لوحة القيادة</span>
+      </div>
+      <h1>لوحة القيادة</h1>
+      <p id="sub">نبض منشأتك في لمحة واحدة</p>
+    </div>
+  </div>
+  <div id="content"></div>
+</div>
+
+<script>
+  function color(score, reverse) {
+    if (reverse) {
+      if (score >= 60) return "#ef4444";
+      if (score >= 30) return "#f59e0b";
+      return "#10b981";
+    }
+    if (score >= 75) return "#10b981";
+    if (score >= 60) return "#f59e0b";
+    return "#ef4444";
+  }
+  function healthGradient(score) {
+    if (score >= 75) return "linear-gradient(135deg,#10b981,#059669)";
+    if (score >= 60) return "linear-gradient(135deg,#f59e0b,#d97706)";
+    return "linear-gradient(135deg,#ef4444,#dc2626)";
+  }
+  function healthTagText(score) {
+    if (score >= 90) return "ممتاز";
+    if (score >= 75) return "جيد";
+    if (score >= 60) return "تنبيه";
+    return "خطر";
+  }
+  async function load() {
+    const content = document.getElementById("content");
+    try {
+      const res = await fetch("http://127.0.0.1:8000/history");
+      const data = await res.json();
+      if (!data || data.length === 0) {
+        content.innerHTML = `
+          <div class="empty-state">
+            <div class="em-ic">📭</div>
+            <h3>لا توجد بيانات بعد</h3>
+            <p>ابدأ بأول تحليل لمنشأتك وستظهر هنا جميع المؤشرات</p>
+            <a href="input.html" class="btn btn-primary">➕ ابدأ التحليل الآن</a>
+          </div>`;
+        return;
+      }
+      const e = data[data.length - 1];
+      document.getElementById("sub").innerText = "نبض منشأة « " + e.restaurant + " » في لمحة واحدة";
+      const covers = e.covers_expenses === 1;
+      const sm = Math.abs(e.safety_margin);
+      const quickWin = Math.round(e.expenses * 0.10);
+      const quickWinYear = quickWin * 12;
+      content.innerHTML = `
+        <div class="g2 mb" style="align-items:stretch">
+          <div class="health-card" style="background:${healthGradient(e.health_score)}">
+            <div class="health-lbl">مؤشر صحة المنشأة</div>
+            <div class="ring-wrap">
+              <svg width="130" height="130" viewBox="0 0 110 110" style="transform:rotate(-90deg)">
+                <circle class="ring-bg" cx="55" cy="55" r="50"/>
+                <circle class="ring-fg" id="ring-fg" cx="55" cy="55" r="50" stroke-dasharray="314" stroke-dashoffset="314"/>
+              </svg>
+              <div class="ring-num"><span class="big">${e.health_score}</span><span class="of">/100</span></div>
+            </div>
+            <div class="health-tag">${healthTagText(e.health_score)}</div>
+          </div>
+          <div class="g3" style="align-content:start">
+            <div class="score-card">
+              <div class="score-top"><span class="score-lbl">مؤشر المخاطر</span>
+                <span class="score-val" style="color:${color(e.risk_score,true)}">${e.risk_score}</span></div>
+              <div class="bar"><div class="bar-fill" style="width:${e.risk_score}%;background:${color(e.risk_score,true)}"></div></div>
+            </div>
+            <div class="score-card">
+              <div class="score-top"><span class="score-lbl">مؤشر الفرص</span>
+                <span class="score-val" style="color:#10b981">${e.opportunity_score}</span></div>
+              <div class="bar"><div class="bar-fill" style="width:${e.opportunity_score}%;background:#10b981"></div></div>
+            </div>
+            <div class="score-card">
+              <div class="score-top"><span class="score-lbl">صحة المنشأة</span>
+                <span class="score-val" style="color:${color(e.health_score)}">${e.health_score}</span></div>
+              <div class="bar"><div class="bar-fill" style="width:${e.health_score}%;background:${color(e.health_score)}"></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="g4 mb">
+          <div class="kpi k-sales"><div class="k-ic">📈</div><div class="k-lbl">آخر مبيعات</div>
+            <div class="k-val">${e.sales_today.toLocaleString()}﷼</div></div>
+          <div class="kpi k-profit"><div class="k-ic">💰</div><div class="k-lbl">صافي الربح</div>
+            <div class="k-val" style="color:${e.profit>=0?'#10b981':'#ef4444'}">${e.profit.toLocaleString()}﷼</div></div>
+          <div class="kpi k-margin"><div class="k-ic">📊</div><div class="k-lbl">هامش الربح</div>
+            <div class="k-val">${e.margin}%</div></div>
+          <div class="kpi k-change"><div class="k-ic">↕️</div><div class="k-lbl">التغير عن أمس</div>
+            <div class="k-val" style="color:${e.change_percent>=0?'#10b981':'#ef4444'}">${e.change_percent}%</div></div>
+        </div>
+        <div class="cover-card ${covers?'':'bad'} mb">
+          <div class="cover-title">🎯 تغطية المصروفات — هل إيراداتك تكفي مصروفاتك؟</div>
+          <div class="cover-row">
+            <div class="c-item"><div class="cl">الإيرادات</div><div class="cv">${e.revenue.toLocaleString()}﷼</div></div>
+            <div class="c-item"><div class="cl">المصروفات</div><div class="cv">${e.expenses.toLocaleString()}﷼</div></div>
+            <div class="c-item"><div class="cl">هامش الأمان</div><div class="cv" style="color:${covers?'#10b981':'#ef4444'}">${covers?'+':'-'}${sm}%</div></div>
+          </div>
+          <div class="cover-msg ${covers?'ok':'bad'}">
+            ${covers ? '✅ إيراداتك تغطّي مصروفاتك وتزيد عنها بـ ' + sm + '%' : '⚠️ إيراداتك لا تغطّي مصروفاتك — عجز بنسبة ' + sm + '%'}
+          </div>
+          <div class="cover-formula">المعادلة: (الإيرادات − المصروفات) ÷ المصروفات × 100</div>
+        </div>
+        <div class="g2 mb">
+          <div class="win-card">
+            <div class="wc-ttl">⚡ أسرع ربح يمكن تحقيقه</div>
+            خفض المصروفات ١٠٪
+            <div class="wc-big">+${quickWin.toLocaleString()}﷼ / شهرياً</div>
+            <div class="wc-meta">≈ ${quickWinYear.toLocaleString()}﷼ سنوياً · الجهد: متوسط · المدة: ٣٠ يوم</div>
+          </div>
+          <div class="status-card ${e.health_score<60?'danger':'safe'}">
+            <div class="sc-ttl">${e.health_score<60?'🔴 إذا لم تتخذ إجراءً':'🛡️ وضعك تحت السيطرة'}</div>
+            <div class="sc-body">${e.health_score<60
+              ? 'مؤشر صحة منشأتك <strong>'+e.health_score+'/100</strong> في منطقة الخطر. راجع التقرير الكامل.'
+              : 'مؤشر الصحة <strong>'+e.health_score+'/100</strong> في منطقة آمنة. ركّز على الفرص لرفع الربحية.'}</div>
+            <div class="sc-meta">${e.health_score<60?'التوصية: ابدأ بأهم قرار فوراً':'استمر في مراقبة المؤشرات يومياً'}</div>
+          </div>
+        </div>
+        <div class="g3 mb">
+          <div class="ins alert"><div class="it">🚨 أهم تنبيه اليوم</div><div class="ib">${e.top_alert || "—"}</div></div>
+          <div class="ins decision"><div class="it">✅ أهم قرار اليوم</div><div class="ib">${e.top_decision || "—"}</div></div>
+          <div class="ins opp"><div class="it">💡 أهم فرصة اليوم</div><div class="ib">${e.top_opportunity || "—"}</div></div>
+        </div>
+        <div class="quality-card">
+          <div class="ql-left"><div class="ql-t">📋 جودة البيانات</div>
+            <div class="ql-sub">كلما اكتملت بياناتك، ارتفعت دقة التحليل</div></div>
+          <div class="ql-val" style="color:${color(e.data_quality)}">${e.data_quality}/100</div>
+        </div>
+      `;
+      requestAnimationFrame(() => {
+        const fg = document.getElementById("ring-fg");
+        if (fg) {
+          const c = 2 * Math.PI * 50;
+          fg.style.strokeDasharray = c;
+          fg.style.strokeDashoffset = c - (e.health_score / 100) * c;
+        }
+      });
+    } catch (err) {
+      content.innerHTML = `<div class="empty-state"><div class="em-ic">⚠️</div>
+        <h3>تعذّر الاتصال بالخادم</h3><p>تأكد إن الخادم شغّال وحاول مرة أخرى</p></div>`;
+    }
+  }
+  load();
+</script>
+</body>
+</html>

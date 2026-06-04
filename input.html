@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نبّاه — إدخال بيانات المنشأة</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<style>
+  :root{
+    --mint:#10b981;--mint-deep:#047857;--mint-darker:#065f46;
+    --mint-soft:#ecfdf5;--mint-soft2:#d1fae5;
+    --ink:#0f1d18;--ink-soft:#475a52;--ink-muted:#8ba89f;
+    --bg:#f4f9f7;--bg-card:#ffffff;
+    --line:#e0ece8;--line-soft:#eef5f2;
+    --gold:#b9892f;--danger:#c2492f;
+    --shadow:0 1px 3px rgba(6,95,70,.04),0 8px 24px rgba(6,95,70,.07);
+    --shadow-lg:0 16px 50px rgba(6,95,70,.14);--r:16px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--ink);
+    line-height:1.75;-webkit-font-smoothing:antialiased;min-height:100vh}
+  body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+    background:radial-gradient(circle at 1px 1px,rgba(16,185,129,.055) 1px,transparent 0);
+    background-size:24px 24px;opacity:.6}
+  nav{position:sticky;top:0;z-index:50;background:rgba(244,249,247,.88);
+    backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+  .nav-in{max-width:900px;margin:0 auto;padding:0 22px;
+    display:flex;align-items:center;justify-content:space-between;height:68px}
+  .logo{display:flex;align-items:center;gap:10px;font-weight:900;font-size:22px;
+    color:var(--mint-darker);text-decoration:none}
+  .logo .bell{width:38px;height:38px;border-radius:12px;background:var(--mint);
+    display:grid;place-items:center;font-size:18px;transform:rotate(-5deg);
+    box-shadow:0 3px 12px rgba(16,185,129,.35)}
+  .nav-links{display:flex;align-items:center;gap:6px}
+  .nav-links a{color:var(--ink-soft);font-weight:500;font-size:14px;padding:7px 14px;
+    border-radius:10px;text-decoration:none;transition:background .2s,color .2s}
+  .nav-links a:hover{background:var(--mint-soft);color:var(--mint-darker)}
+  .nav-links a.active{background:var(--mint-soft);color:var(--mint-darker);font-weight:700}
+  @media(max-width:600px){.nav-links a:not(.nav-btn){display:none}}
+  .wrap{max-width:900px;margin:0 auto;padding:36px 22px 60px;position:relative;z-index:1}
+  .page-header{margin-bottom:28px}
+  .breadcrumb{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-muted);margin-bottom:10px}
+  .breadcrumb a{color:var(--ink-muted);text-decoration:none}.breadcrumb a:hover{color:var(--mint)}
+  .breadcrumb span{opacity:.5}
+  .page-header h1{font-size:28px;font-weight:900;color:var(--ink);margin-bottom:5px}
+  .page-header p{color:var(--ink-soft);font-size:15.5px}
+  .plans{display:grid;grid-template-columns:repeat(3,1fr);gap:13px;margin-bottom:28px}
+  @media(max-width:560px){.plans{grid-template-columns:1fr;gap:9px}}
+  .plan{background:var(--bg-card);border:1.5px solid var(--line);border-radius:var(--r);
+    padding:20px 16px;cursor:pointer;text-align:center;transition:all .2s;position:relative;overflow:hidden}
+  .plan::before{content:"";position:absolute;top:0;right:0;left:0;height:4px;
+    border-radius:var(--r) var(--r) 0 0;background:var(--line);transition:background .2s}
+  .plan.p-pro::before{background:var(--mint)}
+  .plan.p-exec::before{background:var(--mint-darker)}
+  .plan:hover{border-color:var(--mint-soft2);transform:translateY(-2px);box-shadow:var(--shadow)}
+  .plan.active{border-color:var(--mint);background:var(--mint-soft);box-shadow:var(--shadow)}
+  .plan.active::before{background:var(--mint)}
+  .plan .check{position:absolute;top:14px;left:14px;width:22px;height:22px;border-radius:50%;
+    background:var(--mint);display:grid;place-items:center;font-size:12px;color:#fff;
+    opacity:0;transform:scale(.6);transition:all .25s}
+  .plan.active .check{opacity:1;transform:scale(1)}
+  .plan .p-name{font-weight:900;font-size:15.5px;color:var(--ink);margin-bottom:5px}
+  .plan .p-price{color:var(--mint-deep);font-weight:800;font-size:19px;margin-bottom:5px}
+  .plan .p-price small{font-size:12px;color:var(--ink-muted);font-weight:500}
+  .plan .p-desc{color:var(--ink-muted);font-size:12px;line-height:1.5}
+  .card{background:var(--bg-card);border:1px solid var(--line);border-radius:20px;
+    padding:30px;box-shadow:var(--shadow);margin-bottom:20px}
+  .section-label{display:flex;align-items:center;gap:9px;font-weight:800;font-size:15px;
+    color:var(--ink);margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid var(--line-soft)}
+  .section-label .sl-ic{width:32px;height:32px;border-radius:9px;background:var(--mint-soft);
+    display:grid;place-items:center;font-size:16px}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .form-grid.three{grid-template-columns:1fr 1fr 1fr}
+  @media(max-width:620px){.form-grid,.form-grid.three{grid-template-columns:1fr}}
+  .field{display:flex;flex-direction:column;gap:7px}
+  .field.full{grid-column:1/-1}
+  .field label{font-weight:600;font-size:14px;color:var(--ink)}
+  .field label .opt{font-weight:400;color:var(--ink-muted);font-size:12.5px;margin-right:5px}
+  .field input,.field textarea{
+    font-family:'Tajawal';background:#fff;border:1.5px solid var(--line);border-radius:12px;
+    padding:12px 14px;font-size:15px;color:var(--ink);
+    transition:border-color .2s,box-shadow .2s;width:100%}
+  .field input:focus,.field textarea:focus{
+    outline:none;border-color:var(--mint);box-shadow:0 0 0 4px var(--mint-soft)}
+  .field textarea{resize:vertical;min-height:80px}
+  .field input::placeholder,.field textarea::placeholder{color:var(--ink-muted)}
+  .saved-branches{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px}
+  .branch-tag{background:var(--mint-soft);color:var(--mint-darker);border:1px solid var(--mint-soft2);
+    font-size:13px;font-weight:600;padding:5px 12px;border-radius:100px;cursor:pointer;transition:all .2s}
+  .branch-tag:hover{background:var(--mint-soft2)}
+  .hours-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  @media(max-width:620px){.hours-grid{grid-template-columns:1fr 1fr}}
+  .hour-slot{background:var(--bg);border:1.5px solid var(--line);border-radius:12px;
+    padding:14px 12px;text-align:center;transition:border-color .2s}
+  .hour-slot:focus-within{border-color:var(--mint)}
+  .hour-slot .hs-label{font-size:12.5px;font-weight:700;color:var(--ink-soft);margin-bottom:8px}
+  .hour-slot input{border:none;background:transparent;text-align:center;font-size:20px;
+    font-weight:900;color:var(--mint-darker);width:100%;padding:0}
+  .hour-slot input:focus{outline:none}
+  .hour-slot .hs-unit{font-size:12px;color:var(--ink-muted);margin-top:4px}
+  .analyze-btn{width:100%;padding:17px;background:var(--mint);color:#fff;border:none;
+    border-radius:14px;font-family:'Tajawal';font-size:17px;font-weight:800;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;gap:10px;
+    transition:background .2s,transform .15s,box-shadow .2s;
+    box-shadow:0 4px 18px rgba(16,185,129,.3);margin-top:6px}
+  .analyze-btn:hover{background:var(--mint-deep);transform:translateY(-2px)}
+  .analyze-btn:disabled{opacity:.6;cursor:not-allowed;transform:none}
+  .spinner{width:20px;height:20px;border:2.5px solid rgba(255,255,255,.3);
+    border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;display:none}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  #result{display:none;background:var(--bg-card);border:1px solid var(--line);border-radius:20px;
+    padding:30px;box-shadow:var(--shadow);animation:fadeup .5s ease}
+  @keyframes fadeup{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+  .result-meta{padding:18px 22px;background:var(--mint-soft);border-radius:14px;margin-bottom:22px}
+  .result-meta #result-meta{font-weight:800;font-size:17px;color:var(--mint-darker)}
+  #result-msg h2{font-size:18px;color:var(--mint-darker);margin:24px 0 10px;
+    padding-right:10px;border-right:3px solid var(--mint);line-height:1.4}
+  #result-msg h3{font-size:15px;font-weight:800;color:var(--ink);margin:16px 0 8px}
+  #result-msg p{color:var(--ink-soft);font-size:15px;margin:8px 0;line-height:1.85}
+  #result-msg ul{padding-right:18px;margin:9px 0}
+  #result-msg li{color:var(--ink-soft);font-size:14.5px;margin:6px 0;line-height:1.75}
+  #result-msg strong{color:var(--ink);font-weight:700}
+  #result-msg hr{border:none;border-top:1.5px dashed var(--line);margin:20px 0}
+  .actions{display:flex;gap:11px;flex-wrap:wrap;margin-top:22px;padding-top:22px;
+    border-top:1px solid var(--line-soft)}
+  .actions a{display:none;padding:13px 24px;border-radius:12px;text-decoration:none;
+    font-weight:700;font-size:14.5px;transition:all .2s}
+  .actions a:first-child{background:var(--mint);color:#fff}
+  .actions a:first-child:hover{background:var(--mint-deep)}
+  .actions a.dark{background:var(--ink);color:#fff}
+  .actions a.dark:hover{background:#1e2e28}
+</style>
+</head>
+<body>
+<nav><div class="nav-in">
+  <a href="index.html" class="logo"><span class="bell">🔔</span> نبّاه</a>
+  <div class="nav-links">
+    <a href="index.html">الرئيسية</a>
+    <a href="input.html" class="active">إدخال البيانات</a>
+    <a href="dashboard.html">لوحة القيادة</a>
+    <a href="charts.html">التحليلات</a>
+  </div>
+</div></nav>
+
+<div class="wrap">
+  <div class="page-header">
+    <div class="breadcrumb">
+      <a href="index.html">الرئيسية</a><span>/</span><span>إدخال بيانات المنشأة</span>
+    </div>
+    <h1>بيانات منشأتك</h1>
+    <p>اختر الباقة، أدخل أرقامك، ونبّاه يحللها فوراً.</p>
+  </div>
+
+  <div class="plans">
+    <div class="plan p-basic" data-plan="basic" onclick="selectPlan('basic')">
+      <div class="check">✓</div>
+      <div class="p-name">الأساسية</div>
+      <div class="p-price">99 <small>ريال/شهر</small></div>
+      <div class="p-desc">ملخص سريع ومؤشرات مالية أساسية</div>
+    </div>
+    <div class="plan p-pro" data-plan="pro" onclick="selectPlan('pro')">
+      <div class="check">✓</div>
+      <div class="p-name">الاحترافية</div>
+      <div class="p-price">199 <small>ريال/شهر</small></div>
+      <div class="p-desc">تحليل معمّق، أسباب جذرية، توصيات مرتّبة</div>
+    </div>
+    <div class="plan p-exec active" data-plan="executive" onclick="selectPlan('executive')">
+      <div class="check">✓</div>
+      <div class="p-name">التنفيذية</div>
+      <div class="p-price">569 <small>ريال/شهر</small></div>
+      <div class="p-desc">تقرير شامل + توقعات + خطة ٩٠ يوم</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-label"><span class="sl-ic">🏢</span> المنشأة والفرع</div>
+    <div class="form-grid">
+      <div class="field full">
+        <label>اسم المنشأة / الفرع</label>
+        <input id="restaurant" placeholder="مثال: الفرع الرئيسي" oninput="saveBranch()" autocomplete="off">
+        <div class="saved-branches" id="saved-branches"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-label"><span class="sl-ic">📊</span> نشاط وتفاصيل اليوم</div>
+    <div class="form-grid">
+      <div class="field"><label>مبيعات اليوم (ريال)</label>
+        <input id="sales_today" type="number" placeholder="47500"></div>
+      <div class="field"><label>مبيعات أمس (ريال)</label>
+        <input id="sales_yesterday" type="number" placeholder="43200"></div>
+      <div class="field"><label>عدد الطلبات / المعاملات</label>
+        <input id="orders" type="number" placeholder="96"></div>
+      <div class="field"><label>عدد الأصناف / الخدمات المباعة</label>
+        <input id="items_count" type="number" placeholder="28"></div>
+    </div>
+
+    <div style="margin-top:20px;padding-top:18px;border-top:1px solid var(--line-soft)">
+      <div class="section-label" style="margin-bottom:14px;border:none;padding:0">
+        <span class="sl-ic">🏆</span> الأصناف / الخدمات الأكثر مبيعاً
+      </div>
+      <div class="form-grid three">
+        <div class="field"><label>الأول <span class="opt">(الأعلى)</span></label>
+          <input id="top_item" placeholder="مثال: المنتج الرئيسي"></div>
+        <div class="field"><label>الثاني <span class="opt">(اختياري)</span></label>
+          <input id="top_item_2" placeholder="مثال: المنتج الثاني"></div>
+        <div class="field"><label>الثالث <span class="opt">(اختياري)</span></label>
+          <input id="top_item_3" placeholder="مثال: المنتج الثالث"></div>
+      </div>
+    </div>
+
+    <div style="margin-top:20px;padding-top:18px;border-top:1px solid var(--line-soft)">
+      <div class="section-label" style="margin-bottom:14px;border:none;padding:0">
+        <span class="sl-ic">⏰</span> توزيع الطلبات حسب الوقت <span style="color:var(--ink-muted);font-size:13px;font-weight:400">(اختياري — يقوّي التحليل)</span>
+      </div>
+      <div class="hours-grid">
+        <div class="hour-slot"><div class="hs-label">8ص – 12م</div>
+          <input id="h1" type="number" placeholder="0" min="0"><div class="hs-unit">طلب</div></div>
+        <div class="hour-slot"><div class="hs-label">12م – 4م</div>
+          <input id="h2" type="number" placeholder="0" min="0"><div class="hs-unit">طلب</div></div>
+        <div class="hour-slot"><div class="hs-label">4م – 8م</div>
+          <input id="h3" type="number" placeholder="0" min="0"><div class="hs-unit">طلب</div></div>
+        <div class="hour-slot"><div class="hs-label">8م – 12ل</div>
+          <input id="h4" type="number" placeholder="0" min="0"><div class="hs-unit">طلب</div></div>
+      </div>
+    </div>
+
+    <div class="form-grid" style="margin-top:16px">
+      <div class="field"><label>أوقات الذروة <span class="opt">(وصف حر)</span></label>
+        <input id="peak_hours" placeholder="مثال: 12م – 3م"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-label"><span class="sl-ic">💰</span> البيانات المالية</div>
+    <div class="form-grid">
+      <div class="field"><label>إجمالي الإيرادات (ريال)</label>
+        <input id="revenue" type="number" placeholder="380000"></div>
+      <div class="field"><label>إجمالي المصروفات (ريال)</label>
+        <input id="expenses" type="number" placeholder="295000"></div>
+      <div class="field full"><label>ملاحظات إضافية <span class="opt">(اختياري)</span></label>
+        <textarea id="notes" rows="2" placeholder="أي شي تبي نبّاه ينتبه له"></textarea></div>
+    </div>
+    <button class="analyze-btn" onclick="analyze()">
+      <span class="spinner" id="spin"></span>
+      <span id="btn-txt">حلّل الآن</span>
+    </button>
+  </div>
+
+  <div id="result">
+    <div class="result-meta"><div id="result-meta"></div></div>
+    <div id="result-msg"></div>
+    <div class="actions">
+      <a id="dash-link" href="dashboard.html">📊 لوحة القيادة</a>
+      <a id="charts-link" href="charts.html" class="dark">📈 الرسوم البيانية</a>
+    </div>
+  </div>
+</div>
+
+<script>
+  let selectedPlan = "executive";
+
+  function loadBranches() {
+    const branches = JSON.parse(localStorage.getItem("nabbah_branches") || "[]");
+    const container = document.getElementById("saved-branches");
+    container.innerHTML = "";
+    if (branches.length === 0) return;
+    branches.forEach(b => {
+      const tag = document.createElement("span");
+      tag.className = "branch-tag";
+      tag.textContent = b;
+      tag.onclick = () => { document.getElementById("restaurant").value = b; };
+      container.appendChild(tag);
+    });
+  }
+
+  function saveBranch() {
+    const val = document.getElementById("restaurant").value.trim();
+    if (val.length < 2) return;
+    const branches = JSON.parse(localStorage.getItem("nabbah_branches") || "[]");
+    if (!branches.includes(val)) {
+      branches.unshift(val);
+      if (branches.length > 8) branches.pop();
+      localStorage.setItem("nabbah_branches", JSON.stringify(branches));
+      loadBranches();
+    }
+  }
+
+  function buildHourlyString() {
+    const slots = [
+      { label: "8ص-12م", val: document.getElementById("h1").value },
+      { label: "12م-4م", val: document.getElementById("h2").value },
+      { label: "4م-8م",  val: document.getElementById("h3").value },
+      { label: "8م-12ل", val: document.getElementById("h4").value }
+    ];
+    const filled = slots.filter(s => s.val && parseInt(s.val) > 0);
+    if (filled.length === 0) return "";
+    return filled.map(s => s.label + ": " + s.val + " طلب").join(" | ");
+  }
+
+  function selectPlan(plan) {
+    selectedPlan = plan;
+    document.querySelectorAll(".plan").forEach(p => {
+      p.classList.toggle("active", p.dataset.plan === plan);
+    });
+  }
+
+  function checkData(d) {
+    const warnings = [];
+    if (d.revenue <= 0) warnings.push("الإيرادات لازم تكون أكبر من صفر");
+    if (d.expenses < 0) warnings.push("المصروفات ما تكون بالسالب");
+    if (d.sales_today < 0 || d.sales_yesterday < 0) warnings.push("المبيعات ما تكون بالسالب");
+    if (d.orders <= 0) warnings.push("عدد الطلبات لازم يكون أكبر من صفر");
+    if (d.revenue > 0) {
+      const margin = ((d.revenue - d.expenses) / d.revenue) * 100;
+      if (margin > 60) warnings.push("هامش الربح يبدو مرتفع جداً (" + margin.toFixed(0) + "٪) — تأكد إن المصروفات كاملة وصحيحة");
+      if (margin < -50) warnings.push("الخسارة تبدو كبيرة جداً — تأكد إن الأرقام صحيحة");
+    }
+    if (d.sales_today > d.revenue * 1.5 && d.revenue > 0)
+      warnings.push("مبيعات اليوم أكبر من إجمالي الإيرادات — تأكد إنك ما خلطت الأرقام");
+    if (d.orders > 0) {
+      const ticket = d.sales_today / d.orders;
+      if (ticket > 5000) warnings.push("متوسط الفاتورة مرتفع جداً (" + ticket.toFixed(0) + " ريال) — تأكد من المبيعات وعدد الطلبات");
+    }
+    return warnings;
+  }
+
+  async function analyze() {
+    saveBranch();
+    const data = {
+      restaurant:      document.getElementById("restaurant").value,
+      sales_today:     parseFloat(document.getElementById("sales_today").value),
+      sales_yesterday: parseFloat(document.getElementById("sales_yesterday").value),
+      orders:          parseInt(document.getElementById("orders").value),
+      items_count:     parseInt(document.getElementById("items_count").value),
+      top_item:        document.getElementById("top_item").value,
+      top_item_2:      document.getElementById("top_item_2").value,
+      top_item_3:      document.getElementById("top_item_3").value,
+      hourly_orders:   buildHourlyString(),
+      peak_hours:      document.getElementById("peak_hours").value,
+      revenue:         parseFloat(document.getElementById("revenue").value),
+      expenses:        parseFloat(document.getElementById("expenses").value),
+      notes:           document.getElementById("notes").value,
+      plan:            selectedPlan
+    };
+
+    const issues = checkData(data);
+    if (issues.length > 0) {
+      const warnMsg = "⚠️ نبّاه لاحظ أرقام تحتاج مراجعة:\n\n• " + issues.join("\n• ") + "\n\nتبي تكمل التحليل بنفس الأرقام؟";
+      if (!confirm(warnMsg)) return;
+    }
+
+    const result = document.getElementById("result");
+    const meta   = document.getElementById("result-meta");
+    const msg    = document.getElementById("result-msg");
+    const dash   = document.getElementById("dash-link");
+    const charts = document.getElementById("charts-link");
+    const spin   = document.getElementById("spin");
+    const btnTxt = document.getElementById("btn-txt");
+    const btn    = document.querySelector(".analyze-btn");
+
+    result.style.display = "block";
+    meta.innerText = "⏳ نبّاه يحلل... (التحليل يأخذ لحظات)";
+    msg.innerHTML = "";
+    dash.style.display = "none";
+    charts.style.display = "none";
+    btn.disabled = true;
+    spin.style.display = "block";
+    btnTxt.textContent = "جارٍ التحليل...";
+    result.scrollIntoView({ behavior: "smooth", block: "start" });
+
+    try {
+      const res = await fetch("http://127.0.0.1:8000/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+      const out = await res.json();
+      const planNames = { basic: "الأساسية", pro: "الاحترافية", executive: "التنفيذية" };
+      meta.innerText = out.icon + " " + out.level + " — الربح: " + out.profit.toLocaleString() + " ريال (هامش " + out.margin + "٪) · باقة " + (planNames[out.plan] || "");
+      msg.innerHTML = marked.parse(out.smart_message);
+      dash.style.display = "inline-block";
+      charts.style.display = "inline-block";
+    } catch (e) {
+      meta.innerText = "⚠️ تعذّر التحليل";
+      msg.innerHTML = "ما قدرت أتصل بالخادم، أو الخدمة مزدحمة حالياً. تأكد إن الخادم شغّال وحاول بعد لحظات.";
+    } finally {
+      btn.disabled = false;
+      spin.style.display = "none";
+      btnTxt.textContent = "حلّل الآن";
+    }
+  }
+
+  loadBranches();
+</script>
+</body>
+</html>

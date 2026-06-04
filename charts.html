@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نبّاه — التحليلات البيانية</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --mint:#10b981;--mint-deep:#047857;--mint-darker:#065f46;
+    --mint-soft:#ecfdf5;--mint-soft2:#d1fae5;
+    --ink:#0f1d18;--ink-soft:#475a52;--ink-muted:#8ba89f;
+    --bg:#f4f9f7;--bg-card:#ffffff;
+    --line:#e0ece8;--line-soft:#eef5f2;
+    --red:#ef4444;--gold:#b9892f;
+    --shadow:0 1px 3px rgba(6,95,70,.04),0 8px 24px rgba(6,95,70,.07);
+    --shadow-lg:0 16px 50px rgba(6,95,70,.14);--r:16px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--ink);
+    line-height:1.75;-webkit-font-smoothing:antialiased;min-height:100vh}
+  body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+    background:radial-gradient(circle at 1px 1px,rgba(16,185,129,.055) 1px,transparent 0);
+    background-size:24px 24px;opacity:.6}
+  nav{position:sticky;top:0;z-index:50;background:rgba(244,249,247,.88);
+    backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+  .nav-in{max-width:1060px;margin:0 auto;padding:0 22px;
+    display:flex;align-items:center;justify-content:space-between;height:68px}
+  .logo{display:flex;align-items:center;gap:10px;font-weight:900;font-size:22px;
+    color:var(--mint-darker);text-decoration:none}
+  .logo .bell{width:38px;height:38px;border-radius:12px;background:var(--mint);
+    display:grid;place-items:center;font-size:18px;transform:rotate(-5deg);
+    box-shadow:0 3px 12px rgba(16,185,129,.35)}
+  .nav-links{display:flex;align-items:center;gap:6px}
+  .nav-links a{color:var(--ink-soft);font-weight:500;font-size:14px;padding:7px 14px;
+    border-radius:10px;text-decoration:none;transition:background .2s,color .2s}
+  .nav-links a:hover{background:var(--mint-soft);color:var(--mint-darker)}
+  .nav-links a.active{background:var(--mint-soft);color:var(--mint-darker);font-weight:700}
+  @media(max-width:600px){.nav-links a:not(.nav-btn){display:none}}
+  .wrap{max-width:1060px;margin:0 auto;padding:36px 22px 60px;position:relative;z-index:1}
+  .page-header{display:flex;align-items:flex-end;justify-content:space-between;
+    flex-wrap:wrap;gap:16px;margin-bottom:30px}
+  .ph-left .breadcrumb{display:flex;align-items:center;gap:6px;
+    font-size:13px;color:var(--ink-muted);margin-bottom:8px}
+  .ph-left .breadcrumb a{color:var(--ink-muted);text-decoration:none}
+  .ph-left .breadcrumb a:hover{color:var(--mint)}
+  .ph-left .breadcrumb span{opacity:.5}
+  .ph-left h1{font-size:27px;font-weight:900;color:var(--ink)}
+  .ph-left p{color:var(--ink-soft);font-size:15px}
+  .header-actions{display:flex;gap:10px;flex-wrap:wrap}
+  .btn{display:inline-flex;align-items:center;gap:7px;font-family:'Tajawal';
+    font-weight:700;font-size:14.5px;padding:11px 22px;border-radius:12px;
+    border:none;cursor:pointer;text-decoration:none;transition:all .2s}
+  .btn-primary{background:var(--mint);color:#fff;box-shadow:0 3px 12px rgba(16,185,129,.28)}
+  .btn-primary:hover{background:var(--mint-deep)}
+  .btn-dark{background:var(--ink);color:#fff}
+  .btn-dark:hover{background:#1e2e28}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+  @media(max-width:700px){.kpis{grid-template-columns:1fr 1fr}}
+  @media(max-width:420px){.kpis{grid-template-columns:1fr}}
+  .kpi{background:var(--bg-card);border:1px solid var(--line);border-radius:var(--r);
+    padding:20px;position:relative;overflow:hidden;box-shadow:var(--shadow)}
+  .kpi::after{content:"";position:absolute;bottom:0;right:0;left:0;height:3px;background:var(--mint);opacity:.25}
+  .kpi.k-profit::after{background:var(--mint);opacity:.8}
+  .kpi.k-margin::after{background:var(--gold);opacity:.8}
+  .kpi.k-count::after{background:var(--ink);opacity:.3}
+  .kpi .k-label{color:var(--ink-muted);font-size:13px;margin-bottom:8px}
+  .kpi .k-val{font-weight:900;font-size:24px;color:var(--ink);line-height:1.1}
+  .kpi .k-icon{position:absolute;top:18px;left:18px;font-size:20px;opacity:.18}
+  .chart-full{background:var(--bg-card);border:1px solid var(--line);border-radius:20px;
+    padding:26px;box-shadow:var(--shadow);margin-bottom:22px}
+  .charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:22px}
+  @media(max-width:680px){.charts-grid{grid-template-columns:1fr}}
+  .chart-card{background:var(--bg-card);border:1px solid var(--line);border-radius:20px;
+    padding:26px;box-shadow:var(--shadow)}
+  .chart-head h2{font-weight:800;font-size:16px;color:var(--ink);margin-bottom:3px}
+  .chart-head .hint{color:var(--ink-muted);font-size:13px;margin-bottom:16px}
+  .empty-state{text-align:center;padding:60px 22px;color:var(--ink-muted)}
+  .empty-state .em-ic{font-size:48px;margin-bottom:14px}
+  .empty-state h3{font-size:20px;font-weight:800;color:var(--ink-soft);margin-bottom:8px}
+  .empty-state p{font-size:15px;margin-bottom:20px}
+</style>
+</head>
+<body>
+<nav><div class="nav-in">
+  <a href="index.html" class="logo"><span class="bell">🔔</span> نبّاه</a>
+  <div class="nav-links">
+    <a href="index.html">الرئيسية</a>
+    <a href="input.html">إدخال البيانات</a>
+    <a href="dashboard.html">لوحة القيادة</a>
+    <a href="charts.html" class="active">التحليلات</a>
+  </div>
+</div></nav>
+
+<div class="wrap">
+  <div class="page-header">
+    <div class="ph-left">
+      <div class="breadcrumb">
+        <a href="index.html">الرئيسية</a><span>/</span><span>التحليلات البيانية</span>
+      </div>
+      <h1>التحليلات البيانية</h1>
+      <p>نظرة حية على أداء منشأتك من كل إدخالاتك.</p>
+    </div>
+    <div class="header-actions">
+      <a href="input.html" class="btn btn-primary">➕ أضف بيانات</a>
+      <a href="dashboard.html" class="btn btn-dark">📊 لوحة القيادة</a>
+    </div>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi k-sales"><div class="k-icon">📈</div>
+      <div class="k-label">آخر مبيعات</div><div class="k-val" id="kpi-sales">—</div></div>
+    <div class="kpi k-profit"><div class="k-icon">💰</div>
+      <div class="k-label">آخر ربح</div><div class="k-val" id="kpi-profit">—</div></div>
+    <div class="kpi k-margin"><div class="k-icon">📊</div>
+      <div class="k-label">آخر هامش</div><div class="k-val" id="kpi-margin">—</div></div>
+    <div class="kpi k-count"><div class="k-icon">🗂️</div>
+      <div class="k-label">عدد الإدخالات</div><div class="k-val" id="kpi-count">—</div></div>
+  </div>
+
+  <div class="chart-full">
+    <div class="chart-head">
+      <h2>📈 اتجاه المبيعات</h2>
+      <div class="hint">حركة مبيعاتك عبر كل الإدخالات</div>
+    </div>
+    <canvas id="salesChart" height="90"></canvas>
+  </div>
+
+  <div class="charts-grid">
+    <div class="chart-card">
+      <div class="chart-head">
+        <h2>💰 آخر يوم: الربح مقابل المصروفات</h2>
+        <div class="hint">توزيع آخر إدخال</div>
+      </div>
+      <canvas id="profitChart"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-head">
+        <h2>📊 المبيعات مقابل المصروفات</h2>
+        <div class="hint">مقارنة عبر الأيام</div>
+      </div>
+      <canvas id="compareChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<script>
+  const green = "#10b981";
+  const red = "#ef4444";
+  Chart.defaults.font.family = "Tajawal";
+  Chart.defaults.font.size = 13;
+
+  async function loadData() {
+    try {
+      const res = await fetch("http://127.0.0.1:8000/history");
+      const data = await res.json();
+
+      if (!data || data.length === 0) {
+        document.querySelector(".wrap").insertAdjacentHTML("beforeend",
+          `<div class="empty-state">
+            <div class="em-ic">📭</div>
+            <h3>لا توجد بيانات بعد</h3>
+            <p>أضف بيانات من صفحة الإدخال لتظهر هنا التحليلات</p>
+            <a href="input.html" class="btn btn-primary">➕ أضف بيانات</a>
+          </div>`
+        );
+        return;
+      }
+
+      const labels = data.map((e, i) => "إدخال " + (i + 1));
+      const sales = data.map(e => e.sales_today);
+      const expenses = data.map(e => e.expenses);
+      const last = data[data.length - 1];
+
+      document.getElementById("kpi-sales").innerText = last.sales_today.toLocaleString() + "﷼";
+      document.getElementById("kpi-profit").innerText = last.profit.toLocaleString() + "﷼";
+      document.getElementById("kpi-margin").innerText = last.margin + "%";
+      document.getElementById("kpi-count").innerText = data.length;
+
+      const ctx = document.getElementById("salesChart").getContext("2d");
+      const grad = ctx.createLinearGradient(0, 0, 0, 300);
+      grad.addColorStop(0, "rgba(16,185,129,0.25)");
+      grad.addColorStop(1, "rgba(16,185,129,0)");
+      new Chart(ctx, {
+        type: "line",
+        data: { labels, datasets: [{ data: sales, borderColor: green, backgroundColor: grad, fill: true, tension: 0.4, borderWidth: 3, pointBackgroundColor: green, pointRadius: 5 }] },
+        options: { plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => v.toLocaleString() + "﷼" } } } }
+      });
+
+      new Chart(document.getElementById("profitChart"), {
+        type: "doughnut",
+        data: { labels: ["الربح", "المصروفات"], datasets: [{ data: [Math.max(last.profit, 0), last.expenses], backgroundColor: [green, red], borderWidth: 0 }] },
+        options: { cutout: "68%", plugins: { legend: { position: "bottom", labels: { padding: 18, usePointStyle: true } } } }
+      });
+
+      new Chart(document.getElementById("compareChart"), {
+        type: "bar",
+        data: { labels, datasets: [
+          { label: "المبيعات", data: sales, backgroundColor: green, borderRadius: 6 },
+          { label: "المصروفات", data: expenses, backgroundColor: red, borderRadius: 6 }
+        ] },
+        options: { plugins: { legend: { position: "bottom", labels: { usePointStyle: true } } } }
+      });
+
+    } catch (e) {
+      document.querySelector(".wrap").insertAdjacentHTML("beforeend",
+        `<div class="empty-state">
+          <div class="em-ic">⚠️</div>
+          <h3>تعذّر الاتصال بالخادم</h3>
+          <p>تأكد إن الخادم شغّال وحاول مرة أخرى</p>
+        </div>`
+      );
+    }
+  }
+
+  loadData();
+</script>
+</body>
+</html>
