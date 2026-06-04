@@ -173,6 +173,7 @@
     <a href="#how">كيف يعمل</a>
     <a href="#features">المميزات</a>
     <a href="#pricing">الباقات</a>
+    <a href="login.html" id="nav-login">تسجيل الدخول</a>
     <a href="input.html" class="btn btn-primary">ابدأ تحليل منشأتك</a>
   </div>
 </div></nav>
@@ -324,5 +325,23 @@
   <div class="foot-bottom">© 2026 نبّاه · جميع الحقوق محفوظة</div>
 </div></footer>
 
+<script>
+  // لو مسجّل دخول، بدّل "تسجيل الدخول" بزر الخروج
+  (function () {
+    var navLogin = document.getElementById("nav-login");
+    if (localStorage.getItem("nabbah_token") && navLogin) {
+      var name = localStorage.getItem("nabbah_name") || "حسابي";
+      navLogin.textContent = "خروج (" + name + ")";
+      navLogin.href = "#";
+      navLogin.onclick = function (e) {
+        e.preventDefault();
+        localStorage.removeItem("nabbah_token");
+        localStorage.removeItem("nabbah_name");
+        localStorage.removeItem("nabbah_active");
+        window.location.reload();
+      };
+    }
+  })();
+</script>
 </body>
 </html>
