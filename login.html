@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نبّاه — تسجيل الدخول</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{--mint:#10b981;--mint-deep:#047857;--mint-darker:#065f46;--mint-soft:#ecfdf5;
+    --ink:#0f1d18;--ink-soft:#475a52;--ink-muted:#8ba89f;--bg:#f4f9f7;--line:#e0ece8;--red:#ef4444;}
+  *{margin:0;padding:0;box-sizing:border-box;font-family:'Tajawal',sans-serif}
+  body{background:var(--bg);color:var(--ink);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+  body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+    background:radial-gradient(circle at 1px 1px,rgba(16,185,129,.055) 1px,transparent 0);background-size:24px 24px;opacity:.6}
+  .box{position:relative;z-index:1;background:#fff;border:1px solid var(--line);border-radius:22px;
+    padding:38px 34px;width:100%;max-width:420px;box-shadow:0 16px 50px rgba(6,95,70,.1)}
+  .logo{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:8px}
+  .logo .bell{width:46px;height:46px;border-radius:14px;background:var(--mint);display:grid;place-items:center;
+    font-size:24px;transform:rotate(-5deg);box-shadow:0 3px 12px rgba(16,185,129,.35)}
+  .logo .name{font-weight:900;font-size:26px;color:var(--mint-darker)}
+  h1{text-align:center;font-size:20px;font-weight:800;margin:18px 0 4px}
+  .sub{text-align:center;color:var(--ink-muted);font-size:14px;margin-bottom:26px}
+  .field{margin-bottom:16px}
+  .field label{display:block;font-weight:600;font-size:14px;margin-bottom:7px}
+  .field input{width:100%;background:#fff;border:1.5px solid var(--line);border-radius:12px;
+    padding:13px 15px;font-size:15px;color:var(--ink);transition:border-color .2s,box-shadow .2s}
+  .field input:focus{outline:none;border-color:var(--mint);box-shadow:0 0 0 4px var(--mint-soft)}
+  .btn{width:100%;padding:15px;background:var(--mint);color:#fff;border:none;border-radius:13px;
+    font-family:'Tajawal';font-size:16px;font-weight:800;cursor:pointer;margin-top:8px;
+    transition:background .2s;display:flex;align-items:center;justify-content:center;gap:10px}
+  .btn:hover{background:var(--mint-deep)}
+  .btn:disabled{opacity:.6;cursor:not-allowed}
+  .spin{width:18px;height:18px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;
+    border-radius:50%;animation:spin .8s linear infinite;display:none}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .msg{margin-top:14px;padding:12px 15px;border-radius:11px;font-size:14px;font-weight:600;text-align:center;display:none}
+  .msg.error{background:#fef2f2;color:var(--red);display:block}
+  .msg.ok{background:var(--mint-soft);color:var(--mint-darker);display:block}
+  .switch{text-align:center;margin-top:22px;font-size:14px;color:var(--ink-soft)}
+  .switch a{color:var(--mint-darker);font-weight:700;text-decoration:none}
+  .switch a:hover{text-decoration:underline}
+  .back{text-align:center;margin-top:14px}
+  .back a{color:var(--ink-muted);font-size:13px;text-decoration:none}
+</style>
+</head>
+<body>
+  <div class="box">
+    <div class="logo"><span class="bell">🔔</span><span class="name">نبّاه</span></div>
+    <h1>تسجيل الدخول</h1>
+    <p class="sub">ادخل لحسابك للوصول إلى تحليلاتك</p>
+
+    <div class="field">
+      <label>البريد الإلكتروني</label>
+      <input id="email" type="email" placeholder="example@email.com" autocomplete="email">
+    </div>
+    <div class="field">
+      <label>كلمة المرور</label>
+      <input id="password" type="password" placeholder="••••••••" autocomplete="current-password">
+    </div>
+
+    <button class="btn" id="btn" onclick="login()">
+      <span class="spin" id="spin"></span>
+      <span id="btn-txt">دخول</span>
+    </button>
+
+    <div class="msg" id="msg"></div>
+
+    <div class="switch">ما عندك حساب؟ <a href="register.html">أنشئ حساب جديد</a></div>
+    <div class="back"><a href="index.html">← رجوع للرئيسية</a></div>
+  </div>
+
+<script>
+  // لو مسجّل دخول بالفعل، حوّله للوحة القيادة
+  if (localStorage.getItem("nabbah_token")) {
+    window.location.href = "dashboard.html";
+  }
+
+  async function login() {
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value;
+    const msg = document.getElementById("msg");
+    const btn = document.getElementById("btn");
+    const spin = document.getElementById("spin");
+    const btnTxt = document.getElementById("btn-txt");
+
+    msg.className = "msg";
+    if (!email || !password) {
+      msg.className = "msg error"; msg.innerText = "املأ البريد وكلمة المرور"; return;
+    }
+
+    btn.disabled = true; spin.style.display = "block"; btnTxt.innerText = "جارٍ الدخول...";
+
+    try {
+      const res = await fetch("/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password })
+      });
+      const out = await res.json();
+      if (!res.ok) {
+        msg.className = "msg error"; msg.innerText = out.detail || "فشل الدخول";
+      } else {
+        localStorage.setItem("nabbah_token", out.token);
+        localStorage.setItem("nabbah_name", out.name);
+        localStorage.setItem("nabbah_active", out.is_active);
+        msg.className = "msg ok"; msg.innerText = "تم الدخول، جارٍ التحويل...";
+        window.location.href = out.is_active == 1 ? "dashboard.html" : "index.html#plans";
+      }
+    } catch (e) {
+      msg.className = "msg error"; msg.innerText = "تعذّر الاتصال بالخادم";
+    } finally {
+      btn.disabled = false; spin.style.display = "none"; btnTxt.innerText = "دخول";
+    }
+  }
+
+  document.getElementById("password").addEventListener("keydown", e => { if (e.key === "Enter") login(); });
+</script>
+</body>
+</html>
