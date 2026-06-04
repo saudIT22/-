@@ -27,6 +27,8 @@
   body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
     background:radial-gradient(circle at 1px 1px,rgba(16,185,129,.055) 1px,transparent 0);
     background-size:24px 24px;opacity:.6}
+
+  /* NAV */
   nav{position:sticky;top:0;z-index:50;background:rgba(244,249,247,.88);
     backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
   .nav-in{max-width:1060px;margin:0 auto;padding:0 22px;
@@ -47,7 +49,11 @@
   .btn-primary{background:var(--mint);color:#fff;box-shadow:0 3px 10px rgba(16,185,129,.28)}
   .btn-primary:hover{background:var(--mint-deep)}
   @media(max-width:600px){.nav-links a:not(.btn-primary){display:none}}
+
+  /* WRAP */
   .wrap{max-width:1060px;margin:0 auto;padding:36px 22px 60px;position:relative;z-index:1}
+
+  /* PAGE HEADER */
   .page-header{display:flex;align-items:flex-end;justify-content:space-between;
     flex-wrap:wrap;gap:16px;margin-bottom:30px}
   .ph-left .breadcrumb{display:flex;align-items:center;gap:6px;
@@ -57,18 +63,27 @@
   .ph-left .breadcrumb span{opacity:.5}
   .ph-left h1{font-size:27px;font-weight:900;color:var(--ink)}
   .ph-left p{color:var(--ink-soft);font-size:15px}
+
+  /* GRID HELPERS */
   .g2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
   .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
   .g4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
   @media(max-width:760px){.g2,.g3{grid-template-columns:1fr}.g4{grid-template-columns:1fr 1fr}}
   @media(max-width:420px){.g4{grid-template-columns:1fr}}
   .mb{margin-bottom:20px}
+
+  /* CARDS */
+  .card{background:var(--bg-card);border:1px solid var(--line);border-radius:20px;
+    padding:26px;box-shadow:var(--shadow)}
+
+  /* HEALTH RING CARD */
   .health-card{border-radius:22px;padding:30px;text-align:center;color:#fff;
     box-shadow:var(--shadow-lg);display:flex;flex-direction:column;align-items:center;justify-content:center}
   .ring-wrap{position:relative;width:130px;height:130px;margin:0 auto 18px}
+  .ring-svg{transform:rotate(-90deg)}
   .ring-bg{fill:none;stroke:rgba(255,255,255,.2);stroke-width:12}
   .ring-fg{fill:none;stroke:#fff;stroke-width:12;stroke-linecap:round;
-    transition:stroke-dashoffset 1.2s ease}
+    stroke-dasharray:314;stroke-dashoffset:314;transition:stroke-dashoffset 1.2s ease}
   .ring-num{position:absolute;inset:0;display:flex;flex-direction:column;
     align-items:center;justify-content:center;line-height:1}
   .ring-num .big{font-weight:900;font-size:42px}
@@ -76,6 +91,8 @@
   .health-tag{margin-top:4px;background:rgba(255,255,255,.22);padding:7px 18px;
     border-radius:100px;font-weight:800;font-size:15px;display:inline-block}
   .health-lbl{margin-bottom:14px;font-size:15px;opacity:.9}
+
+  /* SCORES */
   .score-card{background:var(--bg-card);border:1px solid var(--line);border-radius:var(--r);
     padding:20px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:10px}
   .score-top{display:flex;justify-content:space-between;align-items:center}
@@ -83,6 +100,8 @@
   .score-val{font-weight:900;font-size:28px}
   .bar{height:8px;background:var(--line-soft);border-radius:100px;overflow:hidden}
   .bar-fill{height:100%;border-radius:100px;transition:width 1s ease .2s}
+
+  /* KPI CARDS */
   .kpi{background:var(--bg-card);border:1px solid var(--line);border-radius:var(--r);
     padding:20px;box-shadow:var(--shadow);position:relative;overflow:hidden}
   .kpi::after{content:"";position:absolute;bottom:0;right:0;left:0;height:3px}
@@ -93,6 +112,8 @@
   .kpi .k-lbl{color:var(--ink-muted);font-size:13px;margin-bottom:7px}
   .kpi .k-val{font-weight:900;font-size:24px;color:var(--ink)}
   .kpi .k-ic{position:absolute;top:18px;left:18px;font-size:20px;opacity:.15}
+
+  /* COVER CARD */
   .cover-card{background:var(--bg-card);border:1px solid var(--line);border-radius:20px;
     padding:26px;box-shadow:var(--shadow);border-right:4px solid var(--mint)}
   .cover-card.bad{border-right-color:var(--red)}
@@ -100,13 +121,16 @@
     margin-bottom:20px;color:var(--ink)}
   .cover-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:16px}
   @media(max-width:560px){.cover-row{grid-template-columns:1fr}}
-  .c-item{text-align:center;padding:16px;background:var(--bg);border:1px solid var(--line);border-radius:14px}
+  .c-item{text-align:center;padding:16px;background:var(--bg);border:1px solid var(--line);
+    border-radius:14px}
   .c-item .cl{color:var(--ink-muted);font-size:13px;margin-bottom:6px}
   .c-item .cv{font-size:21px;font-weight:900}
   .cover-msg{padding:13px 18px;border-radius:12px;font-weight:700;font-size:14.5px;text-align:center;margin-bottom:10px}
   .cover-msg.ok{background:var(--mint-soft);color:var(--mint-darker)}
   .cover-msg.bad{background:var(--red-soft);color:var(--red)}
   .cover-formula{text-align:center;color:var(--ink-muted);font-size:12.5px}
+
+  /* WIN / WARN CARDS */
   .win-card{border-radius:20px;padding:26px;background:linear-gradient(135deg,var(--mint),var(--mint-deep));
     color:#fff;box-shadow:var(--shadow-lg)}
   .win-card .wc-ttl{font-weight:800;font-size:15px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
@@ -121,6 +145,8 @@
   .status-card.safe .sc-ttl{color:var(--mint-darker)}
   .status-card .sc-body{color:var(--ink-soft);font-size:15px;line-height:1.85}
   .status-card .sc-meta{font-size:13px;margin-top:8px;color:var(--ink-muted)}
+
+  /* INSIGHT CARDS */
   .ins{background:var(--bg-card);border:1px solid var(--line);border-radius:var(--r);
     padding:22px;box-shadow:var(--shadow);border-top:4px solid var(--line)}
   .ins.alert{border-top-color:var(--red)}
@@ -131,12 +157,16 @@
   .ins.decision .it{color:var(--blue)}
   .ins.opp .it{color:var(--mint-darker)}
   .ins .ib{color:var(--ink-soft);font-size:15px;line-height:1.85}
+
+  /* QUALITY */
   .quality-card{background:var(--bg-card);border:1px solid var(--line);border-radius:var(--r);
     padding:22px 26px;box-shadow:var(--shadow);display:flex;align-items:center;
     justify-content:space-between;flex-wrap:wrap;gap:16px}
   .ql-left .ql-t{font-weight:800;font-size:15px}
   .ql-left .ql-sub{color:var(--ink-muted);font-size:14px;margin-top:3px}
   .ql-val{font-weight:900;font-size:32px}
+
+  /* EMPTY */
   .empty-state{background:var(--bg-card);border:1px solid var(--line);border-radius:20px;
     padding:64px 30px;text-align:center;box-shadow:var(--shadow)}
   .empty-state .em-ic{font-size:52px;margin-bottom:16px}
@@ -145,6 +175,7 @@
 </style>
 </head>
 <body>
+
 <nav><div class="nav-in">
   <a href="index.html" class="logo"><span class="bell">🔔</span> نبّاه</a>
   <div class="nav-links">
@@ -152,7 +183,7 @@
     <a href="input.html">إدخال البيانات</a>
     <a href="dashboard.html" class="active">لوحة القيادة</a>
     <a href="charts.html">التحليلات</a>
-    <a href="input.html" class="btn btn-primary">➕ تحليل جديد</a>
+    <a href="input.html" class="btn-primary btn">➕ تحليل جديد</a>
   </div>
 </div></nav>
 
@@ -166,10 +197,15 @@
       <p id="sub">نبض منشأتك في لمحة واحدة</p>
     </div>
   </div>
+
   <div id="content"></div>
 </div>
 
 <script>
+  // حماية الصفحة
+  if (!localStorage.getItem("nabbah_token")) {
+    window.location.href = "login.html";
+  }
   function color(score, reverse) {
     if (reverse) {
       if (score >= 60) return "#ef4444";
@@ -180,22 +216,29 @@
     if (score >= 60) return "#f59e0b";
     return "#ef4444";
   }
+
   function healthGradient(score) {
     if (score >= 75) return "linear-gradient(135deg,#10b981,#059669)";
     if (score >= 60) return "linear-gradient(135deg,#f59e0b,#d97706)";
     return "linear-gradient(135deg,#ef4444,#dc2626)";
   }
+
   function healthTagText(score) {
     if (score >= 90) return "ممتاز";
     if (score >= 75) return "جيد";
     if (score >= 60) return "تنبيه";
     return "خطر";
   }
+
   async function load() {
     const content = document.getElementById("content");
     try {
-      const res = await fetch("http://127.0.0.1:8000/history");
+      const res = await fetch("/history", {
+        headers: { "Authorization": "Bearer " + (localStorage.getItem("nabbah_token") || "") }
+      });
+      if (res.status === 401) { window.location.href = "login.html"; return; }
       const data = await res.json();
+
       if (!data || data.length === 0) {
         content.innerHTML = `
           <div class="empty-state">
@@ -206,53 +249,89 @@
           </div>`;
         return;
       }
+
       const e = data[data.length - 1];
       document.getElementById("sub").innerText = "نبض منشأة « " + e.restaurant + " » في لمحة واحدة";
+
+      /* ring offset */
+      const circumference = 314;
+      const offset = circumference - (e.health_score / 100) * circumference;
+
+      /* cover card */
       const covers = e.covers_expenses === 1;
       const sm = Math.abs(e.safety_margin);
+
+      /* quick win */
       const quickWin = Math.round(e.expenses * 0.10);
       const quickWinYear = quickWin * 12;
+
       content.innerHTML = `
+        <!-- ① HEALTH + SCORES -->
         <div class="g2 mb" style="align-items:stretch">
           <div class="health-card" style="background:${healthGradient(e.health_score)}">
             <div class="health-lbl">مؤشر صحة المنشأة</div>
             <div class="ring-wrap">
-              <svg width="130" height="130" viewBox="0 0 110 110" style="transform:rotate(-90deg)">
+              <svg class="ring-svg" width="130" height="130" viewBox="0 0 110 110">
                 <circle class="ring-bg" cx="55" cy="55" r="50"/>
-                <circle class="ring-fg" id="ring-fg" cx="55" cy="55" r="50" stroke-dasharray="314" stroke-dashoffset="314"/>
+                <circle class="ring-fg" id="ring-fg" cx="55" cy="55" r="50"/>
               </svg>
-              <div class="ring-num"><span class="big">${e.health_score}</span><span class="of">/100</span></div>
+              <div class="ring-num">
+                <span class="big">${e.health_score}</span>
+                <span class="of">/100</span>
+              </div>
             </div>
             <div class="health-tag">${healthTagText(e.health_score)}</div>
           </div>
           <div class="g3" style="align-content:start">
             <div class="score-card">
-              <div class="score-top"><span class="score-lbl">مؤشر المخاطر</span>
-                <span class="score-val" style="color:${color(e.risk_score,true)}">${e.risk_score}</span></div>
+              <div class="score-top">
+                <span class="score-lbl">مؤشر المخاطر</span>
+                <span class="score-val" style="color:${color(e.risk_score,true)}">${e.risk_score}</span>
+              </div>
               <div class="bar"><div class="bar-fill" style="width:${e.risk_score}%;background:${color(e.risk_score,true)}"></div></div>
             </div>
             <div class="score-card">
-              <div class="score-top"><span class="score-lbl">مؤشر الفرص</span>
-                <span class="score-val" style="color:#10b981">${e.opportunity_score}</span></div>
+              <div class="score-top">
+                <span class="score-lbl">مؤشر الفرص</span>
+                <span class="score-val" style="color:#10b981">${e.opportunity_score}</span>
+              </div>
               <div class="bar"><div class="bar-fill" style="width:${e.opportunity_score}%;background:#10b981"></div></div>
             </div>
             <div class="score-card">
-              <div class="score-top"><span class="score-lbl">صحة المنشأة</span>
-                <span class="score-val" style="color:${color(e.health_score)}">${e.health_score}</span></div>
+              <div class="score-top">
+                <span class="score-lbl">صحة المنشأة</span>
+                <span class="score-val" style="color:${color(e.health_score)}">${e.health_score}</span>
+              </div>
               <div class="bar"><div class="bar-fill" style="width:${e.health_score}%;background:${color(e.health_score)}"></div></div>
             </div>
           </div>
         </div>
+
+        <!-- ② KPIs -->
         <div class="g4 mb">
-          <div class="kpi k-sales"><div class="k-ic">📈</div><div class="k-lbl">آخر مبيعات</div>
-            <div class="k-val">${e.sales_today.toLocaleString()}﷼</div></div>
-          <div class="kpi k-profit"><div class="k-ic">💰</div><div class="k-lbl">صافي الربح</div>
-            <div class="k-val" style="color:${e.profit>=0?'#10b981':'#ef4444'}">${e.profit.toLocaleString()}﷼</div></div>
-          <div class="kpi k-margin"><div class="k-ic">📊</div><div class="k-lbl">هامش الربح</div>
-            <div class="k-val">${e.margin}%</div></div>
-          <div class="kpi k-change"><div class="k-ic">↕️</div><div class="k-lbl">التغير عن أمس</div>
-            <div class="k-val" style="color:${e.change_percent>=0?'#10b981':'#ef4444'}">${e.change_percent}%</div></div>
+          <div class="kpi k-sales">
+            <div class="k-ic">📈</div>
+            <div class="k-lbl">آخر مبيعات</div>
+            <div class="k-val">${e.sales_today.toLocaleString()}﷼</div>
+          </div>
+          <div class="kpi k-profit">
+            <div class="k-ic">💰</div>
+            <div class="k-lbl">صافي الربح</div>
+            <div class="k-val" style="color:${e.profit>=0?'#10b981':'#ef4444'}">${e.profit.toLocaleString()}﷼</div>
+          </div>
+          <div class="kpi k-margin">
+            <div class="k-ic">📊</div>
+            <div class="k-lbl">هامش الربح</div>
+            <div class="k-val">${e.margin}%</div>
+          </div>
+          <div class="kpi k-change">
+            <div class="k-ic">↕️</div>
+            <div class="k-lbl">التغير عن أمس</div>
+            <div class="k-val" style="color:${e.change_percent>=0?'#10b981':'#ef4444'}">${e.change_percent}%</div>
+          </div>
         </div>
+
+        <!-- ③ COVER -->
         <div class="cover-card ${covers?'':'bad'} mb">
           <div class="cover-title">🎯 تغطية المصروفات — هل إيراداتك تكفي مصروفاتك؟</div>
           <div class="cover-row">
@@ -261,10 +340,14 @@
             <div class="c-item"><div class="cl">هامش الأمان</div><div class="cv" style="color:${covers?'#10b981':'#ef4444'}">${covers?'+':'-'}${sm}%</div></div>
           </div>
           <div class="cover-msg ${covers?'ok':'bad'}">
-            ${covers ? '✅ إيراداتك تغطّي مصروفاتك وتزيد عنها بـ ' + sm + '%' : '⚠️ إيراداتك لا تغطّي مصروفاتك — عجز بنسبة ' + sm + '%'}
+            ${covers
+              ? '✅ إيراداتك تغطّي مصروفاتك وتزيد عنها بـ ' + sm + '% — المنشأة تحقق ربحاً'
+              : '⚠️ إيراداتك لا تغطّي مصروفاتك — عجز بنسبة ' + sm + '%'}
           </div>
           <div class="cover-formula">المعادلة: (الإيرادات − المصروفات) ÷ المصروفات × 100</div>
         </div>
+
+        <!-- ④ WIN + STATUS -->
         <div class="g2 mb">
           <div class="win-card">
             <div class="wc-ttl">⚡ أسرع ربح يمكن تحقيقه</div>
@@ -273,24 +356,45 @@
             <div class="wc-meta">≈ ${quickWinYear.toLocaleString()}﷼ سنوياً · الجهد: متوسط · المدة: ٣٠ يوم</div>
           </div>
           <div class="status-card ${e.health_score<60?'danger':'safe'}">
-            <div class="sc-ttl">${e.health_score<60?'🔴 إذا لم تتخذ إجراءً':'🛡️ وضعك تحت السيطرة'}</div>
-            <div class="sc-body">${e.health_score<60
-              ? 'مؤشر صحة منشأتك <strong>'+e.health_score+'/100</strong> في منطقة الخطر. راجع التقرير الكامل.'
-              : 'مؤشر الصحة <strong>'+e.health_score+'/100</strong> في منطقة آمنة. ركّز على الفرص لرفع الربحية.'}</div>
+            <div class="sc-ttl">
+              ${e.health_score<60?'🔴 إذا لم تتخذ إجراءً':'🛡️ وضعك تحت السيطرة'}
+            </div>
+            <div class="sc-body">
+              ${e.health_score<60
+                ? 'مؤشر صحة منشأتك <strong>' + e.health_score + '/100</strong> في منطقة الخطر. استمرار الوضع الحالي يضغط على الربحية — راجع التقرير الكامل.'
+                : 'مؤشر الصحة <strong>' + e.health_score + '/100</strong> في منطقة آمنة. حافظ على الأداء وركّز على الفرص لرفع الربحية.'}
+            </div>
             <div class="sc-meta">${e.health_score<60?'التوصية: ابدأ بأهم قرار فوراً':'استمر في مراقبة المؤشرات يومياً'}</div>
           </div>
         </div>
+
+        <!-- ⑤ INSIGHTS -->
         <div class="g3 mb">
-          <div class="ins alert"><div class="it">🚨 أهم تنبيه اليوم</div><div class="ib">${e.top_alert || "—"}</div></div>
-          <div class="ins decision"><div class="it">✅ أهم قرار اليوم</div><div class="ib">${e.top_decision || "—"}</div></div>
-          <div class="ins opp"><div class="it">💡 أهم فرصة اليوم</div><div class="ib">${e.top_opportunity || "—"}</div></div>
+          <div class="ins alert">
+            <div class="it">🚨 أهم تنبيه اليوم</div>
+            <div class="ib">${e.top_alert || "—"}</div>
+          </div>
+          <div class="ins decision">
+            <div class="it">✅ أهم قرار اليوم</div>
+            <div class="ib">${e.top_decision || "—"}</div>
+          </div>
+          <div class="ins opp">
+            <div class="it">💡 أهم فرصة اليوم</div>
+            <div class="ib">${e.top_opportunity || "—"}</div>
+          </div>
         </div>
+
+        <!-- ⑥ QUALITY -->
         <div class="quality-card">
-          <div class="ql-left"><div class="ql-t">📋 جودة البيانات</div>
-            <div class="ql-sub">كلما اكتملت بياناتك، ارتفعت دقة التحليل</div></div>
+          <div class="ql-left">
+            <div class="ql-t">📋 جودة البيانات</div>
+            <div class="ql-sub">كلما اكتملت بياناتك، ارتفعت دقة التحليل</div>
+          </div>
           <div class="ql-val" style="color:${color(e.data_quality)}">${e.data_quality}/100</div>
         </div>
       `;
+
+      /* animate ring */
       requestAnimationFrame(() => {
         const fg = document.getElementById("ring-fg");
         if (fg) {
@@ -299,12 +403,18 @@
           fg.style.strokeDashoffset = c - (e.health_score / 100) * c;
         }
       });
+
     } catch (err) {
-      content.innerHTML = `<div class="empty-state"><div class="em-ic">⚠️</div>
-        <h3>تعذّر الاتصال بالخادم</h3><p>تأكد إن الخادم شغّال وحاول مرة أخرى</p></div>`;
+      content.innerHTML = `
+        <div class="empty-state">
+          <div class="em-ic">⚠️</div>
+          <h3>تعذّر الاتصال بالخادم</h3>
+          <p>تأكد إن الخادم شغّال (<code>uvicorn main:app --reload</code>) وحاول مرة أخرى</p>
+        </div>`;
     }
   }
+
   load();
 </script>
 </body>
-</html>
+</html
