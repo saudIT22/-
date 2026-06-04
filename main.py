@@ -1,18 +1,24 @@
 import os
 import time
 import re
+import jwt
+import bcrypt
 from dotenv import load_dotenv
 from google import genai
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Header, Depends
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
-from sqlmodel import SQLModel, Field, create_engine, Session
-from datetime import datetime
+from sqlmodel import SQLModel, Field, create_engine, Session, select
+from datetime import datetime, timedelta
 
 load_dotenv()
 ai_client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+
+# مفتاح سري لتوقيع رموز الدخول (يُضبط في Railway Variables)
+SECRET_KEY = os.getenv("SECRET_KEY", "nabbah-dev-secret-change-me")
+TOKEN_DAYS = 30  # مدة صلاحية الدخول
 
 app = FastAPI()
 
@@ -39,8 +45,22 @@ class SalesData(BaseModel):
     notes: Optional[str] = ""
     plan: Optional[str] = "executive"
 
+class User(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    name: str
+    email: str = Field(index=True, unique=True)
+    password_hash: str
+    business_name: str = ""
+    phone: str = ""
+    plan: str = ""                      # فارغ = ما اشترك بعد
+    is_active: int = 0                  # 0 = غير مفعّل، 1 = مفعّل (دفع)
+    subscription_start: Optional[datetime] = None
+    subscription_end: Optional[datetime] = None
+    created_at: datetime = Field(default_factory=datetime.now)
+
 class Entry(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: Optional[int] = Field(default=None, index=True)   # صاحب التحليل
     restaurant: str
     sales_today: float
     sales_yesterday: float
@@ -72,6 +92,40 @@ class Entry(SQLModel, table=True):
 
 engine = create_engine("sqlite:///nabbah.db")
 SQLModel.metadata.create_all(engine)
+
+
+# ===== أدوات الأمان: كلمات المرور والرموز =====
+def hash_password(password: str) -> str:
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+def verify_password(password: str, password_hash: str) -> bool:
+    try:
+        return bcrypt.checkpw(password.encode("utf-8"), password_hash.encode("utf-8"))
+    except Exception:
+        return False
+
+def create_token(user_id: int) -> str:
+    payload = {
+        "user_id": user_id,
+        "exp": datetime.utcnow() + timedelta(days=TOKEN_DAYS)
+    }
+    return jwt.encode(payload, SECRET_KEY, algorithm="HS256")
+
+def get_current_user(authorization: str = Header(default="")) -> User:
+    """يتحقق من رمز الدخول ويُرجع المستخدم، وإلا يرفض الطلب."""
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="يجب تسجيل الدخول")
+    token = authorization[len("Bearer "):]
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        user_id = payload.get("user_id")
+    except Exception:
+        raise HTTPException(status_code=401, detail="انتهت الجلسة، سجّل الدخول من جديد")
+    with Session(engine) as s:
+        user = s.get(User, user_id)
+        if not user:
+            raise HTTPException(status_code=401, detail="المستخدم غير موجود")
+        return user
 
 
 def extract_exec(text):
@@ -261,9 +315,83 @@ def page_dashboard():
 def page_charts():
     return FileResponse("charts.html")
 
+@app.get("/login.html")
+def page_login():
+    return FileResponse("login.html")
+
+@app.get("/register.html")
+def page_register():
+    return FileResponse("register.html")
+
+
+# ===== التسجيل والدخول =====
+class RegisterData(BaseModel):
+    name: str
+    email: str
+    password: str
+    business_name: Optional[str] = ""
+    phone: Optional[str] = ""
+
+class LoginData(BaseModel):
+    email: str
+    password: str
+
+@app.post("/register")
+def register(data: RegisterData):
+    email = data.email.strip().lower()
+    if len(data.password) < 6:
+        raise HTTPException(status_code=400, detail="كلمة المرور يجب أن تكون 6 أحرف على الأقل")
+    with Session(engine) as s:
+        existing = s.exec(select(User).where(User.email == email)).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="هذا البريد مسجّل مسبقاً")
+        user = User(
+            name=data.name.strip(),
+            email=email,
+            password_hash=hash_password(data.password),
+            business_name=(data.business_name or "").strip(),
+            phone=(data.phone or "").strip(),
+        )
+        s.add(user)
+        s.commit()
+        s.refresh(user)
+        token = create_token(user.id)
+        return {"token": token, "name": user.name, "is_active": user.is_active, "plan": user.plan}
+
+@app.post("/login")
+def login(data: LoginData):
+    email = data.email.strip().lower()
+    with Session(engine) as s:
+        user = s.exec(select(User).where(User.email == email)).first()
+        if not user or not verify_password(data.password, user.password_hash):
+            raise HTTPException(status_code=401, detail="البريد أو كلمة المرور غير صحيحة")
+        token = create_token(user.id)
+        return {"token": token, "name": user.name, "is_active": user.is_active, "plan": user.plan}
+
+@app.get("/me")
+def me(user: User = Depends(get_current_user)):
+    """يرجّع بيانات المستخدم الحالي وحالة اشتراكه."""
+    return {
+        "name": user.name,
+        "email": user.email,
+        "business_name": user.business_name,
+        "phone": user.phone,
+        "plan": user.plan,
+        "is_active": user.is_active,
+        "subscription_start": user.subscription_start,
+        "subscription_end": user.subscription_end,
+    }
+
 
 @app.post("/analyze")
-def analyze(data: SalesData):
+def analyze(data: SalesData, user: User = Depends(get_current_user)):
+    # قفل: لازم يكون مشترك ومفعّل
+    if user.is_active != 1:
+        raise HTTPException(status_code=403, detail="يجب الاشتراك في إحدى الباقات لاستخدام التحليل")
+    # تحقق من انتهاء الاشتراك
+    if user.subscription_end and user.subscription_end < datetime.now():
+        raise HTTPException(status_code=403, detail="انتهى اشتراكك، يرجى التجديد")
+
     change = data.sales_today - data.sales_yesterday
     percent = round((change / data.sales_yesterday) * 100, 1) if data.sales_yesterday > 0 else 0
 
@@ -465,6 +593,7 @@ OPPORTUNITY: (أهم فرصة — جملة واحدة)
         top_opportunity = "راجع قسم الفرص في التقرير"
 
     entry = Entry(
+        user_id=user.id,
         restaurant=data.restaurant,
         sales_today=data.sales_today, sales_yesterday=data.sales_yesterday,
         orders=data.orders, items_count=data.items_count,
@@ -499,7 +628,9 @@ OPPORTUNITY: (أهم فرصة — جملة واحدة)
 
 
 @app.get("/history")
-def history():
+def history(user: User = Depends(get_current_user)):
     with Session(engine) as session:
-        entries = session.query(Entry).all()
+        entries = session.exec(
+            select(Entry).where(Entry.user_id == user.id)
+        ).all()
         return entries
