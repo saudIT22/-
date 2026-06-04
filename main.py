@@ -4,8 +4,7 @@ import re
 from dotenv import load_dotenv
 from google import genai
 from fastapi import FastAPI, HTTPException
-from fastapi.staticfiles import StaticFiles      # ← جديد ١
-from fastapi.responses import FileResponse       # ← جديد ٢
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
@@ -23,8 +22,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-app.mount("/static", StaticFiles(directory="static"), name="static")   # ← جديد ٣
 
 class SalesData(BaseModel):
     restaurant: str
@@ -101,15 +98,15 @@ def check_sanity(data, margin, avg_ticket, expense_ratio):
     if data.expenses < 0:
         flags.append("المصروفات بالسالب — رقم غير منطقي")
     if margin > 60:
-        flags.append(f"هامش الربح {margin}% مرتفع جداً — قد تكون المصروفات غير مكتملة")
+        flags.append(f"هامش الربح {margin}% مرتفع جداً وغير معتاد — قد تكون المصروفات غير مكتملة")
     if margin < -50:
-        flags.append(f"الخسارة كبيرة جداً (هامش {margin}%) — تأكد من صحة الأرقام")
+        flags.append(f"الخسارة كبيرة جداً (هامش {margin}%) — تأكد من صحة الإيرادات والمصروفات")
     if data.revenue > 0 and data.sales_today > data.revenue * 1.5:
         flags.append("مبيعات اليوم أكبر من إجمالي الإيرادات — قد تكون الأرقام مختلطة")
     if avg_ticket > 5000:
-        flags.append(f"متوسط الفاتورة {avg_ticket} ريال مرتفع جداً")
+        flags.append(f"متوسط الفاتورة {avg_ticket} ريال مرتفع جداً — تأكد من المبيعات وعدد الطلبات")
     if expense_ratio > 0 and expense_ratio < 20:
-        flags.append(f"المصروفات منخفضة جداً ({expense_ratio}%) — قد تكون غير مكتملة")
+        flags.append(f"المصروفات منخفضة جداً ({expense_ratio}% من الإيرادات) — قد تكون غير مكتملة")
     return flags
 
 
@@ -149,7 +146,7 @@ def get_sections(plan):
 الإيرادات، المصروفات، صافي الربح، هامش الربح — مع تعليق خبير قصير على كل رقم.
 
 ## 🎯 تغطية المصروفات
-اشرح حالة التغطية وهامش الأمان، واعرض المعادلة بوضوح.
+اشرح حالة التغطية وهامش الأمان، واعرض المعادلة بوضوح ليثق المالك بالرقم.
 
 ## ✅ القرار التنفيذي النهائي
 ٥ أسطر: الحالة؟ أكبر مشكلة؟ أكبر فرصة؟ أول قرار؟ العائد المتوقع؟"""
@@ -163,26 +160,26 @@ def get_sections(plan):
 ## 📊 التفاصيل الكاملة
 
 ### 💰 المؤشرات المالية
-الإيرادات، المصروفات، الربح، الهامش، متوسط الفاتورة — مع تعليق خبير قصير.
+الإيرادات، المصروفات، الربح، الهامش، متوسط الفاتورة — مع تعليق خبير قصير على كل رقم.
 
 ### 🎯 تغطية المصروفات
 اشرح حالة التغطية وهامش الأمان، واعرض المعادلة بوضوح.
 
 ### 🔍 المشكلات الرئيسية وحلولها
-لكل مشكلة: الوصف | الخطورة (🔴/🟡/🟢) | التأثير المالي | أكثر من حل | نسبة الثقة (%).
+لكل مشكلة: الوصف | الخطورة (🔴/🟡/🟢) | التأثير المالي | **أكثر من حل** | نسبة الثقة (%).
 
 ### 🧩 تحليل الأسباب الجذرية
-لكل مشكلة: السبب الجذري + المؤشر الداعم + نسبة الثقة.
+لكل مشكلة: السبب الجذري (إن توفرت بيانات) + المؤشر الداعم + نسبة الثقة.
 
 ### 💵 تقدير الأثر المالي
-مرتبة من الأعلى أثراً.
+استخدم التقديرات الجاهزة (شهري وسنوي)، مرتبة من الأعلى أثراً.
 
 ### 🎯 ترتيب الأولويات
-افعل الآن | افعل لاحقاً.
+**افعل الآن** | **افعل لاحقاً**.
 
 ### 📈 المؤشرات الواجب مراقبتها (KPIs)
 
-### 🧮 المؤشرات الذكية
+### 🧮 المؤشرات الذكية (اشرح كل درجة، لا تغيّرها)
 - صحة المنشأة: {health_score}/100 ({level}) — لماذا؟
 - المخاطر: {risk_score}/100 — لماذا؟
 - الفرص: {opportunity_score}/100 — لماذا؟
@@ -192,7 +189,7 @@ def get_sections(plan):
 ### ✅ القرار التنفيذي النهائي
 ٥ أسطر: الحالة؟ أكبر خطر؟ أكبر فرصة؟ أول قرار؟ العائد المتوقع؟"""
 
-    else:
+    else:  # executive
         return """## ⚡ الملخص السريع (30 ثانية)
 في ٤-٥ أسطر مختصرة: الحالة العامة ({level} - {health_score}/100) | المشكلة رقم ١ | المشكلة رقم ٢ | الفرصة رقم ١ | أول خطوة الآن.
 
@@ -201,36 +198,36 @@ def get_sections(plan):
 ## 📊 التفاصيل الكاملة
 
 ### 💰 المؤشرات المالية
-الإيرادات، المصروفات، الربح، الهامش، متوسط الفاتورة — مع تعليق خبير قصير.
+الإيرادات، المصروفات، الربح، الهامش، متوسط الفاتورة — مع تعليق خبير قصير على كل رقم.
 
 ### 🎯 تغطية المصروفات
-اشرح حالة التغطية وهامش الأمان، واعرض المعادلة بوضوح.
+اشرح حالة التغطية وهامش الأمان، واعرض المعادلة بوضوح ليثق المالك بالرقم.
 
 ### 🔍 المشكلات الرئيسية وحلولها
-لكل مشكلة: الوصف | الخطورة (🔴/🟡/🟢) | التأثير المالي | أكثر من حل | نسبة الثقة (%).
+لكل مشكلة: الوصف | الخطورة (🔴/🟡/🟢) | التأثير المالي | **أكثر من حل** | نسبة الثقة (%).
 
 ### 🧩 تحليل الأسباب الجذرية
-لكل مشكلة: السبب الجذري + المؤشر الداعم + نسبة الثقة.
+لكل مشكلة: السبب الجذري (إن توفرت بيانات) + المؤشر الداعم + نسبة الثقة.
 
 ### 💵 تقدير الأثر المالي
-مرتبة من الأعلى أثراً.
+استخدم التقديرات الجاهزة (شهري وسنوي)، مرتبة من الأعلى أثراً.
 
 ### 🎯 ترتيب الأولويات
-افعل الآن | افعل لاحقاً.
+**افعل الآن** | **افعل لاحقاً**.
 
 ### 📅 خطة تنفيذية ٣٠-٦٠-٩٠ يوم
 
 ### 📈 المؤشرات الواجب مراقبتها (KPIs)
 
 ### 🔮 التوقعات المستقبلية
-استخدم التوقعات الرقمية المعطاة مع نسبة ثقة واضحة.
+استخدم التوقعات الرقمية المعطاة. ضع نسبة ثقة، ومع بيانات قليلة اجعلها منخفضة صراحة.
 
 ### 📉 تحليل المخاطر
-مخاطر حرجة / متوسطة / منخفضة + أثر + نسبة ثقة.
+مخاطر حرجة / متوسطة / منخفضة + أثر كل خطر + نسبة ثقة. بلا مبالغة.
 
 ### 💡 الفرص المخفية
 
-### 🧮 المؤشرات الذكية
+### 🧮 المؤشرات الذكية (اشرح كل درجة، لا تغيّرها)
 - صحة المنشأة: {health_score}/100 ({level}) — لماذا؟
 - المخاطر: {risk_score}/100 — لماذا؟
 - الفرص: {opportunity_score}/100 — لماذا؟
@@ -240,13 +237,29 @@ def get_sections(plan):
 ### ✅ القرار التنفيذي النهائي
 ٥ أسطر: الحالة؟ أكبر خطر؟ أكبر فرصة؟ أول قرار؟ العائد المتوقع؟
 
-### 🎚️ مستوى الثقة الإجمالي
+### 🎚️ مستوى الثقة الإجمالي بالتحليل
 نسبة % + سبب أي نقص + ما الذي يرفعها."""
 
 
-@app.get("/")                          # ← جديد ٤
+@app.get("/")
 def home():
-    return FileResponse("static/index.html")
+    return FileResponse("index.html")
+
+@app.get("/index.html")
+def page_index():
+    return FileResponse("index.html")
+
+@app.get("/input.html")
+def page_input():
+    return FileResponse("input.html")
+
+@app.get("/dashboard.html")
+def page_dashboard():
+    return FileResponse("dashboard.html")
+
+@app.get("/charts.html")
+def page_charts():
+    return FileResponse("charts.html")
 
 
 @app.post("/analyze")
@@ -275,7 +288,7 @@ def analyze(data: SalesData):
 
     forecast = build_forecast(history_revenues, data.revenue)
     if forecast:
-        forecast_text = f"""بناءً على {history_count + 1} إدخالات، متوسط معدل نمو الإيرادات: {forecast['avg_rate']}%.
+        forecast_text = f"""بناءً على {history_count + 1} إدخالات، متوسط معدل نمو الإيرادات: {forecast['avg_rate']}% لكل فترة.
 - الشهر القادم: بين {forecast['next_month_cons']} (متحفظ) و {forecast['next_month_opt']} (متفائل) ريال
 - بعد ٣ أشهر: بين {forecast['m3_cons']} و {forecast['m3_opt']} ريال
 - بعد ٦ أشهر: بين {forecast['m6_cons']} و {forecast['m6_opt']} ريال"""
@@ -283,8 +296,12 @@ def analyze(data: SalesData):
         forecast_text = "لا تتوفر بيانات تاريخية كافية للتوقع (يحتاج إدخالين أو أكثر)."
 
     sanity_flags = check_sanity(data, margin, avg_ticket, expense_ratio)
-    sanity_text = ("⚠️ ملاحظات على جودة المدخلات:\n- " + "\n- ".join(sanity_flags)) if sanity_flags else "✅ المدخلات تبدو منطقية ومتسقة."
+    if sanity_flags:
+        sanity_text = "⚠️ ملاحظات على جودة المدخلات (فسّر النتائج بحذر):\n- " + "\n- ".join(sanity_flags)
+    else:
+        sanity_text = "✅ المدخلات تبدو منطقية ومتسقة."
 
+    # ===== محرك الحسابات: الدرجات =====
     health = 0
     if margin >= 25: health += 40
     elif margin >= 15: health += 32
@@ -334,20 +351,24 @@ def analyze(data: SalesData):
 
     if data_quality >= 85: quality_note = "بيانات شبه مكتملة — دقة عالية"
     elif data_quality >= 60: quality_note = "بيانات جيدة مع بعض النقص"
-    else: quality_note = "بيانات ناقصة — الدقة محدودة"
+    else: quality_note = "بيانات ناقصة — الدقة محدودة، يُنصح بإكمالها"
 
     if health_score >= 90: level = "ممتاز"; icon = "🟢"
     elif health_score >= 75: level = "جيد"; icon = "🟢"
     elif health_score >= 60: level = "تنبيه"; icon = "🟡"
     else: level = "خطر"; icon = "🔴"
 
-    be_text = (f"الإيرادات ({data.revenue} ريال) تغطّي المصروفات ({data.expenses} ريال) — هامش أمان {safety_margin}%."
-               if covers_expenses else
-               f"الإيرادات ({data.revenue} ريال) لا تغطّي المصروفات ({data.expenses} ريال) — عجز {abs(safety_margin)}%.")
+    if covers_expenses:
+        be_text = f"الإيرادات ({data.revenue} ريال) تغطّي المصروفات ({data.expenses} ريال) وتزيد عنها — هامش أمان {safety_margin}%. المعادلة: (الإيرادات − المصروفات) ÷ المصروفات × 100."
+    else:
+        be_text = f"الإيرادات ({data.revenue} ريال) لا تغطّي المصروفات ({data.expenses} ريال) — المنشأة في منطقة خسارة بنسبة {abs(safety_margin)}%."
 
+    # بناء سطر الأصناف الأكثر مبيعاً
     top_items_parts = [data.top_item]
-    if data.top_item_2 and data.top_item_2.strip(): top_items_parts.append(data.top_item_2.strip())
-    if data.top_item_3 and data.top_item_3.strip(): top_items_parts.append(data.top_item_3.strip())
+    if data.top_item_2 and data.top_item_2.strip():
+        top_items_parts.append(data.top_item_2.strip())
+    if data.top_item_3 and data.top_item_3.strip():
+        top_items_parts.append(data.top_item_3.strip())
     top_items_str = " | ".join(top_items_parts)
 
     plan = data.plan if data.plan in ("basic", "pro", "executive") else "executive"
@@ -357,49 +378,63 @@ def analyze(data: SalesData):
     )
     plan_names = {"basic": "الأساسية", "pro": "الاحترافية", "executive": "التنفيذية"}
 
-    prompt = f"""أنت "نبّاه"، مستشار أعمال تنفيذي بخبرة ١٥ عاماً. مهمتك اكتشاف المشكلات الحقيقية والفرص الخفية.
+    prompt = f"""أنت "نبّاه"، مستشار أعمال تنفيذي بخبرة تتجاوز ١٥ عاماً في تحليل المنشآت. مهمتك ليست وصف الأرقام، بل اكتشاف المشكلات الحقيقية والفرص الخفية كمستشار تنفيذي يكتب لمالك المنشأة.
 
-# الباقة: {plan_names[plan]}
+# الباقة الحالية: {plan_names[plan]}
+اكتب الأقسام المطلوبة لهذه الباقة فقط. لا تضف أقساماً خارجها.
 
-# بيانات منشأة "{data.restaurant}":
-- مبيعات اليوم: {data.sales_today} | أمس: {data.sales_yesterday} | التغير: {percent}%
-- الطلبات: {data.orders} | الأصناف: {data.items_count} | متوسط الفاتورة: {avg_ticket} ريال
+# البيانات المؤكدة لمنشأة "{data.restaurant}":
+- مبيعات اليوم: {data.sales_today} ريال | أمس: {data.sales_yesterday} ريال | التغير: {percent}%
+- عدد الطلبات: {data.orders} | الأصناف: {data.items_count} | متوسط الفاتورة: {avg_ticket} ريال
 - الأصناف الأكثر مبيعاً: {top_items_str}
 - أوقات الذروة: {data.peak_hours}
 - توزيع الطلبات بالوقت: {data.hourly_orders if data.hourly_orders else 'لم يُدخل'}
-- الإيرادات: {data.revenue} | المصروفات: {data.expenses} ({expense_ratio}%)
-- صافي الربح: {profit} | الهامش: {margin}% | الربح/طلب: {profit_per_order}
-- ملاحظات: {data.notes}
-- إدخالات تاريخية: {history_count}
+- الإيرادات: {data.revenue} ريال | المصروفات: {data.expenses} ريال ({expense_ratio}% من الإيرادات)
+- صافي الربح: {profit} ريال | الهامش: {margin}% | الربح لكل طلب: {profit_per_order} ريال
+- ملاحظات المالك: {data.notes}
+- عدد الإدخالات التاريخية: {history_count}
 
-# جودة المدخلات: {sanity_text}
-# تغطية المصروفات: {be_text}
-# التوقعات: {forecast_text}
+# نتيجة فحص جودة المدخلات:
+{sanity_text}
 
-# الدرجات (لا تغيّرها):
-- الصحة: {health_score}/100 ({level})
-- المخاطر: {risk_score}/100
-- الفرص: {opportunity_score}/100
-- جودة البيانات: {data_quality}/100
+# تغطية المصروفات:
+{be_text}
 
-# تقديرات جاهزة:
-- توفير 10% مصروفات: {save_10} شهرياً / {save_10_year} سنوياً
-- زيادة مبيعات 15%: {sales_up_15}
-- رفع الفاتورة 8%: {ticket_up_8}
+# التوقعات الرقمية:
+{forecast_text}
+
+# الدرجات الذكية (لا تغيّرها، اشرحها فقط):
+- مؤشر صحة المنشأة: {health_score}/100 ({level})
+- مؤشر المخاطر: {risk_score}/100
+- مؤشر الفرص: {opportunity_score}/100
+- جودة البيانات: {data_quality}/100 ({quality_note})
+
+# تقديرات مالية جاهزة:
+- توفير شهري لو خُفّضت المصروفات ١٠٪: {save_10} ريال | سنوياً: {save_10_year} ريال
+- زيادة الإيراد لو ارتفعت المبيعات ١٥٪: {sales_up_15} ريال
+- أثر رفع متوسط الفاتورة ٨٪: {ticket_up_8} ريال
 
 # قواعد صارمة:
-1. ✅ حقيقة | ⚠️ فرضية | ❌ ناقص
-2. لا تخترع أرقاماً
-3. الدرجات ثابتة — اشرحها فقط
-4. نسبة ثقة بعد كل استنتاج
-5. لا مبالغة
-6. اكتب فقط أقسام الباقة المحددة
+1. فرّق بوضوح: ✅ حقيقة مؤكدة | ⚠️ فرضية تحتاج تحقق | ❌ بيانات ناقصة.
+2. لا تخترع أي رقم. كل الأرقام والدرجات استخدمها كما أُعطيت حرفياً.
+3. الدرجات محسوبة مسبقاً — ممنوع تغييرها. اشرح "لماذا" كل درجة.
+4. ضع نسبة ثقة (%) بعد كل استنتاج أو توصية مهمة.
+5. ممنوع المبالغة. لا تتنبأ بـ"إفلاس" أو "كارثة" من بيانات قليلة.
+6. للأسباب الجذرية: لا تخمّن. إذا لم تكفِ البيانات قل ذلك صراحة.
+7. عند وجود تناقض: نبّه عليه، لكن أكمل التحليل ولا ترفض البيانات.
+8. إذا كانت هناك ملاحظات على جودة المدخلات، اذكرها في البداية.
+9. أي قسم لا تكفيه البيانات: تجاهله.
+10. كن محدداً بالأرقام، ولهجة مهنية واثقة دون مبالغة.
+11. اكتب فقط الأقسام المحددة لهذه الباقة. لا تضف أي قسم غير مذكور.
 
+# مهم: ابدأ ردّك بهذه الكتلة بالضبط:
 ===NABBAH_EXEC===
-ALERT: (أهم تنبيه — جملة واحدة بالأرقام)
-DECISION: (أهم قرار — جملة واحدة)
+ALERT: (أهم تنبيه — جملة واحدة محددة بالأرقام)
+DECISION: (أهم قرار الآن — جملة واحدة)
 OPPORTUNITY: (أهم فرصة — جملة واحدة)
 ===END===
+
+# ثم اكتب الأقسام التالية فقط (حسب باقة {plan_names[plan]}):
 
 {sections}"""
 
@@ -408,27 +443,38 @@ OPPORTUNITY: (أهم فرصة — جملة واحدة)
     for model_name in models:
         for attempt in range(2):
             try:
-                response = ai_client.models.generate_content(model=model_name, contents=prompt)
+                response = ai_client.models.generate_content(
+                    model=model_name,
+                    contents=prompt
+                )
                 break
-            except Exception:
+            except Exception as e:
                 time.sleep(2)
         if response is not None:
             break
     if response is None:
-        raise HTTPException(status_code=503, detail="الخدمة مزدحمة، حاول بعد دقيقة")
+        raise HTTPException(status_code=503, detail="الخدمة مزدحمة حالياً، حاول بعد دقيقة")
 
     clean_text, top_alert, top_decision, top_opportunity = extract_exec(response.text)
 
-    if not top_alert: top_alert = "راجع المؤشرات المالية في التقرير" if level != "خطر" else "المنشأة في منطقة خطر — راجع التقرير فوراً"
-    if not top_decision: top_decision = "اطّلع على قسم القرار التنفيذي"
-    if not top_opportunity: top_opportunity = "راجع قسم الفرص في التقرير"
+    if not top_alert:
+        top_alert = "راجع المؤشرات المالية في التقرير الكامل" if level != "خطر" else "المنشأة في منطقة خطر — راجع التقرير فوراً"
+    if not top_decision:
+        top_decision = "اطّلع على قسم القرار التنفيذي في التقرير"
+    if not top_opportunity:
+        top_opportunity = "راجع قسم الفرص في التقرير"
 
     entry = Entry(
-        restaurant=data.restaurant, sales_today=data.sales_today, sales_yesterday=data.sales_yesterday,
-        orders=data.orders, items_count=data.items_count, top_item=data.top_item,
-        top_item_2=data.top_item_2 or "", top_item_3=data.top_item_3 or "",
-        hourly_orders=data.hourly_orders or "", peak_hours=data.peak_hours,
-        revenue=data.revenue, expenses=data.expenses, notes=data.notes, plan=plan,
+        restaurant=data.restaurant,
+        sales_today=data.sales_today, sales_yesterday=data.sales_yesterday,
+        orders=data.orders, items_count=data.items_count,
+        top_item=data.top_item,
+        top_item_2=data.top_item_2 or "",
+        top_item_3=data.top_item_3 or "",
+        hourly_orders=data.hourly_orders or "",
+        peak_hours=data.peak_hours,
+        revenue=data.revenue, expenses=data.expenses, notes=data.notes,
+        plan=plan,
         change_percent=percent, profit=profit, margin=margin,
         health_score=health_score, risk_score=risk_score,
         opportunity_score=opportunity_score, data_quality=data_quality,
@@ -445,7 +491,8 @@ OPPORTUNITY: (أهم فرصة — جملة واحدة)
         "profit": profit, "margin": margin, "profit_per_order": profit_per_order,
         "health_score": health_score, "risk_score": risk_score,
         "opportunity_score": opportunity_score, "data_quality": data_quality,
-        "covers_expenses": covers_expenses, "safety_margin": safety_margin, "plan": plan,
+        "covers_expenses": covers_expenses, "safety_margin": safety_margin,
+        "plan": plan,
         "top_alert": top_alert, "top_decision": top_decision, "top_opportunity": top_opportunity,
         "level": level, "icon": icon, "smart_message": clean_text
     }
@@ -454,4 +501,5 @@ OPPORTUNITY: (أهم فرصة — جملة واحدة)
 @app.get("/history")
 def history():
     with Session(engine) as session:
-        return session.query(Entry).all()
+        entries = session.query(Entry).all()
+        return entries
