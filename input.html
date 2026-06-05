@@ -425,11 +425,17 @@
         },
         body: JSON.stringify(data)
       });
-      if (res.status === 401) { window.location.href = "login.html"; return; }
+      if (res.status === 401) {
+        localStorage.removeItem("nabbah_token");
+        localStorage.removeItem("nabbah_name");
+        localStorage.removeItem("nabbah_active");
+        window.location.href = "login.html";
+        return;
+      }
       if (res.status === 403) {
         const err = await res.json();
         meta.innerText = "🔒 " + (err.detail || "يجب الاشتراك أولاً");
-        msg.innerHTML = '<p style="text-align:center">للاستفادة من التحليل، يرجى <a href="index.html#plans" style="color:#065f46;font-weight:700">الاشتراك في إحدى الباقات</a>.</p>';
+        msg.innerHTML = '<div style="text-align:center;padding:20px"><p style="margin-bottom:18px;font-size:16px">للاستفادة من التحليل، اختر إحدى الطرق التالية:</p><a href="trial.html" style="display:inline-block;background:#10b981;color:#fff;padding:13px 28px;border-radius:12px;font-weight:800;text-decoration:none;margin:6px 4px">🎁 لدي كود تجربة</a> <a href="index.html#pricing" style="display:inline-block;background:#065f46;color:#fff;padding:13px 28px;border-radius:12px;font-weight:800;text-decoration:none;margin:6px 4px">💎 الاشتراك في باقة</a></div>';
         return;
       }
       const out = await res.json();
