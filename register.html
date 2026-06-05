@@ -123,8 +123,8 @@
         localStorage.setItem("nabbah_token", out.token);
         localStorage.setItem("nabbah_name", out.name);
         localStorage.setItem("nabbah_active", out.is_active);
-        msg.className = "msg ok"; msg.innerText = "تم إنشاء الحساب! جارٍ التحويل...";
-        window.location.href = "index.html#plans";
+        msg.className = "msg ok"; msg.innerText = "تم إنشاء الحساب! جارٍ التحويل لتفعيل التجربة...";
+        window.location.href = "trial.html";
       }
     } catch (e) {
       msg.className = "msg error"; msg.innerText = "تعذّر الاتصال بالخادم";
