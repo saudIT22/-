@@ -333,6 +333,14 @@ def page_register():
 def page_trial():
     return FileResponse("trial.html")
 
+@app.get("/admin")
+def page_admin():
+    return FileResponse("admin.html")
+
+@app.get("/admin.html")
+def page_admin_html():
+    return FileResponse("admin.html")
+
 
 # ===== التسجيل والدخول =====
 class RegisterData(BaseModel):
@@ -424,6 +432,73 @@ def admin_activate(data: ActivateData):
             "plan": user.plan,
             "active_until": user.subscription_end.isoformat()
         }
+
+
+# ===== لوحة الإدارة =====
+def verify_admin(x_admin_key: str = Header(default="")) -> bool:
+    admin_secret = os.getenv("ADMIN_KEY", "")
+    if not admin_secret or x_admin_key != admin_secret:
+        raise HTTPException(status_code=403, detail="كلمة المسؤول غير صحيحة")
+    return True
+
+@app.get("/admin/users")
+def admin_list_users(_: bool = Depends(verify_admin)):
+    """يرجّع قائمة كل العملاء."""
+    with Session(engine) as s:
+        users = s.exec(select(User)).all()
+        result = []
+        for u in users:
+            # عدد التحاليل
+            entries_count = len(s.exec(select(Entry).where(Entry.user_id == u.id)).all())
+            result.append({
+                "id": u.id,
+                "name": u.name,
+                "email": u.email,
+                "phone": u.phone,
+                "business_name": u.business_name,
+                "plan": u.plan,
+                "is_active": u.is_active,
+                "trial_used": u.trial_used,
+                "subscription_end": u.subscription_end.isoformat() if u.subscription_end else None,
+                "created_at": u.created_at.isoformat() if u.created_at else None,
+                "entries_count": entries_count,
+            })
+        # ترتيب: الأحدث أولاً
+        result.sort(key=lambda x: x["created_at"] or "", reverse=True)
+        return result
+
+class AdminActionData(BaseModel):
+    user_id: int
+    plan: Optional[str] = "executive"
+    days: Optional[int] = 30
+
+@app.post("/admin/activate-user")
+def admin_activate_user(data: AdminActionData, _: bool = Depends(verify_admin)):
+    """تفعيل حساب عميل بـ user_id."""
+    with Session(engine) as s:
+        user = s.get(User, data.user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="المستخدم غير موجود")
+        now = datetime.now()
+        user.is_active = 1
+        user.plan = data.plan
+        user.subscription_start = now
+        user.subscription_end = now + timedelta(days=data.days)
+        s.add(user)
+        s.commit()
+        return {"ok": True, "message": f"تم تفعيل {user.email} لمدة {data.days} يوم"}
+
+@app.post("/admin/deactivate-user")
+def admin_deactivate_user(data: AdminActionData, _: bool = Depends(verify_admin)):
+    """إيقاف حساب عميل."""
+    with Session(engine) as s:
+        user = s.get(User, data.user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="المستخدم غير موجود")
+        user.is_active = 0
+        s.add(user)
+        s.commit()
+        return {"ok": True, "message": f"تم إيقاف {user.email}"}
 
 
 # ===== كود التجربة (تحليل واحد فقط) =====
