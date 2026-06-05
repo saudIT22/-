@@ -236,7 +236,13 @@
       const res = await fetch("/history", {
         headers: { "Authorization": "Bearer " + (localStorage.getItem("nabbah_token") || "") }
       });
-      if (res.status === 401) { window.location.href = "login.html"; return; }
+      if (res.status === 401) {
+        localStorage.removeItem("nabbah_token");
+        localStorage.removeItem("nabbah_name");
+        localStorage.removeItem("nabbah_active");
+        window.location.href = "login.html";
+        return;
+      }
       const data = await res.json();
 
       if (!data || data.length === 0) {
@@ -417,4 +423,4 @@
   load();
 </script>
 </body>
-</html
+</html>
