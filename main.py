@@ -52,8 +52,9 @@ class User(SQLModel, table=True):
     password_hash: str
     business_name: str = ""
     phone: str = ""
-    plan: str = ""                      # فارغ = ما اشترك بعد
-    is_active: int = 0                  # 0 = غير مفعّل، 1 = مفعّل (دفع)
+    plan: str = ""                      # فارغ = ما اشترك بعد | "trial" = في تجربة | "basic/pro/executive" = مشترك
+    is_active: int = 0                  # 0 = غير مفعّل، 1 = مفعّل
+    trial_used: int = 0                 # 0 = ما استخدم تجربة، 1 = استخدمها
     subscription_start: Optional[datetime] = None
     subscription_end: Optional[datetime] = None
     created_at: datetime = Field(default_factory=datetime.now)
@@ -383,6 +384,65 @@ def me(user: User = Depends(get_current_user)):
     }
 
 
+# ===== تفعيل يدوي مؤقت (يُحذف بعد ربط الدفع) =====
+class ActivateData(BaseModel):
+    email: str
+    admin_key: str
+    plan: str = "executive"  # basic / pro / executive
+    days: int = 30
+
+@app.post("/admin-activate")
+def admin_activate(data: ActivateData):
+    """تفعيل حساب يدوياً للاختبار. يتطلّب كلمة مرور المسؤول."""
+    admin_secret = os.getenv("ADMIN_KEY", "")
+    if not admin_secret or data.admin_key != admin_secret:
+        raise HTTPException(status_code=403, detail="كلمة المسؤول غير صحيحة")
+    email = data.email.strip().lower()
+    with Session(engine) as s:
+        user = s.exec(select(User).where(User.email == email)).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="الحساب غير موجود")
+        now = datetime.now()
+        user.is_active = 1
+        user.plan = data.plan
+        user.subscription_start = now
+        user.subscription_end = now + timedelta(days=data.days)
+        s.add(user)
+        s.commit()
+        return {
+            "ok": True,
+            "email": user.email,
+            "plan": user.plan,
+            "active_until": user.subscription_end.isoformat()
+        }
+
+
+# ===== كود التجربة (تحليل واحد فقط) =====
+class TrialData(BaseModel):
+    code: str
+
+@app.post("/redeem-trial")
+def redeem_trial(data: TrialData, user: User = Depends(get_current_user)):
+    """يستخدم كود تجربة لإتاحة تحليل واحد فقط للمستخدم."""
+    trial_code = os.getenv("TRIAL_CODE", "")
+    if not trial_code:
+        raise HTTPException(status_code=503, detail="كود التجربة غير متاح حالياً")
+    if data.code.strip() != trial_code:
+        raise HTTPException(status_code=400, detail="كود التجربة غير صحيح")
+    with Session(engine) as s:
+        u = s.get(User, user.id)
+        if u.trial_used == 1:
+            raise HTTPException(status_code=400, detail="استخدمت تجربتك مسبقاً، اشترك للمتابعة")
+        if u.is_active == 1 and u.plan not in ("", "trial"):
+            raise HTTPException(status_code=400, detail="لديك اشتراك فعّال بالفعل")
+        u.is_active = 1
+        u.plan = "trial"
+        u.trial_used = 1
+        s.add(u)
+        s.commit()
+        return {"ok": True, "message": "تم تفعيل التجربة — لك تحليل واحد فقط"}
+
+
 @app.post("/analyze")
 def analyze(data: SalesData, user: User = Depends(get_current_user)):
     # قفل: لازم يكون مشترك ومفعّل
@@ -613,6 +673,13 @@ OPPORTUNITY: (أهم فرصة — جملة واحدة)
     )
     with Session(engine) as session:
         session.add(entry)
+        # إذا كان في وضع التجربة، اقفله بعد هذا التحليل الوحيد
+        if user.plan == "trial":
+            u = session.get(User, user.id)
+            if u:
+                u.is_active = 0
+                u.plan = "trial_used"
+                session.add(u)
         session.commit()
 
     return {
