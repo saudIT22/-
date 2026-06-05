@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نبّاه — تفعيل التجربة</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{--mint:#10b981;--mint-deep:#047857;--mint-darker:#065f46;--mint-soft:#ecfdf5;
+    --ink:#0f1d18;--ink-soft:#475a52;--ink-muted:#8ba89f;--bg:#f4f9f7;--line:#e0ece8;--red:#ef4444;}
+  *{margin:0;padding:0;box-sizing:border-box;font-family:'Tajawal',sans-serif}
+  body{background:var(--bg);color:var(--ink);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+  body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+    background:radial-gradient(circle at 1px 1px,rgba(16,185,129,.055) 1px,transparent 0);background-size:24px 24px;opacity:.6}
+  .box{position:relative;z-index:1;background:#fff;border:1px solid var(--line);border-radius:22px;
+    padding:38px 34px;width:100%;max-width:440px;box-shadow:0 16px 50px rgba(6,95,70,.1)}
+  .logo{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:8px}
+  .logo .bell{width:46px;height:46px;border-radius:14px;background:var(--mint);display:grid;place-items:center;
+    font-size:24px;transform:rotate(-5deg);box-shadow:0 3px 12px rgba(16,185,129,.35)}
+  .logo .name{font-weight:900;font-size:26px;color:var(--mint-darker)}
+  h1{text-align:center;font-size:20px;font-weight:800;margin:18px 0 4px}
+  .sub{text-align:center;color:var(--ink-muted);font-size:14px;margin-bottom:8px}
+  .info{background:var(--mint-soft);border:1px solid #b6e9d3;border-radius:12px;padding:13px 15px;
+    font-size:13.5px;color:var(--mint-darker);line-height:1.7;margin:18px 0 22px;text-align:center}
+  .field{margin-bottom:16px}
+  .field label{display:block;font-weight:700;font-size:14px;margin-bottom:7px}
+  .field input{width:100%;background:#fff;border:1.5px solid var(--line);border-radius:12px;
+    padding:14px 16px;font-size:16px;color:var(--ink);text-align:center;letter-spacing:1px;
+    font-weight:700;text-transform:uppercase;transition:border-color .2s,box-shadow .2s}
+  .field input:focus{outline:none;border-color:var(--mint);box-shadow:0 0 0 4px var(--mint-soft)}
+  .btn{width:100%;padding:15px;background:var(--mint);color:#fff;border:none;border-radius:13px;
+    font-family:'Tajawal';font-size:16px;font-weight:800;cursor:pointer;margin-top:8px;
+    transition:background .2s;display:flex;align-items:center;justify-content:center;gap:10px}
+  .btn:hover{background:var(--mint-deep)}
+  .btn:disabled{opacity:.6;cursor:not-allowed}
+  .spin{width:18px;height:18px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;
+    border-radius:50%;animation:spin .8s linear infinite;display:none}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .msg{margin-top:14px;padding:12px 15px;border-radius:11px;font-size:14px;font-weight:600;text-align:center;display:none}
+  .msg.error{background:#fef2f2;color:var(--red);display:block}
+  .msg.ok{background:var(--mint-soft);color:var(--mint-darker);display:block}
+  .switch{text-align:center;margin-top:22px;font-size:14px;color:var(--ink-soft)}
+  .switch a{color:var(--mint-darker);font-weight:700;text-decoration:none}
+  .back{text-align:center;margin-top:14px}
+  .back a{color:var(--ink-muted);font-size:13px;text-decoration:none}
+</style>
+</head>
+<body>
+  <div class="box">
+    <div class="logo"><span class="bell">🔔</span><span class="name">نبّاه</span></div>
+    <h1>تفعيل كود التجربة</h1>
+    <p class="sub">جرّب نبّاه قبل الاشتراك</p>
+
+    <div class="info">
+      🎁 الكود التجريبي يمنحك <b>تحليلاً واحداً مجانياً</b><br>
+      بعدها يلزم الاشتراك في إحدى الباقات
+    </div>
+
+    <div class="field">
+      <label>كود التجربة</label>
+      <input id="code" placeholder="NABBAH-TRY-XXXX" autocomplete="off">
+    </div>
+
+    <button class="btn" id="btn" onclick="redeem()">
+      <span class="spin" id="spin"></span>
+      <span id="btn-txt">تفعيل التجربة</span>
+    </button>
+
+    <div class="msg" id="msg"></div>
+
+    <div class="switch">أو <a href="index.html#pricing">شاهد الباقات للاشتراك</a></div>
+    <div class="back"><a href="index.html">← رجوع للرئيسية</a></div>
+  </div>
+
+<script>
+  // لازم يكون مسجّل دخول
+  if (!localStorage.getItem("nabbah_token")) {
+    window.location.href = "login.html";
+  }
+
+  async function redeem() {
+    const code = document.getElementById("code").value.trim();
+    const msg = document.getElementById("msg");
+    const btn = document.getElementById("btn");
+    const spin = document.getElementById("spin");
+    const btnTxt = document.getElementById("btn-txt");
+
+    msg.className = "msg";
+    if (!code) {
+      msg.className = "msg error"; msg.innerText = "اكتب كود التجربة"; return;
+    }
+
+    btn.disabled = true; spin.style.display = "block"; btnTxt.innerText = "جارٍ التفعيل...";
+
+    try {
+      const res = await fetch("/redeem-trial", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + (localStorage.getItem("nabbah_token") || "")
+        },
+        body: JSON.stringify({ code })
+      });
+      if (res.status === 401) {
+        localStorage.removeItem("nabbah_token");
+        localStorage.removeItem("nabbah_name");
+        localStorage.removeItem("nabbah_active");
+        window.location.href = "login.html"; return;
+      }
+      const out = await res.json();
+      if (!res.ok) {
+        msg.className = "msg error"; msg.innerText = out.detail || "تعذّر تفعيل الكود";
+      } else {
+        localStorage.setItem("nabbah_active", 1);
+        msg.className = "msg ok"; msg.innerText = "✅ تم التفعيل! جارٍ التحويل لصفحة التحليل...";
+        setTimeout(() => { window.location.href = "input.html"; }, 1200);
+      }
+    } catch (e) {
+      msg.className = "msg error"; msg.innerText = "تعذّر الاتصال بالخادم";
+    } finally {
+      btn.disabled = false; spin.style.display = "none"; btnTxt.innerText = "تفعيل التجربة";
+    }
+  }
+
+  document.getElementById("code").addEventListener("keydown", e => { if (e.key === "Enter") redeem(); });
+</script>
+</body>
+</html>
