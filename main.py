@@ -91,7 +91,12 @@ class Entry(SQLModel, table=True):
     smart_message: str = ""
     created_at: datetime = Field(default_factory=datetime.now)
 
-engine = create_engine("sqlite:///nabbah.db")
+# قاعدة البيانات: تستخدم PostgreSQL من Railway تلقائياً، أو SQLite محلياً
+db_url = os.getenv("DATABASE_URL", "sqlite:///nabbah.db")
+# Railway يعطي postgres:// لكن SQLAlchemy يحتاج postgresql://
+if db_url.startswith("postgres://"):
+    db_url = db_url.replace("postgres://", "postgresql://", 1)
+engine = create_engine(db_url)
 SQLModel.metadata.create_all(engine)
 
 
