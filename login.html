@@ -70,10 +70,7 @@
   </div>
 
 <script>
-  // لو مسجّل دخول بالفعل، حوّله للوحة القيادة
-  if (localStorage.getItem("nabbah_token")) {
-    window.location.href = "dashboard.html";
-  }
+  // ملاحظة: لا نحوّل تلقائياً حتى لو فيه token قديم — قد يكون منتهي
 
   async function login() {
     const email = document.getElementById("email").value.trim();
