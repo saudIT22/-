@@ -101,7 +101,7 @@
         localStorage.setItem("nabbah_name", out.name);
         localStorage.setItem("nabbah_active", out.is_active);
         msg.className = "msg ok"; msg.innerText = "تم الدخول، جارٍ التحويل...";
-        window.location.href = out.is_active == 1 ? "dashboard.html" : "index.html#plans";
+        window.location.href = out.is_active == 1 ? "dashboard.html" : "trial.html";
       }
     } catch (e) {
       msg.className = "msg error"; msg.innerText = "تعذّر الاتصال بالخادم";
