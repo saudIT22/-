@@ -87,9 +87,7 @@
   </div>
 
 <script>
-  if (localStorage.getItem("nabbah_token")) {
-    window.location.href = "dashboard.html";
-  }
+  // ملاحظة: لا نحوّل تلقائياً حتى لو فيه token قديم
 
   async function register() {
     const name = document.getElementById("name").value.trim();
