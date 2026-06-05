@@ -324,6 +324,10 @@ def page_login():
 def page_register():
     return FileResponse("register.html")
 
+@app.get("/trial.html")
+def page_trial():
+    return FileResponse("trial.html")
+
 
 # ===== التسجيل والدخول =====
 class RegisterData(BaseModel):
