@@ -91,6 +91,23 @@ class Entry(SQLModel, table=True):
     smart_message: str = ""
     created_at: datetime = Field(default_factory=datetime.now)
 
+class ActivityLog(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    actor: str = "النظام"          # من قام بالإجراء (admin/النظام/اسم العميل)
+    action: str = ""               # وصف الإجراء
+    target_email: str = ""         # العميل المتأثر إن وجد
+    created_at: datetime = Field(default_factory=datetime.now)
+
+def log_activity(actor: str, action: str, target_email: str = ""):
+    """يسجّل حدثاً في سجل النشاط."""
+    try:
+        with Session(engine) as s:
+            s.add(ActivityLog(actor=actor, action=action, target_email=target_email))
+            s.commit()
+    except Exception:
+        pass
+
+
 # قاعدة البيانات: تستخدم PostgreSQL من Railway تلقائياً، أو SQLite محلياً
 db_url = os.getenv("DATABASE_URL", "sqlite:///nabbah.db")
 # Railway يعطي postgres:// لكن SQLAlchemy يحتاج postgresql://
@@ -374,6 +391,7 @@ def register(data: RegisterData):
         s.commit()
         s.refresh(user)
         token = create_token(user.id)
+        log_activity("عميل جديد", f"سجّل حساباً جديداً ({user.business_name or 'بدون منشأة'})", user.email)
         return {"token": token, "name": user.name, "is_active": user.is_active, "plan": user.plan}
 
 @app.post("/login")
@@ -467,6 +485,85 @@ def admin_list_users(_: bool = Depends(verify_admin)):
         result.sort(key=lambda x: x["created_at"] or "", reverse=True)
         return result
 
+
+# أسعار الباقات (ريال/شهر)
+PLAN_PRICES = {"basic": 269, "pro": 699, "executive": 1299}
+
+@app.get("/admin/stats")
+def admin_stats(_: bool = Depends(verify_admin)):
+    """إحصائيات شاملة للوحة الإدارة."""
+    now = datetime.now()
+    week_ago = now - timedelta(days=7)
+    with Session(engine) as s:
+        users = s.exec(select(User)).all()
+        total = len(users)
+        active = sum(1 for u in users if u.is_active == 1 and u.plan in ("basic", "pro", "executive"))
+        frozen = sum(1 for u in users if u.is_active == 0 and u.plan in ("basic", "pro", "executive"))
+        trial = sum(1 for u in users if u.plan in ("trial", "trial_used"))
+        expired = sum(1 for u in users if u.subscription_end and u.subscription_end < now and u.plan in ("basic", "pro", "executive"))
+        new_week = sum(1 for u in users if u.created_at and u.created_at >= week_ago)
+        # الإيرادات الشهرية = مجموع أسعار باقات المشتركين النشطين
+        monthly_revenue = sum(
+            PLAN_PRICES.get(u.plan, 0)
+            for u in users
+            if u.is_active == 1 and u.plan in PLAN_PRICES
+            and (not u.subscription_end or u.subscription_end >= now)
+        )
+        total_entries = len(s.exec(select(Entry)).all())
+        return {
+            "total": total,
+            "active": active,
+            "frozen": frozen,
+            "trial": trial,
+            "expired": expired,
+            "new_week": new_week,
+            "monthly_revenue": monthly_revenue,
+            "yearly_revenue": monthly_revenue * 12,
+            "total_entries": total_entries,
+        }
+
+@app.get("/admin/activity")
+def admin_activity(_: bool = Depends(verify_admin)):
+    """آخر 50 حدث في سجل النشاط."""
+    with Session(engine) as s:
+        logs = s.exec(select(ActivityLog)).all()
+        logs.sort(key=lambda x: x.created_at or datetime.min, reverse=True)
+        logs = logs[:50]
+        return [{
+            "actor": l.actor,
+            "action": l.action,
+            "target_email": l.target_email,
+            "created_at": l.created_at.isoformat() if l.created_at else None,
+        } for l in logs]
+
+@app.get("/admin/user/{user_id}")
+def admin_user_detail(user_id: int, _: bool = Depends(verify_admin)):
+    """تفاصيل عميل واحد مع تحاليله."""
+    with Session(engine) as s:
+        u = s.get(User, user_id)
+        if not u:
+            raise HTTPException(status_code=404, detail="العميل غير موجود")
+        entries = s.exec(select(Entry).where(Entry.user_id == user_id)).all()
+        entries.sort(key=lambda x: x.created_at or datetime.min, reverse=True)
+        return {
+            "id": u.id,
+            "name": u.name,
+            "email": u.email,
+            "phone": u.phone,
+            "business_name": u.business_name,
+            "plan": u.plan,
+            "is_active": u.is_active,
+            "trial_used": u.trial_used,
+            "subscription_start": u.subscription_start.isoformat() if u.subscription_start else None,
+            "subscription_end": u.subscription_end.isoformat() if u.subscription_end else None,
+            "created_at": u.created_at.isoformat() if u.created_at else None,
+            "entries": [{
+                "restaurant": e.restaurant,
+                "created_at": e.created_at.isoformat() if e.created_at else None,
+            } for e in entries],
+        }
+
+
 class AdminActionData(BaseModel):
     user_id: int
     plan: Optional[str] = "executive"
@@ -480,12 +577,18 @@ def admin_activate_user(data: AdminActionData, _: bool = Depends(verify_admin)):
         if not user:
             raise HTTPException(status_code=404, detail="المستخدم غير موجود")
         now = datetime.now()
+        old_plan = user.plan
         user.is_active = 1
         user.plan = data.plan
         user.subscription_start = now
         user.subscription_end = now + timedelta(days=data.days)
         s.add(user)
         s.commit()
+        plan_ar = {"basic": "الأساسية", "pro": "الاحترافية", "executive": "التنفيذية"}.get(data.plan, data.plan)
+        if old_plan and old_plan != data.plan:
+            log_activity("المسؤول", f"غيّر الاشتراك إلى {plan_ar} ({data.days} يوم)", user.email)
+        else:
+            log_activity("المسؤول", f"فعّل اشتراك {plan_ar} ({data.days} يوم)", user.email)
         return {"ok": True, "message": f"تم تفعيل {user.email} لمدة {data.days} يوم"}
 
 @app.post("/admin/deactivate-user")
@@ -498,6 +601,7 @@ def admin_deactivate_user(data: AdminActionData, _: bool = Depends(verify_admin)
         user.is_active = 0
         s.add(user)
         s.commit()
+        log_activity("المسؤول", "أوقف الاشتراك", user.email)
         return {"ok": True, "message": f"تم إيقاف {user.email}"}
 
 
@@ -643,7 +747,14 @@ def analyze(data: SalesData, user: User = Depends(get_current_user)):
         top_items_parts.append(data.top_item_3.strip())
     top_items_str = " | ".join(top_items_parts)
 
-    plan = data.plan if data.plan in ("basic", "pro", "executive") else "executive"
+    # الباقة تُحدّد من اشتراك العميل الفعلي (وليس من اختياره في الصفحة)
+    # عميل التجربة يحصل على مستوى الباقة الأساسية
+    if user.plan in ("basic", "pro", "executive"):
+        plan = user.plan
+    elif user.plan == "trial":
+        plan = "basic"
+    else:
+        plan = "basic"
     sections = get_sections(plan).format(
         level=level, health_score=health_score, risk_score=risk_score,
         opportunity_score=opportunity_score, data_quality=data_quality, quality_note=quality_note
@@ -765,6 +876,8 @@ OPPORTUNITY: (أهم فرصة — جملة واحدة)
                 u.plan = "trial_used"
                 session.add(u)
         session.commit()
+
+    log_activity(user.name or "عميل", f"ولّد تقريراً جديداً ({data.restaurant})", user.email)
 
     return {
         "restaurant": data.restaurant, "change_percent": percent, "avg_ticket": avg_ticket,
