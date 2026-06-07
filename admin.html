@@ -39,8 +39,8 @@
   /* إحصائيات */
   .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
   @media(max-width:760px){.stats{grid-template-columns:repeat(2,1fr)}}
-  .stat{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px}
-  .stat .lbl{color:var(--ink-muted);font-size:13px;font-weight:600;margin-bottom:6px}
+  .stat{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px}
+  .stat .lbl{color:var(--ink-muted);font-size:12.5px;font-weight:600;margin-bottom:6px}
   .stat .val{font-size:26px;font-weight:900;color:var(--mint-darker)}
 
   /* جدول */
@@ -113,8 +113,12 @@
     <div class="stats">
       <div class="stat"><div class="lbl">إجمالي العملاء</div><div class="val" id="s-total">—</div></div>
       <div class="stat"><div class="lbl">مشتركين فعّالين</div><div class="val" id="s-active">—</div></div>
+      <div class="stat"><div class="lbl">مجمّدين / موقوفين</div><div class="val" id="s-frozen">—</div></div>
       <div class="stat"><div class="lbl">حسابات تجريبية</div><div class="val" id="s-trial">—</div></div>
-      <div class="stat"><div class="lbl">إجمالي التحاليل</div><div class="val" id="s-entries">—</div></div>
+      <div class="stat"><div class="lbl">اشتراكات منتهية</div><div class="val" id="s-expired">—</div></div>
+      <div class="stat"><div class="lbl">عملاء جدد (الأسبوع)</div><div class="val" id="s-new">—</div></div>
+      <div class="stat"><div class="lbl">الإيراد الشهري</div><div class="val" id="s-monthly" style="font-size:20px">—</div></div>
+      <div class="stat"><div class="lbl">الإيراد السنوي (متوقّع)</div><div class="val" id="s-yearly" style="font-size:20px">—</div></div>
     </div>
 
     <div class="table-box">
@@ -140,6 +144,15 @@
           <tbody id="users-body"></tbody>
         </table>
       </div>
+    </div>
+
+    <!-- سجل النشاط -->
+    <div class="table-box" style="margin-top:20px">
+      <div class="table-head">
+        <h3>📋 سجل النشاط</h3>
+        <button class="refresh" onclick="loadActivity()">🔄 تحديث</button>
+      </div>
+      <div id="activity-list" style="padding:8px 22px 18px"></div>
     </div>
   </div>
 </div>
@@ -170,6 +183,17 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- مودال تفاصيل العميل -->
+<div class="modal-back" id="detail-modal" onclick="if(event.target===this)closeDetail()">
+  <div class="modal" style="max-width:480px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <h3 style="margin:0">تفاصيل العميل</h3>
+      <button onclick="closeDetail()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#8ba89f">×</button>
+    </div>
+    <div id="detail-body" style="font-size:14px;line-height:1.9;color:#0f1d18"></div>
+  </div>
+</div>
 
 <script>
   let adminKey = sessionStorage.getItem("nabbah_admin_key") || "";
@@ -217,21 +241,46 @@
       }
       const users = await res.json();
       renderUsers(users);
-      updateStats(users);
+      loadStats();
+      loadActivity();
     } catch (e) {
       toast("تعذّر الاتصال بالخادم", true);
     }
   }
 
-  function updateStats(users) {
-    const total = users.length;
-    const active = users.filter(u => u.is_active === 1 && u.plan !== "trial").length;
-    const trial = users.filter(u => u.plan === "trial" || u.plan === "trial_used").length;
-    const entries = users.reduce((s, u) => s + (u.entries_count || 0), 0);
-    document.getElementById("s-total").innerText = total;
-    document.getElementById("s-active").innerText = active;
-    document.getElementById("s-trial").innerText = trial;
-    document.getElementById("s-entries").innerText = entries;
+  async function loadStats() {
+    try {
+      const res = await fetch("/admin/stats", { headers: { "X-Admin-Key": adminKey } });
+      const st = await res.json();
+      document.getElementById("s-total").innerText = st.total;
+      document.getElementById("s-active").innerText = st.active;
+      document.getElementById("s-frozen").innerText = st.frozen;
+      document.getElementById("s-trial").innerText = st.trial;
+      document.getElementById("s-expired").innerText = st.expired;
+      document.getElementById("s-new").innerText = st.new_week;
+      document.getElementById("s-monthly").innerText = st.monthly_revenue.toLocaleString() + " ﷼";
+      document.getElementById("s-yearly").innerText = st.yearly_revenue.toLocaleString() + " ﷼";
+    } catch (e) {}
+  }
+
+  async function loadActivity() {
+    try {
+      const res = await fetch("/admin/activity", { headers: { "X-Admin-Key": adminKey } });
+      const logs = await res.json();
+      const box = document.getElementById("activity-list");
+      if (!logs || logs.length === 0) {
+        box.innerHTML = '<p style="color:#8ba89f;padding:14px 0">لا يوجد نشاط بعد</p>';
+        return;
+      }
+      box.innerHTML = logs.map(l => {
+        const d = l.created_at ? new Date(l.created_at) : null;
+        const dateStr = d ? d.toLocaleDateString("ar-SA") + " · " + d.toLocaleTimeString("ar-SA", {hour:"2-digit",minute:"2-digit"}) : "";
+        return `<div style="display:flex;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid #f0f5f3">
+          <div><b style="color:#065f46">${escape(l.actor)}</b> ${escape(l.action)}${l.target_email ? ' <span style="color:#8ba89f">— ' + escape(l.target_email) + '</span>' : ''}</div>
+          <div style="color:#8ba89f;font-size:12.5px;white-space:nowrap">${dateStr}</div>
+        </div>`;
+      }).join("");
+    } catch (e) {}
   }
 
   function renderUsers(users) {
@@ -253,7 +302,7 @@
         ? `<button class="act-btn act-off" onclick="deactivate(${u.id},'${escape(u.email)}')">إيقاف</button>`
         : `<button class="act-btn act-on" onclick="openModal(${u.id},'${escape(u.email)}')">تفعيل</button>`;
       return `<tr>
-        <td><b>${escape(u.name)}</b></td>
+        <td><b style="color:#065f46;cursor:pointer;text-decoration:underline" onclick="showDetail(${u.id})">${escape(u.name)}</b></td>
         <td>${escape(u.email)}</td>
         <td>${escape(u.phone || "—")}</td>
         <td>${escape(u.business_name || "—")}</td>
@@ -306,6 +355,42 @@
       if (res.ok) { toast(out.message); loadUsers(); }
       else toast(out.detail || "فشل الإيقاف", true);
     } catch (e) { toast("خطأ بالاتصال", true); }
+  }
+
+  async function showDetail(userId) {
+    try {
+      const res = await fetch("/admin/user/" + userId, { headers: { "X-Admin-Key": adminKey } });
+      if (!res.ok) { toast("تعذّر جلب التفاصيل", true); return; }
+      const u = await res.json();
+      const planNames = {"":"بدون","basic":"الأساسية","pro":"الاحترافية","executive":"التنفيذية","trial":"تجربة","trial_used":"تجربة منتهية"};
+      const fmt = d => d ? new Date(d).toLocaleDateString("ar-SA") : "—";
+      const statusTxt = u.is_active === 1 ? (u.plan === "trial" ? "تجريبي نشط" : "نشط") : (u.plan === "trial_used" ? "تجربة منتهية" : "موقوف");
+      let entriesHtml = "";
+      if (u.entries && u.entries.length) {
+        entriesHtml = '<div style="margin-top:12px"><b>التحاليل (' + u.entries.length + '):</b><div style="max-height:140px;overflow-y:auto;margin-top:6px">' +
+          u.entries.map(e => `<div style="padding:6px 0;border-bottom:1px solid #f0f5f3;font-size:13px">📊 ${escape(e.restaurant)} <span style="color:#8ba89f">— ${fmt(e.created_at)}</span></div>`).join("") +
+          '</div></div>';
+      } else {
+        entriesHtml = '<div style="margin-top:12px;color:#8ba89f">لا توجد تحاليل بعد</div>';
+      }
+      document.getElementById("detail-body").innerHTML = `
+        <div><b>الاسم:</b> ${escape(u.name)}</div>
+        <div><b>البريد:</b> ${escape(u.email)}</div>
+        <div><b>الجوال:</b> ${escape(u.phone || "—")}</div>
+        <div><b>المنشأة:</b> ${escape(u.business_name || "—")}</div>
+        <div><b>الباقة:</b> ${planNames[u.plan] || u.plan}</div>
+        <div><b>الحالة:</b> ${statusTxt}</div>
+        <div><b>تاريخ التسجيل:</b> ${fmt(u.created_at)}</div>
+        <div><b>بداية الاشتراك:</b> ${fmt(u.subscription_start)}</div>
+        <div><b>نهاية الاشتراك:</b> ${fmt(u.subscription_end)}</div>
+        ${entriesHtml}
+      `;
+      document.getElementById("detail-modal").classList.add("show");
+    } catch (e) { toast("خطأ بالاتصال", true); }
+  }
+
+  function closeDetail() {
+    document.getElementById("detail-modal").classList.remove("show");
   }
 
   function toast(msg, isErr) {
