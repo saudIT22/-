@@ -338,6 +338,10 @@ def page_dashboard():
 def page_charts():
     return FileResponse("charts.html")
 
+@app.get("/trends.html")
+def page_trends():
+    return FileResponse("trends.html")
+
 @app.get("/login.html")
 def page_login():
     return FileResponse("login.html")
@@ -898,3 +902,54 @@ def history(user: User = Depends(get_current_user)):
             select(Entry).where(Entry.user_id == user.id)
         ).all()
         return entries
+
+
+@app.get("/trends")
+def trends(user: User = Depends(get_current_user)):
+    """تطوّر مؤشرات المنشأة عبر الوقت + مقارنة آخر تحليلين."""
+    with Session(engine) as session:
+        entries = session.exec(
+            select(Entry).where(Entry.user_id == user.id)
+        ).all()
+        entries.sort(key=lambda e: e.created_at or datetime.min)
+
+        points = [{
+            "date": e.created_at.isoformat() if e.created_at else None,
+            "restaurant": e.restaurant,
+            "sales": e.sales_today,
+            "revenue": e.revenue,
+            "expenses": e.expenses,
+            "profit": e.profit,
+            "margin": e.margin,
+            "orders": e.orders,
+            "health_score": e.health_score,
+            "risk_score": e.risk_score,
+            "opportunity_score": e.opportunity_score,
+        } for e in entries]
+
+        # المقارنة بين آخر تحليلين
+        comparison = None
+        if len(entries) >= 2:
+            last = entries[-1]
+            prev = entries[-2]
+            def delta(now, before):
+                diff = now - before
+                pct = round((diff / before) * 100, 1) if before else 0
+                return {"now": now, "before": before, "diff": round(diff, 1), "pct": pct,
+                        "dir": "up" if diff > 0 else ("down" if diff < 0 else "same")}
+            comparison = {
+                "from_date": prev.created_at.isoformat() if prev.created_at else None,
+                "to_date": last.created_at.isoformat() if last.created_at else None,
+                "sales": delta(last.sales_today, prev.sales_today),
+                "revenue": delta(last.revenue, prev.revenue),
+                "expenses": delta(last.expenses, prev.expenses),
+                "profit": delta(last.profit, prev.profit),
+                "margin": delta(last.margin, prev.margin),
+                "health_score": delta(last.health_score, prev.health_score),
+            }
+
+        return {
+            "count": len(points),
+            "points": points,
+            "comparison": comparison,
+        }
