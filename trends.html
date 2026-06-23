@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نبّاه — تطوّر منشأتك</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root{--mint:#10b981;--mint-deep:#047857;--mint-darker:#065f46;--mint-soft:#ecfdf5;
+    --ink:#0f1d18;--ink-soft:#475a52;--ink-muted:#8ba89f;--bg:#f4f9f7;--line:#e0ece8;
+    --red:#ef4444;--red-soft:#fef2f2;--amber:#f59e0b;}
+  *{margin:0;padding:0;box-sizing:border-box;font-family:'Tajawal',sans-serif}
+  body{background:var(--bg);color:var(--ink);min-height:100vh;padding:20px}
+  .wrap{max-width:1100px;margin:0 auto}
+  nav{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 22px;
+    margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+  .logo{display:flex;align-items:center;gap:9px}
+  .logo .bell{width:36px;height:36px;border-radius:10px;background:var(--mint);display:grid;place-items:center;font-size:19px;transform:rotate(-5deg)}
+  .logo .name{font-weight:900;font-size:19px;color:var(--mint-darker)}
+  .nav-links{display:flex;gap:18px;align-items:center}
+  .nav-links a{color:var(--ink-soft);font-weight:600;font-size:14px;text-decoration:none}
+  .nav-links a:hover{color:var(--mint-deep)}
+  .nav-links a.active{color:var(--mint-darker);font-weight:800}
+  h1{font-size:24px;font-weight:900;margin-bottom:6px}
+  .sub{color:var(--ink-muted);font-size:15px;margin-bottom:22px}
+
+  .empty{background:#fff;border:1px solid var(--line);border-radius:18px;padding:60px 30px;text-align:center}
+  .empty .ic{font-size:50px;margin-bottom:16px}
+  .empty h3{font-size:20px;margin-bottom:10px}
+  .empty p{color:var(--ink-muted);margin-bottom:22px}
+  .btn{display:inline-block;background:var(--mint);color:#fff;padding:13px 26px;border-radius:12px;
+    font-weight:800;text-decoration:none;border:none;cursor:pointer;font-family:'Tajawal';font-size:15px}
+  .btn:hover{background:var(--mint-deep)}
+
+  /* بطاقات المقارنة */
+  .cmp-head{font-size:17px;font-weight:800;margin-bottom:6px}
+  .cmp-sub{color:var(--ink-muted);font-size:13.5px;margin-bottom:16px}
+  .cmp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:28px}
+  @media(max-width:720px){.cmp-grid{grid-template-columns:repeat(2,1fr)}}
+  .cmp{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px}
+  .cmp .lbl{color:var(--ink-muted);font-size:13px;font-weight:600;margin-bottom:8px}
+  .cmp .val{font-size:22px;font-weight:900;color:var(--ink)}
+  .cmp .chg{display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:800;
+    padding:3px 9px;border-radius:7px;margin-top:8px}
+  .up{background:var(--mint-soft);color:var(--mint-darker)}
+  .down{background:var(--red-soft);color:var(--red)}
+  .same{background:#f1f5f4;color:var(--ink-muted)}
+  /* للمصروفات: الصعود سيء */
+  .up-bad{background:var(--red-soft);color:var(--red)}
+  .down-good{background:var(--mint-soft);color:var(--mint-darker)}
+
+  .card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:22px;margin-bottom:18px}
+  .card h3{font-size:16px;font-weight:800;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+  .chart-box{position:relative;height:280px}
+  @media(max-width:600px){.chart-box{height:230px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav>
+    <div class="logo"><span class="bell">🔔</span><span class="name">نبّاه</span></div>
+    <div class="nav-links">
+      <a href="input.html">تحليل جديد</a>
+      <a href="dashboard.html">لوحة القيادة</a>
+      <a href="trends.html" class="active">التطوّر</a>
+      <a href="#" onclick="logout();return false">خروج</a>
+    </div>
+  </nav>
+
+  <h1>📈 تطوّر منشأتك</h1>
+  <p class="sub">كيف تغيّرت أرقامك عبر الوقت — وأين تتجه.</p>
+
+  <div id="content"></div>
+</div>
+
+<script>
+  if (!localStorage.getItem("nabbah_token")) {
+    window.location.href = "login.html";
+  }
+
+  function logout() {
+    localStorage.removeItem("nabbah_token");
+    localStorage.removeItem("nabbah_name");
+    localStorage.removeItem("nabbah_active");
+    window.location.href = "index.html";
+  }
+
+  const token = localStorage.getItem("nabbah_token");
+  let charts = [];
+
+  async function load() {
+    try {
+      const res = await fetch("/trends", { headers: { "Authorization": "Bearer " + token } });
+      if (res.status === 401) {
+        localStorage.removeItem("nabbah_token"); window.location.href = "login.html"; return;
+      }
+      const data = await res.json();
+      render(data);
+    } catch (e) {
+      document.getElementById("content").innerHTML = '<div class="empty"><div class="ic">⚠️</div><h3>تعذّر تحميل البيانات</h3><p>حاول مرة أخرى</p></div>';
+    }
+  }
+
+  function fmt(n) { return Number(n||0).toLocaleString("en-US"); }
+  function dateLabel(iso) {
+    if (!iso) return "";
+    const d = new Date(iso);
+    return d.toLocaleDateString("ar-SA", { month: "short", day: "numeric" });
+  }
+
+  function chip(d, isExpense) {
+    // للمصروفات الصعود سيء
+    let cls;
+    if (d.dir === "same") cls = "same";
+    else if (isExpense) cls = d.dir === "up" ? "up-bad" : "down-good";
+    else cls = d.dir === "up" ? "up" : "down";
+    const arrow = d.dir === "up" ? "▲" : (d.dir === "down" ? "▼" : "—");
+    const sign = d.pct > 0 ? "+" : "";
+    return `<span class="chg ${cls}">${arrow} ${sign}${d.pct}%</span>`;
+  }
+
+  function render(data) {
+    const c = document.getElementById("content");
+
+    if (!data.count || data.count === 0) {
+      c.innerHTML = '<div class="empty"><div class="ic">📊</div><h3>لا توجد تحاليل بعد</h3><p>أنشئ تحليلك الأول لتبدأ رحلة متابعة منشأتك.</p><a href="input.html" class="btn">ابدأ تحليلك الأول</a></div>';
+      return;
+    }
+
+    if (data.count === 1) {
+      c.innerHTML = '<div class="empty"><div class="ic">🌱</div><h3>تحليل واحد حتى الآن</h3><p>أنشئ تحليلاً ثانياً لتظهر المقارنة وتتبّع تطوّر أرقامك عبر الوقت.</p><a href="input.html" class="btn">أنشئ تحليلاً جديداً</a></div>';
+      return;
+    }
+
+    let html = "";
+
+    // المقارنة
+    const cmp = data.comparison;
+    if (cmp) {
+      html += `<div class="cmp-head">آخر مقارنة</div>
+        <div class="cmp-sub">من ${dateLabel(cmp.from_date)} إلى ${dateLabel(cmp.to_date)}</div>
+        <div class="cmp-grid">
+          <div class="cmp"><div class="lbl">المبيعات</div><div class="val">${fmt(cmp.sales.now)}</div>${chip(cmp.sales)}</div>
+          <div class="cmp"><div class="lbl">الإيرادات</div><div class="val">${fmt(cmp.revenue.now)}</div>${chip(cmp.revenue)}</div>
+          <div class="cmp"><div class="lbl">المصروفات</div><div class="val">${fmt(cmp.expenses.now)}</div>${chip(cmp.expenses, true)}</div>
+          <div class="cmp"><div class="lbl">الربح</div><div class="val">${fmt(cmp.profit.now)}</div>${chip(cmp.profit)}</div>
+          <div class="cmp"><div class="lbl">هامش الربح</div><div class="val">${cmp.margin.now}%</div>${chip(cmp.margin)}</div>
+          <div class="cmp"><div class="lbl">درجة الصحة</div><div class="val">${cmp.health_score.now}</div>${chip(cmp.health_score)}</div>
+        </div>`;
+    }
+
+    // الرسوم
+    html += `
+      <div class="card"><h3>💰 المبيعات والإيرادات</h3><div class="chart-box"><canvas id="c-revenue"></canvas></div></div>
+      <div class="card"><h3>📊 الربح والمصروفات</h3><div class="chart-box"><canvas id="c-profit"></canvas></div></div>
+      <div class="card"><h3>❤️ درجة صحة المنشأة</h3><div class="chart-box"><canvas id="c-health"></canvas></div></div>
+    `;
+    c.innerHTML = html;
+
+    const labels = data.points.map(p => dateLabel(p.date));
+    const green = "#10b981", greenSoft = "rgba(16,185,129,.12)";
+    const red = "#ef4444", redSoft = "rgba(239,68,68,.12)";
+    const blue = "#3b82f6", blueSoft = "rgba(59,130,246,.12)";
+
+    const baseOpts = {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { font: { family: "Tajawal", size: 13 } } } },
+      scales: {
+        x: { ticks: { font: { family: "Tajawal" } }, grid: { display: false } },
+        y: { ticks: { font: { family: "Tajawal" } }, grid: { color: "#f0f5f3" } }
+      }
+    };
+
+    charts.push(new Chart(document.getElementById("c-revenue"), {
+      type: "line",
+      data: { labels, datasets: [
+        { label: "المبيعات", data: data.points.map(p => p.sales), borderColor: green, backgroundColor: greenSoft, fill: true, tension: .35, borderWidth: 2.5 },
+        { label: "الإيرادات", data: data.points.map(p => p.revenue), borderColor: blue, backgroundColor: blueSoft, fill: true, tension: .35, borderWidth: 2.5 }
+      ]},
+      options: baseOpts
+    }));
+
+    charts.push(new Chart(document.getElementById("c-profit"), {
+      type: "bar",
+      data: { labels, datasets: [
+        { label: "الربح", data: data.points.map(p => p.profit), backgroundColor: green, borderRadius: 6 },
+        { label: "المصروفات", data: data.points.map(p => p.expenses), backgroundColor: red, borderRadius: 6 }
+      ]},
+      options: baseOpts
+    }));
+
+    charts.push(new Chart(document.getElementById("c-health"), {
+      type: "line",
+      data: { labels, datasets: [
+        { label: "درجة الصحة", data: data.points.map(p => p.health_score), borderColor: green, backgroundColor: greenSoft, fill: true, tension: .35, borderWidth: 3, pointRadius: 5, pointBackgroundColor: green }
+      ]},
+      options: { ...baseOpts, scales: { ...baseOpts.scales, y: { ...baseOpts.scales.y, min: 0, max: 100 } } }
+    }));
+  }
+
+  load();
+</script>
+</body>
+</html>
