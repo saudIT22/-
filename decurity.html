@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نبّاه — الأمان</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{--mint:#10b981;--mint-darker:#065f46;--mint-soft:#ecfdf5;--ink:#0f1d18;--ink-soft:#475a52;--ink-muted:#8ba89f;--bg:#f4f9f7;--line:#e0ece8;}
+  *{margin:0;padding:0;box-sizing:border-box;font-family:'Tajawal',sans-serif}
+  body{background:var(--bg);color:var(--ink);padding:20px}
+  .wrap{max-width:820px;margin:0 auto}
+  nav{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 22px;margin-bottom:28px;display:flex;align-items:center;justify-content:space-between}
+  .logo{display:flex;align-items:center;gap:9px}
+  .logo .bell{width:36px;height:36px;border-radius:10px;background:var(--mint);display:grid;place-items:center;font-size:19px;transform:rotate(-5deg)}
+  .logo .name{font-weight:900;font-size:19px;color:var(--mint-darker)}
+  .back{color:var(--mint-darker);font-weight:700;text-decoration:none;font-size:14px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:36px 40px}
+  @media(max-width:600px){.card{padding:24px 20px}}
+  h1{font-size:26px;font-weight:900;margin-bottom:6px}
+  .date{color:var(--ink-muted);font-size:13.5px;margin-bottom:28px}
+  h2{font-size:17px;font-weight:800;color:var(--mint-darker);margin:28px 0 12px;padding-right:14px;border-right:3px solid var(--mint)}
+  p{color:var(--ink-soft);font-size:15px;line-height:1.9;margin-bottom:12px}
+  ul{padding-right:22px;margin-bottom:12px}
+  ul li{color:var(--ink-soft);font-size:15px;line-height:1.9;margin-bottom:6px}
+  .sec-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin:18px 0}
+  @media(max-width:580px){.sec-grid{grid-template-columns:1fr}}
+  .sec-card{background:var(--mint-soft);border:1px solid #b6e9d3;border-radius:14px;padding:20px}
+  .sec-card .ic{font-size:28px;margin-bottom:8px}
+  .sec-card h3{font-size:15px;font-weight:800;color:var(--mint-darker);margin-bottom:6px}
+  .sec-card p{font-size:13.5px;color:#047857;margin:0}
+  .report{background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:16px 18px;margin-top:20px}
+  .report p{margin:0;color:#9a3412;font-size:14px}
+  footer{text-align:center;margin-top:28px;color:var(--ink-muted);font-size:13px}
+  footer a{color:var(--mint-darker);text-decoration:none;font-weight:600}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav>
+    <div class="logo"><span class="bell">🔔</span><span class="name">نبّاه</span></div>
+    <a href="index.html" class="back">← رجوع للرئيسية</a>
+  </nav>
+  <div class="card">
+    <h1>🔐 الأمان في نبّاه</h1>
+    <p class="date">آخر تحديث: يونيو ٢٠٢٦</p>
+
+    <p>أمان بياناتك ومعلوماتك المالية أولويتنا القصوى. إليك كيف نحمي منصّتنا:</p>
+
+    <div class="sec-grid">
+      <div class="sec-card">
+        <div class="ic">🔒</div>
+        <h3>تشفير الاتصالات</h3>
+        <p>جميع الاتصالات بين متصفّحك وخوادمنا مشفّرة بـ HTTPS/TLS</p>
+      </div>
+      <div class="sec-card">
+        <div class="ic">🛡️</div>
+        <h3>حماية كلمات المرور</h3>
+        <p>نطبّق إجراءات أمنية مناسبة لحماية كلمات المرور وعدم تخزينها بصيغة قابلة للقراءة</p>
+      </div>
+      <div class="sec-card">
+        <div class="ic">🎫</div>
+        <h3>جلسات آمنة</h3>
+        <p>رموز الدخول مؤقتة ومشفّرة، وتنتهي تلقائياً بعد فترة محدّدة</p>
+      </div>
+      <div class="sec-card">
+        <div class="ic">☁️</div>
+        <h3>استضافة موثوقة</h3>
+        <p>بياناتك محفوظة على بنية تحتية سحابية موثوقة مع نسخ احتياطية منتظمة</p>
+      </div>
+      <div class="sec-card">
+        <div class="ic">👤</div>
+        <h3>عزل البيانات</h3>
+        <p>كل مستخدم يرى بياناته فقط — لا يمكن لأي مستخدم الوصول لبيانات آخر</p>
+      </div>
+      <div class="sec-card">
+        <div class="ic">🔍</div>
+        <h3>مراقبة مستمرة</h3>
+        <p>نراقب الأنشطة غير الاعتيادية للكشف المبكر عن أي تهديدات أمنية</p>
+      </div>
+    </div>
+
+    <h2>مسؤوليتك كمستخدم</h2>
+    <ul>
+      <li>استخدم كلمة مرور قوية وفريدة</li>
+      <li>لا تشارك بيانات دخولك مع أحد</li>
+      <li>سجّل خروجك عند استخدام أجهزة مشتركة</li>
+      <li>تواصل معنا فوراً إذا اشتبهت بأي نشاط غير معتاد على حسابك</li>
+    </ul>
+
+    <div class="report">
+      <p>🐛 <strong>اكتشفت ثغرة أمنية؟</strong> نقدّر مساهمتك — أبلغنا على nabbah33@gmail.com وسنتعامل مع بلاغك بجدية تامة.</p>
+    </div>
+  </div>
+  <footer>
+    <p>© ٢٠٢٦ نبّاه &nbsp;|&nbsp; <a href="privacy.html">الخصوصية</a> &nbsp;|&nbsp; <a href="terms.html">الشروط</a> &nbsp;|&nbsp; <a href="contact.html">تواصل</a></p>
+  </footer>
+</div>
+</body>
+</html>
