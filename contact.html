@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نبّاه — تواصل معنا</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{--mint:#10b981;--mint-deep:#047857;--mint-darker:#065f46;--mint-soft:#ecfdf5;
+    --ink:#0f1d18;--ink-soft:#475a52;--ink-muted:#8ba89f;--bg:#f4f9f7;--line:#e0ece8;--red:#ef4444;}
+  *{margin:0;padding:0;box-sizing:border-box;font-family:'Tajawal',sans-serif}
+  body{background:var(--bg);color:var(--ink);padding:20px}
+  .wrap{max-width:820px;margin:0 auto}
+  nav{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 22px;
+    margin-bottom:28px;display:flex;align-items:center;justify-content:space-between}
+  .logo{display:flex;align-items:center;gap:9px}
+  .logo .bell{width:36px;height:36px;border-radius:10px;background:var(--mint);display:grid;place-items:center;font-size:19px;transform:rotate(-5deg)}
+  .logo .name{font-weight:900;font-size:19px;color:var(--mint-darker)}
+  .back{color:var(--mint-darker);font-weight:700;text-decoration:none;font-size:14px}
+  h1{font-size:26px;font-weight:900;margin-bottom:6px}
+  .sub{color:var(--ink-muted);font-size:15px;margin-bottom:28px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:24px}
+  @media(max-width:640px){.grid{grid-template-columns:1fr}}
+  .channel{background:#fff;border:1px solid var(--line);border-radius:16px;padding:26px;
+    display:flex;flex-direction:column;gap:10px}
+  .channel .ic{font-size:36px}
+  .channel h3{font-size:17px;font-weight:800;color:var(--ink)}
+  .channel p{color:var(--ink-muted);font-size:14px;line-height:1.7}
+  .channel a{display:inline-flex;align-items:center;gap:8px;background:var(--mint);color:#fff;
+    padding:12px 20px;border-radius:11px;font-weight:800;text-decoration:none;margin-top:4px;
+    font-size:14.5px;transition:background .2s}
+  .channel a:hover{background:var(--mint-deep)}
+  .channel a.ghost{background:#fff;color:var(--mint-darker);border:1.5px solid var(--line)}
+  .channel a.ghost:hover{border-color:var(--mint)}
+  .hours{background:#fff;border:1px solid var(--line);border-radius:16px;padding:24px;margin-bottom:24px}
+  .hours h3{font-size:16px;font-weight:800;margin-bottom:14px}
+  .hour-row{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);font-size:14.5px}
+  .hour-row:last-child{border-bottom:none}
+  .hour-row .day{color:var(--ink-soft);font-weight:600}
+  .hour-row .time{color:var(--mint-darker);font-weight:700}
+  .faq{background:#fff;border:1px solid var(--line);border-radius:16px;padding:24px}
+  .faq h3{font-size:16px;font-weight:800;margin-bottom:16px}
+  .q{border-bottom:1px solid var(--line);padding:14px 0}
+  .q:last-child{border-bottom:none}
+  .q .question{font-weight:700;font-size:15px;margin-bottom:7px}
+  .q .answer{color:var(--ink-soft);font-size:14px;line-height:1.8}
+  footer{text-align:center;margin-top:28px;color:var(--ink-muted);font-size:13px}
+  footer a{color:var(--mint-darker);text-decoration:none;font-weight:600}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav>
+    <div class="logo"><span class="bell">🔔</span><span class="name">نبّاه</span></div>
+    <a href="index.html" class="back">← رجوع للرئيسية</a>
+  </nav>
+
+  <h1>تواصل معنا</h1>
+  <p class="sub">نحن هنا للمساعدة — اختر الطريقة الأنسب لك.</p>
+
+  <div class="grid">
+    <div class="channel">
+      <div class="ic">💬</div>
+      <h3>واتساب</h3>
+      <p>الأسرع للرد — متاح خلال ساعات العمل. للاستفسارات والدعم الفني وطلبات الاشتراك.</p>
+      <a href="https://wa.me/966559986553?text=السلام%20عليكم،%20لدي%20استفسار%20عن%20نبّاه" target="_blank">ابدأ المحادثة</a>
+    </div>
+    <div class="channel">
+      <div class="ic">📧</div>
+      <h3>البريد الإلكتروني</h3>
+      <p>للمراسلات الرسمية والشراكات والطلبات التقنية. يُرد خلال ٢٤ ساعة في أيام العمل.</p>
+      <a href="mailto:nabbah33@gmail.com" class="ghost">nabbah33@gmail.com</a>
+    </div>
+  </div>
+
+  <div class="hours">
+    <h3>⏰ أوقات الدعم</h3>
+    <div class="hour-row"><span class="day">الأحد — الخميس</span><span class="time">٩ صباحاً — ٩ مساءً</span></div>
+    <div class="hour-row"><span class="day">الجمعة — السبت</span><span class="time">١٢ ظهراً — ٦ مساءً</span></div>
+  </div>
+
+  <div class="faq">
+    <h3>❓ أسئلة شائعة</h3>
+    <div class="q">
+      <div class="question">كيف أبدأ التجربة؟</div>
+      <div class="answer">سجّل حساباً مجانياً، ثم ادخل كود التجربة في صفحة تفعيل التجربة. ستحصل على تحليل واحد مجاني.</div>
+    </div>
+    <div class="q">
+      <div class="question">هل يمكنني إلغاء اشتراكي؟</div>
+      <div class="answer">نعم، تواصل معنا عبر واتساب أو البريد وسنوقف تجديد اشتراكك فوراً.</div>
+    </div>
+    <div class="q">
+      <div class="question">ما الفرق بين الباقات؟</div>
+      <div class="answer">الأساسية: ملخص سريع ومؤشرات أساسية (٢٦٩ ريال). الاحترافية: تحليل معمّق وأسباب جذرية (٦٩٩ ريال). التنفيذية: تقرير شامل + توقعات + خطة ٩٠ يوم (١٢٩٩ ريال).</div>
+    </div>
+    <div class="q">
+      <div class="question">هل التحاليل سرية؟</div>
+      <div class="answer">نعم تماماً. كل عميل يرى تحاليله فقط، ولا نشارك بياناتك مع أي طرف.</div>
+    </div>
+    <div class="q">
+      <div class="question">هل نبّاه بديل عن المحاسب؟</div>
+      <div class="answer">لا — نبّاه يُكمّل عمل المحاسب. المحاسب يسجّل ويوثّق، ونبّاه يحلّل ويعطيك قرار يومي سريع.</div>
+    </div>
+  </div>
+
+  <footer>
+    <p>© ٢٠٢٦ نبّاه — جميع الحقوق محفوظة &nbsp;|&nbsp;
+    <a href="privacy.html">سياسة الخصوصية</a> &nbsp;|&nbsp;
+    <a href="terms.html">شروط الاستخدام</a></p>
+  </footer>
+</div>
+</body>
+</html>
