@@ -362,6 +362,30 @@ def page_admin():
 def page_admin_html():
     return FileResponse("admin.html")
 
+@app.get("/privacy.html")
+def page_privacy():
+    return FileResponse("privacy.html")
+
+@app.get("/terms.html")
+def page_terms():
+    return FileResponse("terms.html")
+
+@app.get("/contact.html")
+def page_contact():
+    return FileResponse("contact.html")
+
+@app.get("/refund.html")
+def page_refund():
+    return FileResponse("refund.html")
+
+@app.get("/cookies.html")
+def page_cookies():
+    return FileResponse("cookies.html")
+
+@app.get("/security.html")
+def page_security():
+    return FileResponse("security.html")
+
 
 # ===== التسجيل والدخول =====
 class RegisterData(BaseModel):
