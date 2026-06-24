@@ -157,29 +157,7 @@
       <a href="index.html">الرئيسية</a><span>/</span><span>إدخال بيانات المنشأة</span>
     </div>
     <h1>بيانات منشأتك</h1>
-    <p>اختر الباقة، أدخل أرقامك، ونبّاه يحللها فوراً.</p>
-  </div>
-
-  <!-- PLANS -->
-  <div class="plans">
-    <div class="plan p-basic" data-plan="basic" onclick="selectPlan('basic')">
-      <div class="check">✓</div>
-      <div class="p-name">الأساسية</div>
-      <div class="p-price">99 <small>ريال/شهر</small></div>
-      <div class="p-desc">ملخص سريع ومؤشرات مالية أساسية</div>
-    </div>
-    <div class="plan p-pro" data-plan="pro" onclick="selectPlan('pro')">
-      <div class="check">✓</div>
-      <div class="p-name">الاحترافية</div>
-      <div class="p-price">199 <small>ريال/شهر</small></div>
-      <div class="p-desc">تحليل معمّق، أسباب جذرية، توصيات مرتّبة</div>
-    </div>
-    <div class="plan p-exec active" data-plan="executive" onclick="selectPlan('executive')">
-      <div class="check">✓</div>
-      <div class="p-name">التنفيذية</div>
-      <div class="p-price">569 <small>ريال/شهر</small></div>
-      <div class="p-desc">تقرير شامل + توقعات + خطة ٩٠ يوم</div>
-    </div>
+    <p>أدخل أرقامك، ونبّاه يحللها فوراً حسب باقتك.</p>
   </div>
 
   <!-- شرح الأرقام المطلوبة -->
@@ -206,6 +184,20 @@
         <label>اسم المنشأة / الفرع</label>
         <input id="restaurant" placeholder="مثال: الفرع الرئيسي" oninput="saveBranch()" autocomplete="off">
         <div class="saved-branches" id="saved-branches"></div>
+      </div>
+      <div class="field full">
+        <label>نوع النشاط <span class="opt">(يُستخدم للمقارنة بمعايير القطاع)</span></label>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px">
+          <label style="display:flex;align-items:center;gap:7px;background:#f4f9f7;border:1.5px solid var(--line-soft);border-radius:10px;padding:10px 16px;cursor:pointer;font-weight:600;font-size:14px">
+            <input type="radio" name="sector" value="restaurant" checked style="accent-color:#10b981"> 🍽️ مطعم
+          </label>
+          <label style="display:flex;align-items:center;gap:7px;background:#f4f9f7;border:1.5px solid var(--line-soft);border-radius:10px;padding:10px 16px;cursor:pointer;font-weight:600;font-size:14px">
+            <input type="radio" name="sector" value="cafe" style="accent-color:#10b981"> ☕ كافيه
+          </label>
+          <label style="display:flex;align-items:center;gap:7px;background:#f4f9f7;border:1.5px solid var(--line-soft);border-radius:10px;padding:10px 16px;cursor:pointer;font-weight:600;font-size:14px">
+            <input type="radio" name="sector" value="retail" style="accent-color:#10b981"> 🛒 تجزئة
+          </label>
+        </div>
       </div>
     </div>
   </div>
@@ -317,7 +309,8 @@
     window.location.href = "login.html";
   }
 
-  let selectedPlan = "executive";
+  // الباقة تُحدّد تلقائياً من اشتراك العميل في الخادم
+  let selectedPlan = "";
 
   /* ===== BRANCHES (localStorage) ===== */
   function loadBranches() {
@@ -358,13 +351,7 @@
     return filled.map(s => s.label + ": " + s.val + " طلب").join(" | ");
   }
 
-  /* ===== PLAN SELECTOR ===== */
-  function selectPlan(plan) {
-    selectedPlan = plan;
-    document.querySelectorAll(".plan").forEach(p => {
-      p.classList.toggle("active", p.dataset.plan === plan);
-    });
-  }
+  /* ===== PLAN SELECTOR (أُزيل — الباقة تتحدد من اشتراك العميل) ===== */
 
   /* ===== DATA VALIDATION (original — unchanged) ===== */
   function checkData(d) {
@@ -392,6 +379,7 @@
     saveBranch();
     const data = {
       restaurant:      document.getElementById("restaurant").value,
+      sector:          (document.querySelector('input[name="sector"]:checked') || {value: "restaurant"}).value,
       sales_today:     parseFloat(document.getElementById("sales_today").value),
       sales_yesterday: parseFloat(document.getElementById("sales_yesterday").value),
       orders:          parseInt(document.getElementById("orders").value),
