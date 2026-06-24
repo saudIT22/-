@@ -31,6 +31,7 @@ app.add_middleware(
 
 class SalesData(BaseModel):
     restaurant: str
+    sector: Optional[str] = "restaurant"  # restaurant / cafe / retail
     sales_today: float
     sales_yesterday: float
     orders: int
@@ -659,6 +660,116 @@ def redeem_trial(data: TrialData, user: User = Depends(get_current_user)):
         return {"ok": True, "message": "تم تفعيل التجربة — لك تحليل واحد فقط"}
 
 
+# ===== معايير القطاع (Benchmarks) =====
+BENCHMARKS = {
+    "restaurant": {
+        "name": "مطاعم",
+        "margin_good": 25,       # هامش ربح جيد %
+        "margin_ok": 15,         # هامش مقبول %
+        "avg_ticket_good": 80,   # متوسط فاتورة جيد ريال
+        "expense_ratio_ok": 65,  # نسبة مصروفات مقبولة من الإيرادات %
+        "orders_growth": 5,      # نمو طلبات مستهدف %
+    },
+    "cafe": {
+        "name": "كافيهات",
+        "margin_good": 35,
+        "margin_ok": 20,
+        "avg_ticket_good": 50,
+        "expense_ratio_ok": 55,
+        "orders_growth": 8,
+    },
+    "retail": {
+        "name": "تجزئة",
+        "margin_good": 30,
+        "margin_ok": 18,
+        "avg_ticket_good": 150,
+        "expense_ratio_ok": 60,
+        "orders_growth": 3,
+    },
+}
+
+def get_benchmark_analysis(data: SalesData, margin: float, avg_ticket: float, expense_ratio: float) -> str:
+    """مقارنة أرقام المنشأة بمعايير قطاعها."""
+    sector = data.sector or "restaurant"
+    bm = BENCHMARKS.get(sector, BENCHMARKS["restaurant"])
+    lines = [f"\n📊 **مقارنة بمعايير قطاع {bm['name']}:**"]
+
+    # هامش الربح
+    if margin >= bm["margin_good"]:
+        lines.append(f"✅ هامش الربح {margin}٪ — ممتاز (معيار القطاع: {bm['margin_good']}٪+)")
+    elif margin >= bm["margin_ok"]:
+        lines.append(f"⚠️ هامش الربح {margin}٪ — مقبول لكن دون المعيار المثالي ({bm['margin_good']}٪)")
+    else:
+        lines.append(f"❌ هامش الربح {margin}٪ — دون معيار القطاع ({bm['margin_ok']}٪ الحد الأدنى)")
+
+    # متوسط الفاتورة
+    if avg_ticket >= bm["avg_ticket_good"]:
+        lines.append(f"✅ متوسط الفاتورة {avg_ticket} ريال — جيد لقطاع {bm['name']}")
+    else:
+        lines.append(f"⚠️ متوسط الفاتورة {avg_ticket} ريال — أقل من المعيار ({bm['avg_ticket_good']} ريال)")
+
+    # نسبة المصروفات
+    if expense_ratio <= bm["expense_ratio_ok"]:
+        lines.append(f"✅ نسبة المصروفات {expense_ratio}٪ — ضمن المعيار المقبول")
+    else:
+        lines.append(f"⚠️ نسبة المصروفات {expense_ratio}٪ — أعلى من معيار القطاع ({bm['expense_ratio_ok']}٪)")
+
+    return "\n".join(lines)
+
+def get_history_analysis(entries: list) -> str:
+    """تحليل مبني على تاريخ العميل مع توقعات الأسبوع القادم."""
+    if len(entries) < 2:
+        return ""
+
+    # آخر 5 تحاليل
+    recent = sorted(entries, key=lambda e: e.created_at or datetime.min)[-5:]
+
+    # اتجاه المبيعات
+    sales_list = [e.sales_today for e in recent if e.sales_today]
+    margin_list = [e.margin for e in recent if e.margin]
+    health_list = [e.health_score for e in recent if e.health_score]
+
+    lines = ["\n📈 **تحليل مسار منشأتك:**"]
+
+    if len(sales_list) >= 2:
+        sales_trend = sales_list[-1] - sales_list[0]
+        sales_pct = round((sales_trend / sales_list[0]) * 100, 1) if sales_list[0] else 0
+        if sales_pct > 5:
+            lines.append(f"✅ مبيعاتك في تحسّن مستمر (+{sales_pct}٪ مقارنة بأول إدخال)")
+        elif sales_pct < -5:
+            lines.append(f"⚠️ مبيعاتك في تراجع ({sales_pct}٪) — يحتاج مراجعة")
+        else:
+            lines.append(f"➡️ مبيعاتك مستقرة نسبياً ({sales_pct:+.1f}٪)")
+
+    if len(margin_list) >= 2:
+        margin_trend = margin_list[-1] - margin_list[0]
+        if margin_trend > 2:
+            lines.append(f"✅ هامش الربح يتحسّن (+{margin_trend:.1f}٪ منذ أول تحليل)")
+        elif margin_trend < -2:
+            lines.append(f"⚠️ هامش الربح يتراجع ({margin_trend:.1f}٪) — راجع مصروفاتك")
+
+    if len(health_list) >= 2:
+        health_trend = health_list[-1] - health_list[0]
+        if health_trend > 5:
+            lines.append(f"✅ درجة صحة منشأتك ترتفع ({health_trend:+.0f} نقطة)")
+        elif health_trend < -5:
+            lines.append(f"⚠️ درجة الصحة تنخفض ({health_trend:.0f} نقطة) — انتبه للاتجاه")
+
+    # توقعات الأسبوع القادم
+    if len(sales_list) >= 3:
+        lines.append("\n🔮 **توقعات الأسبوع القادم:**")
+        avg_growth = (sales_list[-1] - sales_list[-3]) / 2 if len(sales_list) >= 3 else 0
+        forecast = round(sales_list[-1] + avg_growth)
+        if avg_growth > 0:
+            lines.append(f"📈 المبيعات اليومية المتوقعة: {forecast:,} ريال (استناداً لمسار النمو الأخير)")
+        elif avg_growth < 0:
+            lines.append(f"📉 المبيعات المتوقعة: {forecast:,} ريال — المسار الحالي يشير لتراجع، وقت التدخّل الآن")
+        else:
+            lines.append(f"➡️ المبيعات المتوقعة: {forecast:,} ريال (استقرار نسبي)")
+
+    return "\n".join(lines) if len(lines) > 1 else ""
+
+
 @app.post("/analyze")
 def analyze(data: SalesData, user: User = Depends(get_current_user)):
     # قفل: لازم يكون مشترك ومفعّل
@@ -686,9 +797,16 @@ def analyze(data: SalesData, user: User = Depends(get_current_user)):
     ticket_up_8 = round(avg_ticket * 0.08 * data.orders, 0)
 
     with Session(engine) as s:
-        all_entries = s.query(Entry).all()
-        history_count = len(all_entries)
-        history_revenues = [e.revenue for e in all_entries]
+        user_entries = s.exec(select(Entry).where(Entry.user_id == user.id)).all()
+        user_entries_sorted = sorted(user_entries, key=lambda e: e.created_at or datetime.min)
+        history_count = len(user_entries)
+        history_revenues = [e.revenue for e in user_entries_sorted]
+
+    # تحليل مبني على تاريخ العميل
+    history_insight = get_history_analysis(user_entries_sorted)
+
+    # مقارنة بمعايير القطاع
+    benchmark_insight = get_benchmark_analysis(data, margin, avg_ticket, expense_ratio)
 
     forecast = build_forecast(history_revenues, data.revenue)
     if forecast:
@@ -813,6 +931,12 @@ def analyze(data: SalesData, user: User = Depends(get_current_user)):
 
 # التوقعات الرقمية:
 {forecast_text}
+
+# مقارنة بمعايير قطاع {BENCHMARKS.get(data.sector or 'restaurant', BENCHMARKS['restaurant'])['name']}:
+{benchmark_insight}
+
+# تحليل مسار المنشأة (مبني على تاريخ العميل):
+{history_insight if history_insight else "لا يتوفر تاريخ كافٍ للتحليل (هذا أول تحليل أو تحليل واحد سابق)."}
 
 # الدرجات الذكية (لا تغيّرها، اشرحها فقط):
 - مؤشر صحة المنشأة: {health_score}/100 ({level})
