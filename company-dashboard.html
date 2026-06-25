@@ -230,8 +230,9 @@ body { background:var(--bg); color:var(--text); min-height:100vh; display:flex; 
 
   <div class="sb-section">النظام</div>
   <ul class="sb-nav">
-    <li><a href="#"><span class="ic">👥</span><span>الفريق</span></a></li>
-    <li><a href="#"><span class="ic">⚙️</span><span>الإعدادات</span></a></li>
+    <li><a href="company-team.html"><span class="ic">👥</span><span>الفريق</span></a></li>
+    <li><a href="dashboard.html"><span class="ic">↩️</span><span>الوضع الفردي</span></a></li>
+    <li><a href="#" onclick="localStorage.clear();location.href='index.html';return false"><span class="ic">🚪</span><span>خروج</span></a></li>
   </ul>
 
   <div class="sb-bottom">
@@ -443,6 +444,25 @@ body { background:var(--bg); color:var(--text); min-height:100vh; display:flex; 
 </main>
 
 <script>
+// حماية: لازم تسجيل دخول + شركة مسجّلة
+(async function guard(){
+  const token = localStorage.getItem("nabbah_token");
+  if(!token){ location.href = "login.html"; return; }
+  try{
+    const r = await fetch("/company/info", { headers:{ "Authorization":"Bearer "+token } });
+    if(r.status === 401){ localStorage.clear(); location.href="login.html"; return; }
+    const d = await r.json();
+    if(!d.has_company){
+      // مسجّل دخول لكن ما عنده شركة → وجّهه للتسجيل
+      location.href = "company-register.html";
+      return;
+    }
+    // عنده شركة → حدّث اسمها في العنوان
+    const t = document.querySelector(".tb-title span");
+    if(t && d.company) t.textContent = "/ " + d.company.name;
+  }catch(e){}
+})();
+
 // ضبط Chart.js
 Chart.defaults.color = '#8ba89f';
 Chart.defaults.font.family = 'Tajawal';
