@@ -875,7 +875,7 @@ def analyze(data: SalesData, user: User = Depends(get_current_user)):
 - بعد ٣ أشهر: بين {forecast['m3_cons']} و {forecast['m3_opt']} ريال
 - بعد ٦ أشهر: بين {forecast['m6_cons']} و {forecast['m6_opt']} ريال"""
     else:
-      forecast_text = "لا تتوفر بيانات تاريخية كافية للتوقع (يحتاج إدخالين أو أكثر)."
+        forecast_text = "لا تتوفر بيانات تاريخية كافية للتوقع (يحتاج إدخالين أو أكثر)."
 
     sanity_flags = check_sanity(data, margin, avg_ticket, expense_ratio)
     if sanity_flags:
@@ -951,10 +951,7 @@ def analyze(data: SalesData, user: User = Depends(get_current_user)):
         top_items_parts.append(data.top_item_2.strip())
     if data.top_item_3 and data.top_item_3.strip():
         top_items_parts.append(data.top_item_3.strip())
-    top_items_str = " | ".join(top_items_parts)
-
-    # الباقة تُحدّد من اشتراك العميل الفعلي (وليس من اختياره في الصفحة)
-    # عميل التجربة يحصل على مستوى الباقة الأساسية
+    top_items_str = " | ".join(top_items_parts) 
     if user.plan in ("basic", "pro", "executive"):
         plan = user.plan
     elif user.plan == "trial":
@@ -1741,3 +1738,145 @@ def company_simulate(data: dict, user: User = Depends(get_current_user)):
                 "total_diff_pct": round(total_diff/tot_before_profit*100,1) if tot_before_profit else 0,
             }
         }
+
+# ============================================================
+# ===== TEAM PERMISSIONS — صلاحيات الفريق (الخدمة 3) =====
+# ============================================================
+
+@app.get("/company-team.html")
+def page_company_team():
+    return FileResponse("company-team.html")
+
+
+@app.get("/company/team")
+def company_team_list(user: User = Depends(get_current_user)):
+    """قائمة أعضاء الفريق — للمالك فقط."""
+    if not user.company_id:
+        raise HTTPException(403, "حسابك غير مرتبط بشركة")
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id)
+        if company.owner_id != user.id:
+            raise HTTPException(403, "هذه الصفحة للمالك فقط")
+
+        members = s.exec(
+            select(User).where(User.company_id == user.company_id)
+        ).all()
+        branches = s.exec(
+            select(Branch).where(Branch.company_id == user.company_id, Branch.is_active == 1)
+        ).all()
+        branch_map = {b.id: b.name for b in branches}
+
+        team = []
+        for m in members:
+            # اسم الفرع المرتبط بمدير الفرع
+            assigned = ""
+            for b in branches:
+                if b.manager_id == m.id:
+                    assigned = b.name
+                    break
+            team.append({
+                "id": m.id,
+                "name": m.name,
+                "email": m.email,
+                "role": m.company_role or "owner",
+                "assigned_branch": assigned,
+                "is_owner": m.id == company.owner_id,
+            })
+
+        return {
+            "company": {"name": company.name},
+            "team": team,
+            "branches": [{"id": b.id, "name": b.name, "manager_id": b.manager_id} for b in branches],
+        }
+
+
+@app.post("/company/team/add")
+def company_team_add(data: dict, user: User = Depends(get_current_user)):
+    """إضافة عضو فريق جديد — ينشئ حساب ويربطه بالشركة."""
+    if not user.company_id:
+        raise HTTPException(403, "حسابك غير مرتبط بشركة")
+
+    name = data.get("name", "").strip()
+    email = data.get("email", "").strip().lower()
+    password = data.get("password", "").strip()
+    role = data.get("role", "staff")          # manager / accountant / staff
+    branch_id = data.get("branch_id")          # للمدير: الفرع المسؤول عنه
+
+    if not name or not email or not password:
+        raise HTTPException(400, "الاسم والبريد وكلمة المرور مطلوبة")
+    if len(password) < 6:
+        raise HTTPException(400, "كلمة المرور 6 أحرف على الأقل")
+    if role not in ("manager", "accountant", "staff"):
+        raise HTTPException(400, "الدور غير صحيح")
+
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id)
+        if company.owner_id != user.id:
+            raise HTTPException(403, "فقط المالك يضيف أعضاء")
+
+        # تأكد ما فيه حساب بنفس البريد
+        existing = s.exec(select(User).where(User.email == email)).first()
+        if existing:
+            raise HTTPException(400, "هذا البريد مسجّل بالفعل")
+
+        # أنشئ الحساب
+        new_user = User(
+            name=name,
+            email=email,
+            password_hash=hash_password(password),
+            company_id=user.company_id,
+            company_role=role,
+            is_active=1,
+            plan="enterprise_member",
+        )
+        s.add(new_user)
+        s.commit()
+        s.refresh(new_user)
+
+        # لو مدير فرع، اربطه بالفرع
+        if role == "manager" and branch_id:
+            branch = s.get(Branch, int(branch_id))
+            if branch and branch.company_id == user.company_id:
+                branch.manager_id = new_user.id
+                branch.manager_name = name
+                s.add(branch)
+                s.commit()
+
+        log_activity(user.name, f"أضاف عضو فريق: {name} ({role})", email)
+        return {"ok": True, "message": f"تم إضافة {name} بنجاح"}
+
+
+@app.post("/company/team/remove")
+def company_team_remove(data: dict, user: User = Depends(get_current_user)):
+    """إزالة عضو من الفريق."""
+    if not user.company_id:
+        raise HTTPException(403, "حسابك غير مرتبط بشركة")
+    member_id = data.get("member_id")
+
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id)
+        if company.owner_id != user.id:
+            raise HTTPException(403, "فقط المالك يزيل أعضاء")
+        if int(member_id) == company.owner_id:
+            raise HTTPException(400, "لا يمكن إزالة المالك")
+
+        member = s.get(User, int(member_id))
+        if not member or member.company_id != user.company_id:
+            raise HTTPException(404, "العضو غير موجود")
+
+        # فك ارتباطه بأي فرع
+        branches = s.exec(select(Branch).where(Branch.manager_id == member.id)).all()
+        for b in branches:
+            b.manager_id = None
+            b.manager_name = ""
+            s.add(b)
+
+        # فك ارتباطه بالشركة (ما نحذف الحساب، فقط نفصله)
+        member.company_id = None
+        member.company_role = ""
+        member.is_active = 0
+        s.add(member)
+        s.commit()
+
+        log_activity(user.name, f"أزال عضو الفريق: {member.name}", member.email)
+        return {"ok": True}
