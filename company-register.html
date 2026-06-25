@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نبّاه — تسجيل شركتك</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{--mint:#10b981;--mint-deep:#047857;--mint-darker:#065f46;--mint-soft:#ecfdf5;
+    --ink:#0f1d18;--ink-soft:#475a52;--ink-muted:#8ba89f;--bg:#f4f9f7;--line:#e0ece8;--red:#ef4444;}
+  *{margin:0;padding:0;box-sizing:border-box;font-family:'Tajawal',sans-serif}
+  body{background:var(--bg);color:var(--ink);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+  .box{background:#fff;border:1px solid var(--line);border-radius:20px;padding:40px;width:100%;max-width:560px}
+  .logo{display:flex;align-items:center;gap:10px;margin-bottom:28px}
+  .logo .bell{width:40px;height:40px;border-radius:11px;background:var(--mint);display:grid;place-items:center;font-size:22px}
+  .logo .name{font-weight:900;font-size:22px;color:var(--mint-darker)}
+  h2{font-size:22px;font-weight:900;margin-bottom:6px}
+  .sub{color:var(--ink-muted);font-size:14px;margin-bottom:28px}
+  label{display:block;font-size:13.5px;font-weight:700;color:var(--ink-soft);margin-bottom:6px}
+  input[type=text]{width:100%;padding:12px 14px;border:1.5px solid var(--line);border-radius:11px;font-family:'Tajawal';font-size:15px;color:var(--ink);outline:none;transition:border .2s;margin-bottom:18px}
+  input[type=text]:focus{border-color:var(--mint)}
+  .sector-row{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap}
+  .sector-btn{flex:1;min-width:100px;padding:10px;border:1.5px solid var(--line);border-radius:11px;background:#fff;cursor:pointer;font-family:'Tajawal';font-size:13.5px;font-weight:600;color:var(--ink-soft);text-align:center;transition:all .2s}
+  .sector-btn.active{border-color:var(--mint);background:var(--mint-soft);color:var(--mint-darker)}
+  .branches-area{border:1.5px solid var(--line);border-radius:14px;padding:16px;margin-bottom:20px}
+  .branches-label{font-size:13px;font-weight:700;color:var(--ink-soft);margin-bottom:12px}
+  .branch-item{display:flex;gap:8px;margin-bottom:8px;align-items:center}
+  .branch-item input{margin-bottom:0;flex:1}
+  .del-btn{width:34px;height:34px;border:1.5px solid var(--line);border-radius:9px;background:#fff;cursor:pointer;font-size:16px;color:var(--ink-muted);flex-shrink:0;display:grid;place-items:center}
+  .del-btn:hover{border-color:var(--red);color:var(--red)}
+  .add-branch{display:flex;align-items:center;gap:8px;cursor:pointer;color:var(--mint-darker);font-weight:700;font-size:13.5px;margin-top:6px}
+  .btn{width:100%;padding:15px;background:var(--mint);color:#fff;border:none;border-radius:13px;font-family:'Tajawal';font-size:16px;font-weight:800;cursor:pointer;transition:background .2s}
+  .btn:hover{background:var(--mint-deep)}
+  .btn:disabled{background:#b2dfdb;cursor:not-allowed}
+  .msg{padding:12px 16px;border-radius:11px;font-size:14px;font-weight:600;margin-bottom:16px;display:none}
+  .msg.error{background:#fef2f2;color:var(--red);border:1px solid #fecaca}
+  .msg.success{background:var(--mint-soft);color:var(--mint-darker);border:1px solid #a7f3d0}
+</style>
+</head>
+<body>
+<div class="box">
+  <div class="logo"><div class="bell">🔔</div><div class="name">نبّاه</div></div>
+  <h2>سجّل شركتك</h2>
+  <p class="sub">أنشئ حساب شركتك وأضف فروعها — يستغرق دقيقتين.</p>
+
+  <div class="msg" id="msg"></div>
+
+  <label>اسم الشركة / السلسلة</label>
+  <input type="text" id="company-name" placeholder="مثال: سلسلة نبّاه للمطاعم">
+
+  <label>نوع النشاط</label>
+  <div class="sector-row">
+    <div class="sector-btn active" data-v="restaurant" onclick="setSector(this)">🍽️ مطاعم</div>
+    <div class="sector-btn" data-v="cafe" onclick="setSector(this)">☕ كافيهات</div>
+    <div class="sector-btn" data-v="retail" onclick="setSector(this)">🛒 تجزئة</div>
+  </div>
+
+  <div class="branches-area">
+    <div class="branches-label">🏪 الفروع (أضف فرعاً واحداً على الأقل)</div>
+    <div id="branches-list">
+      <div class="branch-item">
+        <input type="text" placeholder="اسم الفرع الأول" class="branch-input">
+        <button class="del-btn" onclick="delBranch(this)">✕</button>
+      </div>
+    </div>
+    <div class="add-branch" onclick="addBranch()">＋ أضف فرعاً آخر</div>
+  </div>
+
+  <button class="btn" id="submit-btn" onclick="submit()">إنشاء الشركة ←</button>
+</div>
+
+<script>
+  if (!localStorage.getItem("nabbah_token")) location.href = "login.html";
+
+  let sector = "restaurant";
+
+  function setSector(el) {
+    document.querySelectorAll('.sector-btn').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+    sector = el.dataset.v;
+  }
+
+  function addBranch() {
+    const d = document.createElement('div');
+    d.className = 'branch-item';
+    d.innerHTML = `<input type="text" placeholder="اسم الفرع" class="branch-input"><button class="del-btn" onclick="delBranch(this)">✕</button>`;
+    document.getElementById('branches-list').appendChild(d);
+  }
+
+  function delBranch(btn) {
+    const items = document.querySelectorAll('.branch-item');
+    if (items.length > 1) btn.parentElement.remove();
+  }
+
+  function showMsg(txt, type) {
+    const m = document.getElementById('msg');
+    m.textContent = txt; m.className = 'msg ' + type; m.style.display = 'block';
+  }
+
+  async function submit() {
+    const name = document.getElementById('company-name').value.trim();
+    const branches = [...document.querySelectorAll('.branch-input')]
+      .map(i => i.value.trim()).filter(Boolean);
+
+    if (!name) { showMsg('أدخل اسم الشركة', 'error'); return; }
+    if (!branches.length) { showMsg('أضف فرعاً واحداً على الأقل', 'error'); return; }
+
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = true; btn.textContent = 'جاري الإنشاء...';
+
+    try {
+      const res = await fetch('/company/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + localStorage.getItem('nabbah_token')
+        },
+        body: JSON.stringify({ name, sector, branches })
+      });
+      const data = await res.json();
+      if (!res.ok) { showMsg(data.detail || 'حدث خطأ', 'error'); btn.disabled=false; btn.textContent='إنشاء الشركة ←'; return; }
+      showMsg('✅ ' + data.message + ' — جاري التحويل...', 'success');
+      setTimeout(() => location.href = 'company-dashboard.html', 1500);
+    } catch(e) {
+      showMsg('تعذّر الاتصال، حاول مرة أخرى', 'error');
+      btn.disabled=false; btn.textContent='إنشاء الشركة ←';
+    }
+  }
+</script>
+</body>
+</html>
