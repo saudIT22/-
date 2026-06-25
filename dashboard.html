@@ -3,528 +3,440 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>نبّاه — لوحة المدير التنفيذي</title>
+<title>نبّاه — لوحة القيادة</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
-:root {
-  --bg:        #0a0f0c;
-  --surface:   #101a14;
-  --card:      #141f18;
-  --card-hover:#192618;
-  --border:    #1e3026;
-  --border-soft:#253c2e;
-  --mint:      #10b981;
-  --mint-b:    #34d399;
-  --mint-dim:  #a7f3d0;
-  --mint-glow: rgba(16,185,129,.15);
-  --text:      #e8f5ee;
-  --text-soft: #8ba89f;
-  --text-dim:  #4a6b5a;
-  --red:       #f87171;
-  --red-soft:  rgba(248,113,113,.12);
-  --amber:     #fbbf24;
-  --amber-soft:rgba(251,191,36,.12);
-  --blue:      #60a5fa;
-  --sidebar-w: 220px;
-}
-* { margin:0; padding:0; box-sizing:border-box; font-family:'Tajawal',sans-serif }
-body { background:var(--bg); color:var(--text); min-height:100vh; display:flex; overflow-x:hidden }
+  :root{
+    --mint:#10b981;--mint-deep:#047857;--mint-darker:#065f46;
+    --mint-soft:#ecfdf5;--mint-soft2:#d1fae5;
+    --ink:#0f1d18;--ink-soft:#475a52;--ink-muted:#8ba89f;
+    --bg:#f4f9f7;--bg-card:#ffffff;
+    --line:#e0ece8;--line-soft:#eef5f2;
+    --red:#ef4444;--red-soft:#fef2f2;
+    --amber:#f59e0b;--amber-soft:#fffbeb;
+    --blue:#3b82f6;--blue-soft:#eff6ff;
+    --shadow:0 1px 3px rgba(6,95,70,.04),0 8px 24px rgba(6,95,70,.07);
+    --shadow-lg:0 16px 50px rgba(6,95,70,.14);--r:16px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--ink);
+    line-height:1.75;-webkit-font-smoothing:antialiased;min-height:100vh}
+  body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+    background:radial-gradient(circle at 1px 1px,rgba(16,185,129,.055) 1px,transparent 0);
+    background-size:24px 24px;opacity:.6}
 
-/* ===== SIDEBAR ===== */
-.sidebar {
-  width:var(--sidebar-w); min-height:100vh; background:var(--surface);
-  border-left:1px solid var(--border); display:flex; flex-direction:column;
-  position:fixed; right:0; top:0; z-index:100;
-}
-.sb-logo {
-  padding:22px 18px 16px; border-bottom:1px solid var(--border);
-  display:flex; align-items:center; gap:10px;
-}
-.sb-logo .bell {
-  width:38px; height:38px; border-radius:10px; background:var(--mint);
-  display:grid; place-items:center; font-size:20px; flex-shrink:0;
-  box-shadow:0 0 16px var(--mint-glow);
-}
-.sb-logo .brand { font-size:18px; font-weight:900; color:var(--mint) }
-.sb-logo .plan { font-size:10px; color:var(--text-dim); margin-top:1px }
+  /* NAV */
+  nav{position:sticky;top:0;z-index:50;background:rgba(244,249,247,.88);
+    backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+  .nav-in{max-width:1060px;margin:0 auto;padding:0 22px;
+    display:flex;align-items:center;justify-content:space-between;height:68px}
+  .logo{display:flex;align-items:center;gap:10px;font-weight:900;font-size:22px;
+    color:var(--mint-darker);text-decoration:none}
+  .logo .bell{width:38px;height:38px;border-radius:12px;background:var(--mint);
+    display:grid;place-items:center;font-size:18px;transform:rotate(-5deg);
+    box-shadow:0 3px 12px rgba(16,185,129,.35)}
+  .nav-links{display:flex;align-items:center;gap:6px}
+  .nav-links a{color:var(--ink-soft);font-weight:500;font-size:14px;padding:7px 14px;
+    border-radius:10px;text-decoration:none;transition:background .2s,color .2s}
+  .nav-links a:hover{background:var(--mint-soft);color:var(--mint-darker)}
+  .nav-links a.active{background:var(--mint-soft);color:var(--mint-darker);font-weight:700}
+  .btn{display:inline-flex;align-items:center;gap:7px;font-family:'Tajawal';
+    font-weight:700;font-size:14px;padding:10px 20px;border-radius:11px;
+    border:none;cursor:pointer;text-decoration:none;transition:all .2s}
+  .btn-primary{background:var(--mint);color:#fff;box-shadow:0 3px 10px rgba(16,185,129,.28)}
+  .btn-primary:hover{background:var(--mint-deep)}
+  @media(max-width:600px){.nav-links a:not(.btn-primary){display:none}}
 
-.sb-section { padding:16px 12px 6px; font-size:10px; color:var(--text-dim); letter-spacing:.08em; text-transform:uppercase }
-.sb-nav { list-style:none; padding:0 8px }
-.sb-nav li a {
-  display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:9px;
-  color:var(--text-soft); font-size:13.5px; font-weight:500; text-decoration:none;
-  transition:all .2s; cursor:pointer;
-}
-.sb-nav li a:hover { background:var(--mint-glow); color:var(--mint-b) }
-.sb-nav li a.active { background:var(--mint-glow); color:var(--mint-b); font-weight:700 }
-.sb-nav li a .ic { width:16px; text-align:center; font-size:15px; flex-shrink:0 }
-.sb-nav li a .badge {
-  margin-right:auto; background:var(--red); color:#fff; font-size:10px;
-  font-weight:800; padding:1px 6px; border-radius:20px;
-}
-.sb-bottom { margin-top:auto; padding:14px 12px; border-top:1px solid var(--border) }
-.sb-user { display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:10px; }
-.sb-user .av { width:32px; height:32px; border-radius:9px; background:var(--mint-glow); border:1px solid var(--mint); display:grid; place-items:center; font-size:14px; flex-shrink:0 }
-.sb-user .info .name { font-size:12.5px; font-weight:700; color:var(--text) }
-.sb-user .info .role { font-size:10.5px; color:var(--text-dim) }
+  /* WRAP */
+  .wrap{max-width:1060px;margin:0 auto;padding:36px 22px 60px;position:relative;z-index:1}
 
-/* ===== MAIN ===== */
-.main { margin-right:var(--sidebar-w); flex:1; display:flex; flex-direction:column; min-height:100vh }
+  /* PAGE HEADER */
+  .page-header{display:flex;align-items:flex-end;justify-content:space-between;
+    flex-wrap:wrap;gap:16px;margin-bottom:30px}
+  .ph-left .breadcrumb{display:flex;align-items:center;gap:6px;
+    font-size:13px;color:var(--ink-muted);margin-bottom:8px}
+  .ph-left .breadcrumb a{color:var(--ink-muted);text-decoration:none}
+  .ph-left .breadcrumb a:hover{color:var(--mint)}
+  .ph-left .breadcrumb span{opacity:.5}
+  .ph-left h1{font-size:27px;font-weight:900;color:var(--ink)}
+  .ph-left p{color:var(--ink-soft);font-size:15px}
 
-/* TOPBAR */
-.topbar {
-  background:var(--surface); border-bottom:1px solid var(--border);
-  padding:14px 28px; display:flex; align-items:center; gap:16px;
-  position:sticky; top:0; z-index:50;
-}
-.tb-title { font-size:16px; font-weight:800; color:var(--text); flex:1 }
-.tb-title span { color:var(--text-soft); font-weight:400; font-size:13px; margin-right:8px }
-.period-tabs { display:flex; background:var(--bg); border:1px solid var(--border); border-radius:9px; overflow:hidden }
-.period-tabs button {
-  border:none; background:transparent; color:var(--text-soft); font-family:'Tajawal'; font-size:12.5px;
-  font-weight:600; padding:6px 14px; cursor:pointer; transition:all .15s;
-}
-.period-tabs button.active { background:var(--mint); color:#fff }
-.tb-notif {
-  width:34px; height:34px; background:var(--card); border:1px solid var(--border);
-  border-radius:9px; display:grid; place-items:center; cursor:pointer; position:relative; font-size:16px;
-}
-.tb-notif .dot { position:absolute; top:6px; left:6px; width:7px; height:7px; background:var(--red); border-radius:50%; border:1.5px solid var(--surface) }
+  /* GRID HELPERS */
+  .g2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+  .g4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  @media(max-width:760px){.g2,.g3{grid-template-columns:1fr}.g4{grid-template-columns:1fr 1fr}}
+  @media(max-width:420px){.g4{grid-template-columns:1fr}}
+  .mb{margin-bottom:20px}
 
-/* CONTENT */
-.content { padding:24px 28px; flex:1 }
+  /* CARDS */
+  .card{background:var(--bg-card);border:1px solid var(--line);border-radius:20px;
+    padding:26px;box-shadow:var(--shadow)}
 
-/* KPI CARDS */
-.kpi-row { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:20px }
-.kpi {
-  background:var(--card); border:1px solid var(--border); border-radius:14px;
-  padding:18px 20px; position:relative; overflow:hidden; transition:border-color .2s;
-}
-.kpi:hover { border-color:var(--border-soft) }
-.kpi::before {
-  content:''; position:absolute; top:0; right:0; width:3px; height:100%; background:var(--mint); border-radius:0 14px 14px 0;
-}
-.kpi.red::before { background:var(--red) }
-.kpi.amber::before { background:var(--amber) }
-.kpi.blue::before { background:var(--blue) }
-.kpi-label { font-size:12px; color:var(--text-soft); font-weight:600; margin-bottom:8px; display:flex; align-items:center; gap:6px }
-.kpi-val { font-size:26px; font-weight:900; color:var(--text); letter-spacing:-.5px }
-.kpi-val .unit { font-size:13px; font-weight:600; color:var(--text-soft); margin-right:3px }
-.kpi-change {
-  display:inline-flex; align-items:center; gap:4px; margin-top:8px;
-  font-size:12px; font-weight:700; padding:3px 8px; border-radius:6px;
-}
-.up { background:rgba(16,185,129,.15); color:var(--mint-b) }
-.down { background:var(--red-soft); color:var(--red) }
-.neu { background:rgba(251,191,36,.12); color:var(--amber) }
+  /* HEALTH RING CARD */
+  .health-card{border-radius:22px;padding:30px;text-align:center;color:#fff;
+    box-shadow:var(--shadow-lg);display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .ring-wrap{position:relative;width:130px;height:130px;margin:0 auto 18px}
+  .ring-svg{transform:rotate(-90deg)}
+  .ring-bg{fill:none;stroke:rgba(255,255,255,.2);stroke-width:12}
+  .ring-fg{fill:none;stroke:#fff;stroke-width:12;stroke-linecap:round;
+    stroke-dasharray:314;stroke-dashoffset:314;transition:stroke-dashoffset 1.2s ease}
+  .ring-num{position:absolute;inset:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;line-height:1}
+  .ring-num .big{font-weight:900;font-size:42px}
+  .ring-num .of{font-size:14px;opacity:.85}
+  .health-tag{margin-top:4px;background:rgba(255,255,255,.22);padding:7px 18px;
+    border-radius:100px;font-weight:800;font-size:15px;display:inline-block}
+  .health-lbl{margin-bottom:14px;font-size:15px;opacity:.9}
 
-/* CHARTS ROW */
-.charts-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:20px }
-.chart-card {
-  background:var(--card); border:1px solid var(--border); border-radius:14px; padding:20px;
-}
-.chart-card.wide { grid-column:span 2 }
-.chart-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px }
-.chart-title { font-size:14px; font-weight:800; color:var(--text) }
-.chart-sub { font-size:12px; color:var(--text-soft) }
-.chart-box { position:relative; height:230px }
+  /* SCORES */
+  .score-card{background:var(--bg-card);border:1px solid var(--line);border-radius:var(--r);
+    padding:20px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:10px}
+  .score-top{display:flex;justify-content:space-between;align-items:center}
+  .score-lbl{color:var(--ink-muted);font-size:13.5px;font-weight:600}
+  .score-val{font-weight:900;font-size:28px}
+  .bar{height:8px;background:var(--line-soft);border-radius:100px;overflow:hidden}
+  .bar-fill{height:100%;border-radius:100px;transition:width 1s ease .2s}
 
-/* BRANCH MATRIX */
-.section-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px }
-.section-title { font-size:15px; font-weight:800; color:var(--text) }
-.section-sub { font-size:12px; color:var(--text-soft) }
-.view-all { font-size:12px; color:var(--mint); font-weight:700; text-decoration:none; cursor:pointer }
+  /* KPI CARDS */
+  .kpi{background:var(--bg-card);border:1px solid var(--line);border-radius:var(--r);
+    padding:20px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+  .kpi::after{content:"";position:absolute;bottom:0;right:0;left:0;height:3px}
+  .kpi.k-sales::after{background:var(--mint);opacity:.6}
+  .kpi.k-profit::after{background:var(--mint);opacity:1}
+  .kpi.k-margin::after{background:var(--amber)}
+  .kpi.k-change::after{background:var(--blue)}
+  .kpi .k-lbl{color:var(--ink-muted);font-size:13px;margin-bottom:7px}
+  .kpi .k-val{font-weight:900;font-size:24px;color:var(--ink)}
+  .kpi .k-ic{position:absolute;top:18px;left:18px;font-size:20px;opacity:.15}
 
-.branch-matrix { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:20px }
-.branch-card {
-  background:var(--card); border:1px solid var(--border); border-radius:14px;
-  padding:18px; transition:all .2s; cursor:pointer; position:relative; overflow:hidden;
-}
-.branch-card:hover { border-color:var(--border-soft); transform:translateY(-2px) }
-.branch-card.best { border-color:rgba(16,185,129,.35) }
-.branch-card.warn { border-color:rgba(251,191,36,.35) }
-.branch-card.danger { border-color:rgba(248,113,113,.35) }
+  /* COVER CARD */
+  .cover-card{background:var(--bg-card);border:1px solid var(--line);border-radius:20px;
+    padding:26px;box-shadow:var(--shadow);border-right:4px solid var(--mint)}
+  .cover-card.bad{border-right-color:var(--red)}
+  .cover-title{display:flex;align-items:center;gap:9px;font-weight:800;font-size:16px;
+    margin-bottom:20px;color:var(--ink)}
+  .cover-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:16px}
+  @media(max-width:560px){.cover-row{grid-template-columns:1fr}}
+  .c-item{text-align:center;padding:16px;background:var(--bg);border:1px solid var(--line);
+    border-radius:14px}
+  .c-item .cl{color:var(--ink-muted);font-size:13px;margin-bottom:6px}
+  .c-item .cv{font-size:21px;font-weight:900}
+  .cover-msg{padding:13px 18px;border-radius:12px;font-weight:700;font-size:14.5px;text-align:center;margin-bottom:10px}
+  .cover-msg.ok{background:var(--mint-soft);color:var(--mint-darker)}
+  .cover-msg.bad{background:var(--red-soft);color:var(--red)}
+  .cover-formula{text-align:center;color:var(--ink-muted);font-size:12.5px}
 
-.bc-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px }
-.bc-name { font-size:14px; font-weight:800; color:var(--text) }
-.bc-rank { font-size:10px; font-weight:800; padding:2px 8px; border-radius:6px }
-.rank-1 { background:rgba(16,185,129,.2); color:var(--mint-b) }
-.rank-2 { background:rgba(96,165,250,.15); color:var(--blue) }
-.rank-3 { background:rgba(251,191,36,.15); color:var(--amber) }
-.rank-bad { background:rgba(248,113,113,.15); color:var(--red) }
+  /* WIN / WARN CARDS */
+  .win-card{border-radius:20px;padding:26px;background:linear-gradient(135deg,var(--mint),var(--mint-deep));
+    color:#fff;box-shadow:var(--shadow-lg)}
+  .win-card .wc-ttl{font-weight:800;font-size:15px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+  .win-card .wc-big{font-size:30px;font-weight:900;margin:8px 0}
+  .win-card .wc-meta{font-size:13px;opacity:.88;margin-top:6px}
+  .status-card{background:var(--bg-card);border:1.5px solid var(--line);
+    border-radius:20px;padding:26px;box-shadow:var(--shadow)}
+  .status-card.danger{border-color:#fecaca;background:var(--red-soft)}
+  .status-card.safe{border-color:var(--mint-soft2);background:var(--mint-soft)}
+  .status-card .sc-ttl{font-weight:800;font-size:15px;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+  .status-card.danger .sc-ttl{color:var(--red)}
+  .status-card.safe .sc-ttl{color:var(--mint-darker)}
+  .status-card .sc-body{color:var(--ink-soft);font-size:15px;line-height:1.85}
+  .status-card .sc-meta{font-size:13px;margin-top:8px;color:var(--ink-muted)}
 
-.bc-stats { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px }
-.bc-stat .lbl { font-size:10.5px; color:var(--text-dim); margin-bottom:3px }
-.bc-stat .val { font-size:15px; font-weight:800; color:var(--text) }
-.bc-stat .val.green { color:var(--mint-b) }
-.bc-stat .val.red { color:var(--red) }
-.bc-stat .val.amber { color:var(--amber) }
+  /* INSIGHT CARDS */
+  .ins{background:var(--bg-card);border:1px solid var(--line);border-radius:var(--r);
+    padding:22px;box-shadow:var(--shadow);border-top:4px solid var(--line)}
+  .ins.alert{border-top-color:var(--red)}
+  .ins.decision{border-top-color:var(--blue)}
+  .ins.opp{border-top-color:var(--mint)}
+  .ins .it{font-weight:800;font-size:15px;margin-bottom:10px;display:flex;align-items:center;gap:7px}
+  .ins.alert .it{color:var(--red)}
+  .ins.decision .it{color:var(--blue)}
+  .ins.opp .it{color:var(--mint-darker)}
+  .ins .ib{color:var(--ink-soft);font-size:15px;line-height:1.85}
 
-.health-bar { height:5px; background:var(--border); border-radius:3px; overflow:hidden }
-.health-fill { height:100%; border-radius:3px; transition:width .6s ease }
+  /* QUALITY */
+  .quality-card{background:var(--bg-card);border:1px solid var(--line);border-radius:var(--r);
+    padding:22px 26px;box-shadow:var(--shadow);display:flex;align-items:center;
+    justify-content:space-between;flex-wrap:wrap;gap:16px}
+  .ql-left .ql-t{font-weight:800;font-size:15px}
+  .ql-left .ql-sub{color:var(--ink-muted);font-size:14px;margin-top:3px}
+  .ql-val{font-weight:900;font-size:32px}
 
-/* ALERTS */
-.alerts-card {
-  background:var(--card); border:1px solid var(--border); border-radius:14px; padding:20px; margin-bottom:20px;
-}
-.alert-item {
-  display:flex; align-items:flex-start; gap:12px; padding:12px 0;
-  border-bottom:1px solid var(--border);
-}
-.alert-item:last-child { border-bottom:none; padding-bottom:0 }
-.alert-ic { width:32px; height:32px; border-radius:9px; display:grid; place-items:center; font-size:16px; flex-shrink:0 }
-.ic-red { background:var(--red-soft) }
-.ic-amber { background:var(--amber-soft) }
-.ic-mint { background:var(--mint-glow) }
-.alert-body .title { font-size:13.5px; font-weight:700; color:var(--text); margin-bottom:3px }
-.alert-body .desc { font-size:12.5px; color:var(--text-soft); line-height:1.7 }
-.alert-time { font-size:11px; color:var(--text-dim); margin-right:auto; flex-shrink:0 }
-
-/* RESPONSIVE */
-@media(max-width:900px) {
-  :root { --sidebar-w:60px }
-  .sb-logo .brand, .sb-logo .plan, .sb-nav li a span, .sb-section, .sb-user .info { display:none }
-  .sb-logo { justify-content:center; padding:18px 0 }
-  .sb-nav li a { justify-content:center; padding:10px }
-  .sb-nav li a .ic { width:auto; font-size:18px }
-  .kpi-row { grid-template-columns:repeat(2,1fr) }
-  .charts-row { grid-template-columns:1fr }
-  .charts-row .chart-card.wide { grid-column:span 1 }
-  .branch-matrix { grid-template-columns:1fr 1fr }
-  .content { padding:16px }
-  .topbar { padding:12px 16px }
-}
-@media(max-width:600px) {
-  .kpi-row { grid-template-columns:1fr 1fr }
-  .branch-matrix { grid-template-columns:1fr }
-}
+  /* EMPTY */
+  .empty-state{background:var(--bg-card);border:1px solid var(--line);border-radius:20px;
+    padding:64px 30px;text-align:center;box-shadow:var(--shadow)}
+  .empty-state .em-ic{font-size:52px;margin-bottom:16px}
+  .empty-state h3{font-size:22px;font-weight:900;color:var(--ink-soft);margin-bottom:8px}
+  .empty-state p{color:var(--ink-muted);font-size:15.5px;margin-bottom:22px}
 </style>
 </head>
 <body>
 
-<!-- SIDEBAR -->
-<aside class="sidebar">
-  <div class="sb-logo">
-    <div class="bell">🔔</div>
-    <div>
-      <div class="brand">نبّاه</div>
-      <div class="plan">باقة الشركات</div>
+<nav><div class="nav-in">
+  <a href="index.html" class="logo"><span class="bell">🔔</span> نبّاه</a>
+  <div class="nav-links">
+    <a href="index.html">الرئيسية</a>
+    <a href="input.html">إدخال البيانات</a>
+    <a href="dashboard.html" class="active">لوحة القيادة</a>
+    <a href="charts.html">التحليلات</a>
+    <a href="trends.html">📈 التطوّر</a>
+    <a href="company-dashboard.html" id="company-link" style="display:none;background:#065f46;color:#fff;border-radius:9px;font-weight:700">🏢 لوحة الشركة</a>
+    <a href="input.html" class="btn-primary btn">➕ تحليل جديد</a>
+  </div>
+</div></nav>
+
+<div class="wrap">
+  <div class="page-header">
+    <div class="ph-left">
+      <div class="breadcrumb">
+        <a href="index.html">الرئيسية</a><span>/</span><span>لوحة القيادة</span>
+      </div>
+      <h1>لوحة القيادة</h1>
+      <p id="sub">نبض منشأتك في لمحة واحدة</p>
     </div>
   </div>
 
-  <div class="sb-section">الرئيسية</div>
-  <ul class="sb-nav">
-    <li><a href="company-dashboard.html" class="active"><span class="ic">🏠</span><span>لوحة المدير</span></a></li>
-    <li><a href="company-branches.html"><span class="ic">🏪</span><span>مقارنة الفروع</span></a></li>
-    <li><a href="company-report.html"><span class="ic">📊</span><span>التقارير</span></a></li>
-  </ul>
-
-  <div class="sb-section">الأدوات</div>
-  <ul class="sb-nav">
-    <li><a href="#"><span class="ic">💰</span><span>التدفق النقدي</span></a></li>
-    <li><a href="#"><span class="ic">🔍</span><span>كشف التسرب</span></a></li>
-    <li><a href="#"><span class="ic">📈</span><span>مقارنة السوق</span></a></li>
-    <li><a href="#"><span class="ic">⚠️</span><span>التنبيهات</span><span class="badge">3</span></a></li>
-  </ul>
-
-  <div class="sb-section">النظام</div>
-  <ul class="sb-nav">
-    <li><a href="#"><span class="ic">👥</span><span>الفريق</span></a></li>
-    <li><a href="dashboard.html"><span class="ic">↩️</span><span>الوضع الفردي</span></a></li>
-    <li><a href="#" onclick="localStorage.clear();location.href='index.html';return false"><span class="ic">🚪</span><span>خروج</span></a></li>
-  </ul>
-
-  <div class="sb-bottom">
-    <div class="sb-user">
-      <div class="av">م</div>
-      <div class="info">
-        <div class="name">المدير التنفيذي</div>
-        <div class="role">صلاحية كاملة</div>
-      </div>
-    </div>
-  </div>
-</aside>
-
-<!-- MAIN -->
-<main class="main">
-  <!-- TOPBAR -->
-  <div class="topbar">
-    <div class="tb-title">لوحة المدير التنفيذي <span>/ سلسلة نبّاه للمطاعم</span></div>
-    <div class="period-tabs">
-      <button>اليوم</button>
-      <button class="active">الأسبوع</button>
-      <button>الشهر</button>
-      <button>الربع</button>
-    </div>
-    <div class="tb-notif">🔔<span class="dot"></span></div>
-  </div>
-
-  <!-- CONTENT -->
-  <div class="content">
-
-    <!-- KPI ROW -->
-    <div class="kpi-row">
-      <div class="kpi">
-        <div class="kpi-label">💰 إجمالي الإيرادات</div>
-        <div class="kpi-val"><span class="unit">ر.س</span>٣٨٤,٢٠٠</div>
-        <div class="kpi-change up">▲ +١٢.٣٪ عن الأسبوع الماضي</div>
-      </div>
-      <div class="kpi">
-        <div class="kpi-label">📊 إجمالي الربح الصافي</div>
-        <div class="kpi-val"><span class="unit">ر.س</span>٩٨,٤٤٠</div>
-        <div class="kpi-change up">▲ هامش ٢٥.٦٪</div>
-      </div>
-      <div class="kpi amber">
-        <div class="kpi-label">🏪 أفضل فرع</div>
-        <div class="kpi-val" style="font-size:18px;padding-top:4px">فرع العليا</div>
-        <div class="kpi-change neu">٩٨,٢٠٠ ريال هذا الأسبوع</div>
-      </div>
-      <div class="kpi">
-        <div class="kpi-label">❤️ صحة الشركة الكلية</div>
-        <div class="kpi-val">٧٤<span class="unit">/١٠٠</span></div>
-        <div class="kpi-change up">▲ +٥ نقاط</div>
-      </div>
-    </div>
-
-    <!-- CHARTS ROW -->
-    <div class="charts-row">
-      <div class="chart-card">
-        <div class="chart-head">
-          <div>
-            <div class="chart-title">أداء الفروع — الأسبوع الحالي</div>
-            <div class="chart-sub">الإيرادات حسب كل فرع</div>
-          </div>
-        </div>
-        <div class="chart-box"><canvas id="c-branches"></canvas></div>
-      </div>
-      <div class="chart-card">
-        <div class="chart-head">
-          <div>
-            <div class="chart-title">مسار الإيرادات — آخر ٨ أسابيع</div>
-            <div class="chart-sub">النمو الإجمالي للشركة</div>
-          </div>
-        </div>
-        <div class="chart-box"><canvas id="c-trend"></canvas></div>
-      </div>
-    </div>
-
-    <!-- BRANCH MATRIX -->
-    <div class="section-head">
-      <div>
-        <div class="section-title">🏪 مصفوفة صحة الفروع</div>
-        <div class="section-sub">ترتيب من الأفضل أداءً — مُحدَّث تلقائياً</div>
-      </div>
-      <a class="view-all">عرض مقارنة كاملة ←</a>
-    </div>
-
-    <div class="branch-matrix">
-
-      <div class="branch-card best">
-        <div class="bc-header">
-          <div class="bc-name">فرع العليا</div>
-          <span class="bc-rank rank-1">🥇 الأول</span>
-        </div>
-        <div class="bc-stats">
-          <div class="bc-stat"><div class="lbl">الإيرادات</div><div class="val green">٩٨,٢٠٠</div></div>
-          <div class="bc-stat"><div class="lbl">الهامش</div><div class="val green">٣١٪</div></div>
-          <div class="bc-stat"><div class="lbl">الطلبات</div><div class="val">٣٤٢</div></div>
-          <div class="bc-stat"><div class="lbl">الصحة</div><div class="val green">٨٨</div></div>
-        </div>
-        <div class="health-bar"><div class="health-fill" style="width:88%;background:#10b981"></div></div>
-      </div>
-
-      <div class="branch-card">
-        <div class="bc-header">
-          <div class="bc-name">فرع الروضة</div>
-          <span class="bc-rank rank-2">🥈 الثاني</span>
-        </div>
-        <div class="bc-stats">
-          <div class="bc-stat"><div class="lbl">الإيرادات</div><div class="val green">٨٦,٥٠٠</div></div>
-          <div class="bc-stat"><div class="lbl">الهامش</div><div class="val green">٢٨٪</div></div>
-          <div class="bc-stat"><div class="lbl">الطلبات</div><div class="val">٢٩٨</div></div>
-          <div class="bc-stat"><div class="lbl">الصحة</div><div class="val green">٨٢</div></div>
-        </div>
-        <div class="health-bar"><div class="health-fill" style="width:82%;background:#34d399"></div></div>
-      </div>
-
-      <div class="branch-card">
-        <div class="bc-header">
-          <div class="bc-name">فرع النزهة</div>
-          <span class="bc-rank rank-3">🥉 الثالث</span>
-        </div>
-        <div class="bc-stats">
-          <div class="bc-stat"><div class="lbl">الإيرادات</div><div class="val">٧٤,١٠٠</div></div>
-          <div class="bc-stat"><div class="lbl">الهامش</div><div class="val">٢٤٪</div></div>
-          <div class="bc-stat"><div class="lbl">الطلبات</div><div class="val">٢٥١</div></div>
-          <div class="bc-stat"><div class="lbl">الصحة</div><div class="val">٧٢</div></div>
-        </div>
-        <div class="health-bar"><div class="health-fill" style="width:72%;background:#fbbf24"></div></div>
-      </div>
-
-      <div class="branch-card warn">
-        <div class="bc-header">
-          <div class="bc-name">فرع الشفاء</div>
-          <span class="bc-rank rank-3">الرابع</span>
-        </div>
-        <div class="bc-stats">
-          <div class="bc-stat"><div class="lbl">الإيرادات</div><div class="val amber">٦٢,٨٠٠</div></div>
-          <div class="bc-stat"><div class="lbl">الهامش</div><div class="val amber">١٨٪</div></div>
-          <div class="bc-stat"><div class="lbl">الطلبات</div><div class="val">٢١٠</div></div>
-          <div class="bc-stat"><div class="lbl">الصحة</div><div class="val amber">٥٨</div></div>
-        </div>
-        <div class="health-bar"><div class="health-fill" style="width:58%;background:#fbbf24"></div></div>
-      </div>
-
-      <div class="branch-card danger">
-        <div class="bc-header">
-          <div class="bc-name">فرع المروة</div>
-          <span class="bc-rank rank-bad">⚠️ يحتاج تدخّل</span>
-        </div>
-        <div class="bc-stats">
-          <div class="bc-stat"><div class="lbl">الإيرادات</div><div class="val red">٣٨,٢٠٠</div></div>
-          <div class="bc-stat"><div class="lbl">الهامش</div><div class="val red">٩٪</div></div>
-          <div class="bc-stat"><div class="lbl">الطلبات</div><div class="val">١٣١</div></div>
-          <div class="bc-stat"><div class="lbl">الصحة</div><div class="val red">٣٢</div></div>
-        </div>
-        <div class="health-bar"><div class="health-fill" style="width:32%;background:#f87171"></div></div>
-      </div>
-
-      <div class="branch-card">
-        <div class="bc-header">
-          <div class="bc-name">فرع الحمراء</div>
-          <span class="bc-rank rank-3">السادس</span>
-        </div>
-        <div class="bc-stats">
-          <div class="bc-stat"><div class="lbl">الإيرادات</div><div class="val">٢٤,٤٠٠</div></div>
-          <div class="bc-stat"><div class="lbl">الهامش</div><div class="val">٢١٪</div></div>
-          <div class="bc-stat"><div class="lbl">الطلبات</div><div class="val">٩٨</div></div>
-          <div class="bc-stat"><div class="lbl">الصحة</div><div class="val">٦٥</div></div>
-        </div>
-        <div class="health-bar"><div class="health-fill" style="width:65%;background:#34d399"></div></div>
-      </div>
-
-    </div>
-
-    <!-- ALERTS -->
-    <div class="section-head">
-      <div>
-        <div class="section-title">🔔 تنبيهات ذكية</div>
-        <div class="section-sub">٣ تنبيهات تحتاج مراجعة</div>
-      </div>
-    </div>
-    <div class="alerts-card">
-      <div class="alert-item">
-        <div class="alert-ic ic-red">🚨</div>
-        <div class="alert-body">
-          <div class="title">فرع المروة — هامش الربح انهار إلى ٩٪</div>
-          <div class="desc">دون المعيار بـ ١٦٪. المصروفات ارتفعت ٢٨٪ هذا الأسبوع بينما الإيرادات نزلت ١٢٪. يحتاج تدخل فوري.</div>
-        </div>
-        <div class="alert-time">اليوم</div>
-      </div>
-      <div class="alert-item">
-        <div class="alert-ic ic-amber">⚠️</div>
-        <div class="alert-body">
-          <div class="title">فرع الشفاء — تدهور متواصل منذ ٣ أسابيع</div>
-          <div class="desc">الهامش نزل من ٢٦٪ إلى ١٨٪ خلال ٣ أسابيع. المسار يشير لمشكلة هيكلية في التكاليف.</div>
-        </div>
-        <div class="alert-time">أمس</div>
-      </div>
-      <div class="alert-item">
-        <div class="alert-ic ic-mint">💡</div>
-        <div class="alert-body">
-          <div class="title">فرصة — فرع العليا أعلى من معيار السوق بـ ٢٣٪</div>
-          <div class="desc">أداؤه يتفوق على ٨٠٪ من المنشآت المشابهة. يستحق دراسة أسلوبه وتطبيقه على باقي الفروع.</div>
-        </div>
-        <div class="alert-time">منذ يومين</div>
-      </div>
-    </div>
-
-  </div><!-- /content -->
-</main>
+  <div id="content"></div>
+</div>
 
 <script>
-// حماية: لازم تسجيل دخول + شركة مسجّلة
-(async function guard(){
-  const token = localStorage.getItem("nabbah_token");
-  if(!token){ location.href = "login.html"; return; }
-  try{
-    const r = await fetch("/company/info", { headers:{ "Authorization":"Bearer "+token } });
-    if(r.status === 401){ localStorage.clear(); location.href="login.html"; return; }
-    const d = await r.json();
-    if(!d.has_company){
-      // مسجّل دخول لكن ما عنده شركة → وجّهه للتسجيل
-      location.href = "company-register.html";
-      return;
+  // حماية الصفحة
+  if (!localStorage.getItem("nabbah_token")) {
+    window.location.href = "login.html";
+  }
+  function color(score, reverse) {
+    if (reverse) {
+      if (score >= 60) return "#ef4444";
+      if (score >= 30) return "#f59e0b";
+      return "#10b981";
     }
-    // عنده شركة → حدّث اسمها في العنوان
-    const t = document.querySelector(".tb-title span");
-    if(t && d.company) t.textContent = "/ " + d.company.name;
-  }catch(e){}
-})();
+    if (score >= 75) return "#10b981";
+    if (score >= 60) return "#f59e0b";
+    return "#ef4444";
+  }
 
-// ضبط Chart.js
-Chart.defaults.color = '#8ba89f';
-Chart.defaults.font.family = 'Tajawal';
-Chart.defaults.font.size = 12;
+  function healthGradient(score) {
+    if (score >= 75) return "linear-gradient(135deg,#10b981,#059669)";
+    if (score >= 60) return "linear-gradient(135deg,#f59e0b,#d97706)";
+    return "linear-gradient(135deg,#ef4444,#dc2626)";
+  }
 
-const gridColor = '#1e3026';
+  function healthTagText(score) {
+    if (score >= 90) return "ممتاز";
+    if (score >= 75) return "جيد";
+    if (score >= 60) return "تنبيه";
+    return "خطر";
+  }
 
-// رسم الفروع
-new Chart(document.getElementById('c-branches'), {
-  type: 'bar',
-  data: {
-    labels: ['العليا','الروضة','النزهة','الشفاء','المروة','الحمراء'],
-    datasets: [{
-      label: 'الإيرادات (ريال)',
-      data: [98200, 86500, 74100, 62800, 38200, 24400],
-      backgroundColor: ['#10b981','#34d399','#34d399','#fbbf24','#f87171','#34d399'],
-      borderRadius: 7,
-      borderSkipped: false,
-    }]
-  },
-  options: {
-    responsive: true, maintainAspectRatio: false,
-    plugins: { legend: { display: false } },
-    scales: {
-      x: { grid: { color: gridColor }, ticks: { font: { family:'Tajawal', size:12 } } },
-      y: { grid: { color: gridColor }, ticks: { font: { family:'Tajawal', size:11 },
-        callback: v => v >= 1000 ? (v/1000)+'k' : v } }
+  async function load() {
+    const content = document.getElementById("content");
+    try {
+      const res = await fetch("/history", {
+        headers: { "Authorization": "Bearer " + (localStorage.getItem("nabbah_token") || "") }
+      });
+      if (res.status === 401) {
+        localStorage.removeItem("nabbah_token");
+        localStorage.removeItem("nabbah_name");
+        localStorage.removeItem("nabbah_active");
+        window.location.href = "login.html";
+        return;
+      }
+      const data = await res.json();
+
+      if (!data || data.length === 0) {
+        content.innerHTML = `
+          <div class="empty-state">
+            <div class="em-ic">📭</div>
+            <h3>لا توجد بيانات بعد</h3>
+            <p>ابدأ بأول تحليل لمنشأتك وستظهر هنا جميع المؤشرات</p>
+            <a href="input.html" class="btn btn-primary">➕ ابدأ التحليل الآن</a>
+          </div>`;
+        return;
+      }
+
+      const e = data[data.length - 1];
+      document.getElementById("sub").innerText = "نبض منشأة « " + e.restaurant + " » في لمحة واحدة";
+
+      /* ring offset */
+      const circumference = 314;
+      const offset = circumference - (e.health_score / 100) * circumference;
+
+      /* cover card */
+      const covers = e.covers_expenses === 1;
+      const sm = Math.abs(e.safety_margin);
+
+      /* quick win */
+      const quickWin = Math.round(e.expenses * 0.10);
+      const quickWinYear = quickWin * 12;
+
+      content.innerHTML = `
+        <!-- ① HEALTH + SCORES -->
+        <div class="g2 mb" style="align-items:stretch">
+          <div class="health-card" style="background:${healthGradient(e.health_score)}">
+            <div class="health-lbl">مؤشر صحة المنشأة</div>
+            <div class="ring-wrap">
+              <svg class="ring-svg" width="130" height="130" viewBox="0 0 110 110">
+                <circle class="ring-bg" cx="55" cy="55" r="50"/>
+                <circle class="ring-fg" id="ring-fg" cx="55" cy="55" r="50"/>
+              </svg>
+              <div class="ring-num">
+                <span class="big">${e.health_score}</span>
+                <span class="of">/100</span>
+              </div>
+            </div>
+            <div class="health-tag">${healthTagText(e.health_score)}</div>
+          </div>
+          <div class="g3" style="align-content:start">
+            <div class="score-card">
+              <div class="score-top">
+                <span class="score-lbl">مؤشر المخاطر</span>
+                <span class="score-val" style="color:${color(e.risk_score,true)}">${e.risk_score}</span>
+              </div>
+              <div class="bar"><div class="bar-fill" style="width:${e.risk_score}%;background:${color(e.risk_score,true)}"></div></div>
+            </div>
+            <div class="score-card">
+              <div class="score-top">
+                <span class="score-lbl">مؤشر الفرص</span>
+                <span class="score-val" style="color:#10b981">${e.opportunity_score}</span>
+              </div>
+              <div class="bar"><div class="bar-fill" style="width:${e.opportunity_score}%;background:#10b981"></div></div>
+            </div>
+            <div class="score-card">
+              <div class="score-top">
+                <span class="score-lbl">صحة المنشأة</span>
+                <span class="score-val" style="color:${color(e.health_score)}">${e.health_score}</span>
+              </div>
+              <div class="bar"><div class="bar-fill" style="width:${e.health_score}%;background:${color(e.health_score)}"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ② KPIs -->
+        <div class="g4 mb">
+          <div class="kpi k-sales">
+            <div class="k-ic">📈</div>
+            <div class="k-lbl">آخر مبيعات</div>
+            <div class="k-val">${e.sales_today.toLocaleString()}﷼</div>
+          </div>
+          <div class="kpi k-profit">
+            <div class="k-ic">💰</div>
+            <div class="k-lbl">صافي الربح</div>
+            <div class="k-val" style="color:${e.profit>=0?'#10b981':'#ef4444'}">${e.profit.toLocaleString()}﷼</div>
+          </div>
+          <div class="kpi k-margin">
+            <div class="k-ic">📊</div>
+            <div class="k-lbl">هامش الربح</div>
+            <div class="k-val">${e.margin}%</div>
+          </div>
+          <div class="kpi k-change">
+            <div class="k-ic">↕️</div>
+            <div class="k-lbl">التغير عن أمس</div>
+            <div class="k-val" style="color:${e.change_percent>=0?'#10b981':'#ef4444'}">${e.change_percent}%</div>
+          </div>
+        </div>
+
+        <!-- ③ COVER -->
+        <div class="cover-card ${covers?'':'bad'} mb">
+          <div class="cover-title">🎯 تغطية المصروفات — هل إيراداتك تكفي مصروفاتك؟</div>
+          <div class="cover-row">
+            <div class="c-item"><div class="cl">الإيرادات</div><div class="cv">${e.revenue.toLocaleString()}﷼</div></div>
+            <div class="c-item"><div class="cl">المصروفات</div><div class="cv">${e.expenses.toLocaleString()}﷼</div></div>
+            <div class="c-item"><div class="cl">هامش الأمان</div><div class="cv" style="color:${covers?'#10b981':'#ef4444'}">${covers?'+':'-'}${sm}%</div></div>
+          </div>
+          <div class="cover-msg ${covers?'ok':'bad'}">
+            ${covers
+              ? '✅ إيراداتك تغطّي مصروفاتك وتزيد عنها بـ ' + sm + '% — المنشأة تحقق ربحاً'
+              : '⚠️ إيراداتك لا تغطّي مصروفاتك — عجز بنسبة ' + sm + '%'}
+          </div>
+          <div class="cover-formula">المعادلة: (الإيرادات − المصروفات) ÷ المصروفات × 100</div>
+        </div>
+
+        <!-- ④ WIN + STATUS -->
+        <div class="g2 mb">
+          <div class="win-card">
+            <div class="wc-ttl">⚡ أسرع ربح يمكن تحقيقه</div>
+            خفض المصروفات ١٠٪
+            <div class="wc-big">+${quickWin.toLocaleString()}﷼ / شهرياً</div>
+            <div class="wc-meta">≈ ${quickWinYear.toLocaleString()}﷼ سنوياً · الجهد: متوسط · المدة: ٣٠ يوم</div>
+          </div>
+          <div class="status-card ${e.health_score<60?'danger':'safe'}">
+            <div class="sc-ttl">
+              ${e.health_score<60?'🔴 إذا لم تتخذ إجراءً':'🛡️ وضعك تحت السيطرة'}
+            </div>
+            <div class="sc-body">
+              ${e.health_score<60
+                ? 'مؤشر صحة منشأتك <strong>' + e.health_score + '/100</strong> في منطقة الخطر. استمرار الوضع الحالي يضغط على الربحية — راجع التقرير الكامل.'
+                : 'مؤشر الصحة <strong>' + e.health_score + '/100</strong> في منطقة آمنة. حافظ على الأداء وركّز على الفرص لرفع الربحية.'}
+            </div>
+            <div class="sc-meta">${e.health_score<60?'التوصية: ابدأ بأهم قرار فوراً':'استمر في مراقبة المؤشرات يومياً'}</div>
+          </div>
+        </div>
+
+        <!-- ⑤ INSIGHTS -->
+        <div class="g3 mb">
+          <div class="ins alert">
+            <div class="it">🚨 أهم تنبيه اليوم</div>
+            <div class="ib">${e.top_alert || "—"}</div>
+          </div>
+          <div class="ins decision">
+            <div class="it">✅ أهم قرار اليوم</div>
+            <div class="ib">${e.top_decision || "—"}</div>
+          </div>
+          <div class="ins opp">
+            <div class="it">💡 أهم فرصة اليوم</div>
+            <div class="ib">${e.top_opportunity || "—"}</div>
+          </div>
+        </div>
+
+        <!-- ⑥ QUALITY -->
+        <div class="quality-card">
+          <div class="ql-left">
+            <div class="ql-t">📋 جودة البيانات</div>
+            <div class="ql-sub">كلما اكتملت بياناتك، ارتفعت دقة التحليل</div>
+          </div>
+          <div class="ql-val" style="color:${color(e.data_quality)}">${e.data_quality}/100</div>
+        </div>
+      `;
+
+      /* animate ring */
+      requestAnimationFrame(() => {
+        const fg = document.getElementById("ring-fg");
+        if (fg) {
+          const c = 2 * Math.PI * 50;
+          fg.style.strokeDasharray = c;
+          fg.style.strokeDashoffset = c - (e.health_score / 100) * c;
+        }
+      });
+
+    } catch (err) {
+      content.innerHTML = `
+        <div class="empty-state">
+          <div class="em-ic">⚠️</div>
+          <h3>تعذّر الاتصال بالخادم</h3>
+          <p>تأكد إن الخادم شغّال (<code>uvicorn main:app --reload</code>) وحاول مرة أخرى</p>
+        </div>`;
     }
   }
-});
 
-// رسم المسار
-const weeks = ['أسبوع ١','أسبوع ٢','أسبوع ٣','أسبوع ٤','أسبوع ٥','أسبوع ٦','أسبوع ٧','الحالي'];
-new Chart(document.getElementById('c-trend'), {
-  type: 'line',
-  data: {
-    labels: weeks,
-    datasets: [{
-      label: 'الإيرادات',
-      data: [298000, 314000, 326000, 308000, 341000, 355000, 372000, 384200],
-      borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,.08)',
-      fill: true, tension: .4, borderWidth: 2.5,
-      pointRadius: 4, pointBackgroundColor: '#10b981',
-    }]
-  },
-  options: {
-    responsive: true, maintainAspectRatio: false,
-    plugins: { legend: { display: false } },
-    scales: {
-      x: { grid: { color: gridColor } },
-      y: { grid: { color: gridColor }, ticks: { callback: v => v >= 1000 ? (v/1000)+'k' : v } }
-    }
-  }
-});
+  load();
 
-// أزرار الفترة
-document.querySelectorAll('.period-tabs button').forEach(btn => {
-  btn.onclick = () => {
-    document.querySelectorAll('.period-tabs button').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-  };
-});
+  // فحص إذا المستخدم عنده شركة → أظهر زر "لوحة الشركة"
+  (async () => {
+    try {
+      const token = localStorage.getItem("nabbah_token");
+      if (!token) return;
+      const r = await fetch("/company/info", { headers: { "Authorization": "Bearer " + token } });
+      if (!r.ok) return;
+      const d = await r.json();
+      if (d.has_company) {
+        document.getElementById("company-link").style.display = "inline-block";
+      }
+    } catch(e) {}
+  })();
 </script>
 </body>
 </html>
