@@ -58,6 +58,8 @@ class User(SQLModel, table=True):
     trial_used: int = 0                 # 0 = ما استخدم تجربة، 1 = استخدمها
     subscription_start: Optional[datetime] = None
     subscription_end: Optional[datetime] = None
+    company_id: Optional[int] = None            # مرتبط بشركة؟ (للمدراء والموظفين)
+    company_role: str = ""                       # owner/manager/staff — فارغ = فرد
     created_at: datetime = Field(default_factory=datetime.now)
 
 class Entry(SQLModel, table=True):
@@ -94,9 +96,27 @@ class Entry(SQLModel, table=True):
 
 class ActivityLog(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    actor: str = "النظام"          # من قام بالإجراء (admin/النظام/اسم العميل)
-    action: str = ""               # وصف الإجراء
-    target_email: str = ""         # العميل المتأثر إن وجد
+    actor: str = "النظام"
+    action: str = ""
+    target_email: str = ""
+    created_at: datetime = Field(default_factory=datetime.now)
+
+# ===== جداول الشركات =====
+class Company(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    name: str                                    # اسم الشركة
+    owner_id: int = Field(index=True)            # المالك (user_id)
+    plan: str = "enterprise"
+    sector: str = "restaurant"                   # restaurant/cafe/retail
+    is_active: int = 1
+    created_at: datetime = Field(default_factory=datetime.now)
+
+class Branch(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)          # تابع لأي شركة
+    name: str                                    # اسم الفرع
+    manager_id: Optional[int] = None            # مدير الفرع (user_id) — اختياري
+    is_active: int = 1
     created_at: datetime = Field(default_factory=datetime.now)
 
 def log_activity(actor: str, action: str, target_email: str = ""):
@@ -1101,3 +1121,223 @@ def trends(user: User = Depends(get_current_user)):
             "points": points,
             "comparison": comparison,
         }
+
+# ============================================================
+# ===== COMPANY ENDPOINTS — باقة الشركات =====
+# ============================================================
+
+# --- صفحة تسجيل الشركة ---
+@app.get("/company-register.html")
+def page_company_register():
+    return FileResponse("company-register.html")
+
+@app.get("/company-dashboard.html")
+def page_company_dashboard():
+    return FileResponse("company-dashboard.html")
+
+# --- إنشاء شركة جديدة ---
+@app.post("/company/create")
+def company_create(
+    data: dict,
+    user: User = Depends(get_current_user)
+):
+    company_name = data.get("name", "").strip()
+    sector = data.get("sector", "restaurant")
+    branches_raw = data.get("branches", [])  # قائمة أسماء الفروع
+
+    if not company_name:
+        raise HTTPException(400, "اسم الشركة مطلوب")
+    if not branches_raw:
+        raise HTTPException(400, "أضف فرعاً واحداً على الأقل")
+
+    with Session(engine) as s:
+        # منع إنشاء شركتين للمستخدم نفسه
+        existing = s.exec(select(Company).where(Company.owner_id == user.id)).first()
+        if existing:
+            raise HTTPException(400, "لديك شركة مسجّلة بالفعل")
+
+        # إنشاء الشركة
+        company = Company(name=company_name, owner_id=user.id, sector=sector)
+        s.add(company)
+        s.commit()
+        s.refresh(company)
+
+        # إنشاء الفروع
+        for b_name in branches_raw:
+            b_name = b_name.strip()
+            if b_name:
+                branch = Branch(company_id=company.id, name=b_name)
+                s.add(branch)
+
+        # ربط المستخدم بالشركة كـ owner
+        user_db = s.get(User, user.id)
+        user_db.company_id = company.id
+        user_db.company_role = "owner"
+        s.add(user_db)
+        s.commit()
+
+        log_activity(s, user.name, f"أنشأ شركة: {company_name}", user.email)
+        return {"ok": True, "company_id": company.id, "message": f"تم إنشاء {company_name} بنجاح"}
+
+
+# --- لوحة المدير التنفيذي (بيانات حقيقية) ---
+@app.get("/company/dashboard")
+def company_dashboard(user: User = Depends(get_current_user)):
+    if not user.company_id:
+        raise HTTPException(403, "حسابك غير مرتبط بشركة")
+
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id)
+        if not company:
+            raise HTTPException(404, "الشركة غير موجودة")
+        if company.owner_id != user.id and user.company_role not in ("owner","manager"):
+            raise HTTPException(403, "ليس لديك صلاحية")
+
+        # جلب الفروع
+        branches = s.exec(
+            select(Branch).where(Branch.company_id == company.id, Branch.is_active == 1)
+        ).all()
+
+        branch_ids = [b.id for b in branches]
+        branch_map = {b.id: b.name for b in branches}
+
+        # جلب أحدث تحليل لكل فرع (مرتبط بمدير الفرع أو باسم الفرع)
+        branch_stats = []
+        total_revenue = 0
+        total_profit = 0
+        total_orders = 0
+
+        for branch in branches:
+            # الفروع مرتبطة بمستخدم مدير الفرع أو بالاسم في Entry.restaurant
+            entries = s.exec(
+                select(Entry)
+                .where(Entry.restaurant == branch.name)
+                .order_by(Entry.created_at.desc())
+            ).all()
+
+            if entries:
+                latest = entries[0]
+                # تاريخ 4 تحاليل للاتجاه
+                trend = [e.revenue for e in reversed(entries[:4])]
+                total_revenue += latest.revenue
+                total_profit  += latest.profit
+                total_orders  += latest.orders
+
+                # تحديد حالة الفرع
+                if latest.health_score >= 70:
+                    status = "good"
+                elif latest.health_score >= 45:
+                    status = "warn"
+                else:
+                    status = "danger"
+
+                branch_stats.append({
+                    "id": branch.id,
+                    "name": branch.name,
+                    "revenue": latest.revenue,
+                    "profit": latest.profit,
+                    "margin": latest.margin,
+                    "orders": latest.orders,
+                    "health_score": latest.health_score,
+                    "risk_score": latest.risk_score,
+                    "status": status,
+                    "trend": trend,
+                    "last_updated": latest.created_at.isoformat() if latest.created_at else None,
+                    "top_alert": latest.top_alert,
+                    "top_decision": latest.top_decision,
+                })
+            else:
+                # فرع بدون تحاليل بعد
+                branch_stats.append({
+                    "id": branch.id, "name": branch.name,
+                    "revenue": 0, "profit": 0, "margin": 0,
+                    "orders": 0, "health_score": 0, "risk_score": 0,
+                    "status": "empty", "trend": [],
+                    "last_updated": None, "top_alert": "", "top_decision": "",
+                })
+
+        # ترتيب الفروع من الأفضل للأضعف
+        branch_stats.sort(key=lambda b: b["health_score"], reverse=True)
+
+        # الصحة الكلية للشركة
+        active = [b for b in branch_stats if b["status"] != "empty"]
+        company_health = round(sum(b["health_score"] for b in active) / len(active)) if active else 0
+
+        # أفضل وأضعف فرع
+        best  = branch_stats[0] if branch_stats else None
+        worst = branch_stats[-1] if len(branch_stats) > 1 else None
+
+        # تنبيهات ذكية تلقائية
+        alerts = []
+        for b in branch_stats:
+            if b["status"] == "danger":
+                alerts.append({
+                    "type": "danger",
+                    "branch": b["name"],
+                    "msg": f"درجة الصحة {b['health_score']} — يحتاج تدخلاً فورياً",
+                    "detail": b["top_alert"] or "مصروفات مرتفعة أو إيرادات منخفضة"
+                })
+            elif b["status"] == "warn":
+                alerts.append({
+                    "type": "warn",
+                    "branch": b["name"],
+                    "msg": f"أداء متدنٍّ — درجة الصحة {b['health_score']}",
+                    "detail": b["top_alert"] or "يحتاج مراجعة"
+                })
+            if b["health_score"] >= 80:
+                alerts.append({
+                    "type": "opportunity",
+                    "branch": b["name"],
+                    "msg": f"أداء ممتاز — يمكن الاستفادة من نموذجه",
+                    "detail": b["top_decision"] or "ادرس أسلوب هذا الفرع وطبّقه على غيره"
+                })
+
+        return {
+            "company": {"id": company.id, "name": company.name, "sector": company.sector},
+            "summary": {
+                "total_revenue": round(total_revenue),
+                "total_profit": round(total_profit),
+                "total_orders": total_orders,
+                "company_health": company_health,
+                "branch_count": len(branches),
+                "best_branch": best["name"] if best else "",
+                "worst_branch": worst["name"] if worst else "",
+            },
+            "branches": branch_stats,
+            "alerts": alerts[:6],  # أهم 6 تنبيهات
+        }
+
+
+# --- معلومات شركة المستخدم ---
+@app.get("/company/info")
+def company_info(user: User = Depends(get_current_user)):
+    if not user.company_id:
+        return {"has_company": False}
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id)
+        branches = s.exec(
+            select(Branch).where(Branch.company_id == user.company_id, Branch.is_active == 1)
+        ).all()
+        return {
+            "has_company": True,
+            "company": {"id": company.id, "name": company.name, "sector": company.sector},
+            "branches": [{"id": b.id, "name": b.name} for b in branches],
+            "role": user.company_role,
+        }
+
+
+# --- إضافة فرع جديد ---
+@app.post("/company/add-branch")
+def company_add_branch(data: dict, user: User = Depends(get_current_user)):
+    branch_name = data.get("name", "").strip()
+    if not branch_name:
+        raise HTTPException(400, "اسم الفرع مطلوب")
+    if not user.company_id or user.company_role not in ("owner",):
+        raise HTTPException(403, "غير مصرّح")
+    with Session(engine) as s:
+        branch = Branch(company_id=user.company_id, name=branch_name)
+        s.add(branch)
+        s.commit()
+        s.refresh(branch)
+        log_activity(s, user.name, f"أضاف فرع: {branch_name}", user.email)
+        return {"ok": True, "branch_id": branch.id}
