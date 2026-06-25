@@ -1201,6 +1201,8 @@ def company_create(
         s.add(company)
         s.commit()
         s.refresh(company)
+
+        # إنشاء الفروع
         for b_name in branches_raw:
             b_name = b_name.strip()
             if b_name:
@@ -1910,3 +1912,128 @@ def company_delete(user: User = Depends(get_current_user)):
         s.commit()
         log_activity(user.name, f"حذف الشركة: {company.name}", user.email)
         return {"ok": True, "message": "تم حذف الشركة"}
+
+# ============================================================
+# ===== EXECUTIVE REPORT — التقرير التنفيذي التلقائي (الخدمة 4) =====
+# ============================================================
+
+@app.get("/company-report.html")
+def page_company_report():
+    return FileResponse("company-report.html")
+
+
+@app.get("/company/report")
+def company_report(user: User = Depends(get_current_user)):
+    """تقرير تنفيذي شامل: ملخص الشركة + كل الفروع + أهم القرارات."""
+    if not user.company_id:
+        raise HTTPException(403, "حسابك غير مرتبط بشركة")
+
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id)
+        if company.owner_id != user.id and user.company_role not in ("owner", "manager"):
+            raise HTTPException(403, "ليس لديك صلاحية")
+
+        branches = s.exec(
+            select(Branch).where(Branch.company_id == company.id, Branch.is_active == 1)
+        ).all()
+
+        # جمع بيانات الفروع
+        branch_reports = []
+        latest_list = []
+        total_revenue = total_profit = total_expenses = total_orders = 0
+
+        for b in branches:
+            entries = s.exec(
+                select(Entry).where(Entry.restaurant == b.name).order_by(Entry.created_at.desc())
+            ).all()
+            if not entries:
+                continue
+            latest = entries[0]
+            latest_list.append(latest)
+            total_revenue += latest.revenue
+            total_profit += latest.profit
+            total_expenses += latest.expenses
+            total_orders += latest.orders
+
+            # اتجاه آخر تحليلين
+            trend = "stable"
+            if len(entries) >= 2:
+                diff = latest.revenue - entries[1].revenue
+                trend = "up" if diff > 0 else ("down" if diff < 0 else "stable")
+
+            branch_reports.append({
+                "name": b.name,
+                "revenue": round(latest.revenue),
+                "profit": round(latest.profit),
+                "margin": latest.margin,
+                "orders": latest.orders,
+                "health_score": latest.health_score,
+                "trend": trend,
+                "top_alert": latest.top_alert or "",
+                "top_decision": latest.top_decision or "",
+                "top_item": latest.top_item or "",
+            })
+
+        if not branch_reports:
+            return {"company": {"name": company.name}, "empty": True}
+
+        # ترتيب
+        branch_reports.sort(key=lambda x: x["health_score"], reverse=True)
+        n = len(branch_reports)
+        company_health = round(sum(b["health_score"] for b in branch_reports) / n)
+        avg_margin = round(sum(b["margin"] for b in branch_reports) / n, 1)
+
+        best = branch_reports[0]
+        worst = branch_reports[-1]
+
+        # أهم القرارات التنفيذية (مجمّعة)
+        key_decisions = []
+        # 1. الفرع الأضعف
+        if worst["health_score"] < 50:
+            key_decisions.append({
+                "priority": "عاجل",
+                "title": f"تدخّل فوري في فرع {worst['name']}",
+                "detail": f"درجة صحته {worst['health_score']}/100 وهامشه {worst['margin']}٪. " + (worst["top_alert"] or "يحتاج مراجعة شاملة للمصروفات والمبيعات."),
+            })
+        # 2. تعميم نجاح الأفضل
+        if best["health_score"] >= 75:
+            key_decisions.append({
+                "priority": "فرصة",
+                "title": f"تعميم نموذج فرع {best['name']}",
+                "detail": f"الأعلى أداءً ({best['health_score']}/100). ادرس أسلوبه" + (f" وأكثر أصنافه مبيعاً ({best['top_item']})" if best['top_item'] else "") + " وطبّقه على باقي الفروع.",
+            })
+        # 3. الهامش العام
+        if avg_margin < 20:
+            key_decisions.append({
+                "priority": "مهم",
+                "title": "متوسط هامش الشركة منخفض",
+                "detail": f"الهامش العام {avg_margin}٪ دون المستوى الصحي. راجع التسعير وهيكل التكاليف عبر الفروع.",
+            })
+
+        # توزيع حالة الفروع
+        excellent = len([b for b in branch_reports if b["health_score"] >= 70])
+        warning = len([b for b in branch_reports if 45 <= b["health_score"] < 70])
+        critical = len([b for b in branch_reports if b["health_score"] < 45])
+
+        from datetime import datetime as _dt
+        return {
+            "company": {"name": company.name, "sector": company.sector},
+            "generated_at": _dt.now().strftime("%Y-%m-%d %H:%M"),
+            "summary": {
+                "total_revenue": round(total_revenue),
+                "total_profit": round(total_profit),
+                "total_expenses": round(total_expenses),
+                "total_orders": total_orders,
+                "company_health": company_health,
+                "avg_margin": avg_margin,
+                "branch_count": n,
+                "best_branch": best["name"],
+                "worst_branch": worst["name"],
+                "excellent": excellent,
+                "warning": warning,
+                "critical": critical,
+            },
+            "branches": branch_reports,
+            "key_decisions": key_decisions,
+            "empty": False,
+        }
