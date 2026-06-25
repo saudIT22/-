@@ -232,6 +232,7 @@ body { background:var(--bg); color:var(--text); min-height:100vh; display:flex; 
   <ul class="sb-nav">
     <li><a href="company-team.html"><span class="ic">👥</span><span>الفريق</span></a></li>
     <li><a href="dashboard.html"><span class="ic">↩️</span><span>الوضع الفردي</span></a></li>
+    <li><a href="#" onclick="deleteCompany();return false" style="color:#f87171"><span class="ic">🗑️</span><span>حذف الشركة</span></a></li>
     <li><a href="#" onclick="localStorage.clear();location.href='index.html';return false"><span class="ic">🚪</span><span>خروج</span></a></li>
   </ul>
 
@@ -261,270 +262,148 @@ body { background:var(--bg); color:var(--text); min-height:100vh; display:flex; 
   </div>
 
   <!-- CONTENT -->
-  <div class="content">
-
-    <!-- KPI ROW -->
-    <div class="kpi-row">
-      <div class="kpi">
-        <div class="kpi-label">💰 إجمالي الإيرادات</div>
-        <div class="kpi-val"><span class="unit">ر.س</span>٣٨٤,٢٠٠</div>
-        <div class="kpi-change up">▲ +١٢.٣٪ عن الأسبوع الماضي</div>
-      </div>
-      <div class="kpi">
-        <div class="kpi-label">📊 إجمالي الربح الصافي</div>
-        <div class="kpi-val"><span class="unit">ر.س</span>٩٨,٤٤٠</div>
-        <div class="kpi-change up">▲ هامش ٢٥.٦٪</div>
-      </div>
-      <div class="kpi amber">
-        <div class="kpi-label">🏪 أفضل فرع</div>
-        <div class="kpi-val" style="font-size:18px;padding-top:4px">فرع العليا</div>
-        <div class="kpi-change neu">٩٨,٢٠٠ ريال هذا الأسبوع</div>
-      </div>
-      <div class="kpi">
-        <div class="kpi-label">❤️ صحة الشركة الكلية</div>
-        <div class="kpi-val">٧٤<span class="unit">/١٠٠</span></div>
-        <div class="kpi-change up">▲ +٥ نقاط</div>
-      </div>
+  <div class="content" id="content">
+    <div class="loading" style="text-align:center;padding:80px;color:#8ba89f">
+      <div style="width:40px;height:40px;border:3px solid #1e3026;border-top-color:#10b981;border-radius:50%;margin:0 auto 16px;animation:spin 1s linear infinite"></div>
+      جاري تحميل بيانات شركتك...
     </div>
-
-    <!-- CHARTS ROW -->
-    <div class="charts-row">
-      <div class="chart-card">
-        <div class="chart-head">
-          <div>
-            <div class="chart-title">أداء الفروع — الأسبوع الحالي</div>
-            <div class="chart-sub">الإيرادات حسب كل فرع</div>
-          </div>
-        </div>
-        <div class="chart-box"><canvas id="c-branches"></canvas></div>
-      </div>
-      <div class="chart-card">
-        <div class="chart-head">
-          <div>
-            <div class="chart-title">مسار الإيرادات — آخر ٨ أسابيع</div>
-            <div class="chart-sub">النمو الإجمالي للشركة</div>
-          </div>
-        </div>
-        <div class="chart-box"><canvas id="c-trend"></canvas></div>
-      </div>
-    </div>
-
-    <!-- BRANCH MATRIX -->
-    <div class="section-head">
-      <div>
-        <div class="section-title">🏪 مصفوفة صحة الفروع</div>
-        <div class="section-sub">ترتيب من الأفضل أداءً — مُحدَّث تلقائياً</div>
-      </div>
-      <a class="view-all">عرض مقارنة كاملة ←</a>
-    </div>
-
-    <div class="branch-matrix">
-
-      <div class="branch-card best">
-        <div class="bc-header">
-          <div class="bc-name">فرع العليا</div>
-          <span class="bc-rank rank-1">🥇 الأول</span>
-        </div>
-        <div class="bc-stats">
-          <div class="bc-stat"><div class="lbl">الإيرادات</div><div class="val green">٩٨,٢٠٠</div></div>
-          <div class="bc-stat"><div class="lbl">الهامش</div><div class="val green">٣١٪</div></div>
-          <div class="bc-stat"><div class="lbl">الطلبات</div><div class="val">٣٤٢</div></div>
-          <div class="bc-stat"><div class="lbl">الصحة</div><div class="val green">٨٨</div></div>
-        </div>
-        <div class="health-bar"><div class="health-fill" style="width:88%;background:#10b981"></div></div>
-      </div>
-
-      <div class="branch-card">
-        <div class="bc-header">
-          <div class="bc-name">فرع الروضة</div>
-          <span class="bc-rank rank-2">🥈 الثاني</span>
-        </div>
-        <div class="bc-stats">
-          <div class="bc-stat"><div class="lbl">الإيرادات</div><div class="val green">٨٦,٥٠٠</div></div>
-          <div class="bc-stat"><div class="lbl">الهامش</div><div class="val green">٢٨٪</div></div>
-          <div class="bc-stat"><div class="lbl">الطلبات</div><div class="val">٢٩٨</div></div>
-          <div class="bc-stat"><div class="lbl">الصحة</div><div class="val green">٨٢</div></div>
-        </div>
-        <div class="health-bar"><div class="health-fill" style="width:82%;background:#34d399"></div></div>
-      </div>
-
-      <div class="branch-card">
-        <div class="bc-header">
-          <div class="bc-name">فرع النزهة</div>
-          <span class="bc-rank rank-3">🥉 الثالث</span>
-        </div>
-        <div class="bc-stats">
-          <div class="bc-stat"><div class="lbl">الإيرادات</div><div class="val">٧٤,١٠٠</div></div>
-          <div class="bc-stat"><div class="lbl">الهامش</div><div class="val">٢٤٪</div></div>
-          <div class="bc-stat"><div class="lbl">الطلبات</div><div class="val">٢٥١</div></div>
-          <div class="bc-stat"><div class="lbl">الصحة</div><div class="val">٧٢</div></div>
-        </div>
-        <div class="health-bar"><div class="health-fill" style="width:72%;background:#fbbf24"></div></div>
-      </div>
-
-      <div class="branch-card warn">
-        <div class="bc-header">
-          <div class="bc-name">فرع الشفاء</div>
-          <span class="bc-rank rank-3">الرابع</span>
-        </div>
-        <div class="bc-stats">
-          <div class="bc-stat"><div class="lbl">الإيرادات</div><div class="val amber">٦٢,٨٠٠</div></div>
-          <div class="bc-stat"><div class="lbl">الهامش</div><div class="val amber">١٨٪</div></div>
-          <div class="bc-stat"><div class="lbl">الطلبات</div><div class="val">٢١٠</div></div>
-          <div class="bc-stat"><div class="lbl">الصحة</div><div class="val amber">٥٨</div></div>
-        </div>
-        <div class="health-bar"><div class="health-fill" style="width:58%;background:#fbbf24"></div></div>
-      </div>
-
-      <div class="branch-card danger">
-        <div class="bc-header">
-          <div class="bc-name">فرع المروة</div>
-          <span class="bc-rank rank-bad">⚠️ يحتاج تدخّل</span>
-        </div>
-        <div class="bc-stats">
-          <div class="bc-stat"><div class="lbl">الإيرادات</div><div class="val red">٣٨,٢٠٠</div></div>
-          <div class="bc-stat"><div class="lbl">الهامش</div><div class="val red">٩٪</div></div>
-          <div class="bc-stat"><div class="lbl">الطلبات</div><div class="val">١٣١</div></div>
-          <div class="bc-stat"><div class="lbl">الصحة</div><div class="val red">٣٢</div></div>
-        </div>
-        <div class="health-bar"><div class="health-fill" style="width:32%;background:#f87171"></div></div>
-      </div>
-
-      <div class="branch-card">
-        <div class="bc-header">
-          <div class="bc-name">فرع الحمراء</div>
-          <span class="bc-rank rank-3">السادس</span>
-        </div>
-        <div class="bc-stats">
-          <div class="bc-stat"><div class="lbl">الإيرادات</div><div class="val">٢٤,٤٠٠</div></div>
-          <div class="bc-stat"><div class="lbl">الهامش</div><div class="val">٢١٪</div></div>
-          <div class="bc-stat"><div class="lbl">الطلبات</div><div class="val">٩٨</div></div>
-          <div class="bc-stat"><div class="lbl">الصحة</div><div class="val">٦٥</div></div>
-        </div>
-        <div class="health-bar"><div class="health-fill" style="width:65%;background:#34d399"></div></div>
-      </div>
-
-    </div>
-
-    <!-- ALERTS -->
-    <div class="section-head">
-      <div>
-        <div class="section-title">🔔 تنبيهات ذكية</div>
-        <div class="section-sub">٣ تنبيهات تحتاج مراجعة</div>
-      </div>
-    </div>
-    <div class="alerts-card">
-      <div class="alert-item">
-        <div class="alert-ic ic-red">🚨</div>
-        <div class="alert-body">
-          <div class="title">فرع المروة — هامش الربح انهار إلى ٩٪</div>
-          <div class="desc">دون المعيار بـ ١٦٪. المصروفات ارتفعت ٢٨٪ هذا الأسبوع بينما الإيرادات نزلت ١٢٪. يحتاج تدخل فوري.</div>
-        </div>
-        <div class="alert-time">اليوم</div>
-      </div>
-      <div class="alert-item">
-        <div class="alert-ic ic-amber">⚠️</div>
-        <div class="alert-body">
-          <div class="title">فرع الشفاء — تدهور متواصل منذ ٣ أسابيع</div>
-          <div class="desc">الهامش نزل من ٢٦٪ إلى ١٨٪ خلال ٣ أسابيع. المسار يشير لمشكلة هيكلية في التكاليف.</div>
-        </div>
-        <div class="alert-time">أمس</div>
-      </div>
-      <div class="alert-item">
-        <div class="alert-ic ic-mint">💡</div>
-        <div class="alert-body">
-          <div class="title">فرصة — فرع العليا أعلى من معيار السوق بـ ٢٣٪</div>
-          <div class="desc">أداؤه يتفوق على ٨٠٪ من المنشآت المشابهة. يستحق دراسة أسلوبه وتطبيقه على باقي الفروع.</div>
-        </div>
-        <div class="alert-time">منذ يومين</div>
-      </div>
-    </div>
-
   </div><!-- /content -->
 </main>
 
 <script>
-// حماية: لازم تسجيل دخول + شركة مسجّلة
-(async function guard(){
-  const token = localStorage.getItem("nabbah_token");
-  if(!token){ location.href = "login.html"; return; }
+if(!localStorage.getItem("nabbah_token")) location.href="login.html";
+const token=localStorage.getItem("nabbah_token");
+const authH={"Authorization":"Bearer "+token};
+let charts=[];
+
+function fmt(n){return Number(Math.round(n||0)).toLocaleString("en-US")}
+function statusColor(s){return{excellent:"#10b981",good:"#34d399",warn:"#fbbf24",danger:"#f87171",empty:"#4a6b5a"}[s]||"#4a6b5a"}
+
+async function load(){
+  // تحقق من وجود شركة
   try{
-    const r = await fetch("/company/info", { headers:{ "Authorization":"Bearer "+token } });
-    if(r.status === 401){ localStorage.clear(); location.href="login.html"; return; }
-    const d = await r.json();
-    if(!d.has_company){
-      // مسجّل دخول لكن ما عنده شركة → وجّهه للتسجيل
-      location.href = "company-register.html";
+    const info=await fetch("/company/info",{headers:authH});
+    if(info.status===401){localStorage.clear();location.href="login.html";return}
+    const id=await info.json();
+    if(!id.has_company){location.href="company-register.html";return}
+    document.querySelector(".tb-title span").textContent="/ "+id.company.name;
+  }catch(e){}
+
+  // جلب بيانات اللوحة
+  try{
+    const r=await fetch("/company/dashboard",{headers:authH});
+    if(r.status===403){
+      document.getElementById("content").innerHTML='<div style="text-align:center;padding:60px;color:#8ba89f">⛔ ليس لديك صلاحية</div>';
       return;
     }
-    // عنده شركة → حدّث اسمها في العنوان
-    const t = document.querySelector(".tb-title span");
-    if(t && d.company) t.textContent = "/ " + d.company.name;
-  }catch(e){}
-})();
-
-// ضبط Chart.js
-Chart.defaults.color = '#8ba89f';
-Chart.defaults.font.family = 'Tajawal';
-Chart.defaults.font.size = 12;
-
-const gridColor = '#1e3026';
-
-// رسم الفروع
-new Chart(document.getElementById('c-branches'), {
-  type: 'bar',
-  data: {
-    labels: ['العليا','الروضة','النزهة','الشفاء','المروة','الحمراء'],
-    datasets: [{
-      label: 'الإيرادات (ريال)',
-      data: [98200, 86500, 74100, 62800, 38200, 24400],
-      backgroundColor: ['#10b981','#34d399','#34d399','#fbbf24','#f87171','#34d399'],
-      borderRadius: 7,
-      borderSkipped: false,
-    }]
-  },
-  options: {
-    responsive: true, maintainAspectRatio: false,
-    plugins: { legend: { display: false } },
-    scales: {
-      x: { grid: { color: gridColor }, ticks: { font: { family:'Tajawal', size:12 } } },
-      y: { grid: { color: gridColor }, ticks: { font: { family:'Tajawal', size:11 },
-        callback: v => v >= 1000 ? (v/1000)+'k' : v } }
-    }
+    const d=await r.json();
+    render(d);
+  }catch(e){
+    document.getElementById("content").innerHTML='<div style="text-align:center;padding:60px;color:#f87171">تعذّر تحميل البيانات</div>';
   }
-});
+}
 
-// رسم المسار
-const weeks = ['أسبوع ١','أسبوع ٢','أسبوع ٣','أسبوع ٤','أسبوع ٥','أسبوع ٦','أسبوع ٧','الحالي'];
-new Chart(document.getElementById('c-trend'), {
-  type: 'line',
-  data: {
-    labels: weeks,
-    datasets: [{
-      label: 'الإيرادات',
-      data: [298000, 314000, 326000, 308000, 341000, 355000, 372000, 384200],
-      borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,.08)',
-      fill: true, tension: .4, borderWidth: 2.5,
-      pointRadius: 4, pointBackgroundColor: '#10b981',
-    }]
-  },
-  options: {
-    responsive: true, maintainAspectRatio: false,
-    plugins: { legend: { display: false } },
-    scales: {
-      x: { grid: { color: gridColor } },
-      y: { grid: { color: gridColor }, ticks: { callback: v => v >= 1000 ? (v/1000)+'k' : v } }
-    }
+function render(d){
+  const s=d.summary, branches=d.branches||[], alerts=d.alerts||[];
+  const hasData=branches.some(b=>b.status!=="empty");
+
+  let html="";
+
+  // KPI
+  html+='<div class="kpi-row">';
+  html+=`<div class="kpi"><div class="kpi-label">💰 إجمالي الإيرادات</div><div class="kpi-val"><span class="unit">ر.س</span>${fmt(s.total_revenue)}</div><div class="kpi-change up">${s.branch_count} فرع</div></div>`;
+  html+=`<div class="kpi"><div class="kpi-label">📊 إجمالي الربح</div><div class="kpi-val"><span class="unit">ر.س</span>${fmt(s.total_profit)}</div></div>`;
+  html+=`<div class="kpi amber"><div class="kpi-label">🏪 أفضل فرع</div><div class="kpi-val" style="font-size:18px;padding-top:4px">${s.best_branch||"—"}</div></div>`;
+  html+=`<div class="kpi"><div class="kpi-label">❤️ صحة الشركة</div><div class="kpi-val">${s.company_health}<span class="unit">/١٠٠</span></div></div>`;
+  html+='</div>';
+
+  if(!hasData){
+    html+=`<div style="background:#141f18;border:1px solid #1e3026;border-radius:14px;padding:40px;text-align:center;margin-bottom:20px">
+      <div style="font-size:40px;margin-bottom:12px">📊</div>
+      <h3 style="margin-bottom:8px">لا توجد بيانات فروع بعد</h3>
+      <p style="color:#8ba89f;margin-bottom:18px">أدخل تحاليل بأسماء فروعك لتظهر هنا. تأكد أن اسم المنشأة في صفحة الإدخال = اسم الفرع تماماً.</p>
+      <a href="input.html" style="display:inline-block;background:#10b981;color:#fff;padding:11px 24px;border-radius:10px;text-decoration:none;font-weight:800">➕ أدخل تحليلاً</a>
+    </div>`;
+    document.getElementById("content").innerHTML=html;
+    return;
   }
+
+  // رسم الفروع
+  html+='<div class="charts-row"><div class="chart-card"><div class="chart-head"><div><div class="chart-title">أداء الفروع</div><div class="chart-sub">الإيرادات حسب كل فرع</div></div></div><div class="chart-box"><canvas id="c-branches"></canvas></div></div>';
+  html+='<div class="chart-card"><div class="chart-head"><div><div class="chart-title">توزيع الصحة</div><div class="chart-sub">درجة صحة كل فرع</div></div></div><div class="chart-box"><canvas id="c-health"></canvas></div></div></div>';
+
+  // مصفوفة الفروع
+  html+='<div class="section-head"><div><div class="section-title">🏪 مصفوفة صحة الفروع</div><div class="section-sub">مرتّبة من الأفضل أداءً</div></div><a class="view-all" href="company-branches.html">مقارنة كاملة ←</a></div>';
+  html+='<div class="branch-matrix">';
+  branches.forEach((b,i)=>{
+    if(b.status==="empty"){
+      html+=`<div class="branch-card"><div class="bc-header"><div class="bc-name">${b.name}</div></div><div style="color:#4a6b5a;font-size:13px;padding:10px 0">لا توجد بيانات بعد</div></div>`;
+      return;
+    }
+    const rankLabel=i===0?"🥇 الأول":i===1?"🥈 الثاني":i===2?"🥉 الثالث":`${i+1}`;
+    const cls=b.status==="excellent"||b.status==="good"?"best":b.status==="warn"?"warn":"danger";
+    const col=statusColor(b.status);
+    html+=`<div class="branch-card ${cls}">
+      <div class="bc-header"><div class="bc-name">${b.name}</div><span class="bc-rank ${i===0?'rank-1':i===1?'rank-2':'rank-3'}">${rankLabel}</span></div>
+      <div class="bc-stats">
+        <div class="bc-stat"><div class="lbl">الإيرادات</div><div class="val">${fmt(b.revenue)}</div></div>
+        <div class="bc-stat"><div class="lbl">الهامش</div><div class="val">${b.margin}٪</div></div>
+        <div class="bc-stat"><div class="lbl">الطلبات</div><div class="val">${fmt(b.orders)}</div></div>
+        <div class="bc-stat"><div class="lbl">الصحة</div><div class="val" style="color:${col}">${b.health_score}</div></div>
+      </div>
+      <div class="health-bar"><div class="health-fill" style="width:${b.health_score}%;background:${col}"></div></div>
+    </div>`;
+  });
+  html+='</div>';
+
+  // التنبيهات
+  if(alerts.length){
+    html+='<div class="section-head"><div><div class="section-title">🔔 تنبيهات ذكية</div><div class="section-sub">'+alerts.length+' تنبيه</div></div></div><div class="alerts-card">';
+    alerts.forEach(a=>{
+      const ic=a.type==="danger"?"🚨":a.type==="warn"?"⚠️":"💡";
+      const icCls=a.type==="danger"?"ic-red":a.type==="warn"?"ic-amber":"ic-mint";
+      html+=`<div class="alert-item"><div class="alert-ic ${icCls}">${ic}</div><div class="alert-body"><div class="title">${a.branch} — ${a.msg}</div><div class="desc">${a.detail||""}</div></div></div>`;
+    });
+    html+='</div>';
+  }
+
+  document.getElementById("content").innerHTML=html;
+  drawCharts(branches.filter(b=>b.status!=="empty"));
+}
+
+function drawCharts(branches){
+  Chart.defaults.color='#8ba89f';
+  Chart.defaults.font.family='Tajawal';
+  const grid='#1e3026';
+  const names=branches.map(b=>b.name);
+
+  new Chart(document.getElementById("c-branches"),{
+    type:"bar",
+    data:{labels:names,datasets:[{data:branches.map(b=>b.revenue),backgroundColor:branches.map(b=>statusColor(b.status)),borderRadius:7}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:grid},ticks:{callback:v=>v>=1000?(v/1000)+"k":v}}}}
+  });
+  new Chart(document.getElementById("c-health"),{
+    type:"bar",
+    data:{labels:names,datasets:[{data:branches.map(b=>b.health_score),backgroundColor:branches.map(b=>statusColor(b.status)),borderRadius:7}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:grid},min:0,max:100}}}
+  });
+}
+
+// أزرار الفترة (عرض فقط حالياً)
+document.querySelectorAll(".period-tabs button").forEach(btn=>{
+  btn.onclick=()=>{document.querySelectorAll(".period-tabs button").forEach(b=>b.classList.remove("active"));btn.classList.add("active")};
 });
 
-// أزرار الفترة
-document.querySelectorAll('.period-tabs button').forEach(btn => {
-  btn.onclick = () => {
-    document.querySelectorAll('.period-tabs button').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-  };
-});
+async function deleteCompany(){
+  if(!confirm("⚠️ حذف الشركة وكل فروعها؟ لا يمكن التراجع.\\nستتمكن من تسجيل شركة جديدة بعدها."))return;
+  try{
+    const r=await fetch("/company/delete",{method:"POST",headers:authH});
+    if(r.ok){alert("✅ تم حذف الشركة. يمكنك تسجيل شركة جديدة الآن.");location.href="company-register.html"}
+    else{const d=await r.json();alert(d.detail||"تعذّر الحذف")}
+  }catch(e){alert("تعذّر الاتصال")}
+}
+
+load();
 </script>
 </body>
 </html>
