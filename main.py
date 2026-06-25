@@ -951,7 +951,10 @@ def analyze(data: SalesData, user: User = Depends(get_current_user)):
         top_items_parts.append(data.top_item_2.strip())
     if data.top_item_3 and data.top_item_3.strip():
         top_items_parts.append(data.top_item_3.strip())
-    top_items_str = " | ".join(top_items_parts) 
+    top_items_str = " | ".join(top_items_parts)
+
+    # الباقة تُحدّد من اشتراك العميل الفعلي (وليس من اختياره في الصفحة)
+    # عميل التجربة يحصل على مستوى الباقة الأساسية
     if user.plan in ("basic", "pro", "executive"):
         plan = user.plan
     elif user.plan == "trial":
@@ -1198,8 +1201,6 @@ def company_create(
         s.add(company)
         s.commit()
         s.refresh(company)
-
-        # إنشاء الفروع
         for b_name in branches_raw:
             b_name = b_name.strip()
             if b_name:
@@ -1880,3 +1881,32 @@ def company_team_remove(data: dict, user: User = Depends(get_current_user)):
 
         log_activity(user.name, f"أزال عضو الفريق: {member.name}", member.email)
         return {"ok": True}
+
+# ===== حذف الشركة (للتجربة والإعادة) =====
+@app.post("/company/delete")
+def company_delete(user: User = Depends(get_current_user)):
+    """يحذف شركة المستخدم وكل فروعها — للمالك فقط."""
+    if not user.company_id:
+        raise HTTPException(403, "ليس لديك شركة")
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id)
+        if not company or company.owner_id != user.id:
+            raise HTTPException(403, "فقط المالك يحذف الشركة")
+
+        # احذف الفروع
+        branches = s.exec(select(Branch).where(Branch.company_id == company.id)).all()
+        for b in branches:
+            s.delete(b)
+
+        # فك ربط كل الأعضاء
+        members = s.exec(select(User).where(User.company_id == company.id)).all()
+        for m in members:
+            m.company_id = None
+            m.company_role = ""
+            s.add(m)
+
+        # احذف الشركة
+        s.delete(company)
+        s.commit()
+        log_activity(user.name, f"حذف الشركة: {company.name}", user.email)
+        return {"ok": True, "message": "تم حذف الشركة"}
