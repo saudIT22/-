@@ -115,7 +115,9 @@ class Branch(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     company_id: int = Field(index=True)          # تابع لأي شركة
     name: str                                    # اسم الفرع
+    branch_type: str = "standalone"              # mall/residential/cloud/airport/standalone
     manager_id: Optional[int] = None            # مدير الفرع (user_id) — اختياري
+    manager_name: str = ""                       # اسم مدير الفرع (للعرض)
     is_active: int = 1
     created_at: datetime = Field(default_factory=datetime.now)
 
@@ -1341,3 +1343,363 @@ def company_add_branch(data: dict, user: User = Depends(get_current_user)):
         s.refresh(branch)
         log_activity(s, user.name, f"أضاف فرع: {branch_name}", user.email)
         return {"ok": True, "branch_id": branch.id}
+
+# ============================================================
+# ===== BRANCH COMPARISON — مقارنة الفروع الذكية (الخدمة 2) =====
+# ============================================================
+
+def ask_gemini(prompt: str) -> str:
+    """استدعاء Gemini مع إعادة المحاولة — للأسئلة الذكية."""
+    models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-flash-latest"]
+    for model_name in models:
+        for attempt in range(2):
+            try:
+                r = ai_client.models.generate_content(model=model_name, contents=prompt)
+                if r and r.text:
+                    return r.text.strip()
+            except Exception:
+                time.sleep(1.5)
+    return ""
+
+
+def compute_branch_score(latest, all_branch_latest, sector):
+    """مؤشر أداء موحّد للفرع من 100 — يجمع 5 عوامل."""
+    bm = BENCHMARKS.get(sector, BENCHMARKS["restaurant"])
+
+    # 1) الإيرادات (نسبةً لأعلى فرع) — 25 نقطة
+    max_rev = max((b.revenue for b in all_branch_latest), default=1) or 1
+    rev_score = (latest.revenue / max_rev) * 25
+
+    # 2) الربحية (الهامش مقابل معيار القطاع) — 25 نقطة
+    margin_score = min(latest.margin / bm["margin_good"], 1.0) * 25 if bm["margin_good"] else 0
+
+    # 3) العملاء/الطلبات (نسبةً لأعلى فرع) — 20 نقطة
+    max_ord = max((b.orders for b in all_branch_latest), default=1) or 1
+    ord_score = (latest.orders / max_ord) * 20
+
+    # 4) متوسط الفاتورة (مقابل المعيار) — 15 نقطة
+    avg_ticket = (latest.revenue / latest.orders) if latest.orders else 0
+    ticket_score = min(avg_ticket / bm["avg_ticket_good"], 1.0) * 15 if bm["avg_ticket_good"] else 0
+
+    # 5) درجة الصحة العامة — 15 نقطة
+    health_score = (latest.health_score / 100) * 15
+
+    total = rev_score + margin_score + ord_score + ticket_score + health_score
+    return round(min(total, 100)), {
+        "revenue": round(rev_score, 1),
+        "margin": round(margin_score, 1),
+        "orders": round(ord_score, 1),
+        "ticket": round(ticket_score, 1),
+        "health": round(health_score, 1),
+        "avg_ticket": round(avg_ticket),
+    }
+
+
+def analyze_root_cause(entries):
+    """كشف أسباب تغيّر الأداء تلقائياً — يقارن آخر تحليلين."""
+    if len(entries) < 2:
+        return {"change_pct": 0, "reasons": [], "direction": "stable"}
+
+    latest, prev = entries[0], entries[1]
+    reasons = []
+
+    # تغيّر الإيراد الكلي
+    rev_change = ((latest.revenue - prev.revenue) / prev.revenue * 100) if prev.revenue else 0
+
+    # متوسط الفاتورة
+    at_now = (latest.revenue / latest.orders) if latest.orders else 0
+    at_prev = (prev.revenue / prev.orders) if prev.orders else 0
+    if at_prev:
+        at_change = (at_now - at_prev) / at_prev * 100
+        if at_change <= -8:
+            reasons.append(f"انخفاض متوسط الفاتورة {abs(round(at_change))}٪")
+        elif at_change >= 8:
+            reasons.append(f"ارتفاع متوسط الفاتورة {round(at_change)}٪ ✅")
+
+    # المصروفات
+    if prev.expenses:
+        exp_change = (latest.expenses - prev.expenses) / prev.expenses * 100
+        if exp_change >= 12:
+            reasons.append(f"زيادة المصروفات {round(exp_change)}٪")
+
+    # عدد العملاء
+    if prev.orders:
+        ord_change = (latest.orders - prev.orders) / prev.orders * 100
+        if ord_change <= -8:
+            reasons.append(f"تراجع عدد العملاء {abs(round(ord_change))}٪")
+        elif ord_change >= 10:
+            reasons.append(f"نمو عدد العملاء {round(ord_change)}٪ ✅")
+
+    # الهامش
+    margin_change = latest.margin - prev.margin
+    if margin_change <= -3:
+        reasons.append(f"انخفاض هامش الربح {abs(round(margin_change,1))} نقطة")
+
+    direction = "up" if rev_change > 3 else ("down" if rev_change < -3 else "stable")
+    return {"change_pct": round(rev_change, 1), "reasons": reasons, "direction": direction}
+
+
+def detect_anomalies(branch_data, company_avg):
+    """كشف الفروع غير الطبيعية مقارنة بمتوسط الشركة."""
+    anomalies = []
+    rev = branch_data["revenue"]
+    margin = branch_data["margin"]
+
+    if company_avg["revenue"] and rev < company_avg["revenue"] * 0.66:
+        diff = round((1 - rev / company_avg["revenue"]) * 100)
+        anomalies.append(f"المبيعات أقل من متوسط الشركة بـ {diff}٪")
+    if company_avg["margin"] and margin < company_avg["margin"] - 8:
+        anomalies.append(f"هامش الربح أقل من متوسط الشركة بـ {round(company_avg['margin']-margin)} نقطة")
+    if company_avg["avg_ticket"] and branch_data["scores"]["avg_ticket"] < company_avg["avg_ticket"] * 0.7:
+        anomalies.append("متوسط الفاتورة منخفض بشكل غير طبيعي")
+    return anomalies
+
+
+@app.get("/company-branches.html")
+def page_company_branches():
+    return FileResponse("company-branches.html")
+
+
+@app.get("/company/branches")
+def company_branches_compare(user: User = Depends(get_current_user)):
+    """المقارنة الذكية الكاملة للفروع."""
+    if not user.company_id:
+        raise HTTPException(403, "حسابك غير مرتبط بشركة")
+
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id)
+        if not company:
+            raise HTTPException(404, "الشركة غير موجودة")
+        if company.owner_id != user.id and user.company_role not in ("owner", "manager"):
+            raise HTTPException(403, "ليس لديك صلاحية")
+
+        branches = s.exec(
+            select(Branch).where(Branch.company_id == company.id, Branch.is_active == 1)
+        ).all()
+
+        # اجمع آخر تحليل + تاريخ لكل فرع
+        branch_entries = {}   # branch_id -> list entries (desc)
+        latest_per_branch = []
+        for b in branches:
+            entries = s.exec(
+                select(Entry).where(Entry.restaurant == b.name).order_by(Entry.created_at.desc())
+            ).all()
+            branch_entries[b.id] = entries
+            if entries:
+                latest_per_branch.append(entries[0])
+
+        if not latest_per_branch:
+            return {"company": {"name": company.name}, "branches": [], "managers": [],
+                    "best_practices": None, "empty": True}
+
+        # متوسطات الشركة
+        n = len(latest_per_branch)
+        company_avg = {
+            "revenue": sum(e.revenue for e in latest_per_branch) / n,
+            "margin": sum(e.margin for e in latest_per_branch) / n,
+            "avg_ticket": sum((e.revenue/e.orders if e.orders else 0) for e in latest_per_branch) / n,
+        }
+
+        results = []
+        for b in branches:
+            entries = branch_entries[b.id]
+            if not entries:
+                results.append({
+                    "id": b.id, "name": b.name, "type": b.branch_type,
+                    "manager": b.manager_name, "score": 0, "status": "empty",
+                    "revenue": 0, "margin": 0, "orders": 0,
+                    "scores": {}, "root_cause": None, "anomalies": [], "forecast": None,
+                })
+                continue
+
+            latest = entries[0]
+            score, breakdown = compute_branch_score(latest, latest_per_branch, company.sector)
+            root = analyze_root_cause(entries)
+
+            bdata = {
+                "id": b.id, "name": b.name, "type": b.branch_type,
+                "manager": b.manager_name,
+                "score": score,
+                "revenue": round(latest.revenue),
+                "margin": latest.margin,
+                "orders": latest.orders,
+                "health": latest.health_score,
+                "scores": breakdown,
+                "root_cause": root,
+                "top_item": latest.top_item,
+                "last_updated": latest.created_at.isoformat() if latest.created_at else None,
+            }
+            bdata["anomalies"] = detect_anomalies(bdata, company_avg)
+
+            # حالة الفرع
+            if score >= 75: bdata["status"] = "excellent"
+            elif score >= 55: bdata["status"] = "good"
+            elif score >= 40: bdata["status"] = "warn"
+            else: bdata["status"] = "danger"
+
+            # توقع بسيط (اتجاه آخر 3 تحاليل)
+            revs = [e.revenue for e in reversed(entries[:3])]
+            if len(revs) >= 2:
+                growth = (revs[-1] - revs[0]) / revs[0] * 100 if revs[0] else 0
+                bdata["forecast"] = {
+                    "next_revenue": round(revs[-1] * (1 + growth/100/2)),
+                    "growth_pct": round(growth, 1),
+                }
+            else:
+                bdata["forecast"] = None
+
+            results.append(bdata)
+
+        # ترتيب حسب المؤشر
+        results.sort(key=lambda x: x["score"], reverse=True)
+        for i, r in enumerate(results):
+            r["rank"] = i + 1
+
+        # ترتيب المدراء (الفروع اللي لها مدير)
+        managers = [{"name": r["manager"], "branch": r["name"], "score": r["score"]}
+                    for r in results if r["manager"]]
+        managers.sort(key=lambda x: x["score"], reverse=True)
+
+        # أفضل الممارسات (من الفرع الأعلى)
+        best_practices = None
+        ranked = [r for r in results if r["status"] != "empty"]
+        if len(ranked) >= 2:
+            top = ranked[0]
+            bottom = ranked[-1]
+            gap_ticket = top["scores"].get("avg_ticket", 0) - bottom["scores"].get("avg_ticket", 0)
+            best_practices = {
+                "top_branch": top["name"],
+                "top_score": top["score"],
+                "top_avg_ticket": top["scores"].get("avg_ticket", 0),
+                "top_item": top.get("top_item", ""),
+                "ticket_gap": gap_ticket,
+                "suggestion": f"فرع {top['name']} متوسط فاتورته أعلى بـ {gap_ticket} ريال. ادرس قائمته وأسلوب البيع وطبّقه على الفروع الأضعف.",
+            }
+
+        return {
+            "company": {"name": company.name, "sector": company.sector},
+            "branches": results,
+            "managers": managers,
+            "best_practices": best_practices,
+            "company_avg": {k: round(v) for k, v in company_avg.items()},
+            "empty": False,
+        }
+
+
+@app.post("/company/branch-ask")
+def company_branch_ask(data: dict, user: User = Depends(get_current_user)):
+    """محرك الأسئلة الذكي — يسأل المدير بالعربي عن فروعه."""
+    if not user.company_id:
+        raise HTTPException(403, "حسابك غير مرتبط بشركة")
+    question = data.get("question", "").strip()
+    if not question:
+        raise HTTPException(400, "اكتب سؤالك")
+
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id)
+        branches = s.exec(
+            select(Branch).where(Branch.company_id == company.id, Branch.is_active == 1)
+        ).all()
+
+        # اجمع سياق كل فرع
+        context_lines = []
+        for b in branches:
+            latest = s.exec(
+                select(Entry).where(Entry.restaurant == b.name).order_by(Entry.created_at.desc())
+            ).first()
+            if latest:
+                at = round(latest.revenue/latest.orders) if latest.orders else 0
+                context_lines.append(
+                    f"- فرع {b.name}: إيرادات {round(latest.revenue)} ريال، ربح {round(latest.profit)}، "
+                    f"هامش {latest.margin}٪، عملاء {latest.orders}، متوسط الفاتورة {at} ريال، "
+                    f"درجة الصحة {latest.health_score}/100، أكثر صنف: {latest.top_item}"
+                )
+            else:
+                context_lines.append(f"- فرع {b.name}: لا توجد بيانات بعد")
+
+        context = "\n".join(context_lines)
+
+        prompt = f"""أنت "نبّاه"، محلل أعمال خبير. مدير شركة "{company.name}" يسألك سؤالاً عن فروعه.
+استخدم البيانات التالية فقط، وأجب بإجابة عملية مباشرة بالعربية (لا تتجاوز 6 أسطر)، مدعومة بالأرقام، واذكر أسباباً وتوصية واضحة.
+
+بيانات الفروع:
+{context}
+
+سؤال المدير: {question}
+
+أجب الآن بشكل تنفيذي مختصر:"""
+
+        answer = ask_gemini(prompt)
+        if not answer:
+            answer = "الخدمة مزدحمة حالياً، حاول بعد لحظات."
+        return {"answer": answer}
+
+
+@app.post("/company/simulate")
+def company_simulate(data: dict, user: User = Depends(get_current_user)):
+    """محاكي القرارات — يتوقع أثر قرار قبل تنفيذه على كل الفروع."""
+    if not user.company_id:
+        raise HTTPException(403, "حسابك غير مرتبط بشركة")
+
+    # القرارات: price_change%, discount_change%, staff_change% (يؤثر على المصروفات)
+    price_change = float(data.get("price_change", 0))      # رفع/خفض الأسعار %
+    staff_change = float(data.get("staff_change", 0))      # زيادة/نقص الموظفين %
+    marketing = float(data.get("marketing", 0))           # ميزانية تسويق إضافية %
+
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id)
+        branches = s.exec(
+            select(Branch).where(Branch.company_id == company.id, Branch.is_active == 1)
+        ).all()
+
+        results = []
+        tot_before_profit = 0
+        tot_after_profit = 0
+
+        for b in branches:
+            latest = s.exec(
+                select(Entry).where(Entry.restaurant == b.name).order_by(Entry.created_at.desc())
+            ).first()
+            if not latest:
+                continue
+
+            revenue = latest.revenue
+            expenses = latest.expenses
+            orders = latest.orders
+
+            # أثر رفع الأسعار: الإيراد يزيد، لكن الطلب قد ينخفض (مرونة سعرية ~0.4)
+            price_effect = price_change / 100
+            demand_drop = price_effect * 0.4   # كل 1% رفع سعر = 0.4% نقص طلب
+            new_revenue = revenue * (1 + price_effect) * (1 - demand_drop)
+
+            # أثر التسويق: زيادة طلب تقديرية
+            new_revenue *= (1 + (marketing/100) * 0.5)
+
+            # أثر الموظفين على المصروفات (رواتب ~30% من المصروفات)
+            new_expenses = expenses * (1 + (staff_change/100) * 0.30)
+            # التسويق يزيد المصروفات
+            new_expenses *= (1 + (marketing/100) * 0.15)
+
+            before_profit = revenue - expenses
+            after_profit = new_revenue - new_expenses
+            tot_before_profit += before_profit
+            tot_after_profit += after_profit
+
+            results.append({
+                "name": b.name,
+                "before_profit": round(before_profit),
+                "after_profit": round(after_profit),
+                "diff": round(after_profit - before_profit),
+                "diff_pct": round((after_profit-before_profit)/before_profit*100,1) if before_profit else 0,
+            })
+
+        total_diff = tot_after_profit - tot_before_profit
+        return {
+            "branches": results,
+            "summary": {
+                "before_profit": round(tot_before_profit),
+                "after_profit": round(tot_after_profit),
+                "total_diff": round(total_diff),
+                "total_diff_pct": round(total_diff/tot_before_profit*100,1) if tot_before_profit else 0,
+            }
+        }
