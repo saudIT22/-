@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نبّاه — مقارنة الفروع الذكية</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#0a0f0c;--surface:#101a14;--card:#141f18;--card-h:#192618;
+  --border:#1e3026;--border-soft:#253c2e;
+  --mint:#10b981;--mint-b:#34d399;--mint-dim:#a7f3d0;--mint-glow:rgba(16,185,129,.15);
+  --text:#e8f5ee;--text-soft:#8ba89f;--text-dim:#4a6b5a;
+  --red:#f87171;--red-soft:rgba(248,113,113,.12);
+  --amber:#fbbf24;--amber-soft:rgba(251,191,36,.12);
+  --blue:#60a5fa;--blue-soft:rgba(96,165,250,.12);
+  --sidebar-w:220px;
+}
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Tajawal',sans-serif}
+body{background:var(--bg);color:var(--text);min-height:100vh;display:flex;overflow-x:hidden}
+
+/* SIDEBAR */
+.sidebar{width:var(--sidebar-w);min-height:100vh;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;position:fixed;right:0;top:0;z-index:100}
+.sb-logo{padding:22px 18px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.sb-logo .bell{width:38px;height:38px;border-radius:10px;background:var(--mint);display:grid;place-items:center;font-size:20px;flex-shrink:0;box-shadow:0 0 16px var(--mint-glow)}
+.sb-logo .brand{font-size:18px;font-weight:900;color:var(--mint)}
+.sb-logo .plan{font-size:10px;color:var(--text-dim);margin-top:1px}
+.sb-section{padding:16px 12px 6px;font-size:10px;color:var(--text-dim);letter-spacing:.08em}
+.sb-nav{list-style:none;padding:0 8px}
+.sb-nav li a{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:9px;color:var(--text-soft);font-size:13.5px;font-weight:500;text-decoration:none;transition:all .2s;cursor:pointer}
+.sb-nav li a:hover{background:var(--mint-glow);color:var(--mint-b)}
+.sb-nav li a.active{background:var(--mint-glow);color:var(--mint-b);font-weight:700}
+.sb-nav li a .ic{width:16px;text-align:center;font-size:15px;flex-shrink:0}
+.sb-bottom{margin-top:auto;padding:14px 12px;border-top:1px solid var(--border)}
+.sb-user{display:flex;align-items:center;gap:10px;padding:8px 10px}
+.sb-user .av{width:32px;height:32px;border-radius:9px;background:var(--mint-glow);border:1px solid var(--mint);display:grid;place-items:center;font-size:14px}
+.sb-user .info .name{font-size:12.5px;font-weight:700}
+.sb-user .info .role{font-size:10.5px;color:var(--text-dim)}
+
+/* MAIN */
+.main{margin-right:var(--sidebar-w);flex:1;display:flex;flex-direction:column;min-height:100vh}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 28px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:50}
+.tb-title{font-size:16px;font-weight:800;flex:1}
+.tb-title span{color:var(--text-soft);font-weight:400;font-size:13px;margin-right:8px}
+.content{padding:24px 28px;flex:1}
+
+.loading{text-align:center;padding:80px 20px;color:var(--text-soft)}
+.spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--mint);border-radius:50%;margin:0 auto 16px;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.empty-state{text-align:center;padding:70px 30px;background:var(--card);border:1px solid var(--border);border-radius:16px}
+.empty-state .ic{font-size:48px;margin-bottom:14px}
+.empty-state h3{font-size:19px;margin-bottom:8px}
+.empty-state p{color:var(--text-soft);margin-bottom:22px}
+.btn-mint{display:inline-block;background:var(--mint);color:#fff;padding:12px 26px;border-radius:11px;font-weight:800;text-decoration:none;border:none;cursor:pointer;font-family:'Tajawal';font-size:14.5px}
+.btn-mint:hover{background:#047857}
+
+.section-head{display:flex;align-items:center;justify-content:space-between;margin:24px 0 14px}
+.section-title{font-size:15px;font-weight:800}
+.section-sub{font-size:12px;color:var(--text-soft)}
+
+/* LEADERBOARD */
+.leaderboard{display:flex;flex-direction:column;gap:10px;margin-bottom:8px}
+.lb-row{display:flex;align-items:center;gap:16px;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 20px;transition:all .2s;cursor:pointer}
+.lb-row:hover{border-color:var(--border-soft);background:var(--card-h)}
+.lb-row.excellent{border-right:3px solid var(--mint)}
+.lb-row.good{border-right:3px solid var(--mint-b)}
+.lb-row.warn{border-right:3px solid var(--amber)}
+.lb-row.danger{border-right:3px solid var(--red)}
+.lb-rank{font-size:20px;font-weight:900;width:40px;text-align:center;flex-shrink:0}
+.lb-rank.gold{color:#fcd34d}.lb-rank.silver{color:#cbd5e1}.lb-rank.bronze{color:#d6a366}
+.lb-info{flex:1;min-width:0}
+.lb-name{font-size:15px;font-weight:800;display:flex;align-items:center;gap:8px}
+.lb-type{font-size:10px;font-weight:600;padding:2px 7px;border-radius:5px;background:var(--blue-soft);color:var(--blue)}
+.lb-meta{font-size:12px;color:var(--text-soft);margin-top:3px;display:flex;gap:14px;flex-wrap:wrap}
+.lb-score-box{text-align:center;flex-shrink:0;min-width:90px}
+.lb-score{font-size:30px;font-weight:900;line-height:1}
+.lb-score.excellent,.lb-score.good{color:var(--mint-b)}
+.lb-score.warn{color:var(--amber)}
+.lb-score.danger{color:var(--red)}
+.lb-score small{font-size:13px;color:var(--text-dim);font-weight:600}
+.lb-score-label{font-size:10px;color:var(--text-dim);margin-top:3px}
+.lb-bar{width:90px;height:5px;background:var(--border);border-radius:3px;overflow:hidden;margin-top:6px}
+.lb-fill{height:100%;border-radius:3px}
+
+/* ROOT CAUSE & ANOMALY CARDS */
+.insight-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:8px}
+.insight-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px}
+.ic-head{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:800;margin-bottom:14px}
+.cause-item{padding:11px 0;border-bottom:1px solid var(--border)}
+.cause-item:last-child{border-bottom:none}
+.cause-branch{font-size:13.5px;font-weight:700;display:flex;align-items:center;gap:7px;margin-bottom:6px}
+.cause-pct{font-size:11px;font-weight:800;padding:1px 7px;border-radius:5px}
+.cause-pct.down{background:var(--red-soft);color:var(--red)}
+.cause-pct.up{background:var(--mint-glow);color:var(--mint-b)}
+.cause-reasons{display:flex;flex-wrap:wrap;gap:6px}
+.reason-tag{font-size:11.5px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:4px 9px;color:var(--text-soft)}
+.anomaly-item{display:flex;gap:10px;align-items:flex-start;padding:11px 0;border-bottom:1px solid var(--border)}
+.anomaly-item:last-child{border-bottom:none}
+.anomaly-ic{width:28px;height:28px;border-radius:8px;background:var(--red-soft);display:grid;place-items:center;font-size:14px;flex-shrink:0}
+.anomaly-txt .b{font-size:13px;font-weight:700}
+.anomaly-txt .d{font-size:12px;color:var(--text-soft);margin-top:2px}
+.no-issues{text-align:center;padding:20px;color:var(--text-dim);font-size:13px}
+
+/* BEST PRACTICES */
+.bp-card{background:linear-gradient(135deg,rgba(16,185,129,.08),rgba(52,211,153,.03));border:1px solid rgba(16,185,129,.25);border-radius:14px;padding:20px;margin-bottom:8px}
+.bp-head{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:800;color:var(--mint-b);margin-bottom:12px}
+.bp-body{font-size:13.5px;color:var(--text);line-height:1.8}
+.bp-highlight{color:var(--mint-b);font-weight:800}
+
+/* MANAGERS */
+.mgr-table{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.mgr-row{display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid var(--border)}
+.mgr-row:last-child{border-bottom:none}
+.mgr-medal{font-size:18px;width:30px;text-align:center}
+.mgr-name{font-size:14px;font-weight:700;flex:1}
+.mgr-branch{font-size:12px;color:var(--text-soft)}
+.mgr-score{font-size:18px;font-weight:900;color:var(--mint-b)}
+
+/* Q&A ENGINE */
+.qa-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:22px;margin-bottom:8px}
+.qa-head{display:flex;align-items:center;gap:9px;font-size:15px;font-weight:800;margin-bottom:6px}
+.qa-sub{font-size:12.5px;color:var(--text-soft);margin-bottom:16px}
+.qa-input-row{display:flex;gap:10px}
+.qa-input{flex:1;background:var(--bg);border:1.5px solid var(--border);border-radius:11px;padding:13px 16px;color:var(--text);font-family:'Tajawal';font-size:14px;outline:none}
+.qa-input:focus{border-color:var(--mint)}
+.qa-send{background:var(--mint);color:#fff;border:none;border-radius:11px;padding:0 22px;font-family:'Tajawal';font-weight:800;font-size:14px;cursor:pointer;flex-shrink:0}
+.qa-send:hover{background:#047857}
+.qa-send:disabled{background:var(--border);cursor:not-allowed}
+.qa-suggestions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.qa-chip{font-size:12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text-soft);cursor:pointer;transition:all .2s}
+.qa-chip:hover{border-color:var(--mint);color:var(--mint-b)}
+.qa-answer{margin-top:16px;background:var(--bg);border:1px solid var(--border-soft);border-radius:12px;padding:16px 18px;font-size:14px;line-height:1.9;color:var(--text);display:none;white-space:pre-wrap}
+.qa-answer.show{display:block}
+.qa-answer .label{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:800;color:var(--mint-b);margin-bottom:10px}
+
+/* SIMULATOR */
+.sim-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:22px;margin-bottom:8px}
+.sim-head{display:flex;align-items:center;gap:9px;font-size:15px;font-weight:800;margin-bottom:6px}
+.sim-sub{font-size:12.5px;color:var(--text-soft);margin-bottom:18px}
+.sim-controls{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:18px}
+.sim-control label{display:block;font-size:12.5px;font-weight:700;color:var(--text-soft);margin-bottom:8px}
+.sim-control .slider-val{font-size:18px;font-weight:900;color:var(--mint-b);margin-bottom:6px}
+.sim-control input[type=range]{width:100%;accent-color:var(--mint)}
+.sim-run{background:var(--mint);color:#fff;border:none;border-radius:11px;padding:13px 28px;font-family:'Tajawal';font-weight:800;font-size:14.5px;cursor:pointer;width:100%}
+.sim-run:hover{background:#047857}
+.sim-result{margin-top:18px;display:none}
+.sim-result.show{display:block}
+.sim-summary{background:var(--bg);border:1px solid var(--border-soft);border-radius:12px;padding:18px;margin-bottom:14px;text-align:center}
+.sim-summary .lbl{font-size:13px;color:var(--text-soft);margin-bottom:6px}
+.sim-summary .big{font-size:30px;font-weight:900}
+.sim-summary .big.pos{color:var(--mint-b)}
+.sim-summary .big.neg{color:var(--red)}
+.sim-branches{display:flex;flex-direction:column;gap:8px}
+.sim-br-row{display:flex;align-items:center;justify-content:space-between;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:11px 16px}
+.sim-br-name{font-size:13px;font-weight:700}
+.sim-br-diff{font-size:13.5px;font-weight:800}
+.sim-br-diff.pos{color:var(--mint-b)}
+.sim-br-diff.neg{color:var(--red)}
+
+@media(max-width:900px){
+  :root{--sidebar-w:60px}
+  .sb-logo .brand,.sb-logo .plan,.sb-nav li a span,.sb-section,.sb-user .info{display:none}
+  .sb-logo{justify-content:center;padding:18px 0}.sb-nav li a{justify-content:center;padding:10px}
+  .sb-nav li a .ic{width:auto;font-size:18px}
+  .insight-grid{grid-template-columns:1fr}.sim-controls{grid-template-columns:1fr}
+  .content{padding:16px}.topbar{padding:12px 16px}
+}
+</style>
+</head>
+<body>
+<aside class="sidebar">
+  <div class="sb-logo"><div class="bell">🔔</div><div><div class="brand">نبّاه</div><div class="plan">باقة الشركات</div></div></div>
+  <div class="sb-section">الرئيسية</div>
+  <ul class="sb-nav">
+    <li><a href="company-dashboard.html"><span class="ic">🏠</span><span>لوحة المدير</span></a></li>
+    <li><a href="company-branches.html" class="active"><span class="ic">🏪</span><span>مقارنة الفروع</span></a></li>
+    <li><a href="company-report.html"><span class="ic">📊</span><span>التقارير</span></a></li>
+  </ul>
+  <div class="sb-section">النظام</div>
+  <ul class="sb-nav">
+    <li><a href="dashboard.html"><span class="ic">↩️</span><span>الوضع الفردي</span></a></li>
+    <li><a href="#" onclick="logout();return false"><span class="ic">🚪</span><span>خروج</span></a></li>
+  </ul>
+  <div class="sb-bottom"><div class="sb-user"><div class="av">م</div><div class="info"><div class="name" id="sb-name">المدير</div><div class="role">صلاحية كاملة</div></div></div></div>
+</aside>
+
+<main class="main">
+  <div class="topbar">
+    <div class="tb-title">مقارنة الفروع الذكية <span id="tb-company">/ ...</span></div>
+  </div>
+  <div class="content" id="content">
+    <div class="loading"><div class="spinner"></div>جاري تحليل الفروع...</div>
+  </div>
+</main>
+
+<script>
+if(!localStorage.getItem("nabbah_token")) location.href="login.html";
+function logout(){localStorage.clear();location.href="index.html"}
+const token=localStorage.getItem("nabbah_token");
+const authH={"Authorization":"Bearer "+token,"Content-Type":"application/json"};
+
+function fmt(n){return Number(n||0).toLocaleString("en-US")}
+function statusColor(s){return{excellent:"#10b981",good:"#34d399",warn:"#fbbf24",danger:"#f87171",empty:"#4a6b5a"}[s]||"#4a6b5a"}
+
+async function load(){
+  try{
+    const res=await fetch("/company/branches",{headers:authH});
+    if(res.status===401){localStorage.clear();location.href="login.html";return}
+    if(res.status===403){showError("حسابك غير مرتبط بشركة. سجّل شركتك أولاً.","company-register.html","سجّل شركتك");return}
+    const data=await res.json();
+    render(data);
+  }catch(e){showError("تعذّر تحميل البيانات","","")}
+}
+
+function showError(msg,link,btn){
+  document.getElementById("content").innerHTML=
+    `<div class="empty-state"><div class="ic">🏢</div><h3>${msg}</h3>`+
+    (link?`<a href="${link}" class="btn-mint">${btn}</a>`:"")+`</div>`;
+}
+
+function render(data){
+  document.getElementById("tb-company").textContent="/ "+(data.company?.name||"");
+  if(data.empty||!data.branches.length){
+    showError("لا توجد بيانات فروع بعد","input.html","أضف أول تحليل");
+    return;
+  }
+  const c=document.getElementById("content");
+  let html="";
+
+  // ===== LEADERBOARD =====
+  html+=`<div class="section-head"><div><div class="section-title">🏆 ترتيب الفروع — مؤشر الأداء الموحّد</div><div class="section-sub">تقييم من 100 يجمع: المبيعات، الربحية، العملاء، متوسط الفاتورة، والصحة</div></div></div>`;
+  html+=`<div class="leaderboard">`;
+  data.branches.forEach(b=>{
+    if(b.status==="empty"){
+      html+=`<div class="lb-row"><div class="lb-rank" style="color:#4a6b5a">—</div><div class="lb-info"><div class="lb-name">${b.name}</div><div class="lb-meta">لا توجد بيانات بعد</div></div><div class="lb-score-box"><div class="lb-score" style="color:#4a6b5a">—</div></div></div>`;
+      return;
+    }
+    const medal=b.rank===1?"gold":b.rank===2?"silver":b.rank===3?"bronze":"";
+    const rankDisplay=b.rank===1?"🥇":b.rank===2?"🥈":b.rank===3?"🥉":b.rank;
+    const at=b.scores?.avg_ticket||0;
+    html+=`<div class="lb-row ${b.status}">
+      <div class="lb-rank ${medal}">${rankDisplay}</div>
+      <div class="lb-info">
+        <div class="lb-name">${b.name} ${b.type&&b.type!=="standalone"?`<span class="lb-type">${typeLabel(b.type)}</span>`:""}</div>
+        <div class="lb-meta"><span>💰 ${fmt(b.revenue)} ريال</span><span>📊 هامش ${b.margin}٪</span><span>👥 ${fmt(b.orders)} عميل</span><span>🧾 متوسط ${at} ريال</span></div>
+      </div>
+      <div class="lb-score-box">
+        <div class="lb-score ${b.status}">${b.score}<small>/100</small></div>
+        <div class="lb-bar"><div class="lb-fill" style="width:${b.score}%;background:${statusColor(b.status)}"></div></div>
+      </div>
+    </div>`;
+  });
+  html+=`</div>`;
+
+  // ===== ROOT CAUSE + ANOMALY =====
+  const withCause=data.branches.filter(b=>b.root_cause&&b.root_cause.reasons&&b.root_cause.reasons.length);
+  const withAnomaly=data.branches.filter(b=>b.anomalies&&b.anomalies.length);
+  html+=`<div class="insight-grid">`;
+  // root cause
+  html+=`<div class="insight-card"><div class="ic-head">🔍 أسباب تغيّر الأداء</div>`;
+  if(withCause.length){
+    withCause.forEach(b=>{
+      const d=b.root_cause.direction;
+      const pctCls=d==="down"?"down":"up";
+      const arrow=d==="down"?"▼":"▲";
+      html+=`<div class="cause-item"><div class="cause-branch">${b.name} <span class="cause-pct ${pctCls}">${arrow} ${Math.abs(b.root_cause.change_pct)}٪</span></div><div class="cause-reasons">`;
+      b.root_cause.reasons.forEach(r=>html+=`<span class="reason-tag">${r}</span>`);
+      html+=`</div></div>`;
+    });
+  }else{html+=`<div class="no-issues">✅ لا توجد تغيّرات جوهرية تستدعي الانتباه</div>`}
+  html+=`</div>`;
+  // anomaly
+  html+=`<div class="insight-card"><div class="ic-head">⚡ كشف الفروع غير الطبيعية</div>`;
+  if(withAnomaly.length){
+    withAnomaly.forEach(b=>{
+      b.anomalies.forEach(a=>{
+        html+=`<div class="anomaly-item"><div class="anomaly-ic">⚠️</div><div class="anomaly-txt"><div class="b">${b.name}</div><div class="d">${a}</div></div></div>`;
+      });
+    });
+  }else{html+=`<div class="no-issues">✅ كل الفروع ضمن النطاق الطبيعي</div>`}
+  html+=`</div></div>`;
+
+  // ===== BEST PRACTICES =====
+  if(data.best_practices){
+    const bp=data.best_practices;
+    html+=`<div class="section-head"><div><div class="section-title">⭐ أفضل الممارسات</div><div class="section-sub">تعلّم من الفرع الأقوى وطبّقه على الباقي</div></div></div>`;
+    html+=`<div class="bp-card"><div class="bp-head">⭐ فرع ${bp.top_branch} — النموذج الأفضل (${bp.top_score}/100)</div>
+      <div class="bp-body">متوسط الفاتورة في فرع <span class="bp-highlight">${bp.top_branch}</span> يبلغ <span class="bp-highlight">${bp.top_avg_ticket} ريال</span>`+
+      (bp.top_item?` وأكثر صنف مبيعاً <span class="bp-highlight">${bp.top_item}</span>`:"")+`.<br>${bp.suggestion}</div></div>`;
+  }
+
+  // ===== MANAGERS =====
+  if(data.managers&&data.managers.length){
+    html+=`<div class="section-head"><div><div class="section-title">👔 ترتيب مدراء الفروع</div><div class="section-sub">حسب مؤشر أداء فروعهم</div></div></div>`;
+    html+=`<div class="mgr-table">`;
+    data.managers.forEach((m,i)=>{
+      const medal=i===0?"🥇":i===1?"🥈":i===2?"🥉":`${i+1}`;
+      html+=`<div class="mgr-row"><div class="mgr-medal">${medal}</div><div class="mgr-name">${m.name}<div class="mgr-branch">${m.branch}</div></div><div class="mgr-score">${m.score}</div></div>`;
+    });
+    html+=`</div>`;
+  }
+
+  // ===== Q&A ENGINE =====
+  html+=`<div class="section-head"><div><div class="section-title">💬 محرّك الأسئلة الذكي</div><div class="section-sub">اسأل عن فروعك بالعربي — يجاوبك نبّاه بالأرقام</div></div></div>`;
+  html+=`<div class="qa-card">
+    <div class="qa-input-row">
+      <input class="qa-input" id="qa-input" placeholder="مثال: ليش فرع المروة أضعف من العليا؟" onkeydown="if(event.key==='Enter')askQ()">
+      <button class="qa-send" id="qa-send" onclick="askQ()">اسأل</button>
+    </div>
+    <div class="qa-suggestions">
+      <span class="qa-chip" onclick="setQ(this)">أي فرع يحتاج تدخّل عاجل؟</span>
+      <span class="qa-chip" onclick="setQ(this)">ليش الفرع الأول أفضل من الأخير؟</span>
+      <span class="qa-chip" onclick="setQ(this)">وش الفرع اللي أعلى ربحية؟</span>
+      <span class="qa-chip" onclick="setQ(this)">كيف أرفع أداء الفروع الضعيفة؟</span>
+    </div>
+    <div class="qa-answer" id="qa-answer"><div class="label">🔔 نبّاه يقول:</div><div id="qa-text"></div></div>
+  </div>`;
+
+  // ===== SIMULATOR =====
+  html+=`<div class="section-head"><div><div class="section-title">🎮 محاكي القرارات</div><div class="section-sub">جرّب أثر القرار على كل الفروع قبل تنفيذه فعلياً</div></div></div>`;
+  html+=`<div class="sim-card">
+    <div class="sim-controls">
+      <div class="sim-control"><label>📈 تغيير الأسعار</label><div class="slider-val" id="v-price">0٪</div><input type="range" id="s-price" min="-20" max="20" value="0" oninput="document.getElementById('v-price').textContent=(this.value>0?'+':'')+this.value+'٪'"></div>
+      <div class="sim-control"><label>👥 تغيير عدد الموظفين</label><div class="slider-val" id="v-staff">0٪</div><input type="range" id="s-staff" min="-30" max="30" value="0" oninput="document.getElementById('v-staff').textContent=(this.value>0?'+':'')+this.value+'٪'"></div>
+      <div class="sim-control"><label>📣 ميزانية تسويق إضافية</label><div class="slider-val" id="v-mkt">0٪</div><input type="range" id="s-mkt" min="0" max="50" value="0" oninput="document.getElementById('v-mkt').textContent='+'+this.value+'٪'"></div>
+    </div>
+    <button class="sim-run" onclick="runSim()">▶ شغّل المحاكاة</button>
+    <div class="sim-result" id="sim-result"></div>
+  </div>`;
+
+  c.innerHTML=html;
+}
+
+function typeLabel(t){return{mall:"مول",residential:"حي سكني",cloud:"مطبخ سحابي",airport:"مطار"}[t]||t}
+function setQ(el){document.getElementById("qa-input").value=el.textContent;askQ()}
+
+async function askQ(){
+  const q=document.getElementById("qa-input").value.trim();
+  if(!q)return;
+  const btn=document.getElementById("qa-send"),ans=document.getElementById("qa-answer"),txt=document.getElementById("qa-text");
+  btn.disabled=true;btn.textContent="...";ans.classList.add("show");txt.textContent="نبّاه يحلل فروعك...";
+  try{
+    const res=await fetch("/company/branch-ask",{method:"POST",headers:authH,body:JSON.stringify({question:q})});
+    const data=await res.json();
+    txt.textContent=data.answer||"تعذّر الحصول على إجابة";
+  }catch(e){txt.textContent="تعذّر الاتصال، حاول مرة أخرى"}
+  btn.disabled=false;btn.textContent="اسأل";
+}
+
+async function runSim(){
+  const price=document.getElementById("s-price").value;
+  const staff=document.getElementById("s-staff").value;
+  const mkt=document.getElementById("s-mkt").value;
+  const box=document.getElementById("sim-result");
+  box.classList.add("show");box.innerHTML=`<div class="loading"><div class="spinner"></div>جاري حساب الأثر...</div>`;
+  try{
+    const res=await fetch("/company/simulate",{method:"POST",headers:authH,body:JSON.stringify({price_change:price,staff_change:staff,marketing:mkt})});
+    const data=await res.json();
+    const s=data.summary;
+    const cls=s.total_diff>=0?"pos":"neg";
+    const sign=s.total_diff>=0?"+":"";
+    let html=`<div class="sim-summary"><div class="lbl">التأثير المتوقّع على إجمالي ربح الشركة</div><div class="big ${cls}">${sign}${fmt(s.total_diff)} ريال</div><div class="lbl" style="margin-top:6px">(${sign}${s.total_diff_pct}٪) — من ${fmt(s.before_profit)} إلى ${fmt(s.after_profit)} ريال</div></div>`;
+    html+=`<div class="sim-branches">`;
+    data.branches.forEach(b=>{
+      const bc=b.diff>=0?"pos":"neg";const bs=b.diff>=0?"+":"";
+      html+=`<div class="sim-br-row"><div class="sim-br-name">${b.name}</div><div class="sim-br-diff ${bc}">${bs}${fmt(b.diff)} ريال (${bs}${b.diff_pct}٪)</div></div>`;
+    });
+    html+=`</div>`;
+    box.innerHTML=html;
+  }catch(e){box.innerHTML=`<div class="no-issues">تعذّر تشغيل المحاكاة</div>`}
+}
+
+load();
+</script>
+</body>
+</html>
