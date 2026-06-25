@@ -184,6 +184,7 @@
     <a href="dashboard.html" class="active">لوحة القيادة</a>
     <a href="charts.html">التحليلات</a>
     <a href="trends.html">📈 التطوّر</a>
+    <a href="company-dashboard.html" id="company-link" style="display:none;background:#065f46;color:#fff;border-radius:9px;font-weight:700">🏢 لوحة الشركة</a>
     <a href="input.html" class="btn-primary btn">➕ تحليل جديد</a>
   </div>
 </div></nav>
@@ -422,6 +423,20 @@
   }
 
   load();
+
+  // فحص إذا المستخدم عنده شركة → أظهر زر "لوحة الشركة"
+  (async () => {
+    try {
+      const token = localStorage.getItem("nabbah_token");
+      if (!token) return;
+      const r = await fetch("/company/info", { headers: { "Authorization": "Bearer " + token } });
+      if (!r.ok) return;
+      const d = await r.json();
+      if (d.has_company) {
+        document.getElementById("company-link").style.display = "inline-block";
+      }
+    } catch(e) {}
+  })();
 </script>
 </body>
 </html>
