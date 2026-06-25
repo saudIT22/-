@@ -140,6 +140,44 @@ engine = create_engine(db_url)
 SQLModel.metadata.create_all(engine)
 
 
+# ===== Migration تلقائي: يضيف الأعمدة الجديدة لجداول موجودة =====
+def run_migrations():
+    """يضيف أعمدة company_id و company_role لجدول user إذا ما كانت موجودة."""
+    from sqlalchemy import text
+    is_postgres = db_url.startswith("postgresql")
+
+    migrations = []
+    if is_postgres:
+        # PostgreSQL syntax
+        migrations = [
+            'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS company_id INTEGER',
+            'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS company_role VARCHAR DEFAULT \'\'',
+        ]
+    else:
+        # SQLite - أبسط، لكن ما يدعم IF NOT EXISTS بنفس الطريقة
+        try:
+            with engine.connect() as conn:
+                result = conn.execute(text("PRAGMA table_info(user)"))
+                cols = [row[1] for row in result]
+                if "company_id" not in cols:
+                    migrations.append("ALTER TABLE user ADD COLUMN company_id INTEGER")
+                if "company_role" not in cols:
+                    migrations.append("ALTER TABLE user ADD COLUMN company_role VARCHAR DEFAULT ''")
+        except Exception:
+            pass
+
+    for sql in migrations:
+        try:
+            with engine.connect() as conn:
+                conn.execute(text(sql))
+                conn.commit()
+                print(f"✅ Migration OK: {sql[:60]}...")
+        except Exception as e:
+            print(f"⚠️ Migration skipped: {e}")
+
+run_migrations()
+
+
 # ===== أدوات الأمان: كلمات المرور والرموز =====
 def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
@@ -1678,28 +1716,4 @@ def company_simulate(data: dict, user: User = Depends(get_current_user)):
             # أثر الموظفين على المصروفات (رواتب ~30% من المصروفات)
             new_expenses = expenses * (1 + (staff_change/100) * 0.30)
             # التسويق يزيد المصروفات
-            new_expenses *= (1 + (marketing/100) * 0.15)
-
-            before_profit = revenue - expenses
-            after_profit = new_revenue - new_expenses
-            tot_before_profit += before_profit
-            tot_after_profit += after_profit
-
-            results.append({
-                "name": b.name,
-                "before_profit": round(before_profit),
-                "after_profit": round(after_profit),
-                "diff": round(after_profit - before_profit),
-                "diff_pct": round((after_profit-before_profit)/before_profit*100,1) if before_profit else 0,
-            })
-
-        total_diff = tot_after_profit - tot_before_profit
-        return {
-            "branches": results,
-            "summary": {
-                "before_profit": round(tot_before_profit),
-                "after_profit": round(tot_after_profit),
-                "total_diff": round(total_diff),
-                "total_diff_pct": round(total_diff/tot_before_profit*100,1) if tot_before_profit else 0,
-            }
-        }
+   
