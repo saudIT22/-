@@ -1504,7 +1504,6 @@ def company_info(user: User = Depends(get_current_user)):
 # ===== إنشاء شركة جديدة =====
 @app.post("/company/create")
 def company_create(data: dict, user: User = Depends(get_current_user)):
-    require_company_access(user)
     name = (data.get("name") or "").strip()
     sector = (data.get("sector") or "retail").strip()
     branches_raw = data.get("branches", [])
@@ -1665,7 +1664,6 @@ def company_set_target(data: dict, user: User = Depends(get_current_user)):
 # ===== إدخال بيانات دورية لفرع (يبدأ الحساب فوراً) =====
 @app.post("/company/entry")
 def company_entry(data: dict, user: User = Depends(get_current_user)):
-    require_company_access(user)
     bid = data.get("branch_id")
     with Session(engine) as s:
         branch = s.get(CompanyBranch, int(bid)) if bid else None
@@ -1714,7 +1712,6 @@ def company_entry(data: dict, user: User = Depends(get_current_user)):
 # ===== لوحة المدير التنفيذي — كل المؤشرات في استجابة واحدة =====
 @app.get("/company/dashboard")
 def company_dashboard(user: User = Depends(get_current_user)):
-    require_company_access(user)
     if not user.company_id:
         raise HTTPException(403, "لا توجد شركة نشطة")
     with Session(engine) as s:
@@ -1850,7 +1847,6 @@ def company_dashboard(user: User = Depends(get_current_user)):
 # ===== تفاصيل فرع واحد + تاريخه =====
 @app.get("/company/branch/{branch_id}")
 def company_branch_detail(branch_id: int, user: User = Depends(get_current_user)):
-    require_company_access(user)
     with Session(engine) as s:
         b = s.get(CompanyBranch, branch_id)
         if not b:
@@ -1880,7 +1876,6 @@ def company_branch_detail(branch_id: int, user: User = Depends(get_current_user)
 # ===== تحليل Gemini (للشركة كاملة أو لفرع) =====
 @app.post("/company/analyze")
 def company_analyze(data: dict, user: User = Depends(get_current_user)):
-    require_company_access(user)
     if not user.company_id:
         raise HTTPException(403, "لا توجد شركة نشطة")
     scope = (data.get("scope") or "company").strip()
@@ -1941,7 +1936,6 @@ def company_analyze(data: dict, user: User = Depends(get_current_user)):
 # ===== اسأل نبّاه الذكي (صندوق المحادثة) =====
 @app.post("/company/ask")
 def company_ask(data: dict, user: User = Depends(get_current_user)):
-    require_company_access(user)
     if not user.company_id:
         raise HTTPException(403, "لا توجد شركة نشطة")
     q = (data.get("question") or "").strip()
@@ -1979,7 +1973,6 @@ def company_ask(data: dict, user: User = Depends(get_current_user)):
 # ===== بيانات التقرير التنفيذي (للطباعة) =====
 @app.get("/company/report")
 def company_report(user: User = Depends(get_current_user)):
-    require_company_access(user)
     if not user.company_id:
         raise HTTPException(403, "لا توجد شركة نشطة")
     with Session(engine) as s:
