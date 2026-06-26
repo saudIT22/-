@@ -3,407 +3,554 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>نبّاه — لوحة المدير التنفيذي</title>
+<title>نبّاه · لوحة الشركة</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <style>
-:root {
-  --bg:        #0a0f0c;
-  --surface:   #101a14;
-  --card:      #141f18;
-  --card-hover:#192618;
-  --border:    #1e3026;
-  --border-soft:#253c2e;
-  --mint:      #10b981;
-  --mint-b:    #34d399;
-  --mint-dim:  #a7f3d0;
-  --mint-glow: rgba(16,185,129,.15);
-  --text:      #e8f5ee;
-  --text-soft: #8ba89f;
-  --text-dim:  #4a6b5a;
-  --red:       #f87171;
-  --red-soft:  rgba(248,113,113,.12);
-  --amber:     #fbbf24;
-  --amber-soft:rgba(251,191,36,.12);
-  --blue:      #60a5fa;
-  --sidebar-w: 220px;
-}
-* { margin:0; padding:0; box-sizing:border-box; font-family:'Tajawal',sans-serif }
-body { background:var(--bg); color:var(--text); min-height:100vh; display:flex; overflow-x:hidden }
+  :root{
+    --bg:#0a0f0c; --bg2:#0d1410; --panel:#101a15; --panel2:#0e1712;
+    --line:#1d2c24; --line-soft:#16221c;
+    --mint:#10b981; --mint-deep:#0c8f64; --mint-glow:rgba(16,185,129,.18);
+    --gold:#f5b301; --orange:#f59e0b; --red:#ef4444; --blue:#3b82f6; --purple:#a855f7;
+    --txt:#e8f1ec; --txt-soft:#9fb4aa; --txt-mute:#678075;
+    --r:16px; --r-sm:11px;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 34px rgba(0,0,0,.32);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--txt);
+    line-height:1.7;-webkit-font-smoothing:antialiased;min-height:100vh}
+  body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.5;
+    background:radial-gradient(circle at 1px 1px,rgba(16,185,129,.05) 1px,transparent 0);background-size:26px 26px}
+  a{text-decoration:none;color:inherit}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 16px;position:relative;z-index:1}
 
-/* ===== SIDEBAR ===== */
-.sidebar {
-  width:var(--sidebar-w); min-height:100vh; background:var(--surface);
-  border-left:1px solid var(--border); display:flex; flex-direction:column;
-  position:fixed; right:0; top:0; z-index:100;
-}
-.sb-logo {
-  padding:22px 18px 16px; border-bottom:1px solid var(--border);
-  display:flex; align-items:center; gap:10px;
-}
-.sb-logo .bell {
-  width:38px; height:38px; border-radius:10px; background:var(--mint);
-  display:grid; place-items:center; font-size:20px; flex-shrink:0;
-  box-shadow:0 0 16px var(--mint-glow);
-}
-.sb-logo .brand { font-size:18px; font-weight:900; color:var(--mint) }
-.sb-logo .plan { font-size:10px; color:var(--text-dim); margin-top:1px }
+  /* header */
+  header{position:sticky;top:0;z-index:40;background:rgba(10,15,12,.86);
+    backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+  .head-in{max-width:1180px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:900;font-size:20px;color:#fff}
+  .brand .bell{width:36px;height:36px;border-radius:11px;background:var(--mint);
+    display:grid;place-items:center;font-size:17px;transform:rotate(-5deg);box-shadow:0 4px 14px var(--mint-glow)}
+  .brand small{display:block;font-size:11.5px;font-weight:500;color:var(--mint);margin-top:-3px}
+  .head-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .pill{display:inline-flex;align-items:center;gap:7px;background:var(--panel);border:1px solid var(--line);
+    padding:7px 13px;border-radius:100px;font-size:13px;font-weight:700;color:var(--txt-soft)}
+  .pill b{color:var(--mint)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;font-family:inherit;
+    font-weight:700;cursor:pointer;border:none;border-radius:11px;font-size:13.5px;transition:.18s;white-space:nowrap}
+  .btn-mint{background:var(--mint);color:#04130d;padding:9px 16px}
+  .btn-mint:hover{background:var(--mint-deep);transform:translateY(-1px)}
+  .btn-ghost{background:var(--panel);color:var(--txt-soft);padding:9px 14px;border:1px solid var(--line)}
+  .btn-ghost:hover{border-color:var(--mint);color:var(--txt)}
 
-.sb-section { padding:16px 12px 6px; font-size:10px; color:var(--text-dim); letter-spacing:.08em; text-transform:uppercase }
-.sb-nav { list-style:none; padding:0 8px }
-.sb-nav li a {
-  display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:9px;
-  color:var(--text-soft); font-size:13.5px; font-weight:500; text-decoration:none;
-  transition:all .2s; cursor:pointer;
-}
-.sb-nav li a:hover { background:var(--mint-glow); color:var(--mint-b) }
-.sb-nav li a.active { background:var(--mint-glow); color:var(--mint-b); font-weight:700 }
-.sb-nav li a .ic { width:16px; text-align:center; font-size:15px; flex-shrink:0 }
-.sb-nav li a .badge {
-  margin-right:auto; background:var(--red); color:#fff; font-size:10px;
-  font-weight:800; padding:1px 6px; border-radius:20px;
-}
-.sb-bottom { margin-top:auto; padding:14px 12px; border-top:1px solid var(--border) }
-.sb-user { display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:10px; }
-.sb-user .av { width:32px; height:32px; border-radius:9px; background:var(--mint-glow); border:1px solid var(--mint); display:grid; place-items:center; font-size:14px; flex-shrink:0 }
-.sb-user .info .name { font-size:12.5px; font-weight:700; color:var(--text) }
-.sb-user .info .role { font-size:10.5px; color:var(--text-dim) }
+  /* page title */
+  .page-head{padding:26px 0 6px}
+  .page-head h1{font-size:clamp(22px,4vw,30px);font-weight:900}
+  .page-head p{color:var(--txt-soft);font-size:14.5px;margin-top:2px}
 
-/* ===== MAIN ===== */
-.main { margin-right:var(--sidebar-w); flex:1; display:flex; flex-direction:column; min-height:100vh }
+  /* loading / states */
+  .state{padding:60px 20px;text-align:center;color:var(--txt-soft)}
+  .spin{width:34px;height:34px;border:3px solid var(--line);border-top-color:var(--mint);
+    border-radius:50%;animation:sp 1s linear infinite;margin:0 auto 14px}
+  @keyframes sp{to{transform:rotate(360deg)}}
 
-/* TOPBAR */
-.topbar {
-  background:var(--surface); border-bottom:1px solid var(--border);
-  padding:14px 28px; display:flex; align-items:center; gap:16px;
-  position:sticky; top:0; z-index:50;
-}
-.tb-title { font-size:16px; font-weight:800; color:var(--text); flex:1 }
-.tb-title span { color:var(--text-soft); font-weight:400; font-size:13px; margin-right:8px }
-.period-tabs { display:flex; background:var(--bg); border:1px solid var(--border); border-radius:9px; overflow:hidden }
-.period-tabs button {
-  border:none; background:transparent; color:var(--text-soft); font-family:'Tajawal'; font-size:12.5px;
-  font-weight:600; padding:6px 14px; cursor:pointer; transition:all .15s;
-}
-.period-tabs button.active { background:var(--mint); color:#fff }
-.tb-notif {
-  width:34px; height:34px; background:var(--card); border:1px solid var(--border);
-  border-radius:9px; display:grid; place-items:center; cursor:pointer; position:relative; font-size:16px;
-}
-.tb-notif .dot { position:absolute; top:6px; left:6px; width:7px; height:7px; background:var(--red); border-radius:50%; border:1.5px solid var(--surface) }
+  /* KPI cards */
+  .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-top:14px}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:15px 16px;position:relative;overflow:hidden}
+  .kpi::after{content:"";position:absolute;top:0;right:0;width:60px;height:60px;
+    background:radial-gradient(circle,var(--mint-glow),transparent 70%);opacity:.6}
+  .kpi .ico{width:34px;height:34px;border-radius:9px;background:var(--mint-soft,#0e3a2a);
+    display:grid;place-items:center;font-size:16px;margin-bottom:9px}
+  .kpi .lbl{font-size:12.5px;color:var(--txt-soft);font-weight:600}
+  .kpi .val{font-size:23px;font-weight:900;letter-spacing:-.02em;margin-top:1px}
+  .kpi .val small{font-size:13px;color:var(--txt-mute);font-weight:700}
 
-/* CONTENT */
-.content { padding:24px 28px; flex:1 }
+  /* panels */
+  .grid{display:grid;gap:14px;margin-top:14px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px}
+  .panel h2{font-size:15.5px;font-weight:800;margin-bottom:2px;display:flex;align-items:center;gap:8px}
+  .panel .sub{font-size:12.5px;color:var(--txt-mute);margin-bottom:14px}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 
-/* KPI CARDS */
-.kpi-row { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:20px }
-.kpi {
-  background:var(--card); border:1px solid var(--border); border-radius:14px;
-  padding:18px 20px; position:relative; overflow:hidden; transition:border-color .2s;
-}
-.kpi:hover { border-color:var(--border-soft) }
-.kpi::before {
-  content:''; position:absolute; top:0; right:0; width:3px; height:100%; background:var(--mint); border-radius:0 14px 14px 0;
-}
-.kpi.red::before { background:var(--red) }
-.kpi.amber::before { background:var(--amber) }
-.kpi.blue::before { background:var(--blue) }
-.kpi-label { font-size:12px; color:var(--text-soft); font-weight:600; margin-bottom:8px; display:flex; align-items:center; gap:6px }
-.kpi-val { font-size:26px; font-weight:900; color:var(--text); letter-spacing:-.5px }
-.kpi-val .unit { font-size:13px; font-weight:600; color:var(--text-soft); margin-right:3px }
-.kpi-change {
-  display:inline-flex; align-items:center; gap:4px; margin-top:8px;
-  font-size:12px; font-weight:700; padding:3px 8px; border-radius:6px;
-}
-.up { background:rgba(16,185,129,.15); color:var(--mint-b) }
-.down { background:var(--red-soft); color:var(--red) }
-.neu { background:rgba(251,191,36,.12); color:var(--amber) }
+  /* ranking */
+  .rank-row{display:flex;align-items:center;gap:11px;padding:11px 0;border-bottom:1px solid var(--line-soft)}
+  .rank-row:last-child{border-bottom:none}
+  .rank-no{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;font-weight:900;font-size:13px;flex-shrink:0;background:var(--panel2);color:var(--txt-soft);border:1px solid var(--line)}
+  .rank-no.top{background:var(--mint);color:#04130d;border-color:var(--mint)}
+  .rank-name{font-weight:700;font-size:14.5px}
+  .rank-city{font-size:11.5px;color:var(--txt-mute)}
+  .rank-score{margin-inline-start:auto;text-align:left}
+  .rank-score b{font-size:16px;font-weight:900}
+  .rank-score .of{font-size:11px;color:var(--txt-mute);font-weight:600}
+  .trend{font-size:12px;font-weight:800;padding:2px 7px;border-radius:7px;margin-inline-start:8px}
+  .trend.up{background:rgba(16,185,129,.14);color:var(--mint)}
+  .trend.down{background:rgba(239,68,68,.14);color:var(--red)}
+  .trend.same{background:var(--panel2);color:var(--txt-mute)}
 
-/* CHARTS ROW */
-.charts-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:20px }
-.chart-card {
-  background:var(--card); border:1px solid var(--border); border-radius:14px; padding:20px;
-}
-.chart-card.wide { grid-column:span 2 }
-.chart-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px }
-.chart-title { font-size:14px; font-weight:800; color:var(--text) }
-.chart-sub { font-size:12px; color:var(--text-soft) }
-.chart-box { position:relative; height:230px }
+  /* map */
+  #map{height:300px;border-radius:var(--r-sm);overflow:hidden;border:1px solid var(--line);background:var(--panel2)}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;font-size:12.5px;color:var(--txt-soft)}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .dot{width:10px;height:10px;border-radius:50%;display:inline-block}
 
-/* BRANCH MATRIX */
-.section-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px }
-.section-title { font-size:15px; font-weight:800; color:var(--text) }
-.section-sub { font-size:12px; color:var(--text-soft) }
-.view-all { font-size:12px; color:var(--mint); font-weight:700; text-decoration:none; cursor:pointer }
+  /* factor bars */
+  .factor{display:flex;align-items:center;gap:10px;margin-bottom:11px}
+  .factor .fl{font-size:13.5px;font-weight:600;min-width:110px}
+  .factor .fbar{flex:1;height:8px;background:var(--panel2);border-radius:100px;overflow:hidden;position:relative}
+  .factor .fbar i{position:absolute;top:0;bottom:0;right:50%;background:var(--red);border-radius:100px}
+  .factor .fv{font-size:13px;font-weight:800;color:var(--red);min-width:48px;text-align:left}
 
-.branch-matrix { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:20px }
-.branch-card {
-  background:var(--card); border:1px solid var(--border); border-radius:14px;
-  padding:18px; transition:all .2s; cursor:pointer; position:relative; overflow:hidden;
-}
-.branch-card:hover { border-color:var(--border-soft); transform:translateY(-2px) }
-.branch-card.best { border-color:rgba(16,185,129,.35) }
-.branch-card.warn { border-color:rgba(251,191,36,.35) }
-.branch-card.danger { border-color:rgba(248,113,113,.35) }
+  /* best practice */
+  .bp-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+  .bp-badge{background:var(--mint);color:#04130d;font-weight:800;font-size:12px;padding:4px 11px;border-radius:100px}
+  .chip-list{display:flex;flex-direction:column;gap:7px}
+  .chip{display:flex;align-items:center;gap:9px;font-size:13.5px;color:var(--txt-soft)}
+  .chip .d{width:6px;height:6px;border-radius:50%;background:var(--mint)}
 
-.bc-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px }
-.bc-name { font-size:14px; font-weight:800; color:var(--text) }
-.bc-rank { font-size:10px; font-weight:800; padding:2px 8px; border-radius:6px }
-.rank-1 { background:rgba(16,185,129,.2); color:var(--mint-b) }
-.rank-2 { background:rgba(96,165,250,.15); color:var(--blue) }
-.rank-3 { background:rgba(251,191,36,.15); color:var(--amber) }
-.rank-bad { background:rgba(248,113,113,.15); color:var(--red) }
+  /* forecast */
+  .fc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:11px}
+  .fc{background:var(--panel2);border:1px solid var(--line);border-radius:var(--r-sm);padding:13px}
+  .fc .fn{font-weight:700;font-size:14px;margin-bottom:6px}
+  .fc .fr{font-size:12.5px;color:var(--txt-soft)}
+  .fc .fr b{font-weight:800}
+  .fc .frate{font-size:13px;font-weight:800;margin-top:5px}
+  .frate.up{color:var(--mint)} .frate.down{color:var(--red)}
 
-.bc-stats { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px }
-.bc-stat .lbl { font-size:10.5px; color:var(--text-dim); margin-bottom:3px }
-.bc-stat .val { font-size:15px; font-weight:800; color:var(--text) }
-.bc-stat .val.green { color:var(--mint-b) }
-.bc-stat .val.red { color:var(--red) }
-.bc-stat .val.amber { color:var(--amber) }
+  /* AI */
+  .ai-out{background:var(--panel2);border:1px solid var(--line);border-radius:var(--r-sm);padding:16px;margin-top:13px;font-size:14px;line-height:1.85;display:none}
+  .ai-out.show{display:block}
+  .ai-out h2{font-size:16px;margin:14px 0 6px;color:var(--mint)}
+  .ai-out h3{font-size:14.5px;margin:12px 0 5px;color:var(--txt)}
+  .ai-out p{margin:6px 0;color:var(--txt-soft)}
+  .ai-out ul{margin:6px 22px}
+  .ai-out strong{color:var(--txt)}
+  .ai-out hr{border:none;border-top:1px solid var(--line);margin:12px 0}
 
-.health-bar { height:5px; background:var(--border); border-radius:3px; overflow:hidden }
-.health-fill { height:100%; border-radius:3px; transition:width .6s ease }
+  /* ask box */
+  .ask{display:flex;gap:9px;margin-top:4px}
+  .ask input{flex:1;background:var(--panel2);border:1px solid var(--line);border-radius:11px;
+    padding:12px 14px;color:var(--txt);font-family:inherit;font-size:14px}
+  .ask input:focus{outline:none;border-color:var(--mint)}
+  .ask-ans{margin-top:12px;background:var(--panel2);border:1px solid var(--line);border-radius:var(--r-sm);
+    padding:14px;font-size:14px;color:var(--txt-soft);line-height:1.85;display:none}
+  .ask-ans.show{display:block}
 
-/* ALERTS */
-.alerts-card {
-  background:var(--card); border:1px solid var(--border); border-radius:14px; padding:20px; margin-bottom:20px;
-}
-.alert-item {
-  display:flex; align-items:flex-start; gap:12px; padding:12px 0;
-  border-bottom:1px solid var(--border);
-}
-.alert-item:last-child { border-bottom:none; padding-bottom:0 }
-.alert-ic { width:32px; height:32px; border-radius:9px; display:grid; place-items:center; font-size:16px; flex-shrink:0 }
-.ic-red { background:var(--red-soft) }
-.ic-amber { background:var(--amber-soft) }
-.ic-mint { background:var(--mint-glow) }
-.alert-body .title { font-size:13.5px; font-weight:700; color:var(--text); margin-bottom:3px }
-.alert-body .desc { font-size:12.5px; color:var(--text-soft); line-height:1.7 }
-.alert-time { font-size:11px; color:var(--text-dim); margin-right:auto; flex-shrink:0 }
+  /* company switcher (bottom) */
+  .switch-wrap{margin:18px 0 8px}
+  .companies{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:11px;margin-top:12px}
+  .co{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-sm);padding:14px;cursor:pointer;transition:.18s}
+  .co:hover{border-color:var(--mint)}
+  .co.active{border-color:var(--mint);background:linear-gradient(160deg,rgba(16,185,129,.1),transparent)}
+  .co .cn{font-weight:800;font-size:15px}
+  .co .cm{font-size:12px;color:var(--txt-mute);margin-top:2px}
+  .co .badge{display:inline-block;margin-top:8px;font-size:11px;font-weight:800;color:var(--mint)}
+  .co-add{display:grid;place-items:center;border:1.5px dashed var(--line);background:transparent;color:var(--txt-soft);font-weight:700;min-height:88px}
+  .co-add:hover{border-color:var(--mint);color:var(--mint)}
 
-/* RESPONSIVE */
-@media(max-width:900px) {
-  :root { --sidebar-w:60px }
-  .sb-logo .brand, .sb-logo .plan, .sb-nav li a span, .sb-section, .sb-user .info { display:none }
-  .sb-logo { justify-content:center; padding:18px 0 }
-  .sb-nav li a { justify-content:center; padding:10px }
-  .sb-nav li a .ic { width:auto; font-size:18px }
-  .kpi-row { grid-template-columns:repeat(2,1fr) }
-  .charts-row { grid-template-columns:1fr }
-  .charts-row .chart-card.wide { grid-column:span 1 }
-  .branch-matrix { grid-template-columns:1fr 1fr }
-  .content { padding:16px }
-  .topbar { padding:12px 16px }
-}
-@media(max-width:600px) {
-  .kpi-row { grid-template-columns:1fr 1fr }
-  .branch-matrix { grid-template-columns:1fr }
-}
+  .foot-links{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0 40px}
+
+  .empty-cta{text-align:center;padding:44px 22px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin-top:20px}
+  .empty-cta .big{font-size:46px;margin-bottom:10px}
+  .empty-cta h3{font-size:19px;font-weight:900;margin-bottom:6px}
+  .empty-cta p{color:var(--txt-soft);font-size:14.5px;max-width:420px;margin:0 auto 18px}
+
+  @media(max-width:900px){
+    .kpis{grid-template-columns:repeat(2,1fr)}
+    .two{grid-template-columns:1fr}
+  }
+  @media(max-width:520px){
+    .kpis{grid-template-columns:repeat(2,1fr)}
+    .kpi .val{font-size:20px}
+  }
 </style>
 </head>
 <body>
 
-<!-- SIDEBAR -->
-<aside class="sidebar">
-  <div class="sb-logo">
-    <div class="bell">🔔</div>
-    <div>
-      <div class="brand">نبّاه</div>
-      <div class="plan">باقة الشركات</div>
+<header>
+  <div class="head-in">
+    <a class="brand" href="company-dashboard.html">
+      <span class="bell">🔔</span>
+      <span>نبّاه<small id="coName">قسم الشركات</small></span>
+    </a>
+    <div class="head-actions">
+      <span class="pill" id="userPill">👤 <b id="userName">…</b></span>
+      <a class="btn btn-ghost" href="company-input.html">＋ إدخال بيانات</a>
+      <button class="btn btn-ghost" onclick="logout()">خروج</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="page-head">
+    <h1 id="title">لوحة المدير التنفيذي</h1>
+    <p id="subtitle">تحليل شامل لأداء الفروع ومقارنتها بالمؤشرات الرئيسية</p>
+  </div>
+
+  <!-- Loading -->
+  <div id="loading" class="state"><div class="spin"></div>جارٍ تحميل بيانات الشركة…</div>
+
+  <!-- No company -->
+  <div id="noCompany" style="display:none">
+    <div class="empty-cta">
+      <div class="big">🏢</div>
+      <h3>ابدأ بإنشاء شركتك</h3>
+      <p>سجّل شركتك وفروعها، أدخل بيانات كل فرع، ويبدأ نبّاه يحلل الأداء ويقارن الفروع ويعطيك قرارات تنفيذية فوراً.</p>
+      <a class="btn btn-mint" href="company-register.html">إنشاء شركة جديدة</a>
     </div>
   </div>
 
-  <div class="sb-section">الرئيسية</div>
-  <ul class="sb-nav">
-    <li><a href="company-dashboard.html" class="active"><span class="ic">🏠</span><span>لوحة المدير</span></a></li>
-    <li><a href="company-branches.html"><span class="ic">🏪</span><span>مقارنة الفروع</span></a></li>
-    <li><a href="company-report.html"><span class="ic">📊</span><span>التقرير التنفيذي</span></a></li>
-  </ul>
+  <!-- No data yet (company exists, no entries) -->
+  <div id="noData" style="display:none">
+    <div class="empty-cta">
+      <div class="big">📊</div>
+      <h3>الشركة جاهزة — أدخل بيانات الفروع</h3>
+      <p>ما فيه بيانات بعد. ادخل بيانات كل فرع (مبيعات، عملاء، مصروفات…) ويبدأ التحليل والمقارنة فوراً.</p>
+      <a class="btn btn-mint" href="company-input.html">إدخال بيانات الفروع</a>
+    </div>
+  </div>
 
-  <div class="sb-section">الأدوات</div>
-  <ul class="sb-nav">
-    <li><a href="#"><span class="ic">💰</span><span>التدفق النقدي</span></a></li>
-    <li><a href="#"><span class="ic">🔍</span><span>كشف التسرب</span></a></li>
-    <li><a href="#"><span class="ic">📈</span><span>مقارنة السوق</span></a></li>
-    <li><a href="#"><span class="ic">⚠️</span><span>التنبيهات</span><span class="badge">3</span></a></li>
-  </ul>
+  <!-- Dashboard -->
+  <div id="dash" style="display:none">
 
-  <div class="sb-section">النظام</div>
-  <ul class="sb-nav">
-    <li><a href="company-team.html"><span class="ic">👥</span><span>الفريق</span></a></li>
-    <li><a href="dashboard.html"><span class="ic">↩️</span><span>الوضع الفردي</span></a></li>
-    <li><a href="#" onclick="deleteCompany();return false" style="color:#f87171"><span class="ic">🗑️</span><span>حذف الشركة</span></a></li>
-    <li><a href="#" onclick="localStorage.clear();location.href='index.html';return false"><span class="ic">🚪</span><span>خروج</span></a></li>
-  </ul>
+    <!-- KPIs -->
+    <div class="kpis" id="kpis"></div>
 
-  <div class="sb-bottom">
-    <div class="sb-user">
-      <div class="av">م</div>
-      <div class="info">
-        <div class="name">المدير التنفيذي</div>
-        <div class="role">صلاحية كاملة</div>
+    <!-- comparison + ranking -->
+    <div class="two">
+      <div class="panel">
+        <h2>📊 مقارنة الفروع — المبيعات</h2>
+        <div class="sub">المبيعات الفعلية لكل فرع (آخر فترة)</div>
+        <div style="height:260px"><canvas id="cmpChart"></canvas></div>
+      </div>
+      <div class="panel">
+        <h2>🏆 ترتيب الفروع (مؤشر الأداء)</h2>
+        <div class="sub">من 100 — مع اتجاه المؤشر عن الفترة السابقة</div>
+        <div id="ranking"></div>
       </div>
     </div>
-  </div>
-</aside>
 
-<!-- MAIN -->
-<main class="main">
-  <!-- TOPBAR -->
-  <div class="topbar">
-    <div class="tb-title">لوحة المدير التنفيذي <span>/ سلسلة نبّاه للمطاعم</span></div>
-    <div class="period-tabs">
-      <button>اليوم</button>
-      <button class="active">الأسبوع</button>
-      <button>الشهر</button>
-      <button>الربع</button>
+    <!-- map + root cause -->
+    <div class="two">
+      <div class="panel">
+        <h2>🗺️ توزيع الفروع على الخريطة</h2>
+        <div class="sub">كل فرع بلونه حسب أدائه</div>
+        <div id="map"></div>
+        <div class="legend">
+          <span><i class="dot" style="background:#10b981"></i> ممتاز</span>
+          <span><i class="dot" style="background:#f5b301"></i> جيد</span>
+          <span><i class="dot" style="background:#f59e0b"></i> متوسط</span>
+          <span><i class="dot" style="background:#ef4444"></i> ضعيف</span>
+        </div>
+      </div>
+      <div class="panel" id="rootPanel">
+        <h2>🔍 تحليل الأسباب</h2>
+        <div class="sub" id="rootSub">الفرع الأقل أداءً مقابل متوسط الشركة</div>
+        <div id="rootCause"></div>
+      </div>
     </div>
-    <div class="tb-notif">🔔<span class="dot"></span></div>
+
+    <!-- best practice + similar -->
+    <div class="two">
+      <div class="panel" id="bpPanel">
+        <h2>✅ أفضل الممارسات</h2>
+        <div class="sub">من الفرع الأعلى أداءً</div>
+        <div id="bestPractice"></div>
+      </div>
+      <div class="panel" id="similarPanel">
+        <h2>🔗 مقارنة الفروع المتشابهة</h2>
+        <div class="sub">حسب نوع الفرع</div>
+        <div style="height:240px"><canvas id="simChart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- forecast -->
+    <div class="panel" id="fcPanel">
+      <h2>📈 التنبؤ بالأداء (الفترة القادمة)</h2>
+      <div class="sub">مبني على اتجاه مبيعات كل فرع عبر الفترات السابقة</div>
+      <div class="fc-grid" id="forecast"></div>
+    </div>
+
+    <!-- AI company analysis -->
+    <div class="panel">
+      <h2>🧠 التحليل التنفيذي بالذكاء الاصطناعي</h2>
+      <div class="sub">تحليل شامل للشركة وكل الفروع، أسباب جذرية، فرص، وقرارات — من نبّاه</div>
+      <button class="btn btn-mint" id="anBtn" onclick="analyzeCompany()">حلّل الشركة الآن</button>
+      <div class="ai-out" id="aiOut"></div>
+    </div>
+
+    <!-- Ask -->
+    <div class="panel">
+      <h2>💬 اسأل نبّاه الذكي</h2>
+      <div class="sub">اسأل أي سؤال عن فروعك — مثال: ليش فرع كذا أفضل من كذا؟</div>
+      <div class="ask">
+        <input id="askInput" placeholder="اكتب سؤالك…" onkeydown="if(event.key==='Enter')ask()">
+        <button class="btn btn-mint" id="askBtn" onclick="ask()">اسأل</button>
+      </div>
+      <div class="ask-ans" id="askAns"></div>
+    </div>
+
   </div>
 
-  <!-- CONTENT -->
-  <div class="content" id="content">
-    <div class="loading" style="text-align:center;padding:80px;color:#8ba89f">
-      <div style="width:40px;height:40px;border:3px solid #1e3026;border-top-color:#10b981;border-radius:50%;margin:0 auto 16px;animation:spin 1s linear infinite"></div>
-      جاري تحميل بيانات شركتك...
+  <!-- Company switcher at BOTTOM (mobile-friendly) -->
+  <div class="switch-wrap" id="switchWrap" style="display:none">
+    <div class="panel">
+      <h2>🏢 شركاتي</h2>
+      <div class="sub">بدّل بين شركاتك أو أضف شركة جديدة (حتى 3)</div>
+      <div class="companies" id="companies"></div>
     </div>
-  </div><!-- /content -->
-</main>
+  </div>
+
+  <div class="foot-links" id="footLinks" style="display:none">
+    <a class="btn btn-ghost" href="company-input.html">إدخال بيانات الفروع</a>
+    <a class="btn btn-ghost" href="company-report.html">التقرير التنفيذي</a>
+    <a class="btn btn-ghost" href="dashboard.html">قسم الأفراد / المطاعم</a>
+  </div>
+
+</div>
 
 <script>
-if(!localStorage.getItem("nabbah_token")) location.href="login.html";
-const token=localStorage.getItem("nabbah_token");
-const authH={"Authorization":"Bearer "+token};
-let charts=[];
+const TOKEN = localStorage.getItem("nabbah_token") || "";
+let cmpChartObj=null, simChartObj=null, mapObj=null;
 
-function fmt(n){return Number(Math.round(n||0)).toLocaleString("en-US")}
-function statusColor(s){return{excellent:"#10b981",good:"#34d399",warn:"#fbbf24",danger:"#f87171",empty:"#4a6b5a"}[s]||"#4a6b5a"}
+if(!TOKEN){ window.location.href = "login.html"; }
 
-async function load(){
-  // تحقق من وجود شركة
+function logout(){
+  localStorage.removeItem("nabbah_token");
+  localStorage.removeItem("nabbah_name");
+  localStorage.removeItem("nabbah_active");
+  window.location.href = "login.html";
+}
+
+async function api(path, opts={}){
+  const res = await fetch(path, {
+    ...opts,
+    headers:{ "Content-Type":"application/json", "Authorization":"Bearer "+TOKEN, ...(opts.headers||{}) }
+  });
+  if(res.status===401){ logout(); throw new Error("جلسة منتهية"); }
+  const data = await res.json().catch(()=>({}));
+  if(!res.ok){ throw new Error(data.detail || "حدث خطأ"); }
+  return data;
+}
+
+const fmt = n => (n||0).toLocaleString("en-US");
+const fmtK = n => { n=n||0; return n>=1e6 ? (n/1e6).toFixed(2)+"M" : n>=1e3 ? (n/1e3).toFixed(1)+"K" : fmt(n); };
+
+document.getElementById("userName").textContent = localStorage.getItem("nabbah_name") || "حسابي";
+
+async function init(){
   try{
-    const info=await fetch("/company/info",{headers:authH});
-    if(info.status===401){localStorage.clear();location.href="login.html";return}
-    const id=await info.json();
-    if(!id.has_company){location.href="company-register.html";return}
-    document.querySelector(".tb-title span").textContent="/ "+id.company.name;
-  }catch(e){}
-
-  // جلب بيانات اللوحة
-  try{
-    const r=await fetch("/company/dashboard",{headers:authH});
-    if(r.status===403){
-      document.getElementById("content").innerHTML='<div style="text-align:center;padding:60px;color:#8ba89f">⛔ ليس لديك صلاحية</div>';
+    const info = await api("/company/info");
+    renderSwitcher(info);
+    if(!info.has_company){
+      hide("loading"); show("noCompany"); show("switchWrap");
       return;
     }
-    const d=await r.json();
-    render(d);
+    document.getElementById("coName").textContent = info.active.name;
+    await loadDashboard();
   }catch(e){
-    document.getElementById("content").innerHTML='<div style="text-align:center;padding:60px;color:#f87171">تعذّر تحميل البيانات</div>';
+    hide("loading");
+    document.getElementById("noCompany").style.display="block";
+    document.querySelector("#noCompany .empty-cta p").textContent = e.message;
   }
 }
 
-function render(d){
-  const s=d.summary, branches=d.branches||[], alerts=d.alerts||[];
-  const hasData=branches.some(b=>b.status!=="empty");
+function show(id){ document.getElementById(id).style.display = (id==="kpis"?"grid":"block"); }
+function hide(id){ document.getElementById(id).style.display = "none"; }
 
-  let html="";
+async function loadDashboard(){
+  let d;
+  try{ d = await api("/company/dashboard"); }
+  catch(e){ hide("loading"); alert(e.message); return; }
 
-  // KPI
-  html+='<div class="kpi-row">';
-  html+=`<div class="kpi"><div class="kpi-label">💰 إجمالي الإيرادات</div><div class="kpi-val"><span class="unit">ر.س</span>${fmt(s.total_revenue)}</div><div class="kpi-change up">${s.branch_count} فرع</div></div>`;
-  html+=`<div class="kpi"><div class="kpi-label">📊 إجمالي الربح</div><div class="kpi-val"><span class="unit">ر.س</span>${fmt(s.total_profit)}</div></div>`;
-  html+=`<div class="kpi amber"><div class="kpi-label">🏪 أفضل فرع</div><div class="kpi-val" style="font-size:18px;padding-top:4px">${s.best_branch||"—"}</div></div>`;
-  html+=`<div class="kpi"><div class="kpi-label">❤️ صحة الشركة</div><div class="kpi-val">${s.company_health}<span class="unit">/١٠٠</span></div></div>`;
-  html+='</div>';
+  hide("loading");
+  show("switchWrap"); document.getElementById("footLinks").style.display="flex";
 
-  if(!hasData){
-    html+=`<div style="background:#141f18;border:1px solid #1e3026;border-radius:14px;padding:40px;text-align:center;margin-bottom:20px">
-      <div style="font-size:40px;margin-bottom:12px">📊</div>
-      <h3 style="margin-bottom:8px">لا توجد بيانات فروع بعد</h3>
-      <p style="color:#8ba89f;margin-bottom:18px">أدخل تحاليل بأسماء فروعك لتظهر هنا. تأكد أن اسم المنشأة في صفحة الإدخال = اسم الفرع تماماً.</p>
-      <a href="input.html" style="display:inline-block;background:#10b981;color:#fff;padding:11px 24px;border-radius:10px;text-decoration:none;font-weight:800">➕ أدخل تحليلاً</a>
+  if(!d.has_data){ show("noData"); return; }
+
+  document.getElementById("dash").style.display="block";
+  const s = d.summary;
+
+  // KPIs
+  const kpis = [
+    {ico:"👥", lbl:"إجمالي العملاء", val:fmtK(s.total_customers)},
+    {ico:"💰", lbl:"إجمالي المبيعات", val:fmtK(s.total_sales), unit:"ر"},
+    {ico:"🧾", lbl:"متوسط الفاتورة", val:fmt(Math.round(s.avg_invoice)), unit:"ر"},
+    {ico:"📈", lbl:"هامش الربح", val:s.avg_margin, unit:"%"},
+    {ico:"⚡", lbl:"مؤشر الأداء العام", val:s.overall_score, unit:"/100"},
+  ];
+  document.getElementById("kpis").innerHTML = kpis.map(k=>`
+    <div class="kpi">
+      <div class="ico">${k.ico}</div>
+      <div class="lbl">${k.lbl}</div>
+      <div class="val">${k.val}${k.unit?`<small> ${k.unit}</small>`:""}</div>
+    </div>`).join("");
+
+  renderRanking(d.ranking);
+  renderComparison(d.ranking);
+  renderMap(d.branches);
+  renderRootCause(d.root_cause);
+  renderBestPractice(d.best_practice);
+  renderSimilar(d.similar);
+  renderForecast(d.forecast);
+}
+
+function renderRanking(rows){
+  document.getElementById("ranking").innerHTML = rows.map((b,i)=>{
+    const tr = b.trend==="up"?`<span class="trend up">▲ ${b.score_change}</span>`
+            : b.trend==="down"?`<span class="trend down">▼ ${Math.abs(b.score_change)}</span>`
+            : `<span class="trend same">—</span>`;
+    return `<div class="rank-row">
+      <div class="rank-no ${i===0?'top':''}">${i+1}</div>
+      <div><div class="rank-name">${b.name}</div><div class="rank-city">${b.city||"—"}</div></div>
+      <div class="rank-score"><b style="color:${b.color}">${b.score}</b><span class="of">/100</span>${tr}</div>
     </div>`;
-    document.getElementById("content").innerHTML=html;
-    return;
-  }
-
-  // رسم الفروع
-  html+='<div class="charts-row"><div class="chart-card"><div class="chart-head"><div><div class="chart-title">أداء الفروع</div><div class="chart-sub">الإيرادات حسب كل فرع</div></div></div><div class="chart-box"><canvas id="c-branches"></canvas></div></div>';
-  html+='<div class="chart-card"><div class="chart-head"><div><div class="chart-title">توزيع الصحة</div><div class="chart-sub">درجة صحة كل فرع</div></div></div><div class="chart-box"><canvas id="c-health"></canvas></div></div></div>';
-
-  // مصفوفة الفروع
-  html+='<div class="section-head"><div><div class="section-title">🏪 مصفوفة صحة الفروع</div><div class="section-sub">مرتّبة من الأفضل أداءً</div></div><a class="view-all" href="company-branches.html">مقارنة كاملة ←</a></div>';
-  html+='<div class="branch-matrix">';
-  branches.forEach((b,i)=>{
-    if(b.status==="empty"){
-      html+=`<div class="branch-card"><div class="bc-header"><div class="bc-name">${b.name}</div></div><div style="color:#4a6b5a;font-size:13px;padding:10px 0">لا توجد بيانات بعد</div></div>`;
-      return;
-    }
-    const rankLabel=i===0?"🥇 الأول":i===1?"🥈 الثاني":i===2?"🥉 الثالث":`${i+1}`;
-    const cls=b.status==="excellent"||b.status==="good"?"best":b.status==="warn"?"warn":"danger";
-    const col=statusColor(b.status);
-    html+=`<div class="branch-card ${cls}">
-      <div class="bc-header"><div class="bc-name">${b.name}</div><span class="bc-rank ${i===0?'rank-1':i===1?'rank-2':'rank-3'}">${rankLabel}</span></div>
-      <div class="bc-stats">
-        <div class="bc-stat"><div class="lbl">الإيرادات</div><div class="val">${fmt(b.revenue)}</div></div>
-        <div class="bc-stat"><div class="lbl">الهامش</div><div class="val">${b.margin}٪</div></div>
-        <div class="bc-stat"><div class="lbl">الطلبات</div><div class="val">${fmt(b.orders)}</div></div>
-        <div class="bc-stat"><div class="lbl">الصحة</div><div class="val" style="color:${col}">${b.health_score}</div></div>
-      </div>
-      <div class="health-bar"><div class="health-fill" style="width:${b.health_score}%;background:${col}"></div></div>
-    </div>`;
-  });
-  html+='</div>';
-
-  // التنبيهات
-  if(alerts.length){
-    html+='<div class="section-head"><div><div class="section-title">🔔 تنبيهات ذكية</div><div class="section-sub">'+alerts.length+' تنبيه</div></div></div><div class="alerts-card">';
-    alerts.forEach(a=>{
-      const ic=a.type==="danger"?"🚨":a.type==="warn"?"⚠️":"💡";
-      const icCls=a.type==="danger"?"ic-red":a.type==="warn"?"ic-amber":"ic-mint";
-      html+=`<div class="alert-item"><div class="alert-ic ${icCls}">${ic}</div><div class="alert-body"><div class="title">${a.branch} — ${a.msg}</div><div class="desc">${a.detail||""}</div></div></div>`;
-    });
-    html+='</div>';
-  }
-
-  document.getElementById("content").innerHTML=html;
-  drawCharts(branches.filter(b=>b.status!=="empty"));
+  }).join("");
 }
 
-function drawCharts(branches){
-  Chart.defaults.color='#8ba89f';
-  Chart.defaults.font.family='Tajawal';
-  const grid='#1e3026';
-  const names=branches.map(b=>b.name);
-
-  new Chart(document.getElementById("c-branches"),{
+function renderComparison(rows){
+  const ctx = document.getElementById("cmpChart");
+  if(cmpChartObj) cmpChartObj.destroy();
+  cmpChartObj = new Chart(ctx,{
     type:"bar",
-    data:{labels:names,datasets:[{data:branches.map(b=>b.revenue),backgroundColor:branches.map(b=>statusColor(b.status)),borderRadius:7}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:grid},ticks:{callback:v=>v>=1000?(v/1000)+"k":v}}}}
-  });
-  new Chart(document.getElementById("c-health"),{
-    type:"bar",
-    data:{labels:names,datasets:[{data:branches.map(b=>b.health_score),backgroundColor:branches.map(b=>statusColor(b.status)),borderRadius:7}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:grid},min:0,max:100}}}
+    data:{ labels: rows.map(r=>r.name),
+      datasets:[{ label:"المبيعات", data:rows.map(r=>r.sales),
+        backgroundColor: rows.map(r=>r.color), borderRadius:7, barThickness:"flex" }]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>fmt(c.raw)+" ريال"}}},
+      scales:{ x:{ticks:{color:"#9fb4aa",font:{family:"Tajawal"}},grid:{display:false}},
+        y:{ticks:{color:"#678075",callback:v=>fmtK(v)},grid:{color:"#16221c"}}}}
   });
 }
 
-// أزرار الفترة (عرض فقط حالياً)
-document.querySelectorAll(".period-tabs button").forEach(btn=>{
-  btn.onclick=()=>{document.querySelectorAll(".period-tabs button").forEach(b=>b.classList.remove("active"));btn.classList.add("active")};
-});
+function renderMap(branches){
+  const withGeo = branches.filter(b=>b.lat && b.lng);
+  if(!mapObj){
+    mapObj = L.map("map",{zoomControl:true,attributionControl:false}).setView([24.7,46.7],5);
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{maxZoom:19}).addTo(mapObj);
+  }
+  if(window._markers){ window._markers.forEach(m=>mapObj.removeLayer(m)); }
+  window._markers=[];
+  const pts=[];
+  withGeo.forEach(b=>{
+    const m = L.circleMarker([b.lat,b.lng],{radius:9,color:"#0a0f0c",weight:2,fillColor:b.color,fillOpacity:.95})
+      .addTo(mapObj).bindPopup(`<b>${b.name}</b><br>${b.city||""}<br>المؤشر: ${b.score}/100 (${b.level})`);
+    window._markers.push(m); pts.push([b.lat,b.lng]);
+  });
+  if(pts.length){ try{ mapObj.fitBounds(pts,{padding:[40,40],maxZoom:11}); }catch(e){} }
+  setTimeout(()=>mapObj.invalidateSize(),200);
+}
 
-async function deleteCompany(){
-  if(!confirm("⚠️ حذف الشركة وكل فروعها؟ لا يمكن التراجع.\\nستتمكن من تسجيل شركة جديدة بعدها."))return;
+function renderRootCause(rc){
+  const el = document.getElementById("rootCause");
+  if(!rc || !rc.factors || !rc.factors.length){
+    document.getElementById("rootSub").textContent="كل الفروع قريبة من المتوسط — لا يوجد فرع متراجع بوضوح";
+    el.innerHTML=`<div style="color:var(--txt-mute);font-size:13.5px">أداء الفروع متقارب 👍</div>`; return;
+  }
+  document.getElementById("rootSub").innerHTML = `الفرع الأقل أداءً: <b style="color:var(--txt)">${rc.branch}</b> — مقابل متوسط الشركة`;
+  const max = Math.max(...rc.factors.map(f=>Math.abs(f.diff)),1);
+  el.innerHTML = rc.factors.map(f=>`
+    <div class="factor">
+      <div class="fl">${f.label}</div>
+      <div class="fbar"><i style="width:${Math.abs(f.diff)/max*50}%"></i></div>
+      <div class="fv">${f.diff}%</div>
+    </div>`).join("");
+}
+
+function renderBestPractice(bp){
+  const el = document.getElementById("bestPractice");
+  if(!bp){ el.innerHTML=`<div style="color:var(--txt-mute)">—</div>`; return; }
+  const prods = (bp.top_products||"").split("|").map(x=>x.trim()).filter(Boolean);
+  el.innerHTML = `
+    <div class="bp-head"><span class="bp-badge">الأفضل أداءً</span><b style="font-size:16px">${bp.name}</b></div>
+    <div style="font-size:13.5px;color:var(--txt-soft);margin-bottom:12px">
+      مؤشر ${bp.score}/100 · هامش ${bp.margin}% · متوسط فاتورة ${fmt(Math.round(bp.avg_invoice))}ر · تكرار عملاء ${bp.repeat_rate}%
+    </div>
+    ${prods.length?`<div style="font-size:13px;font-weight:700;margin-bottom:6px;color:var(--txt)">الأكثر مبيعاً:</div>
+    <div class="chip-list">${prods.map(p=>`<div class="chip"><i class="d"></i>${p}</div>`).join("")}</div>`:""}
+    <div style="font-size:13px;color:var(--txt-mute);margin-top:12px">يُنصح بتعميم أسلوب هذا الفرع على باقي الفروع.</div>`;
+}
+
+function renderSimilar(groups){
+  const panel = document.getElementById("similarPanel");
+  if(!groups || !groups.length){ panel.style.display="none"; return; }
+  panel.style.display="block";
+  const TYPE={mall:"مول",strip:"مجمّع",standalone:"مستقل",online:"أونلاين",kiosk:"كشك"};
+  const labels=[], data=[], colors=[];
+  groups.forEach(g=>{ g.branches.forEach(b=>{ labels.push(b.name); data.push(b.score);
+    colors.push(b.score>=70?"#10b981":b.score>=55?"#f5b301":b.score>=40?"#f59e0b":"#ef4444"); }); });
+  const ctx=document.getElementById("simChart");
+  if(simChartObj) simChartObj.destroy();
+  simChartObj = new Chart(ctx,{ type:"bar",
+    data:{labels, datasets:[{label:"المؤشر",data,backgroundColor:colors,borderRadius:7}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{x:{ticks:{color:"#9fb4aa",font:{family:"Tajawal"}},grid:{display:false}},
+        y:{max:100,ticks:{color:"#678075"},grid:{color:"#16221c"}}}}});
+}
+
+function renderForecast(fc){
+  const panel=document.getElementById("fcPanel");
+  if(!fc || !fc.length){ panel.style.display="none"; return; }
+  panel.style.display="block";
+  document.getElementById("forecast").innerHTML = fc.map(f=>`
+    <div class="fc">
+      <div class="fn">${f.branch}</div>
+      <div class="fr">الفترة القادمة: <b>${fmtK(f.next_cons)}</b> — <b>${fmtK(f.next_opt)}</b> ر</div>
+      <div class="frate ${f.dir}">${f.dir==="up"?"▲":"▼"} متوسط نمو ${f.rate}%</div>
+    </div>`).join("");
+}
+
+function renderSwitcher(info){
+  const wrap=document.getElementById("companies");
+  let html = (info.companies||[]).map(c=>`
+    <div class="co ${c.active?'active':''}" onclick="switchCompany(${c.id},${c.active})">
+      <div class="cn">${c.name}</div>
+      <div class="cm">${c.branch_count} فرع · ${sectorName(c.sector)}</div>
+      ${c.active?'<span class="badge">● النشطة الآن</span>':'<span style="font-size:12px;color:var(--txt-mute)">اضغط للتبديل</span>'}
+    </div>`).join("");
+  if(!info.max_reached){
+    html += `<div class="co co-add" onclick="location.href='company-register.html'">＋ إضافة شركة</div>`;
+  }
+  document.getElementById("companies").innerHTML = html || `<div class="co co-add" onclick="location.href='company-register.html'">＋ إنشاء شركة</div>`;
+}
+function sectorName(s){ return ({retail:"تجزئة",fnb:"مطاعم وكافيهات",services:"خدمات",other:"شركة"})[s]||"شركة"; }
+
+async function switchCompany(id, isActive){
+  if(isActive) return;
+  try{ await api("/company/switch",{method:"POST",body:JSON.stringify({company_id:id})}); location.reload(); }
+  catch(e){ alert(e.message); }
+}
+
+async function analyzeCompany(){
+  const btn=document.getElementById("anBtn"), out=document.getElementById("aiOut");
+  btn.disabled=true; btn.textContent="جارٍ التحليل… (قد يأخذ لحظات)";
   try{
-    const r=await fetch("/company/delete",{method:"POST",headers:authH});
-    if(r.ok){alert("✅ تم حذف الشركة. يمكنك تسجيل شركة جديدة الآن.");location.href="company-register.html"}
-    else{const d=await r.json();alert(d.detail||"تعذّر الحذف")}
-  }catch(e){alert("تعذّر الاتصال")}
+    const r = await api("/company/analyze",{method:"POST",body:JSON.stringify({scope:"company"})});
+    out.innerHTML = marked.parse(r.analysis||""); out.classList.add("show");
+    out.scrollIntoView({behavior:"smooth",block:"nearest"});
+  }catch(e){ out.innerHTML=`<p style="color:var(--red)">${e.message}</p>`; out.classList.add("show"); }
+  btn.disabled=false; btn.textContent="إعادة التحليل";
 }
 
-load();
+async function ask(){
+  const inp=document.getElementById("askInput"), ans=document.getElementById("askAns"), btn=document.getElementById("askBtn");
+  const q=inp.value.trim(); if(!q) return;
+  btn.disabled=true; btn.textContent="…"; ans.classList.add("show"); ans.innerHTML="جارٍ التفكير…";
+  try{
+    const r = await api("/company/ask",{method:"POST",body:JSON.stringify({question:q})});
+    ans.innerHTML = marked.parse(r.answer||"");
+  }catch(e){ ans.innerHTML=`<span style="color:var(--red)">${e.message}</span>`; }
+  btn.disabled=false; btn.textContent="اسأل";
+}
+
+init();
 </script>
 </body>
 </html>
