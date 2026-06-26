@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>نبّاه — تسجيل شركتك</title>
+<title>نبّاه — إدارة شركاتك</title>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0a0f0c;--surface:#101a14;--card:#141f18;--card-h:#192618;--border:#1e3026;--border-soft:#253c2e;
@@ -12,54 +12,77 @@
 --red:#f87171;--red-soft:rgba(248,113,113,.12);--amber:#fbbf24;--blue:#60a5fa;}
 *{margin:0;padding:0;box-sizing:border-box;font-family:'Tajawal',sans-serif}
 body{background:var(--bg);color:var(--text);min-height:100vh;
-  background-image:radial-gradient(circle at 20% 20%,rgba(16,185,129,.08) 0%,transparent 50%),radial-gradient(circle at 80% 80%,rgba(52,211,153,.05) 0%,transparent 50%);}
-.wrap{max-width:580px;margin:0 auto;padding:40px 20px;min-height:100vh;display:flex;align-items:center;justify-content:center}
-.box{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:40px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.4)}
-@media(max-width:600px){.box{padding:28px 22px}}
+  background-image:radial-gradient(circle at 20% 20%,rgba(16,185,129,.08) 0%,transparent 50%),radial-gradient(circle at 80% 80%,rgba(52,211,153,.05) 0%,transparent 50%);padding:30px 20px}
+.wrap{max-width:620px;margin:0 auto}
+.box{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:36px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.4);margin-bottom:18px}
+@media(max-width:600px){.box{padding:24px 20px}}
 .brand{display:flex;align-items:center;gap:12px;margin-bottom:8px}
 .brand .bell{width:44px;height:44px;border-radius:12px;background:var(--mint);display:grid;place-items:center;font-size:22px;box-shadow:0 0 24px var(--mint-glow)}
 .brand .b{font-size:22px;font-weight:900;color:var(--mint)}
 .brand .b small{display:block;font-size:11px;color:var(--text-dim);font-weight:600;margin-top:2px}
-h1{font-size:24px;font-weight:900;margin-top:22px;margin-bottom:6px}
-.sub{color:var(--text-soft);font-size:14px;margin-bottom:28px;line-height:1.7}
-.step-bar{display:flex;gap:6px;margin-bottom:24px}
+h1{font-size:22px;font-weight:900;margin-top:18px;margin-bottom:6px}
+.sub{color:var(--text-soft);font-size:13.5px;margin-bottom:22px;line-height:1.7}
+.counter{display:inline-flex;align-items:center;gap:7px;background:var(--card);border:1px solid var(--border-soft);border-radius:8px;padding:5px 12px;font-size:12px;font-weight:700;color:var(--mint-b);margin-bottom:18px}
+.section-title{font-size:14px;font-weight:800;color:var(--text);margin:24px 0 12px;display:flex;align-items:center;gap:8px}
+.section-title .ic{color:var(--mint-b)}
+/* قائمة الشركات */
+.companies-list{display:flex;flex-direction:column;gap:10px}
+.company-card{background:var(--card);border:1.5px solid var(--border);border-radius:14px;padding:16px 18px;display:flex;align-items:center;gap:14px;transition:all .2s;cursor:pointer}
+.company-card:hover{border-color:var(--border-soft);background:var(--card-h)}
+.company-card.active{border-color:var(--mint);background:rgba(16,185,129,.06)}
+.company-card .av{width:42px;height:42px;border-radius:11px;background:var(--mint-glow);display:grid;place-items:center;font-size:20px;flex-shrink:0}
+.company-card.active .av{background:var(--mint);color:#fff}
+.company-card .info{flex:1;min-width:0}
+.company-card .name{font-size:15px;font-weight:800;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.company-card .meta{font-size:12px;color:var(--text-soft);margin-top:3px}
+.active-badge{font-size:10px;font-weight:800;background:var(--mint);color:#fff;padding:2px 8px;border-radius:5px}
+.company-actions{display:flex;gap:6px;flex-shrink:0}
+.act-btn{width:34px;height:34px;border:1px solid var(--border);border-radius:9px;background:transparent;color:var(--text-soft);cursor:pointer;font-size:14px;display:grid;place-items:center;transition:all .15s}
+.act-btn:hover{border-color:var(--mint);color:var(--mint-b)}
+.act-btn.del:hover{border-color:var(--red);color:var(--red)}
+/* زر إضافة شركة */
+.add-company-btn{width:100%;padding:14px;background:var(--card);border:1.5px dashed var(--border-soft);border-radius:12px;color:var(--mint-b);font-family:'Tajawal';font-weight:800;font-size:14px;cursor:pointer;transition:all .2s;margin-top:14px}
+.add-company-btn:hover{border-color:var(--mint);background:var(--mint-glow)}
+.add-company-btn:disabled{opacity:.5;cursor:not-allowed}
+/* نموذج التسجيل */
+.form-section{display:none}
+.form-section.show{display:block}
+.step-bar{display:flex;gap:6px;margin-bottom:22px}
 .step{flex:1;height:4px;border-radius:3px;background:var(--border)}
 .step.done{background:var(--mint)}
-label{display:block;font-size:13px;font-weight:700;color:var(--text-soft);margin-bottom:8px;margin-top:18px}
+label{display:block;font-size:13px;font-weight:700;color:var(--text-soft);margin-bottom:8px;margin-top:16px}
 label small{color:var(--text-dim);font-weight:500;margin-right:6px}
-input[type=text]{width:100%;padding:13px 16px;background:var(--bg);border:1.5px solid var(--border);border-radius:11px;font-family:'Tajawal';font-size:15px;color:var(--text);outline:none;transition:border .2s}
+input[type=text]{width:100%;padding:12px 15px;background:var(--bg);border:1.5px solid var(--border);border-radius:11px;font-family:'Tajawal';font-size:14.5px;color:var(--text);outline:none;transition:border .2s}
 input[type=text]:focus{border-color:var(--mint);background:var(--card)}
 input::placeholder{color:var(--text-dim)}
 .sector-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.sector-btn{padding:14px 10px;background:var(--card);border:1.5px solid var(--border);border-radius:12px;cursor:pointer;font-family:'Tajawal';font-size:13.5px;font-weight:700;color:var(--text-soft);text-align:center;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:6px}
-.sector-btn .ic{font-size:22px}
+.sector-btn{padding:13px 8px;background:var(--card);border:1.5px solid var(--border);border-radius:11px;cursor:pointer;font-family:'Tajawal';font-size:13px;font-weight:700;color:var(--text-soft);text-align:center;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:5px}
+.sector-btn .ic{font-size:20px}
 .sector-btn:hover{border-color:var(--border-soft)}
 .sector-btn.active{border-color:var(--mint);background:var(--mint-glow);color:var(--mint-b)}
-.branches-card{background:var(--card);border:1.5px solid var(--border);border-radius:14px;padding:18px}
-.branches-head{font-size:13px;font-weight:700;color:var(--mint-b);margin-bottom:14px;display:flex;align-items:center;gap:8px}
-.branch-item{display:flex;gap:8px;margin-bottom:9px;align-items:center}
-.branch-item input{margin:0;flex:1;font-size:14px;padding:11px 14px}
-.del-btn{width:38px;height:38px;border:1.5px solid var(--border);border-radius:10px;background:transparent;cursor:pointer;font-size:14px;color:var(--text-dim);flex-shrink:0;display:grid;place-items:center;transition:all .15s}
+.branches-card{background:var(--card);border:1.5px solid var(--border);border-radius:14px;padding:16px}
+.branches-head{font-size:12.5px;font-weight:700;color:var(--mint-b);margin-bottom:12px;display:flex;align-items:center;gap:7px}
+.branch-item{display:flex;gap:8px;margin-bottom:8px;align-items:center}
+.branch-item input{margin:0;flex:1;font-size:13.5px;padding:10px 13px}
+.del-btn{width:36px;height:36px;border:1.5px solid var(--border);border-radius:9px;background:transparent;cursor:pointer;font-size:13px;color:var(--text-dim);flex-shrink:0;display:grid;place-items:center;transition:all .15s}
 .del-btn:hover{border-color:var(--red);color:var(--red)}
-.add-branch{display:inline-flex;align-items:center;gap:6px;cursor:pointer;color:var(--mint-b);font-weight:700;font-size:13px;margin-top:8px;background:none;border:none;font-family:'Tajawal';padding:6px 0}
+.add-branch{display:inline-flex;align-items:center;gap:6px;cursor:pointer;color:var(--mint-b);font-weight:700;font-size:12.5px;margin-top:6px;background:none;border:none;font-family:'Tajawal';padding:5px 0}
 .add-branch:hover{color:var(--mint)}
-.btn-main{width:100%;padding:15px;background:var(--mint);color:#fff;border:none;border-radius:12px;font-family:'Tajawal';font-size:15.5px;font-weight:800;cursor:pointer;margin-top:24px;transition:all .2s;box-shadow:0 4px 20px rgba(16,185,129,.25)}
+.btn-main{width:100%;padding:14px;background:var(--mint);color:#fff;border:none;border-radius:12px;font-family:'Tajawal';font-size:15px;font-weight:800;cursor:pointer;margin-top:22px;transition:all .2s;box-shadow:0 4px 20px rgba(16,185,129,.25)}
 .btn-main:hover:not(:disabled){background:#047857;transform:translateY(-1px)}
 .btn-main:disabled{background:#1e3026;cursor:not-allowed;box-shadow:none}
-.msg{padding:13px 16px;border-radius:11px;font-size:13.5px;font-weight:600;margin-bottom:18px;display:none}
+.btn-cancel{width:100%;padding:11px;background:transparent;color:var(--text-soft);border:1px solid var(--border);border-radius:10px;font-family:'Tajawal';font-weight:700;font-size:13px;cursor:pointer;margin-top:10px}
+.btn-cancel:hover{border-color:var(--border-soft);color:var(--text)}
+.msg{padding:12px 15px;border-radius:11px;font-size:13px;font-weight:600;margin:14px 0;display:none}
 .msg.error{background:var(--red-soft);color:var(--red);border:1px solid rgba(248,113,113,.3)}
 .msg.success{background:var(--mint-glow);color:var(--mint-b);border:1px solid rgba(16,185,129,.3)}
-.msg.warn{background:rgba(251,191,36,.1);color:var(--amber);border:1px solid rgba(251,191,36,.3)}
-.bottom-row{display:flex;justify-content:space-between;align-items:center;margin-top:18px;font-size:12px;color:var(--text-dim)}
+.empty-state{text-align:center;padding:30px 20px;background:var(--card);border:1.5px dashed var(--border-soft);border-radius:14px;margin-bottom:18px}
+.empty-state .ic{font-size:38px;margin-bottom:10px;opacity:.6}
+.empty-state .t{font-size:15px;font-weight:800;margin-bottom:6px}
+.empty-state .d{font-size:12.5px;color:var(--text-soft)}
+.bottom-row{display:flex;gap:14px;justify-content:center;font-size:12.5px;color:var(--text-dim);padding:14px}
 .bottom-row a{color:var(--mint-b);text-decoration:none;font-weight:700}
-.has-company-card{background:var(--card);border:1px solid var(--mint);border-radius:14px;padding:20px;margin-bottom:18px;display:none}
-.has-company-card.show{display:block}
-.has-company-card h3{font-size:16px;color:var(--mint-b);margin-bottom:8px}
-.has-company-card p{font-size:13.5px;color:var(--text-soft);line-height:1.7;margin-bottom:14px}
-.btns-row{display:flex;gap:10px}
-.btn-go{flex:1;padding:11px;background:var(--mint);color:#fff;border:none;border-radius:10px;font-family:'Tajawal';font-weight:800;font-size:13.5px;cursor:pointer;text-decoration:none;text-align:center}
-.btn-del{padding:11px 18px;background:transparent;color:var(--red);border:1.5px solid rgba(248,113,113,.4);border-radius:10px;font-family:'Tajawal';font-weight:700;font-size:13.5px;cursor:pointer}
-.btn-del:hover{background:var(--red-soft)}
+.bottom-row a:hover{color:var(--mint)}
 </style>
 </head>
 <body>
@@ -70,20 +93,22 @@ input::placeholder{color:var(--text-dim)}
       <div class="b">نبّاه<small>منصة ذكاء القرارات للشركات</small></div>
     </div>
 
-    <!-- لو عنده شركة مسبقاً -->
-    <div class="has-company-card" id="exists-card">
-      <h3>✅ لديك شركة مسجّلة</h3>
-      <p id="exists-name">جاري التحقق...</p>
-      <div class="btns-row">
-        <a href="company-dashboard.html" class="btn-go">دخول لوحة الشركة ←</a>
-        <button class="btn-del" onclick="delCompany()">🗑️ حذف</button>
-      </div>
+    <!-- قائمة الشركات الموجودة -->
+    <div id="companies-section" style="display:none">
+      <h1>شركاتك</h1>
+      <p class="sub">يمكنك تسجيل حتى ٣ شركات في حسابك. اختر شركة للعمل عليها أو أضف شركة جديدة.</p>
+      <div class="counter" id="counter">📊 ٠ من ٣ شركات</div>
+
+      <div class="section-title"><span class="ic">🏢</span> الشركات المسجّلة</div>
+      <div class="companies-list" id="companies-list"></div>
+
+      <button class="add-company-btn" id="add-btn" onclick="showForm()">＋ إضافة شركة جديدة</button>
     </div>
 
     <!-- نموذج التسجيل -->
-    <div id="form-box">
-      <h1>سجّل شركتك</h1>
-      <p class="sub">سجّل بيانات شركتك وفروعها — العملية تستغرق دقيقة، وتفتح لك لوحة المدير التنفيذي ومقارنة الفروع والتقارير الذكية.</p>
+    <div id="form-box" class="form-section">
+      <h1 id="form-title">سجّل شركتك الأولى</h1>
+      <p class="sub">سجّل بيانات شركتك وفروعها. تفتح لك لوحة المدير التنفيذي ومقارنة الفروع والتقارير الذكية.</p>
 
       <div class="step-bar">
         <div class="step done"></div><div class="step done"></div><div class="step done"></div>
@@ -96,15 +121,9 @@ input::placeholder{color:var(--text-dim)}
 
       <label>نوع النشاط</label>
       <div class="sector-row">
-        <div class="sector-btn active" data-v="restaurant" onclick="setSector(this)">
-          <span class="ic">🍽️</span><span>مطاعم</span>
-        </div>
-        <div class="sector-btn" data-v="cafe" onclick="setSector(this)">
-          <span class="ic">☕</span><span>كافيهات</span>
-        </div>
-        <div class="sector-btn" data-v="retail" onclick="setSector(this)">
-          <span class="ic">🛒</span><span>تجزئة</span>
-        </div>
+        <div class="sector-btn active" data-v="restaurant" onclick="setSector(this)"><span class="ic">🍽️</span><span>مطاعم</span></div>
+        <div class="sector-btn" data-v="cafe" onclick="setSector(this)"><span class="ic">☕</span><span>كافيهات</span></div>
+        <div class="sector-btn" data-v="retail" onclick="setSector(this)"><span class="ic">🛒</span><span>تجزئة</span></div>
       </div>
 
       <label>🏪 الفروع <small>(اكتب اسم كل فرع كما هو في صفحة إدخال التحاليل)</small></label>
@@ -120,36 +139,109 @@ input::placeholder{color:var(--text-dim)}
       </div>
 
       <button class="btn-main" id="submit-btn" onclick="submit()">إنشاء الشركة ←</button>
-
-      <div class="bottom-row">
-        <a href="dashboard.html">← الرجوع للوحة الفردية</a>
-        <a href="index.html">الصفحة الرئيسية</a>
-      </div>
+      <button class="btn-cancel" id="cancel-btn" onclick="hideForm()" style="display:none">إلغاء</button>
     </div>
+  </div>
+
+  <div class="bottom-row">
+    <a href="dashboard.html">← الوضع الفردي</a>
+    <span>·</span>
+    <a href="index.html">الصفحة الرئيسية</a>
   </div>
 </div>
 
 <script>
-// تحقق من الدخول
 if(!localStorage.getItem("nabbah_token")){location.href="login.html"}
 const token=localStorage.getItem("nabbah_token");
 const authH={"Authorization":"Bearer "+token,"Content-Type":"application/json"};
 let sector="restaurant";
+let userCompanies=[];
 
-// عند فتح الصفحة: تحقق هل عنده شركة
 (async function init(){
   try{
     const r=await fetch("/company/info",{headers:authH});
     if(r.status===401){localStorage.clear();location.href="login.html";return}
     const d=await r.json();
-    if(d.has_company){
-      // أظهر بطاقة "عندك شركة"
-      document.getElementById("exists-card").classList.add("show");
-      document.getElementById("form-box").style.display="none";
-      document.getElementById("exists-name").innerHTML=`شركة <strong style="color:#34d399">${d.company.name}</strong> مسجّلة باسمك مع ${d.branches.length} فرع. يمكنك الدخول للوحة الشركة، أو حذفها وإنشاء واحدة جديدة.`;
+    userCompanies=d.companies||[];
+
+    if(!d.has_company||!userCompanies.length){
+      // لا توجد شركات → اعرض نموذج التسجيل مباشرة
+      document.getElementById("form-box").classList.add("show");
+      document.getElementById("companies-section").style.display="none";
+    }else{
+      // عنده شركات → اعرض قائمتها
+      renderCompanies();
+      document.getElementById("companies-section").style.display="block";
+      document.getElementById("form-box").classList.remove("show");
     }
-  }catch(e){}
+  }catch(e){
+    document.getElementById("form-box").classList.add("show");
+  }
 })();
+
+function renderCompanies(){
+  const count=userCompanies.length;
+  document.getElementById("counter").textContent=`📊 ${count} من 3 شركات`;
+  const list=document.getElementById("companies-list");
+  const sectorIcons={restaurant:"🍽️",cafe:"☕",retail:"🛒"};
+  list.innerHTML=userCompanies.map(c=>`
+    <div class="company-card ${c.is_active?'active':''}" onclick="switchCompany(${c.id})">
+      <div class="av">${sectorIcons[c.sector]||"🏢"}</div>
+      <div class="info">
+        <div class="name">${c.name} ${c.is_active?'<span class="active-badge">نشطة</span>':''}</div>
+        <div class="meta">${c.branch_count} فرع · ${{restaurant:"مطاعم",cafe:"كافيهات",retail:"تجزئة"}[c.sector]||""}</div>
+      </div>
+      <div class="company-actions">
+        ${!c.is_active?`<button class="act-btn" onclick="event.stopPropagation();switchCompany(${c.id})" title="فعّل">↻</button>`:''}
+        <button class="act-btn del" onclick="event.stopPropagation();delCompanyById(${c.id},'${c.name}')" title="حذف">🗑️</button>
+      </div>
+    </div>
+  `).join("");
+
+  // زر الإضافة
+  const addBtn=document.getElementById("add-btn");
+  if(count>=3){
+    addBtn.disabled=true;
+    addBtn.textContent="وصلت الحد الأقصى (3 شركات)";
+  }else{
+    addBtn.disabled=false;
+    addBtn.textContent=`＋ إضافة شركة جديدة (${3-count} متبقية)`;
+  }
+}
+
+function showForm(){
+  document.getElementById("companies-section").style.display="none";
+  document.getElementById("form-box").classList.add("show");
+  document.getElementById("form-title").textContent=userCompanies.length?"إضافة شركة جديدة":"سجّل شركتك الأولى";
+  document.getElementById("cancel-btn").style.display=userCompanies.length?"block":"none";
+  window.scrollTo(0,0);
+}
+function hideForm(){
+  document.getElementById("form-box").classList.remove("show");
+  document.getElementById("companies-section").style.display="block";
+  document.getElementById("company-name").value="";
+  document.getElementById("branches-list").innerHTML=`<div class="branch-item"><input type="text" placeholder="اسم الفرع الأول" class="branch-input"><button class="del-btn" onclick="delBranch(this)" type="button">✕</button></div>`;
+  hideMsg();
+}
+
+async function switchCompany(id){
+  try{
+    const r=await fetch("/company/switch",{method:"POST",headers:authH,body:JSON.stringify({company_id:id})});
+    if(r.ok){location.href="company-dashboard.html"}
+    else{alert("تعذّر التبديل")}
+  }catch(e){alert("تعذّر الاتصال")}
+}
+
+async function delCompanyById(id,name){
+  if(!confirm(`⚠️ حذف شركة "${name}" وكل فروعها؟ لا يمكن التراجع.`))return;
+  try{
+    // بدّل لها أولاً، ثم احذف
+    await fetch("/company/switch",{method:"POST",headers:authH,body:JSON.stringify({company_id:id})});
+    const r=await fetch("/company/delete",{method:"POST",headers:authH});
+    if(r.ok){location.reload()}
+    else{alert("تعذّر الحذف")}
+  }catch(e){alert("تعذّر الاتصال")}
+}
 
 function setSector(el){
   document.querySelectorAll(".sector-btn").forEach(b=>b.classList.remove("active"));
@@ -181,8 +273,6 @@ async function submit(){
 
   if(!name){showMsg("⚠️ أدخل اسم الشركة","error");return}
   if(!branches.length){showMsg("⚠️ أضف فرعاً واحداً على الأقل","error");return}
-
-  // تحقق من عدم تكرار أسماء الفروع
   const unique=[...new Set(branches)];
   if(unique.length!==branches.length){showMsg("⚠️ هناك أسماء فروع مكرّرة","error");return}
 
@@ -190,31 +280,19 @@ async function submit(){
   btn.disabled=true;btn.textContent="جاري الإنشاء...";
 
   try{
-    const res=await fetch("/company/create",{
-      method:"POST",headers:authH,
-      body:JSON.stringify({name,sector,branches:unique})
-    });
+    const res=await fetch("/company/create",{method:"POST",headers:authH,body:JSON.stringify({name,sector,branches:unique})});
     const data=await res.json();
     if(!res.ok){
       showMsg(data.detail||"حدث خطأ في التسجيل","error");
       btn.disabled=false;btn.textContent="إنشاء الشركة ←";
       return;
     }
-    showMsg("✅ "+data.message+" — جاري التحويل للوحة الشركة...","success");
-    setTimeout(()=>location.href="company-dashboard.html",1400);
+    showMsg("✅ "+data.message+" — جاري التحويل...","success");
+    setTimeout(()=>location.href="company-dashboard.html",1200);
   }catch(e){
-    showMsg("❌ تعذّر الاتصال بالخادم، تأكد من اتصال الإنترنت","error");
+    showMsg("❌ تعذّر الاتصال بالخادم","error");
     btn.disabled=false;btn.textContent="إنشاء الشركة ←";
   }
-}
-
-async function delCompany(){
-  if(!confirm("⚠️ هل تريد فعلاً حذف الشركة وكل فروعها؟"))return;
-  try{
-    const r=await fetch("/company/delete",{method:"POST",headers:authH});
-    if(r.ok){location.reload()}
-    else{alert("تعذّر الحذف")}
-  }catch(e){alert("تعذّر الاتصال")}
 }
 </script>
 </body>
