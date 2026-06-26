@@ -116,10 +116,15 @@ function addBranch(){
   const c=document.getElementById("branches");
   const div=document.createElement("div"); div.className="branch";
   const opts=TYPES.map(t=>`<option value="${t[0]}">${t[1]}</option>`).join("");
-  div.innerHTML=`<input placeholder="اسم الفرع" class="b-name">
-    <input placeholder="المدينة" list="cities" class="b-city">
-    <select class="b-type">${opts}</select>`;
+  div.innerHTML=`<input placeholder="اسم الفرع" class="b-name" autocomplete="off">
+    <input placeholder="المدينة" list="cities" class="b-city" autocomplete="off">
+    <select class="b-type">${opts}</select>
+    <button type="button" class="rm" title="حذف">×</button>`;
+  div.querySelector(".rm").onclick=()=>{
+    if(document.querySelectorAll("#branches .branch").length>1) div.remove();
+  };
   c.appendChild(div);
+  const f=div.querySelector(".b-name"); if(f) f.focus();
 }
 // أول فرعين تلقائياً
 addBranch(); addBranch();
@@ -139,12 +144,22 @@ async function createCompany(){
 
   const btn=document.getElementById("submit"); btn.disabled=true; btn.textContent="جارٍ الإنشاء…";
   try{
-    const res=await fetch("/company/create",{method:"POST",
-      headers:{"Content-Type":"application/json","Authorization":"Bearer "+TOKEN},
-      body:JSON.stringify({name,sector,branches})});
-    const data=await res.json().catch(()=>({}));
+    let res;
+    try{
+      res=await fetch("/company/create",{method:"POST",
+        headers:{"Content-Type":"application/json","Authorization":"Bearer "+TOKEN},
+        body:JSON.stringify({name,sector,branches})});
+    }catch(netErr){
+      throw new Error("تعذّر الاتصال بالخادم — تأكد أن النشر شغّال على Railway وحدّث الصفحة (Ctrl+Shift+R).");
+    }
     if(res.status===401){ localStorage.removeItem("nabbah_token"); window.location.href="login.html"; return; }
-    if(!res.ok){ throw new Error(data.detail||"تعذّر الإنشاء"); }
+    const raw=await res.text();
+    let data={}; try{ data=JSON.parse(raw); }catch(_){}
+    if(!res.ok){
+      const detail = data.detail || raw || "خطأ غير معروف";
+      throw new Error(`خطأ ${res.status}: ${detail}`);
+    }
+    // نجح — مربوط بحسابك مباشرة
     window.location.href="company-input.html";
   }catch(e){ showErr(e.message); btn.disabled=false; btn.textContent="إنشاء الشركة والبدء"; }
 }
