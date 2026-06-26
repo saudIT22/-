@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نبّاه · إدخال بيانات فرع</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<style>
+  :root{
+    --bg:#0a0f0c;--panel:#101a15;--panel2:#0e1712;--line:#1d2c24;
+    --mint:#10b981;--mint-deep:#0c8f64;--gold:#f5b301;--red:#ef4444;
+    --txt:#e8f1ec;--txt-soft:#9fb4aa;--txt-mute:#678075;--r:16px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--txt);line-height:1.7;min-height:100vh}
+  body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.5;
+    background:radial-gradient(circle at 1px 1px,rgba(16,185,129,.05) 1px,transparent 0);background-size:26px 26px}
+  a{text-decoration:none;color:inherit}
+  .wrap{max-width:680px;margin:0 auto;padding:0 16px;position:relative;z-index:1}
+  header{position:sticky;top:0;z-index:40;background:rgba(10,15,12,.86);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+  .head-in{max-width:680px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:900;font-size:20px;color:#fff}
+  .brand .bell{width:36px;height:36px;border-radius:11px;background:var(--mint);display:grid;place-items:center;font-size:17px;transform:rotate(-5deg)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;font-family:inherit;font-weight:700;cursor:pointer;border:none;border-radius:11px;font-size:14px;transition:.18s}
+  .btn-mint{background:var(--mint);color:#04130d;padding:12px 20px}
+  .btn-mint:hover{background:var(--mint-deep)} .btn-mint:disabled{opacity:.6;cursor:default}
+  .btn-ghost{background:var(--panel);color:var(--txt-soft);padding:10px 15px;border:1px solid var(--line)}
+  .page-head{padding:24px 0 12px}
+  .page-head h1{font-size:25px;font-weight:900}
+  .page-head p{color:var(--txt-soft);font-size:14.5px;margin-top:3px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:20px;margin-bottom:16px}
+  label{display:block;font-size:13px;font-weight:700;margin-bottom:7px;color:var(--txt)}
+  input,select,textarea{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:12px 14px;color:var(--txt);font-family:inherit;font-size:14.5px}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--mint)}
+  .field{margin-bottom:15px}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .err{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#fca5a5;padding:11px 14px;border-radius:11px;font-size:13.5px;margin-bottom:14px;display:none}
+  .hint{font-size:12px;color:var(--txt-mute);margin-top:5px}
+  .sec-title{font-size:12.5px;font-weight:800;color:var(--mint);letter-spacing:.02em;margin:6px 0 12px;text-transform:none}
+
+  .result{display:none}
+  .metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:6px 0 16px}
+  .m{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:13px;text-align:center}
+  .m .ml{font-size:11.5px;color:var(--txt-soft)} .m .mv{font-size:19px;font-weight:900;margin-top:2px}
+  .score-ring{display:flex;align-items:center;gap:14px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:16px}
+  .ring{width:74px;height:74px;border-radius:50%;display:grid;place-items:center;flex-shrink:0}
+  .ring i{width:58px;height:58px;background:var(--panel);border-radius:50%;display:grid;place-items:center;font-weight:900;font-size:21px;font-style:normal}
+  .ai-out{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:16px;margin-top:14px;font-size:14px;line-height:1.85;display:none}
+  .ai-out.show{display:block}
+  .ai-out h2{font-size:16px;margin:14px 0 6px;color:var(--mint)} .ai-out h3{font-size:14.5px;margin:12px 0 5px}
+  .ai-out p{margin:6px 0;color:var(--txt-soft)} .ai-out ul{margin:6px 22px} .ai-out strong{color:var(--txt)}
+  @media(max-width:520px){ .metrics{grid-template-columns:repeat(2,1fr)} }
+</style>
+</head>
+<body>
+<header>
+  <div class="head-in">
+    <a class="brand" href="company-dashboard.html"><span class="bell">🔔</span>نبّاه</a>
+    <a class="btn btn-ghost" href="company-dashboard.html">اللوحة</a>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="page-head">
+    <h1>إدخال بيانات فرع</h1>
+    <p id="ph">اختر الفرع والفترة، أدخل البيانات، ويبدأ الحساب فوراً.</p>
+  </div>
+
+  <div class="err" id="err"></div>
+
+  <div class="card" id="formCard">
+    <div class="row2">
+      <div class="field">
+        <label>الفرع</label>
+        <select id="branch"></select>
+      </div>
+      <div class="field">
+        <label>الفترة</label>
+        <input type="month" id="period">
+      </div>
+    </div>
+
+    <div class="sec-title">الأساسيات</div>
+    <div class="row2">
+      <div class="field"><label>إجمالي المبيعات (ريال)</label><input type="number" id="sales" placeholder="0" inputmode="decimal"></div>
+      <div class="field"><label>المصروفات (ريال)</label><input type="number" id="expenses" placeholder="0" inputmode="decimal"></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>عدد الفواتير / الطلبات</label><input type="number" id="invoices" placeholder="0" inputmode="numeric"></div>
+      <div class="field"><label>عدد العملاء</label><input type="number" id="customers" placeholder="0" inputmode="numeric"></div>
+    </div>
+
+    <div class="sec-title">تفاصيل إضافية (اختياري)</div>
+    <div class="row2">
+      <div class="field"><label>عملاء جدد</label><input type="number" id="new_customers" placeholder="0" inputmode="numeric"></div>
+      <div class="field"><label>عملاء متكررون</label><input type="number" id="repeat_customers" placeholder="0" inputmode="numeric"></div>
+    </div>
+    <div class="field"><label>الخصومات (ريال)</label><input type="number" id="discounts" placeholder="0" inputmode="decimal"></div>
+    <div class="field"><label>أكثر ٣ أصناف مبيعاً</label><input id="top_products" placeholder="مثال: لاتيه | كرواسون | موهيتو"><div class="hint">افصل بينها بعلامة |</div></div>
+    <div class="field"><label>ملاحظات</label><textarea id="notes" rows="2" placeholder="أي سياق يساعد التحليل…"></textarea></div>
+
+    <button class="btn btn-mint" id="save" style="width:100%;padding:14px" onclick="saveEntry()">حفظ وحساب المؤشرات</button>
+  </div>
+
+  <!-- Result -->
+  <div class="card result" id="result">
+    <div class="score-ring">
+      <div class="ring" id="ring"><i id="ringScore">0</i></div>
+      <div>
+        <div style="font-weight:800;font-size:16px" id="rName">الفرع</div>
+        <div style="font-size:13px;color:var(--txt-soft)" id="rLevel">—</div>
+      </div>
+    </div>
+    <div class="metrics" id="metrics"></div>
+    <button class="btn btn-mint" id="anBtn" style="width:100%;padding:13px" onclick="analyzeBranch()">حلّل هذا الفرع بالذكاء الاصطناعي</button>
+    <div class="ai-out" id="aiOut"></div>
+    <div style="display:flex;gap:9px;margin-top:14px">
+      <button class="btn btn-ghost" style="flex:1" onclick="resetForm()">إدخال فرع آخر</button>
+      <a class="btn btn-ghost" style="flex:1" href="company-dashboard.html">عرض اللوحة</a>
+    </div>
+  </div>
+
+  <div style="height:40px"></div>
+</div>
+
+<script>
+const TOKEN = localStorage.getItem("nabbah_token") || "";
+if(!TOKEN){ window.location.href="login.html"; }
+let lastBranchId=null, lastBranchName="";
+
+async function api(path,opts={}){
+  const res=await fetch(path,{...opts,headers:{"Content-Type":"application/json","Authorization":"Bearer "+TOKEN,...(opts.headers||{})}});
+  if(res.status===401){ localStorage.removeItem("nabbah_token"); window.location.href="login.html"; throw new Error("جلسة منتهية"); }
+  const data=await res.json().catch(()=>({}));
+  if(!res.ok) throw new Error(data.detail||"حدث خطأ");
+  return data;
+}
+const fmt=n=>(Math.round(n)||0).toLocaleString("en-US");
+function showErr(m){ const e=document.getElementById("err"); e.textContent=m; e.style.display="block"; window.scrollTo({top:0,behavior:"smooth"}); }
+
+async function init(){
+  // الفترة الحالية افتراضياً
+  const now=new Date(); document.getElementById("period").value=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
+  try{
+    const info=await api("/company/info");
+    if(!info.has_company){ window.location.href="company-register.html"; return; }
+    document.getElementById("ph").textContent=`شركة: ${info.active.name} — اختر الفرع وأدخل بياناته.`;
+    const sel=document.getElementById("branch");
+    if(!info.branches.length){ sel.innerHTML=`<option>لا توجد فروع — أضفها من اللوحة</option>`; return; }
+    sel.innerHTML=info.branches.map(b=>`<option value="${b.id}">${b.name}${b.city?" · "+b.city:""}</option>`).join("");
+  }catch(e){ showErr(e.message); }
+}
+
+async function saveEntry(){
+  document.getElementById("err").style.display="none";
+  const branch_id=document.getElementById("branch").value;
+  const period=document.getElementById("period").value;
+  const sales=+document.getElementById("sales").value||0;
+  if(!branch_id){ return showErr("اختر فرعاً"); }
+  if(sales<=0){ return showErr("أدخل قيمة مبيعات صحيحة"); }
+
+  const payload={ branch_id, period,
+    sales,
+    expenses:+document.getElementById("expenses").value||0,
+    invoices:+document.getElementById("invoices").value||0,
+    customers:+document.getElementById("customers").value||0,
+    new_customers:+document.getElementById("new_customers").value||0,
+    repeat_customers:+document.getElementById("repeat_customers").value||0,
+    discounts:+document.getElementById("discounts").value||0,
+    top_products:document.getElementById("top_products").value.trim(),
+    notes:document.getElementById("notes").value.trim(),
+  };
+  const btn=document.getElementById("save"); btn.disabled=true; btn.textContent="جارٍ الحساب…";
+  try{
+    const r=await api("/company/entry",{method:"POST",body:JSON.stringify(payload)});
+    showResult(r);
+  }catch(e){ showErr(e.message); }
+  btn.disabled=false; btn.textContent="حفظ وحساب المؤشرات";
+}
+
+function levelOf(s){ return s>=70?["ممتاز","#10b981"]:s>=55?["جيد","#f5b301"]:s>=40?["متوسط","#f59e0b"]:["ضعيف","#ef4444"]; }
+
+function showResult(r){
+  lastBranchId=document.getElementById("branch").value;
+  lastBranchName=r.branch;
+  const m=r.metrics, [lvl,col]=levelOf(m.branch_score);
+  document.getElementById("formCard").style.display="none";
+  const res=document.getElementById("result"); res.style.display="block";
+  document.getElementById("rName").textContent=r.branch;
+  document.getElementById("rLevel").textContent=`مؤشر الأداء: ${lvl}`;
+  document.getElementById("ringScore").textContent=m.branch_score;
+  document.getElementById("ringScore").style.color=col;
+  document.getElementById("ring").style.background=`conic-gradient(${col} 0 ${m.branch_score}%,#16221c ${m.branch_score}% 100%)`;
+  const cells=[
+    ["صافي الربح",fmt(m.profit)+" ر"],["هامش الربح",m.margin+"%"],["متوسط الفاتورة",fmt(m.avg_invoice)+" ر"],
+    ["نسبة التكرار",m.repeat_rate+"%"],["النمو",m.growth+"%"],["المؤشر",m.branch_score+"/100"],
+  ];
+  document.getElementById("metrics").innerHTML=cells.map(c=>`<div class="m"><div class="ml">${c[0]}</div><div class="mv">${c[1]}</div></div>`).join("");
+  document.getElementById("aiOut").classList.remove("show");
+  document.getElementById("anBtn").textContent="حلّل هذا الفرع بالذكاء الاصطناعي";
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+
+async function analyzeBranch(){
+  const btn=document.getElementById("anBtn"), out=document.getElementById("aiOut");
+  btn.disabled=true; btn.textContent="جارٍ التحليل… (لحظات)";
+  try{
+    const r=await api("/company/analyze",{method:"POST",body:JSON.stringify({scope:"branch",branch_id:lastBranchId})});
+    out.innerHTML=marked.parse(r.analysis||""); out.classList.add("show");
+    out.scrollIntoView({behavior:"smooth",block:"nearest"});
+  }catch(e){ out.innerHTML=`<p style="color:var(--red)">${e.message}</p>`; out.classList.add("show"); }
+  btn.disabled=false; btn.textContent="إعادة التحليل";
+}
+
+function resetForm(){
+  ["sales","expenses","invoices","customers","new_customers","repeat_customers","discounts","top_products","notes"].forEach(id=>document.getElementById(id).value="");
+  document.getElementById("result").style.display="none";
+  document.getElementById("formCard").style.display="block";
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+
+init();
+</script>
+</body>
+</html>
