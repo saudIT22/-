@@ -1191,10 +1191,15 @@ def company_create(
         raise HTTPException(400, "أضف فرعاً واحداً على الأقل")
 
     with Session(engine) as s:
-        # منع إنشاء شركتين للمستخدم نفسه
-        existing = s.exec(select(Company).where(Company.owner_id == user.id)).first()
-        if existing:
-            raise HTTPException(400, "لديك شركة مسجّلة بالفعل")
+        # السماح بـ 3 شركات كحد أقصى لكل مستخدم
+        existing_companies = s.exec(select(Company).where(Company.owner_id == user.id)).all()
+        if len(existing_companies) >= 3:
+            raise HTTPException(400, "وصلت الحد الأقصى (3 شركات لكل حساب). احذف شركة قديمة لإضافة جديدة.")
+
+        # تحقق من عدم تكرار الاسم لنفس المستخدم
+        for c in existing_companies:
+            if c.name.strip().lower() == company_name.strip().lower():
+                raise HTTPException(400, f"لديك شركة بنفس الاسم '{company_name}' مسجّلة بالفعل")
 
         # إنشاء الشركة
         company = Company(name=company_name, owner_id=user.id, sector=sector)
@@ -1209,7 +1214,7 @@ def company_create(
                 branch = Branch(company_id=company.id, name=b_name)
                 s.add(branch)
 
-        # ربط المستخدم بالشركة كـ owner
+        # ربط المستخدم بآخر شركة سجّلها (تكون النشطة)
         user_db = s.get(User, user.id)
         user_db.company_id = company.id
         user_db.company_role = "owner"
@@ -1351,19 +1356,81 @@ def company_dashboard(user: User = Depends(get_current_user)):
 # --- معلومات شركة المستخدم ---
 @app.get("/company/info")
 def company_info(user: User = Depends(get_current_user)):
-    if not user.company_id:
-        return {"has_company": False}
+    """يرجّع كل شركات المستخدم + الشركة النشطة حالياً."""
     with Session(engine) as s:
-        company = s.get(Company, user.company_id)
-        branches = s.exec(
-            select(Branch).where(Branch.company_id == user.company_id, Branch.is_active == 1)
-        ).all()
+        # كل الشركات اللي يملكها المستخدم
+        all_companies = s.exec(select(Company).where(Company.owner_id == user.id)).all()
+
+        # أو شركة هو موظف فيها (مدير فرع/محاسب)
+        if not all_companies and user.company_id:
+            c = s.get(Company, user.company_id)
+            if c:
+                all_companies = [c]
+
+        if not all_companies:
+            return {"has_company": False, "companies": [], "max_reached": False}
+
+        # الشركة النشطة (المرتبط بها user.company_id)
+        active_id = user.company_id
+
+        companies_list = []
+        active_company = None
+        active_branches = []
+
+        for c in all_companies:
+            branches = s.exec(select(Branch).where(Branch.company_id == c.id, Branch.is_active == 1)).all()
+            companies_list.append({
+                "id": c.id,
+                "name": c.name,
+                "sector": c.sector,
+                "branch_count": len(branches),
+                "is_active": c.id == active_id,
+            })
+            if c.id == active_id:
+                active_company = c
+                active_branches = branches
+
+        # إذا ما فيه نشطة، خذ أول وحدة
+        if not active_company:
+            active_company = all_companies[0]
+            active_branches = s.exec(select(Branch).where(Branch.company_id == active_company.id, Branch.is_active == 1)).all()
+            # حدّث المستخدم
+            udb = s.get(User, user.id)
+            udb.company_id = active_company.id
+            if not udb.company_role:
+                udb.company_role = "owner" if active_company.owner_id == user.id else "manager"
+            s.add(udb); s.commit()
+
         return {
             "has_company": True,
-            "company": {"id": company.id, "name": company.name, "sector": company.sector},
-            "branches": [{"id": b.id, "name": b.name} for b in branches],
+            "companies": companies_list,
+            "company": {"id": active_company.id, "name": active_company.name, "sector": active_company.sector},
+            "branches": [{"id": b.id, "name": b.name} for b in active_branches],
             "role": user.company_role,
+            "max_reached": len(all_companies) >= 3,
+            "can_add_more": len(all_companies) < 3,
         }
+
+
+# --- تبديل الشركة النشطة ---
+@app.post("/company/switch")
+def company_switch(data: dict, user: User = Depends(get_current_user)):
+    """يبدّل الشركة النشطة للمستخدم."""
+    company_id = data.get("company_id")
+    if not company_id:
+        raise HTTPException(400, "أرسل company_id")
+    with Session(engine) as s:
+        company = s.get(Company, int(company_id))
+        if not company:
+            raise HTTPException(404, "الشركة غير موجودة")
+        if company.owner_id != user.id:
+            raise HTTPException(403, "هذه الشركة ليست لك")
+
+        udb = s.get(User, user.id)
+        udb.company_id = company.id
+        udb.company_role = "owner"
+        s.add(udb); s.commit()
+        return {"ok": True, "company": {"id": company.id, "name": company.name}}
 
 
 # --- إضافة فرع جديد ---
