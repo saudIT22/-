@@ -4,128 +4,218 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>نبّاه — تسجيل شركتك</title>
-<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
 <style>
-  :root{--mint:#10b981;--mint-deep:#047857;--mint-darker:#065f46;--mint-soft:#ecfdf5;
-    --ink:#0f1d18;--ink-soft:#475a52;--ink-muted:#8ba89f;--bg:#f4f9f7;--line:#e0ece8;--red:#ef4444;}
-  *{margin:0;padding:0;box-sizing:border-box;font-family:'Tajawal',sans-serif}
-  body{background:var(--bg);color:var(--ink);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
-  .box{background:#fff;border:1px solid var(--line);border-radius:20px;padding:40px;width:100%;max-width:560px}
-  .logo{display:flex;align-items:center;gap:10px;margin-bottom:28px}
-  .logo .bell{width:40px;height:40px;border-radius:11px;background:var(--mint);display:grid;place-items:center;font-size:22px}
-  .logo .name{font-weight:900;font-size:22px;color:var(--mint-darker)}
-  h2{font-size:22px;font-weight:900;margin-bottom:6px}
-  .sub{color:var(--ink-muted);font-size:14px;margin-bottom:28px}
-  label{display:block;font-size:13.5px;font-weight:700;color:var(--ink-soft);margin-bottom:6px}
-  input[type=text]{width:100%;padding:12px 14px;border:1.5px solid var(--line);border-radius:11px;font-family:'Tajawal';font-size:15px;color:var(--ink);outline:none;transition:border .2s;margin-bottom:18px}
-  input[type=text]:focus{border-color:var(--mint)}
-  .sector-row{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap}
-  .sector-btn{flex:1;min-width:100px;padding:10px;border:1.5px solid var(--line);border-radius:11px;background:#fff;cursor:pointer;font-family:'Tajawal';font-size:13.5px;font-weight:600;color:var(--ink-soft);text-align:center;transition:all .2s}
-  .sector-btn.active{border-color:var(--mint);background:var(--mint-soft);color:var(--mint-darker)}
-  .branches-area{border:1.5px solid var(--line);border-radius:14px;padding:16px;margin-bottom:20px}
-  .branches-label{font-size:13px;font-weight:700;color:var(--ink-soft);margin-bottom:12px}
-  .branch-item{display:flex;gap:8px;margin-bottom:8px;align-items:center}
-  .branch-item input{margin-bottom:0;flex:1}
-  .del-btn{width:34px;height:34px;border:1.5px solid var(--line);border-radius:9px;background:#fff;cursor:pointer;font-size:16px;color:var(--ink-muted);flex-shrink:0;display:grid;place-items:center}
-  .del-btn:hover{border-color:var(--red);color:var(--red)}
-  .add-branch{display:flex;align-items:center;gap:8px;cursor:pointer;color:var(--mint-darker);font-weight:700;font-size:13.5px;margin-top:6px}
-  .btn{width:100%;padding:15px;background:var(--mint);color:#fff;border:none;border-radius:13px;font-family:'Tajawal';font-size:16px;font-weight:800;cursor:pointer;transition:background .2s}
-  .btn:hover{background:var(--mint-deep)}
-  .btn:disabled{background:#b2dfdb;cursor:not-allowed}
-  .msg{padding:12px 16px;border-radius:11px;font-size:14px;font-weight:600;margin-bottom:16px;display:none}
-  .msg.error{background:#fef2f2;color:var(--red);border:1px solid #fecaca}
-  .msg.success{background:var(--mint-soft);color:var(--mint-darker);border:1px solid #a7f3d0}
+:root{--bg:#0a0f0c;--surface:#101a14;--card:#141f18;--card-h:#192618;--border:#1e3026;--border-soft:#253c2e;
+--mint:#10b981;--mint-b:#34d399;--mint-dim:#a7f3d0;--mint-glow:rgba(16,185,129,.15);
+--text:#e8f5ee;--text-soft:#8ba89f;--text-dim:#4a6b5a;
+--red:#f87171;--red-soft:rgba(248,113,113,.12);--amber:#fbbf24;--blue:#60a5fa;}
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Tajawal',sans-serif}
+body{background:var(--bg);color:var(--text);min-height:100vh;
+  background-image:radial-gradient(circle at 20% 20%,rgba(16,185,129,.08) 0%,transparent 50%),radial-gradient(circle at 80% 80%,rgba(52,211,153,.05) 0%,transparent 50%);}
+.wrap{max-width:580px;margin:0 auto;padding:40px 20px;min-height:100vh;display:flex;align-items:center;justify-content:center}
+.box{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:40px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+@media(max-width:600px){.box{padding:28px 22px}}
+.brand{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.brand .bell{width:44px;height:44px;border-radius:12px;background:var(--mint);display:grid;place-items:center;font-size:22px;box-shadow:0 0 24px var(--mint-glow)}
+.brand .b{font-size:22px;font-weight:900;color:var(--mint)}
+.brand .b small{display:block;font-size:11px;color:var(--text-dim);font-weight:600;margin-top:2px}
+h1{font-size:24px;font-weight:900;margin-top:22px;margin-bottom:6px}
+.sub{color:var(--text-soft);font-size:14px;margin-bottom:28px;line-height:1.7}
+.step-bar{display:flex;gap:6px;margin-bottom:24px}
+.step{flex:1;height:4px;border-radius:3px;background:var(--border)}
+.step.done{background:var(--mint)}
+label{display:block;font-size:13px;font-weight:700;color:var(--text-soft);margin-bottom:8px;margin-top:18px}
+label small{color:var(--text-dim);font-weight:500;margin-right:6px}
+input[type=text]{width:100%;padding:13px 16px;background:var(--bg);border:1.5px solid var(--border);border-radius:11px;font-family:'Tajawal';font-size:15px;color:var(--text);outline:none;transition:border .2s}
+input[type=text]:focus{border-color:var(--mint);background:var(--card)}
+input::placeholder{color:var(--text-dim)}
+.sector-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.sector-btn{padding:14px 10px;background:var(--card);border:1.5px solid var(--border);border-radius:12px;cursor:pointer;font-family:'Tajawal';font-size:13.5px;font-weight:700;color:var(--text-soft);text-align:center;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:6px}
+.sector-btn .ic{font-size:22px}
+.sector-btn:hover{border-color:var(--border-soft)}
+.sector-btn.active{border-color:var(--mint);background:var(--mint-glow);color:var(--mint-b)}
+.branches-card{background:var(--card);border:1.5px solid var(--border);border-radius:14px;padding:18px}
+.branches-head{font-size:13px;font-weight:700;color:var(--mint-b);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.branch-item{display:flex;gap:8px;margin-bottom:9px;align-items:center}
+.branch-item input{margin:0;flex:1;font-size:14px;padding:11px 14px}
+.del-btn{width:38px;height:38px;border:1.5px solid var(--border);border-radius:10px;background:transparent;cursor:pointer;font-size:14px;color:var(--text-dim);flex-shrink:0;display:grid;place-items:center;transition:all .15s}
+.del-btn:hover{border-color:var(--red);color:var(--red)}
+.add-branch{display:inline-flex;align-items:center;gap:6px;cursor:pointer;color:var(--mint-b);font-weight:700;font-size:13px;margin-top:8px;background:none;border:none;font-family:'Tajawal';padding:6px 0}
+.add-branch:hover{color:var(--mint)}
+.btn-main{width:100%;padding:15px;background:var(--mint);color:#fff;border:none;border-radius:12px;font-family:'Tajawal';font-size:15.5px;font-weight:800;cursor:pointer;margin-top:24px;transition:all .2s;box-shadow:0 4px 20px rgba(16,185,129,.25)}
+.btn-main:hover:not(:disabled){background:#047857;transform:translateY(-1px)}
+.btn-main:disabled{background:#1e3026;cursor:not-allowed;box-shadow:none}
+.msg{padding:13px 16px;border-radius:11px;font-size:13.5px;font-weight:600;margin-bottom:18px;display:none}
+.msg.error{background:var(--red-soft);color:var(--red);border:1px solid rgba(248,113,113,.3)}
+.msg.success{background:var(--mint-glow);color:var(--mint-b);border:1px solid rgba(16,185,129,.3)}
+.msg.warn{background:rgba(251,191,36,.1);color:var(--amber);border:1px solid rgba(251,191,36,.3)}
+.bottom-row{display:flex;justify-content:space-between;align-items:center;margin-top:18px;font-size:12px;color:var(--text-dim)}
+.bottom-row a{color:var(--mint-b);text-decoration:none;font-weight:700}
+.has-company-card{background:var(--card);border:1px solid var(--mint);border-radius:14px;padding:20px;margin-bottom:18px;display:none}
+.has-company-card.show{display:block}
+.has-company-card h3{font-size:16px;color:var(--mint-b);margin-bottom:8px}
+.has-company-card p{font-size:13.5px;color:var(--text-soft);line-height:1.7;margin-bottom:14px}
+.btns-row{display:flex;gap:10px}
+.btn-go{flex:1;padding:11px;background:var(--mint);color:#fff;border:none;border-radius:10px;font-family:'Tajawal';font-weight:800;font-size:13.5px;cursor:pointer;text-decoration:none;text-align:center}
+.btn-del{padding:11px 18px;background:transparent;color:var(--red);border:1.5px solid rgba(248,113,113,.4);border-radius:10px;font-family:'Tajawal';font-weight:700;font-size:13.5px;cursor:pointer}
+.btn-del:hover{background:var(--red-soft)}
 </style>
 </head>
 <body>
-<div class="box">
-  <div class="logo"><div class="bell">🔔</div><div class="name">نبّاه</div></div>
-  <h2>سجّل شركتك</h2>
-  <p class="sub">أنشئ حساب شركتك وأضف فروعها — يستغرق دقيقتين.</p>
+<div class="wrap">
+  <div class="box">
+    <div class="brand">
+      <div class="bell">🔔</div>
+      <div class="b">نبّاه<small>منصة ذكاء القرارات للشركات</small></div>
+    </div>
 
-  <div class="msg" id="msg"></div>
-
-  <label>اسم الشركة / السلسلة</label>
-  <input type="text" id="company-name" placeholder="مثال: سلسلة نبّاه للمطاعم">
-
-  <label>نوع النشاط</label>
-  <div class="sector-row">
-    <div class="sector-btn active" data-v="restaurant" onclick="setSector(this)">🍽️ مطاعم</div>
-    <div class="sector-btn" data-v="cafe" onclick="setSector(this)">☕ كافيهات</div>
-    <div class="sector-btn" data-v="retail" onclick="setSector(this)">🛒 تجزئة</div>
-  </div>
-
-  <div class="branches-area">
-    <div class="branches-label">🏪 الفروع (أضف فرعاً واحداً على الأقل)</div>
-    <div id="branches-list">
-      <div class="branch-item">
-        <input type="text" placeholder="اسم الفرع الأول" class="branch-input">
-        <button class="del-btn" onclick="delBranch(this)">✕</button>
+    <!-- لو عنده شركة مسبقاً -->
+    <div class="has-company-card" id="exists-card">
+      <h3>✅ لديك شركة مسجّلة</h3>
+      <p id="exists-name">جاري التحقق...</p>
+      <div class="btns-row">
+        <a href="company-dashboard.html" class="btn-go">دخول لوحة الشركة ←</a>
+        <button class="btn-del" onclick="delCompany()">🗑️ حذف</button>
       </div>
     </div>
-    <div class="add-branch" onclick="addBranch()">＋ أضف فرعاً آخر</div>
-  </div>
 
-  <button class="btn" id="submit-btn" onclick="submit()">إنشاء الشركة ←</button>
+    <!-- نموذج التسجيل -->
+    <div id="form-box">
+      <h1>سجّل شركتك</h1>
+      <p class="sub">سجّل بيانات شركتك وفروعها — العملية تستغرق دقيقة، وتفتح لك لوحة المدير التنفيذي ومقارنة الفروع والتقارير الذكية.</p>
+
+      <div class="step-bar">
+        <div class="step done"></div><div class="step done"></div><div class="step done"></div>
+      </div>
+
+      <div class="msg" id="msg"></div>
+
+      <label>اسم الشركة أو السلسلة</label>
+      <input type="text" id="company-name" placeholder="مثال: مجموعة الذواقة للمطاعم" autocomplete="off">
+
+      <label>نوع النشاط</label>
+      <div class="sector-row">
+        <div class="sector-btn active" data-v="restaurant" onclick="setSector(this)">
+          <span class="ic">🍽️</span><span>مطاعم</span>
+        </div>
+        <div class="sector-btn" data-v="cafe" onclick="setSector(this)">
+          <span class="ic">☕</span><span>كافيهات</span>
+        </div>
+        <div class="sector-btn" data-v="retail" onclick="setSector(this)">
+          <span class="ic">🛒</span><span>تجزئة</span>
+        </div>
+      </div>
+
+      <label>🏪 الفروع <small>(اكتب اسم كل فرع كما هو في صفحة إدخال التحاليل)</small></label>
+      <div class="branches-card">
+        <div class="branches-head">📍 أضف فروع شركتك</div>
+        <div id="branches-list">
+          <div class="branch-item">
+            <input type="text" placeholder="اسم الفرع الأول (مثال: فرع التحلية)" class="branch-input">
+            <button class="del-btn" onclick="delBranch(this)" type="button">✕</button>
+          </div>
+        </div>
+        <button class="add-branch" onclick="addBranch()" type="button">＋ أضف فرعاً آخر</button>
+      </div>
+
+      <button class="btn-main" id="submit-btn" onclick="submit()">إنشاء الشركة ←</button>
+
+      <div class="bottom-row">
+        <a href="dashboard.html">← الرجوع للوحة الفردية</a>
+        <a href="index.html">الصفحة الرئيسية</a>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
-  if (!localStorage.getItem("nabbah_token")) location.href = "login.html";
+// تحقق من الدخول
+if(!localStorage.getItem("nabbah_token")){location.href="login.html"}
+const token=localStorage.getItem("nabbah_token");
+const authH={"Authorization":"Bearer "+token,"Content-Type":"application/json"};
+let sector="restaurant";
 
-  let sector = "restaurant";
-
-  function setSector(el) {
-    document.querySelectorAll('.sector-btn').forEach(b => b.classList.remove('active'));
-    el.classList.add('active');
-    sector = el.dataset.v;
-  }
-
-  function addBranch() {
-    const d = document.createElement('div');
-    d.className = 'branch-item';
-    d.innerHTML = `<input type="text" placeholder="اسم الفرع" class="branch-input"><button class="del-btn" onclick="delBranch(this)">✕</button>`;
-    document.getElementById('branches-list').appendChild(d);
-  }
-
-  function delBranch(btn) {
-    const items = document.querySelectorAll('.branch-item');
-    if (items.length > 1) btn.parentElement.remove();
-  }
-
-  function showMsg(txt, type) {
-    const m = document.getElementById('msg');
-    m.textContent = txt; m.className = 'msg ' + type; m.style.display = 'block';
-  }
-
-  async function submit() {
-    const name = document.getElementById('company-name').value.trim();
-    const branches = [...document.querySelectorAll('.branch-input')]
-      .map(i => i.value.trim()).filter(Boolean);
-
-    if (!name) { showMsg('أدخل اسم الشركة', 'error'); return; }
-    if (!branches.length) { showMsg('أضف فرعاً واحداً على الأقل', 'error'); return; }
-
-    const btn = document.getElementById('submit-btn');
-    btn.disabled = true; btn.textContent = 'جاري الإنشاء...';
-
-    try {
-      const res = await fetch('/company/create', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + localStorage.getItem('nabbah_token')
-        },
-        body: JSON.stringify({ name, sector, branches })
-      });
-      const data = await res.json();
-      if (!res.ok) { showMsg(data.detail || 'حدث خطأ', 'error'); btn.disabled=false; btn.textContent='إنشاء الشركة ←'; return; }
-      showMsg('✅ ' + data.message + ' — جاري التحويل...', 'success');
-      setTimeout(() => location.href = 'company-dashboard.html', 1500);
-    } catch(e) {
-      showMsg('تعذّر الاتصال، حاول مرة أخرى', 'error');
-      btn.disabled=false; btn.textContent='إنشاء الشركة ←';
+// عند فتح الصفحة: تحقق هل عنده شركة
+(async function init(){
+  try{
+    const r=await fetch("/company/info",{headers:authH});
+    if(r.status===401){localStorage.clear();location.href="login.html";return}
+    const d=await r.json();
+    if(d.has_company){
+      // أظهر بطاقة "عندك شركة"
+      document.getElementById("exists-card").classList.add("show");
+      document.getElementById("form-box").style.display="none";
+      document.getElementById("exists-name").innerHTML=`شركة <strong style="color:#34d399">${d.company.name}</strong> مسجّلة باسمك مع ${d.branches.length} فرع. يمكنك الدخول للوحة الشركة، أو حذفها وإنشاء واحدة جديدة.`;
     }
+  }catch(e){}
+})();
+
+function setSector(el){
+  document.querySelectorAll(".sector-btn").forEach(b=>b.classList.remove("active"));
+  el.classList.add("active");
+  sector=el.dataset.v;
+}
+function addBranch(){
+  const c=document.createElement("div");
+  c.className="branch-item";
+  c.innerHTML=`<input type="text" placeholder="اسم الفرع" class="branch-input"><button class="del-btn" onclick="delBranch(this)" type="button">✕</button>`;
+  document.getElementById("branches-list").appendChild(c);
+  c.querySelector("input").focus();
+}
+function delBranch(btn){
+  const items=document.querySelectorAll(".branch-item");
+  if(items.length>1)btn.parentElement.remove();
+}
+function showMsg(t,type){
+  const m=document.getElementById("msg");
+  m.textContent=t;m.className="msg "+type;m.style.display="block";
+  m.scrollIntoView({behavior:"smooth",block:"center"});
+}
+function hideMsg(){document.getElementById("msg").style.display="none"}
+
+async function submit(){
+  hideMsg();
+  const name=document.getElementById("company-name").value.trim();
+  const branches=[...document.querySelectorAll(".branch-input")].map(i=>i.value.trim()).filter(Boolean);
+
+  if(!name){showMsg("⚠️ أدخل اسم الشركة","error");return}
+  if(!branches.length){showMsg("⚠️ أضف فرعاً واحداً على الأقل","error");return}
+
+  // تحقق من عدم تكرار أسماء الفروع
+  const unique=[...new Set(branches)];
+  if(unique.length!==branches.length){showMsg("⚠️ هناك أسماء فروع مكرّرة","error");return}
+
+  const btn=document.getElementById("submit-btn");
+  btn.disabled=true;btn.textContent="جاري الإنشاء...";
+
+  try{
+    const res=await fetch("/company/create",{
+      method:"POST",headers:authH,
+      body:JSON.stringify({name,sector,branches:unique})
+    });
+    const data=await res.json();
+    if(!res.ok){
+      showMsg(data.detail||"حدث خطأ في التسجيل","error");
+      btn.disabled=false;btn.textContent="إنشاء الشركة ←";
+      return;
+    }
+    showMsg("✅ "+data.message+" — جاري التحويل للوحة الشركة...","success");
+    setTimeout(()=>location.href="company-dashboard.html",1400);
+  }catch(e){
+    showMsg("❌ تعذّر الاتصال بالخادم، تأكد من اتصال الإنترنت","error");
+    btn.disabled=false;btn.textContent="إنشاء الشركة ←";
   }
+}
+
+async function delCompany(){
+  if(!confirm("⚠️ هل تريد فعلاً حذف الشركة وكل فروعها؟"))return;
+  try{
+    const r=await fetch("/company/delete",{method:"POST",headers:authH});
+    if(r.ok){location.reload()}
+    else{alert("تعذّر الحذف")}
+  }catch(e){alert("تعذّر الاتصال")}
+}
 </script>
 </body>
 </html>
