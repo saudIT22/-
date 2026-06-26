@@ -1216,7 +1216,7 @@ def company_create(
         s.add(user_db)
         s.commit()
 
-        log_activity(s, user.name, f"أنشأ شركة: {company_name}", user.email)
+        log_activity(user.name, f"أنشأ شركة: {company_name}", user.email)
         return {"ok": True, "company_id": company.id, "message": f"تم إنشاء {company_name} بنجاح"}
 
 
@@ -1379,7 +1379,7 @@ def company_add_branch(data: dict, user: User = Depends(get_current_user)):
         s.add(branch)
         s.commit()
         s.refresh(branch)
-        log_activity(s, user.name, f"أضاف فرع: {branch_name}", user.email)
+        log_activity(user.name, f"أضاف فرع: {branch_name}", user.email)
         return {"ok": True, "branch_id": branch.id}
 
 # ============================================================
