@@ -101,24 +101,55 @@ class ActivityLog(SQLModel, table=True):
     target_email: str = ""
     created_at: datetime = Field(default_factory=datetime.now)
 
-# ===== جداول الشركات =====
+# ===== جداول قسم الشركات (مستقل تماماً عن قسم المطاعم/الأفراد) =====
 class Company(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str                                    # اسم الشركة
     owner_id: int = Field(index=True)            # المالك (user_id)
     plan: str = "enterprise"
-    sector: str = "restaurant"                   # restaurant/cafe/retail
+    sector: str = "retail"                       # retail/fnb/services/other — نشاط الشركة
     is_active: int = 1
     created_at: datetime = Field(default_factory=datetime.now)
 
-class Branch(SQLModel, table=True):
+class CompanyBranch(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     company_id: int = Field(index=True)          # تابع لأي شركة
     name: str                                    # اسم الفرع
-    branch_type: str = "standalone"              # mall/residential/cloud/airport/standalone
-    manager_id: Optional[int] = None            # مدير الفرع (user_id) — اختياري
-    manager_name: str = ""                       # اسم مدير الفرع (للعرض)
+    city: str = ""                               # المدينة (تُستخدم للخريطة)
+    area: str = ""                               # الحي/المنطقة (اختياري)
+    branch_type: str = "standalone"              # mall/strip/standalone/online/kiosk
+    lat: float = 0.0                             # إحداثيات الفرع (تُملأ من المدينة)
+    lng: float = 0.0
+    target_sales: float = 0                      # هدف المبيعات الشهري (اختياري)
+    target_customers: int = 0                    # هدف عدد العملاء الشهري (اختياري)
     is_active: int = 1
+    created_at: datetime = Field(default_factory=datetime.now)
+
+class CompanyEntry(SQLModel, table=True):
+    """بيانات دورية لكل فرع — تتراكم لتعطي اتجاهات وتنبؤ."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    branch_id: int = Field(index=True)
+    branch_name: str = ""                         # نسخة للعرض السريع
+    period: str = ""                              # الفترة، مثل "2025-06"
+    # ----- مدخلات خام (يدخلها المستخدم) -----
+    sales: float = 0                              # إجمالي المبيعات
+    invoices: int = 0                             # عدد الفواتير/الطلبات
+    customers: int = 0                            # عدد العملاء
+    new_customers: int = 0                        # عملاء جدد
+    repeat_customers: int = 0                     # عملاء متكررون
+    expenses: float = 0                           # المصروفات
+    discounts: float = 0                          # الخصومات
+    top_products: str = ""                        # أكثر الأصناف مبيعاً (نص: صنف1 | صنف2 | صنف3)
+    notes: str = ""                               # ملاحظات
+    # ----- محسوبة تلقائياً -----
+    profit: float = 0
+    margin: float = 0
+    avg_invoice: float = 0
+    repeat_rate: float = 0
+    growth: float = 0                             # النمو مقابل الفترة السابقة %
+    branch_score: int = 0                         # مؤشر أداء الفرع /100
+    smart_message: str = ""                       # تحليل Gemini المحفوظ
     created_at: datetime = Field(default_factory=datetime.now)
 
 def log_activity(actor: str, action: str, target_email: str = ""):
@@ -1163,10 +1194,251 @@ def trends(user: User = Depends(get_current_user)):
         }
 
 # ============================================================
-# ===== COMPANY ENDPOINTS — باقة الشركات =====
+# ===== قسم الشركات — نظيف ومستقل تماماً عن المطاعم =====
 # ============================================================
 
-# --- صفحة تسجيل الشركة ---
+SECTOR_NAMES = {
+    "retail": "تجزئة",
+    "fnb": "مطاعم وكافيهات",
+    "services": "خدمات",
+    "other": "شركة",
+}
+
+# إحداثيات أبرز المدن السعودية (للخريطة)
+SA_CITIES = {
+    "الرياض": (24.7136, 46.6753),
+    "جدة": (21.4858, 39.1925),
+    "مكة": (21.3891, 39.8579),
+    "مكة المكرمة": (21.3891, 39.8579),
+    "المدينة": (24.5247, 39.5692),
+    "المدينة المنورة": (24.5247, 39.5692),
+    "الدمام": (26.4207, 50.0888),
+    "الخبر": (26.2794, 50.2083),
+    "الظهران": (26.2361, 50.0393),
+    "الطائف": (21.2703, 40.4158),
+    "تبوك": (28.3838, 36.5550),
+    "بريدة": (26.3260, 43.9750),
+    "عنيزة": (26.0840, 43.9940),
+    "خميس مشيط": (18.3000, 42.7300),
+    "أبها": (18.2164, 42.5053),
+    "حائل": (27.5114, 41.7208),
+    "نجران": (17.4933, 44.1277),
+    "جازان": (16.8894, 42.5611),
+    "ينبع": (24.0890, 38.0618),
+    "الأحساء": (25.3833, 49.5833),
+    "الهفوف": (25.3647, 49.5870),
+    "القطيف": (26.5650, 49.9963),
+    "عرعر": (30.9753, 41.0381),
+    "سكاكا": (29.9697, 40.2064),
+    "الجبيل": (27.0046, 49.6606),
+}
+
+def geocode_city(city, seed=0):
+    """يرجّع إحداثيات تقريبية للمدينة مع توزيع بسيط حتى لا تتطابق الدبابيس."""
+    base = SA_CITIES.get((city or "").strip(), SA_CITIES["الرياض"])
+    jitter_lat = ((seed % 7) - 3) * 0.012
+    jitter_lng = ((seed % 5) - 2) * 0.012
+    return round(base[0] + jitter_lat, 5), round(base[1] + jitter_lng, 5)
+
+
+def score_level(score):
+    """مستوى ولون مؤشر الفرع (يطابق مفتاح الألوان في اللوحة)."""
+    if score >= 70:
+        return ("ممتاز", "#10b981")
+    if score >= 55:
+        return ("جيد", "#f5b301")
+    if score >= 40:
+        return ("متوسط", "#f59e0b")
+    return ("ضعيف", "#ef4444")
+
+
+def compute_company_metrics(sales, invoices, customers, repeat_customers, expenses, prev_sales=None):
+    """يحسب المؤشرات المالية ومؤشر أداء الفرع من المدخلات الخام."""
+    profit = round(sales - expenses, 2)
+    margin = round((profit / sales) * 100, 1) if sales > 0 else 0
+    avg_invoice = round(sales / invoices, 1) if invoices > 0 else 0
+    repeat_rate = round((repeat_customers / customers) * 100, 1) if customers > 0 else 0
+    has_prev = bool(prev_sales and prev_sales > 0)
+    growth = round(((sales - prev_sales) / prev_sales) * 100, 1) if has_prev else 0
+
+    score = 0
+    # الهامش (35)
+    if margin >= 25: score += 35
+    elif margin >= 18: score += 28
+    elif margin >= 12: score += 20
+    elif margin >= 6: score += 11
+    elif margin > 0: score += 5
+    # النمو (30) — بلا فترة سابقة نعطي وسطاً محايداً
+    if not has_prev:
+        score += 18
+    elif growth >= 10: score += 30
+    elif growth >= 3: score += 23
+    elif growth >= 0: score += 16
+    elif growth >= -8: score += 8
+    elif growth >= -20: score += 3
+    # ولاء العملاء (20)
+    if repeat_rate >= 40: score += 20
+    elif repeat_rate >= 25: score += 14
+    elif repeat_rate >= 15: score += 9
+    elif repeat_rate > 0: score += 4
+    # ربحية موجبة (15)
+    if profit > 0: score += 15
+    score = min(score, 100)
+
+    return {
+        "profit": profit, "margin": margin, "avg_invoice": avg_invoice,
+        "repeat_rate": repeat_rate, "growth": growth, "branch_score": score,
+    }
+
+
+def company_gemini(prompt: str) -> str:
+    """يستدعي Gemini بنفس سلسلة الـ fallback المستخدمة في تحليل المطاعم."""
+    models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-flash-latest"]
+    response = None
+    for model_name in models:
+        for attempt in range(2):
+            try:
+                response = ai_client.models.generate_content(model=model_name, contents=prompt)
+                break
+            except Exception:
+                time.sleep(2)
+        if response is not None:
+            break
+    if response is None:
+        return ""
+    return response.text or ""
+
+
+def require_company_access(user: User):
+    """قسم الشركات يتطلب اشتراكاً مفعّلاً (مثل تحليل المطاعم)."""
+    if user.is_active != 1:
+        raise HTTPException(status_code=403, detail="باقة الشركات تتطلب اشتراكاً مفعّلاً")
+    if user.subscription_end and user.subscription_end < datetime.now():
+        raise HTTPException(status_code=403, detail="انتهى اشتراكك، يرجى التجديد")
+
+
+def build_company_prompt(company, sector_name, rows):
+    """بناء برومبت التحليل التنفيذي على مستوى الشركة كاملة."""
+    n = len(rows)
+    total_sales = sum(e.sales for _, e in rows)
+    total_cust = sum(e.customers for _, e in rows)
+    total_profit = sum(e.profit for _, e in rows)
+    total_inv = sum(e.invoices for _, e in rows)
+    avg_margin = round((total_profit / total_sales) * 100, 1) if total_sales else 0
+    avg_invoice = round(total_sales / total_inv, 1) if total_inv else 0
+    overall = round(sum(e.branch_score for _, e in rows) / n) if n else 0
+    ranked = sorted(rows, key=lambda x: x[1].branch_score, reverse=True)
+
+    lines = []
+    for b, e in ranked:
+        tgt = ""
+        if b.target_sales > 0:
+            tgt = f" | الهدف {round(b.target_sales)}ر ({round((e.sales / b.target_sales) * 100)}%)"
+        lines.append(
+            f"- {b.name} ({b.city or 'بدون مدينة'}): مبيعات {round(e.sales)}ر | عملاء {e.customers} | "
+            f"متوسط فاتورة {e.avg_invoice}ر | هامش {e.margin}% | تكرار {e.repeat_rate}% | "
+            f"نمو {e.growth}% | مؤشر {e.branch_score}/100{tgt}"
+        )
+    table = "\n".join(lines)
+    best = ranked[0][0].name
+    worst = ranked[-1][0].name if n > 1 else best
+
+    return f"""أنت "نبّاه"، مستشار تنفيذي بخبرة تتجاوز ١٥ عاماً في إدارة الشركات متعددة الفروع. تكتب لمالك/مدير شركة "{company.name}" ({sector_name}) تقريراً تنفيذياً يكتشف المشكلات الحقيقية والفرص الخفية عبر الفروع — لا تصف الأرقام فقط.
+
+# بيانات الشركة (مؤكدة — لا تخترع أرقاماً):
+- عدد الفروع النشطة: {n}
+- إجمالي المبيعات: {round(total_sales)} ريال | إجمالي العملاء: {total_cust} | إجمالي الفواتير: {total_inv}
+- متوسط الفاتورة العام: {avg_invoice} ريال | الهامش العام: {avg_margin}% | صافي الربح: {round(total_profit)} ريال
+- مؤشر الأداء العام للشركة: {overall}/100
+- أفضل فرع: {best} | أضعف فرع: {worst}
+
+# جدول الفروع (مرتّب من الأعلى أداءً):
+{table}
+
+# قواعد صارمة:
+1. لا تخترع أي رقم. استخدم الأرقام والمؤشرات كما أُعطيت حرفياً.
+2. ضع نسبة ثقة (%) بعد كل توصية مهمة.
+3. ممنوع المبالغة أو التهويل من بيانات قليلة.
+4. للأسباب الجذرية: إن لم تكفِ البيانات قل ذلك صراحة.
+5. لهجة مهنية واثقة، محددة بالأرقام، بالعربية.
+6. قارن الأداء بالأهداف إن وُجدت.
+
+# ابدأ ردّك بهذه الكتلة بالضبط:
+===NABBAH_EXEC===
+ALERT: (أهم تنبيه عبر الفروع — جملة محددة بالأرقام)
+DECISION: (أهم قرار تنفيذي الآن — جملة واحدة)
+OPPORTUNITY: (أهم فرصة — جملة واحدة)
+===END===
+
+# ثم اكتب الأقسام التالية:
+
+## ⚡ الملخص التنفيذي السريع (30 ثانية)
+الحالة العامة ({overall}/100) | أقوى فرع | أضعف فرع | أهم قرار الآن.
+
+## 📊 المؤشرات المالية للشركة
+المبيعات، الربح، الهامش، متوسط الفاتورة، العملاء — تعليق خبير قصير على كل رقم.
+
+## 🏆 ترتيب الفروع وقراءته
+لماذا تصدّر {best}؟ ولماذا تأخّر {worst}؟ الفجوة وما تعنيه.
+
+## 🧩 تحليل الأسباب الجذرية للفروع الأضعف
+لكل فرع ضعيف: السبب المرجّح (مدعوم بالأرقام) + نسبة الثقة.
+
+## ✅ أفضل الممارسات (من الفرع الأعلى)
+ما الذي يستحق تعميمه من {best} على باقي الفروع.
+
+## 🎯 الأداء مقابل الأهداف
+قارن المبيعات الفعلية بالأهداف للفروع التي لها هدف.
+
+## 💡 الفرص المخفية عبر الفروع
+
+## 📉 تحليل المخاطر
+مخاطر حرجة/متوسطة + الأثر + نسبة ثقة.
+
+## 📅 خطة تنفيذية ٣٠-٦٠-٩٠ يوم
+
+## ✅ القرار التنفيذي النهائي
+٥ أسطر: الحالة؟ أكبر خطر؟ أكبر فرصة؟ أول قرار؟ العائد المتوقع؟"""
+
+
+def build_branch_prompt(company, sector_name, b, e, avg_margin, avg_inv, avg_score, hist_txt):
+    """بناء برومبت تحليل فرع واحد مقارنةً بمتوسط فروع الشركة."""
+    tgt = ""
+    if b.target_sales > 0:
+        tgt = f"\n- هدف المبيعات: {round(b.target_sales)} ريال (التحقيق {round((e.sales / b.target_sales) * 100)}%)"
+    return f"""أنت "نبّاه"، مستشار تنفيذي بخبرة طويلة. تحلّل أداء فرع "{b.name}" ضمن شركة "{company.name}" ({sector_name}) وتقارنه بباقي فروع الشركة.
+
+# بيانات الفرع (مؤكدة — لا تخترع):
+- المدينة: {b.city or 'غير محددة'} | النوع: {b.branch_type}
+- المبيعات: {round(e.sales)} ريال | العملاء: {e.customers} | الفواتير: {e.invoices}
+- متوسط الفاتورة: {e.avg_invoice} ريال | الهامش: {e.margin}% | صافي الربح: {round(e.profit)} ريال
+- العملاء المتكررون: {e.repeat_rate}% | النمو عن الفترة السابقة: {e.growth}%
+- المنتجات الأكثر مبيعاً: {e.top_products or 'غير مُدخلة'}
+- مؤشر أداء الفرع: {e.branch_score}/100{tgt}
+- مسار الفرع عبر الفترات: {hist_txt}
+
+# مقارنة بمتوسط فروع الشركة:
+- متوسط الهامش: {avg_margin}% | متوسط الفاتورة: {avg_inv} ريال | متوسط المؤشر: {avg_score}/100
+
+# قواعد: لا تخترع أرقاماً، ضع نسبة ثقة بعد كل توصية، بلا مبالغة، بالعربية.
+
+# ابدأ بهذه الكتلة بالضبط:
+===NABBAH_EXEC===
+ALERT: (أهم تنبيه — جملة محددة بالأرقام)
+DECISION: (أهم قرار للفرع الآن)
+OPPORTUNITY: (أهم فرصة)
+===END===
+
+# ثم:
+## ⚡ ملخص سريع
+## 📊 قراءة مؤشرات الفرع مقابل متوسط الشركة
+## 🔍 المشكلات وحلولها (لكل مشكلة: الأثر المالي + أكثر من حل + نسبة ثقة)
+## 💡 الفرص
+## 📅 خطوات الأسبوع القادم
+## ✅ القرار النهائي للفرع"""
+
+
+# ===== صفحات قسم الشركات =====
 @app.get("/company-register.html")
 def page_company_register():
     return FileResponse("company-register.html")
@@ -1175,932 +1447,605 @@ def page_company_register():
 def page_company_dashboard():
     return FileResponse("company-dashboard.html")
 
-# --- إنشاء شركة جديدة ---
-@app.post("/company/create")
-def company_create(
-    data: dict,
-    user: User = Depends(get_current_user)
-):
-    company_name = data.get("name", "").strip()
-    sector = data.get("sector", "restaurant")
-    branches_raw = data.get("branches", [])  # قائمة أسماء الفروع
-
-    if not company_name:
-        raise HTTPException(400, "اسم الشركة مطلوب")
-    if not branches_raw:
-        raise HTTPException(400, "أضف فرعاً واحداً على الأقل")
-
-    with Session(engine) as s:
-        # السماح بـ 3 شركات كحد أقصى لكل مستخدم
-        existing_companies = s.exec(select(Company).where(Company.owner_id == user.id)).all()
-        if len(existing_companies) >= 3:
-            raise HTTPException(400, "وصلت الحد الأقصى (3 شركات لكل حساب). احذف شركة قديمة لإضافة جديدة.")
-
-        # تحقق من عدم تكرار الاسم لنفس المستخدم
-        for c in existing_companies:
-            if c.name.strip().lower() == company_name.strip().lower():
-                raise HTTPException(400, f"لديك شركة بنفس الاسم '{company_name}' مسجّلة بالفعل")
-
-        # إنشاء الشركة
-        company = Company(name=company_name, owner_id=user.id, sector=sector)
-        s.add(company)
-        s.commit()
-        s.refresh(company)
-
-        # إنشاء الفروع
-        for b_name in branches_raw:
-            b_name = b_name.strip()
-            if b_name:
-                branch = Branch(company_id=company.id, name=b_name)
-                s.add(branch)
-
-        # ربط المستخدم بآخر شركة سجّلها (تكون النشطة)
-        user_db = s.get(User, user.id)
-        user_db.company_id = company.id
-        user_db.company_role = "owner"
-        s.add(user_db)
-        s.commit()
-
-        log_activity(user.name, f"أنشأ شركة: {company_name}", user.email)
-        return {"ok": True, "company_id": company.id, "message": f"تم إنشاء {company_name} بنجاح"}
-
-
-# --- لوحة المدير التنفيذي (بيانات حقيقية) ---
-@app.get("/company/dashboard")
-def company_dashboard(user: User = Depends(get_current_user)):
-    if not user.company_id:
-        raise HTTPException(403, "حسابك غير مرتبط بشركة")
-
-    with Session(engine) as s:
-        company = s.get(Company, user.company_id)
-        if not company:
-            raise HTTPException(404, "الشركة غير موجودة")
-        if company.owner_id != user.id and user.company_role not in ("owner","manager"):
-            raise HTTPException(403, "ليس لديك صلاحية")
-
-        # جلب الفروع
-        branches = s.exec(
-            select(Branch).where(Branch.company_id == company.id, Branch.is_active == 1)
-        ).all()
-
-        branch_ids = [b.id for b in branches]
-        branch_map = {b.id: b.name for b in branches}
-
-        # جلب أحدث تحليل لكل فرع (مرتبط بمدير الفرع أو باسم الفرع)
-        branch_stats = []
-        total_revenue = 0
-        total_profit = 0
-        total_orders = 0
-
-        for branch in branches:
-            # الفروع مرتبطة بمستخدم مدير الفرع أو بالاسم في Entry.restaurant
-            entries = s.exec(
-                select(Entry)
-                .where(Entry.restaurant == branch.name)
-                .order_by(Entry.created_at.desc())
-            ).all()
-
-            if entries:
-                latest = entries[0]
-                # تاريخ 4 تحاليل للاتجاه
-                trend = [e.revenue for e in reversed(entries[:4])]
-                total_revenue += latest.revenue
-                total_profit  += latest.profit
-                total_orders  += latest.orders
-
-                # تحديد حالة الفرع
-                if latest.health_score >= 70:
-                    status = "good"
-                elif latest.health_score >= 45:
-                    status = "warn"
-                else:
-                    status = "danger"
-
-                branch_stats.append({
-                    "id": branch.id,
-                    "name": branch.name,
-                    "revenue": latest.revenue,
-                    "profit": latest.profit,
-                    "margin": latest.margin,
-                    "orders": latest.orders,
-                    "health_score": latest.health_score,
-                    "risk_score": latest.risk_score,
-                    "status": status,
-                    "trend": trend,
-                    "last_updated": latest.created_at.isoformat() if latest.created_at else None,
-                    "top_alert": latest.top_alert,
-                    "top_decision": latest.top_decision,
-                })
-            else:
-                # فرع بدون تحاليل بعد
-                branch_stats.append({
-                    "id": branch.id, "name": branch.name,
-                    "revenue": 0, "profit": 0, "margin": 0,
-                    "orders": 0, "health_score": 0, "risk_score": 0,
-                    "status": "empty", "trend": [],
-                    "last_updated": None, "top_alert": "", "top_decision": "",
-                })
-
-        # ترتيب الفروع من الأفضل للأضعف
-        branch_stats.sort(key=lambda b: b["health_score"], reverse=True)
-
-        # الصحة الكلية للشركة
-        active = [b for b in branch_stats if b["status"] != "empty"]
-        company_health = round(sum(b["health_score"] for b in active) / len(active)) if active else 0
-
-        # أفضل وأضعف فرع
-        best  = branch_stats[0] if branch_stats else None
-        worst = branch_stats[-1] if len(branch_stats) > 1 else None
-
-        # تنبيهات ذكية تلقائية
-        alerts = []
-        for b in branch_stats:
-            if b["status"] == "danger":
-                alerts.append({
-                    "type": "danger",
-                    "branch": b["name"],
-                    "msg": f"درجة الصحة {b['health_score']} — يحتاج تدخلاً فورياً",
-                    "detail": b["top_alert"] or "مصروفات مرتفعة أو إيرادات منخفضة"
-                })
-            elif b["status"] == "warn":
-                alerts.append({
-                    "type": "warn",
-                    "branch": b["name"],
-                    "msg": f"أداء متدنٍّ — درجة الصحة {b['health_score']}",
-                    "detail": b["top_alert"] or "يحتاج مراجعة"
-                })
-            if b["health_score"] >= 80:
-                alerts.append({
-                    "type": "opportunity",
-                    "branch": b["name"],
-                    "msg": f"أداء ممتاز — يمكن الاستفادة من نموذجه",
-                    "detail": b["top_decision"] or "ادرس أسلوب هذا الفرع وطبّقه على غيره"
-                })
-
-        return {
-            "company": {"id": company.id, "name": company.name, "sector": company.sector},
-            "summary": {
-                "total_revenue": round(total_revenue),
-                "total_profit": round(total_profit),
-                "total_orders": total_orders,
-                "company_health": company_health,
-                "branch_count": len(branches),
-                "best_branch": best["name"] if best else "",
-                "worst_branch": worst["name"] if worst else "",
-            },
-            "branches": branch_stats,
-            "alerts": alerts[:6],  # أهم 6 تنبيهات
-        }
-
-
-# --- معلومات شركة المستخدم ---
-@app.get("/company/info")
-def company_info(user: User = Depends(get_current_user)):
-    """يرجّع كل شركات المستخدم + الشركة النشطة حالياً."""
-    with Session(engine) as s:
-        # كل الشركات اللي يملكها المستخدم
-        all_companies = s.exec(select(Company).where(Company.owner_id == user.id)).all()
-
-        # أو شركة هو موظف فيها (مدير فرع/محاسب)
-        if not all_companies and user.company_id:
-            c = s.get(Company, user.company_id)
-            if c:
-                all_companies = [c]
-
-        if not all_companies:
-            return {"has_company": False, "companies": [], "max_reached": False}
-
-        # الشركة النشطة (المرتبط بها user.company_id)
-        active_id = user.company_id
-
-        companies_list = []
-        active_company = None
-        active_branches = []
-
-        for c in all_companies:
-            branches = s.exec(select(Branch).where(Branch.company_id == c.id, Branch.is_active == 1)).all()
-            companies_list.append({
-                "id": c.id,
-                "name": c.name,
-                "sector": c.sector,
-                "branch_count": len(branches),
-                "is_active": c.id == active_id,
-            })
-            if c.id == active_id:
-                active_company = c
-                active_branches = branches
-
-        # إذا ما فيه نشطة، خذ أول وحدة
-        if not active_company:
-            active_company = all_companies[0]
-            active_branches = s.exec(select(Branch).where(Branch.company_id == active_company.id, Branch.is_active == 1)).all()
-            # حدّث المستخدم
-            udb = s.get(User, user.id)
-            udb.company_id = active_company.id
-            if not udb.company_role:
-                udb.company_role = "owner" if active_company.owner_id == user.id else "manager"
-            s.add(udb); s.commit()
-
-        return {
-            "has_company": True,
-            "companies": companies_list,
-            "company": {"id": active_company.id, "name": active_company.name, "sector": active_company.sector},
-            "branches": [{"id": b.id, "name": b.name} for b in active_branches],
-            "role": user.company_role,
-            "max_reached": len(all_companies) >= 3,
-            "can_add_more": len(all_companies) < 3,
-        }
-
-
-# --- تبديل الشركة النشطة ---
-@app.post("/company/switch")
-def company_switch(data: dict, user: User = Depends(get_current_user)):
-    """يبدّل الشركة النشطة للمستخدم."""
-    company_id = data.get("company_id")
-    if not company_id:
-        raise HTTPException(400, "أرسل company_id")
-    with Session(engine) as s:
-        company = s.get(Company, int(company_id))
-        if not company:
-            raise HTTPException(404, "الشركة غير موجودة")
-        if company.owner_id != user.id:
-            raise HTTPException(403, "هذه الشركة ليست لك")
-
-        udb = s.get(User, user.id)
-        udb.company_id = company.id
-        udb.company_role = "owner"
-        s.add(udb); s.commit()
-        return {"ok": True, "company": {"id": company.id, "name": company.name}}
-
-
-# --- إضافة فرع جديد ---
-@app.post("/company/add-branch")
-def company_add_branch(data: dict, user: User = Depends(get_current_user)):
-    branch_name = data.get("name", "").strip()
-    if not branch_name:
-        raise HTTPException(400, "اسم الفرع مطلوب")
-    if not user.company_id or user.company_role not in ("owner",):
-        raise HTTPException(403, "غير مصرّح")
-    with Session(engine) as s:
-        branch = Branch(company_id=user.company_id, name=branch_name)
-        s.add(branch)
-        s.commit()
-        s.refresh(branch)
-        log_activity(user.name, f"أضاف فرع: {branch_name}", user.email)
-        return {"ok": True, "branch_id": branch.id}
-
-# ============================================================
-# ===== BRANCH COMPARISON — مقارنة الفروع الذكية (الخدمة 2) =====
-# ============================================================
-
-def ask_gemini(prompt: str) -> str:
-    """استدعاء Gemini مع إعادة المحاولة — للأسئلة الذكية."""
-    models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-flash-latest"]
-    for model_name in models:
-        for attempt in range(2):
-            try:
-                r = ai_client.models.generate_content(model=model_name, contents=prompt)
-                if r and r.text:
-                    return r.text.strip()
-            except Exception:
-                time.sleep(1.5)
-    return ""
-
-
-def compute_branch_score(latest, all_branch_latest, sector):
-    """مؤشر أداء موحّد للفرع من 100 — يجمع 5 عوامل."""
-    bm = BENCHMARKS.get(sector, BENCHMARKS["restaurant"])
-
-    # 1) الإيرادات (نسبةً لأعلى فرع) — 25 نقطة
-    max_rev = max((b.revenue for b in all_branch_latest), default=1) or 1
-    rev_score = (latest.revenue / max_rev) * 25
-
-    # 2) الربحية (الهامش مقابل معيار القطاع) — 25 نقطة
-    margin_score = min(latest.margin / bm["margin_good"], 1.0) * 25 if bm["margin_good"] else 0
-
-    # 3) العملاء/الطلبات (نسبةً لأعلى فرع) — 20 نقطة
-    max_ord = max((b.orders for b in all_branch_latest), default=1) or 1
-    ord_score = (latest.orders / max_ord) * 20
-
-    # 4) متوسط الفاتورة (مقابل المعيار) — 15 نقطة
-    avg_ticket = (latest.revenue / latest.orders) if latest.orders else 0
-    ticket_score = min(avg_ticket / bm["avg_ticket_good"], 1.0) * 15 if bm["avg_ticket_good"] else 0
-
-    # 5) درجة الصحة العامة — 15 نقطة
-    health_score = (latest.health_score / 100) * 15
-
-    total = rev_score + margin_score + ord_score + ticket_score + health_score
-    return round(min(total, 100)), {
-        "revenue": round(rev_score, 1),
-        "margin": round(margin_score, 1),
-        "orders": round(ord_score, 1),
-        "ticket": round(ticket_score, 1),
-        "health": round(health_score, 1),
-        "avg_ticket": round(avg_ticket),
-    }
-
-
-def analyze_root_cause(entries):
-    """كشف أسباب تغيّر الأداء تلقائياً — يقارن آخر تحليلين."""
-    if len(entries) < 2:
-        return {"change_pct": 0, "reasons": [], "direction": "stable"}
-
-    latest, prev = entries[0], entries[1]
-    reasons = []
-
-    # تغيّر الإيراد الكلي
-    rev_change = ((latest.revenue - prev.revenue) / prev.revenue * 100) if prev.revenue else 0
-
-    # متوسط الفاتورة
-    at_now = (latest.revenue / latest.orders) if latest.orders else 0
-    at_prev = (prev.revenue / prev.orders) if prev.orders else 0
-    if at_prev:
-        at_change = (at_now - at_prev) / at_prev * 100
-        if at_change <= -8:
-            reasons.append(f"انخفاض متوسط الفاتورة {abs(round(at_change))}٪")
-        elif at_change >= 8:
-            reasons.append(f"ارتفاع متوسط الفاتورة {round(at_change)}٪ ✅")
-
-    # المصروفات
-    if prev.expenses:
-        exp_change = (latest.expenses - prev.expenses) / prev.expenses * 100
-        if exp_change >= 12:
-            reasons.append(f"زيادة المصروفات {round(exp_change)}٪")
-
-    # عدد العملاء
-    if prev.orders:
-        ord_change = (latest.orders - prev.orders) / prev.orders * 100
-        if ord_change <= -8:
-            reasons.append(f"تراجع عدد العملاء {abs(round(ord_change))}٪")
-        elif ord_change >= 10:
-            reasons.append(f"نمو عدد العملاء {round(ord_change)}٪ ✅")
-
-    # الهامش
-    margin_change = latest.margin - prev.margin
-    if margin_change <= -3:
-        reasons.append(f"انخفاض هامش الربح {abs(round(margin_change,1))} نقطة")
-
-    direction = "up" if rev_change > 3 else ("down" if rev_change < -3 else "stable")
-    return {"change_pct": round(rev_change, 1), "reasons": reasons, "direction": direction}
-
-
-def detect_anomalies(branch_data, company_avg):
-    """كشف الفروع غير الطبيعية مقارنة بمتوسط الشركة."""
-    anomalies = []
-    rev = branch_data["revenue"]
-    margin = branch_data["margin"]
-
-    if company_avg["revenue"] and rev < company_avg["revenue"] * 0.66:
-        diff = round((1 - rev / company_avg["revenue"]) * 100)
-        anomalies.append(f"المبيعات أقل من متوسط الشركة بـ {diff}٪")
-    if company_avg["margin"] and margin < company_avg["margin"] - 8:
-        anomalies.append(f"هامش الربح أقل من متوسط الشركة بـ {round(company_avg['margin']-margin)} نقطة")
-    if company_avg["avg_ticket"] and branch_data["scores"]["avg_ticket"] < company_avg["avg_ticket"] * 0.7:
-        anomalies.append("متوسط الفاتورة منخفض بشكل غير طبيعي")
-    return anomalies
-
-
-@app.get("/company-branches.html")
-def page_company_branches():
-    return FileResponse("company-branches.html")
-
-
-@app.get("/company/branches")
-def company_branches_compare(user: User = Depends(get_current_user)):
-    """المقارنة الذكية الكاملة للفروع."""
-    if not user.company_id:
-        raise HTTPException(403, "حسابك غير مرتبط بشركة")
-
-    with Session(engine) as s:
-        company = s.get(Company, user.company_id)
-        if not company:
-            raise HTTPException(404, "الشركة غير موجودة")
-        if company.owner_id != user.id and user.company_role not in ("owner", "manager"):
-            raise HTTPException(403, "ليس لديك صلاحية")
-
-        branches = s.exec(
-            select(Branch).where(Branch.company_id == company.id, Branch.is_active == 1)
-        ).all()
-
-        # اجمع آخر تحليل + تاريخ لكل فرع
-        branch_entries = {}   # branch_id -> list entries (desc)
-        latest_per_branch = []
-        for b in branches:
-            entries = s.exec(
-                select(Entry).where(Entry.restaurant == b.name).order_by(Entry.created_at.desc())
-            ).all()
-            branch_entries[b.id] = entries
-            if entries:
-                latest_per_branch.append(entries[0])
-
-        if not latest_per_branch:
-            return {"company": {"name": company.name}, "branches": [], "managers": [],
-                    "best_practices": None, "empty": True}
-
-        # متوسطات الشركة
-        n = len(latest_per_branch)
-        company_avg = {
-            "revenue": sum(e.revenue for e in latest_per_branch) / n,
-            "margin": sum(e.margin for e in latest_per_branch) / n,
-            "avg_ticket": sum((e.revenue/e.orders if e.orders else 0) for e in latest_per_branch) / n,
-        }
-
-        results = []
-        for b in branches:
-            entries = branch_entries[b.id]
-            if not entries:
-                results.append({
-                    "id": b.id, "name": b.name, "type": b.branch_type,
-                    "manager": b.manager_name, "score": 0, "status": "empty",
-                    "revenue": 0, "margin": 0, "orders": 0,
-                    "scores": {}, "root_cause": None, "anomalies": [], "forecast": None,
-                })
-                continue
-
-            latest = entries[0]
-            score, breakdown = compute_branch_score(latest, latest_per_branch, company.sector)
-            root = analyze_root_cause(entries)
-
-            bdata = {
-                "id": b.id, "name": b.name, "type": b.branch_type,
-                "manager": b.manager_name,
-                "score": score,
-                "revenue": round(latest.revenue),
-                "margin": latest.margin,
-                "orders": latest.orders,
-                "health": latest.health_score,
-                "scores": breakdown,
-                "root_cause": root,
-                "top_item": latest.top_item,
-                "last_updated": latest.created_at.isoformat() if latest.created_at else None,
-            }
-            bdata["anomalies"] = detect_anomalies(bdata, company_avg)
-
-            # حالة الفرع
-            if score >= 75: bdata["status"] = "excellent"
-            elif score >= 55: bdata["status"] = "good"
-            elif score >= 40: bdata["status"] = "warn"
-            else: bdata["status"] = "danger"
-
-            # توقع بسيط (اتجاه آخر 3 تحاليل)
-            revs = [e.revenue for e in reversed(entries[:3])]
-            if len(revs) >= 2:
-                growth = (revs[-1] - revs[0]) / revs[0] * 100 if revs[0] else 0
-                bdata["forecast"] = {
-                    "next_revenue": round(revs[-1] * (1 + growth/100/2)),
-                    "growth_pct": round(growth, 1),
-                }
-            else:
-                bdata["forecast"] = None
-
-            results.append(bdata)
-
-        # ترتيب حسب المؤشر
-        results.sort(key=lambda x: x["score"], reverse=True)
-        for i, r in enumerate(results):
-            r["rank"] = i + 1
-
-        # ترتيب المدراء (الفروع اللي لها مدير)
-        managers = [{"name": r["manager"], "branch": r["name"], "score": r["score"]}
-                    for r in results if r["manager"]]
-        managers.sort(key=lambda x: x["score"], reverse=True)
-
-        # أفضل الممارسات (من الفرع الأعلى)
-        best_practices = None
-        ranked = [r for r in results if r["status"] != "empty"]
-        if len(ranked) >= 2:
-            top = ranked[0]
-            bottom = ranked[-1]
-            gap_ticket = top["scores"].get("avg_ticket", 0) - bottom["scores"].get("avg_ticket", 0)
-            best_practices = {
-                "top_branch": top["name"],
-                "top_score": top["score"],
-                "top_avg_ticket": top["scores"].get("avg_ticket", 0),
-                "top_item": top.get("top_item", ""),
-                "ticket_gap": gap_ticket,
-                "suggestion": f"فرع {top['name']} متوسط فاتورته أعلى بـ {gap_ticket} ريال. ادرس قائمته وأسلوب البيع وطبّقه على الفروع الأضعف.",
-            }
-
-        return {
-            "company": {"name": company.name, "sector": company.sector},
-            "branches": results,
-            "managers": managers,
-            "best_practices": best_practices,
-            "company_avg": {k: round(v) for k, v in company_avg.items()},
-            "empty": False,
-        }
-
-
-@app.post("/company/branch-ask")
-def company_branch_ask(data: dict, user: User = Depends(get_current_user)):
-    """محرك الأسئلة الذكي — يسأل المدير بالعربي عن فروعه."""
-    if not user.company_id:
-        raise HTTPException(403, "حسابك غير مرتبط بشركة")
-    question = data.get("question", "").strip()
-    if not question:
-        raise HTTPException(400, "اكتب سؤالك")
-
-    with Session(engine) as s:
-        company = s.get(Company, user.company_id)
-        branches = s.exec(
-            select(Branch).where(Branch.company_id == company.id, Branch.is_active == 1)
-        ).all()
-
-        # اجمع سياق كل فرع
-        context_lines = []
-        for b in branches:
-            latest = s.exec(
-                select(Entry).where(Entry.restaurant == b.name).order_by(Entry.created_at.desc())
-            ).first()
-            if latest:
-                at = round(latest.revenue/latest.orders) if latest.orders else 0
-                context_lines.append(
-                    f"- فرع {b.name}: إيرادات {round(latest.revenue)} ريال، ربح {round(latest.profit)}، "
-                    f"هامش {latest.margin}٪، عملاء {latest.orders}، متوسط الفاتورة {at} ريال، "
-                    f"درجة الصحة {latest.health_score}/100، أكثر صنف: {latest.top_item}"
-                )
-            else:
-                context_lines.append(f"- فرع {b.name}: لا توجد بيانات بعد")
-
-        context = "\n".join(context_lines)
-
-        prompt = f"""أنت "نبّاه"، محلل أعمال خبير. مدير شركة "{company.name}" يسألك سؤالاً عن فروعه.
-استخدم البيانات التالية فقط، وأجب بإجابة عملية مباشرة بالعربية (لا تتجاوز 6 أسطر)، مدعومة بالأرقام، واذكر أسباباً وتوصية واضحة.
-
-بيانات الفروع:
-{context}
-
-سؤال المدير: {question}
-
-أجب الآن بشكل تنفيذي مختصر:"""
-
-        answer = ask_gemini(prompt)
-        if not answer:
-            answer = "الخدمة مزدحمة حالياً، حاول بعد لحظات."
-        return {"answer": answer}
-
-
-@app.post("/company/simulate")
-def company_simulate(data: dict, user: User = Depends(get_current_user)):
-    """محاكي القرارات — يتوقع أثر قرار قبل تنفيذه على كل الفروع."""
-    if not user.company_id:
-        raise HTTPException(403, "حسابك غير مرتبط بشركة")
-
-    # القرارات: price_change%, discount_change%, staff_change% (يؤثر على المصروفات)
-    price_change = float(data.get("price_change", 0))      # رفع/خفض الأسعار %
-    staff_change = float(data.get("staff_change", 0))      # زيادة/نقص الموظفين %
-    marketing = float(data.get("marketing", 0))           # ميزانية تسويق إضافية %
-
-    with Session(engine) as s:
-        company = s.get(Company, user.company_id)
-        branches = s.exec(
-            select(Branch).where(Branch.company_id == company.id, Branch.is_active == 1)
-        ).all()
-
-        results = []
-        tot_before_profit = 0
-        tot_after_profit = 0
-
-        for b in branches:
-            latest = s.exec(
-                select(Entry).where(Entry.restaurant == b.name).order_by(Entry.created_at.desc())
-            ).first()
-            if not latest:
-                continue
-
-            revenue = latest.revenue
-            expenses = latest.expenses
-            orders = latest.orders
-
-            # أثر رفع الأسعار: الإيراد يزيد، لكن الطلب قد ينخفض (مرونة سعرية ~0.4)
-            price_effect = price_change / 100
-            demand_drop = price_effect * 0.4   # كل 1% رفع سعر = 0.4% نقص طلب
-            new_revenue = revenue * (1 + price_effect) * (1 - demand_drop)
-
-            # أثر التسويق: زيادة طلب تقديرية
-            new_revenue *= (1 + (marketing/100) * 0.5)
-
-            # أثر الموظفين على المصروفات (رواتب ~30% من المصروفات)
-            new_expenses = expenses * (1 + (staff_change/100) * 0.30)
-            # التسويق يزيد المصروفات
-            new_expenses *= (1 + (marketing/100) * 0.15)
-
-            before_profit = revenue - expenses
-            after_profit = new_revenue - new_expenses
-            tot_before_profit += before_profit
-            tot_after_profit += after_profit
-
-            results.append({
-                "name": b.name,
-                "before_profit": round(before_profit),
-                "after_profit": round(after_profit),
-                "diff": round(after_profit - before_profit),
-                "diff_pct": round((after_profit-before_profit)/before_profit*100,1) if before_profit else 0,
-            })
-
-        total_diff = tot_after_profit - tot_before_profit
-        return {
-            "branches": results,
-            "summary": {
-                "before_profit": round(tot_before_profit),
-                "after_profit": round(tot_after_profit),
-                "total_diff": round(total_diff),
-                "total_diff_pct": round(total_diff/tot_before_profit*100,1) if tot_before_profit else 0,
-            }
-        }
-
-# ============================================================
-# ===== TEAM PERMISSIONS — صلاحيات الفريق (الخدمة 3) =====
-# ============================================================
-
-@app.get("/company-team.html")
-def page_company_team():
-    return FileResponse("company-team.html")
-
-
-@app.get("/company/team")
-def company_team_list(user: User = Depends(get_current_user)):
-    """قائمة أعضاء الفريق — للمالك فقط."""
-    if not user.company_id:
-        raise HTTPException(403, "حسابك غير مرتبط بشركة")
-    with Session(engine) as s:
-        company = s.get(Company, user.company_id)
-        if company.owner_id != user.id:
-            raise HTTPException(403, "هذه الصفحة للمالك فقط")
-
-        members = s.exec(
-            select(User).where(User.company_id == user.company_id)
-        ).all()
-        branches = s.exec(
-            select(Branch).where(Branch.company_id == user.company_id, Branch.is_active == 1)
-        ).all()
-        branch_map = {b.id: b.name for b in branches}
-
-        team = []
-        for m in members:
-            # اسم الفرع المرتبط بمدير الفرع
-            assigned = ""
-            for b in branches:
-                if b.manager_id == m.id:
-                    assigned = b.name
-                    break
-            team.append({
-                "id": m.id,
-                "name": m.name,
-                "email": m.email,
-                "role": m.company_role or "owner",
-                "assigned_branch": assigned,
-                "is_owner": m.id == company.owner_id,
-            })
-
-        return {
-            "company": {"name": company.name},
-            "team": team,
-            "branches": [{"id": b.id, "name": b.name, "manager_id": b.manager_id} for b in branches],
-        }
-
-
-@app.post("/company/team/add")
-def company_team_add(data: dict, user: User = Depends(get_current_user)):
-    """إضافة عضو فريق جديد — ينشئ حساب ويربطه بالشركة."""
-    if not user.company_id:
-        raise HTTPException(403, "حسابك غير مرتبط بشركة")
-
-    name = data.get("name", "").strip()
-    email = data.get("email", "").strip().lower()
-    password = data.get("password", "").strip()
-    role = data.get("role", "staff")          # manager / accountant / staff
-    branch_id = data.get("branch_id")          # للمدير: الفرع المسؤول عنه
-
-    if not name or not email or not password:
-        raise HTTPException(400, "الاسم والبريد وكلمة المرور مطلوبة")
-    if len(password) < 6:
-        raise HTTPException(400, "كلمة المرور 6 أحرف على الأقل")
-    if role not in ("manager", "accountant", "staff"):
-        raise HTTPException(400, "الدور غير صحيح")
-
-    with Session(engine) as s:
-        company = s.get(Company, user.company_id)
-        if company.owner_id != user.id:
-            raise HTTPException(403, "فقط المالك يضيف أعضاء")
-
-        # تأكد ما فيه حساب بنفس البريد
-        existing = s.exec(select(User).where(User.email == email)).first()
-        if existing:
-            raise HTTPException(400, "هذا البريد مسجّل بالفعل")
-
-        # أنشئ الحساب
-        new_user = User(
-            name=name,
-            email=email,
-            password_hash=hash_password(password),
-            company_id=user.company_id,
-            company_role=role,
-            is_active=1,
-            plan="enterprise_member",
-        )
-        s.add(new_user)
-        s.commit()
-        s.refresh(new_user)
-
-        # لو مدير فرع، اربطه بالفرع
-        if role == "manager" and branch_id:
-            branch = s.get(Branch, int(branch_id))
-            if branch and branch.company_id == user.company_id:
-                branch.manager_id = new_user.id
-                branch.manager_name = name
-                s.add(branch)
-                s.commit()
-
-        log_activity(user.name, f"أضاف عضو فريق: {name} ({role})", email)
-        return {"ok": True, "message": f"تم إضافة {name} بنجاح"}
-
-
-@app.post("/company/team/remove")
-def company_team_remove(data: dict, user: User = Depends(get_current_user)):
-    """إزالة عضو من الفريق."""
-    if not user.company_id:
-        raise HTTPException(403, "حسابك غير مرتبط بشركة")
-    member_id = data.get("member_id")
-
-    with Session(engine) as s:
-        company = s.get(Company, user.company_id)
-        if company.owner_id != user.id:
-            raise HTTPException(403, "فقط المالك يزيل أعضاء")
-        if int(member_id) == company.owner_id:
-            raise HTTPException(400, "لا يمكن إزالة المالك")
-
-        member = s.get(User, int(member_id))
-        if not member or member.company_id != user.company_id:
-            raise HTTPException(404, "العضو غير موجود")
-
-        # فك ارتباطه بأي فرع
-        branches = s.exec(select(Branch).where(Branch.manager_id == member.id)).all()
-        for b in branches:
-            b.manager_id = None
-            b.manager_name = ""
-            s.add(b)
-
-        # فك ارتباطه بالشركة (ما نحذف الحساب، فقط نفصله)
-        member.company_id = None
-        member.company_role = ""
-        member.is_active = 0
-        s.add(member)
-        s.commit()
-
-        log_activity(user.name, f"أزال عضو الفريق: {member.name}", member.email)
-        return {"ok": True}
-
-# ===== حذف الشركة (للتجربة والإعادة) =====
-@app.post("/company/delete")
-def company_delete(user: User = Depends(get_current_user)):
-    """يحذف شركة المستخدم وكل فروعها — للمالك فقط."""
-    if not user.company_id:
-        raise HTTPException(403, "ليس لديك شركة")
-    with Session(engine) as s:
-        company = s.get(Company, user.company_id)
-        if not company or company.owner_id != user.id:
-            raise HTTPException(403, "فقط المالك يحذف الشركة")
-
-        # احذف الفروع
-        branches = s.exec(select(Branch).where(Branch.company_id == company.id)).all()
-        for b in branches:
-            s.delete(b)
-
-        # فك ربط كل الأعضاء
-        members = s.exec(select(User).where(User.company_id == company.id)).all()
-        for m in members:
-            m.company_id = None
-            m.company_role = ""
-            s.add(m)
-
-        # احذف الشركة
-        s.delete(company)
-        s.commit()
-        log_activity(user.name, f"حذف الشركة: {company.name}", user.email)
-        return {"ok": True, "message": "تم حذف الشركة"}
-
-# ============================================================
-# ===== EXECUTIVE REPORT — التقرير التنفيذي التلقائي (الخدمة 4) =====
-# ============================================================
+@app.get("/company-input.html")
+def page_company_input():
+    return FileResponse("company-input.html")
 
 @app.get("/company-report.html")
 def page_company_report():
     return FileResponse("company-report.html")
 
 
-@app.get("/company/report")
-def company_report(user: User = Depends(get_current_user)):
-    """تقرير تنفيذي شامل: ملخص الشركة + كل الفروع + أهم القرارات."""
-    if not user.company_id:
-        raise HTTPException(403, "حسابك غير مرتبط بشركة")
+# ===== معلومات الشركة النشطة + قائمة الشركات (للتوجيه والتبديل) =====
+@app.get("/company/info")
+def company_info(user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        companies = s.exec(
+            select(Company).where(Company.owner_id == user.id, Company.is_active == 1)
+        ).all()
+        if not companies:
+            return {"has_company": False, "companies": [], "active": None,
+                    "branches": [], "max_reached": False}
+
+        active_id = user.company_id
+        if active_id not in [c.id for c in companies]:
+            active_id = companies[0].id
+            udb = s.get(User, user.id)
+            udb.company_id = active_id
+            udb.company_role = "owner"
+            s.add(udb)
+            s.commit()
+
+        comp_list = []
+        for c in companies:
+            bc = len(s.exec(
+                select(CompanyBranch).where(CompanyBranch.company_id == c.id, CompanyBranch.is_active == 1)
+            ).all())
+            comp_list.append({"id": c.id, "name": c.name, "sector": c.sector,
+                              "branch_count": bc, "active": c.id == active_id})
+
+        active = next((c for c in companies if c.id == active_id), companies[0])
+        branches = s.exec(
+            select(CompanyBranch).where(CompanyBranch.company_id == active.id, CompanyBranch.is_active == 1)
+        ).all()
+        b_list = [{"id": b.id, "name": b.name, "city": b.city, "type": b.branch_type,
+                   "target_sales": b.target_sales, "target_customers": b.target_customers}
+                  for b in branches]
+
+        return {
+            "has_company": True,
+            "max_reached": len(companies) >= 3,
+            "companies": comp_list,
+            "active": {"id": active.id, "name": active.name, "sector": active.sector},
+            "branches": b_list,
+        }
+
+
+# ===== إنشاء شركة جديدة =====
+@app.post("/company/create")
+def company_create(data: dict, user: User = Depends(get_current_user)):
+    require_company_access(user)
+    name = (data.get("name") or "").strip()
+    sector = (data.get("sector") or "retail").strip()
+    branches_raw = data.get("branches", [])
+
+    if not name:
+        raise HTTPException(400, "اسم الشركة مطلوب")
+    if not branches_raw:
+        raise HTTPException(400, "أضف فرعاً واحداً على الأقل")
 
     with Session(engine) as s:
+        existing = s.exec(
+            select(Company).where(Company.owner_id == user.id, Company.is_active == 1)
+        ).all()
+        if len(existing) >= 3:
+            raise HTTPException(400, "وصلت الحد الأقصى (3 شركات). احذف شركة لإضافة جديدة.")
+        for c in existing:
+            if c.name.strip().lower() == name.lower():
+                raise HTTPException(400, f"لديك شركة بنفس الاسم '{name}'")
+
+        company = Company(name=name, owner_id=user.id, sector=sector)
+        s.add(company)
+        s.commit()
+        s.refresh(company)
+
+        for i, b in enumerate(branches_raw):
+            if isinstance(b, dict):
+                bn = (b.get("name") or "").strip()
+                city = (b.get("city") or "").strip()
+                btype = (b.get("type") or "standalone").strip()
+            else:
+                bn = str(b).strip()
+                city = ""
+                btype = "standalone"
+            if not bn:
+                continue
+            lat, lng = geocode_city(city, company.id + i + len(bn))
+            s.add(CompanyBranch(company_id=company.id, name=bn, city=city,
+                                branch_type=btype, lat=lat, lng=lng))
+
+        udb = s.get(User, user.id)
+        udb.company_id = company.id
+        udb.company_role = "owner"
+        s.add(udb)
+        s.commit()
+
+        log_activity(user.name, f"أنشأ شركة: {name}", user.email)
+        return {"ok": True, "company_id": company.id, "message": f"تم إنشاء {name} بنجاح"}
+
+
+# ===== تبديل الشركة النشطة =====
+@app.post("/company/switch")
+def company_switch(data: dict, user: User = Depends(get_current_user)):
+    cid = data.get("company_id")
+    with Session(engine) as s:
+        company = s.get(Company, int(cid)) if cid else None
+        if not company or company.owner_id != user.id:
+            raise HTTPException(404, "الشركة غير موجودة")
+        udb = s.get(User, user.id)
+        udb.company_id = company.id
+        s.add(udb)
+        s.commit()
+        return {"ok": True, "active": company.id, "name": company.name}
+
+
+# ===== حذف الشركة النشطة + فروعها + بياناتها =====
+@app.post("/company/delete")
+def company_delete(data: dict = None, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        cid = data.get("company_id") if data else None
+        cid = int(cid) if cid else user.company_id
+        if not cid:
+            raise HTTPException(400, "لا توجد شركة")
+        company = s.get(Company, cid)
+        if not company or company.owner_id != user.id:
+            raise HTTPException(403, "فقط المالك يحذف الشركة")
+
+        for b in s.exec(select(CompanyBranch).where(CompanyBranch.company_id == cid)).all():
+            s.delete(b)
+        for e in s.exec(select(CompanyEntry).where(CompanyEntry.company_id == cid)).all():
+            s.delete(e)
+        s.delete(company)
+        s.commit()
+
+        udb = s.get(User, user.id)
+        rest = s.exec(
+            select(Company).where(Company.owner_id == user.id, Company.is_active == 1)
+        ).all()
+        udb.company_id = rest[0].id if rest else None
+        s.add(udb)
+        s.commit()
+
+        log_activity(user.name, f"حذف الشركة: {company.name}", user.email)
+        return {"ok": True}
+
+
+# ===== إضافة فرع =====
+@app.post("/company/add-branch")
+def company_add_branch(data: dict, user: User = Depends(get_current_user)):
+    if not user.company_id:
+        raise HTTPException(400, "لا توجد شركة نشطة")
+    name = (data.get("name") or "").strip()
+    city = (data.get("city") or "").strip()
+    btype = (data.get("type") or "standalone").strip()
+    if not name:
+        raise HTTPException(400, "اسم الفرع مطلوب")
+    with Session(engine) as s:
         company = s.get(Company, user.company_id)
-        if company.owner_id != user.id and user.company_role not in ("owner", "manager"):
-            raise HTTPException(403, "ليس لديك صلاحية")
+        if not company or company.owner_id != user.id:
+            raise HTTPException(403, "غير مصرّح")
+        lat, lng = geocode_city(city, company.id + len(name) + 7)
+        b = CompanyBranch(company_id=company.id, name=name, city=city,
+                          branch_type=btype, lat=lat, lng=lng)
+        s.add(b)
+        s.commit()
+        s.refresh(b)
+        log_activity(user.name, f"أضاف فرع: {name}", user.email)
+        return {"ok": True, "branch_id": b.id}
+
+
+# ===== حذف فرع =====
+@app.post("/company/remove-branch")
+def company_remove_branch(data: dict, user: User = Depends(get_current_user)):
+    bid = data.get("branch_id")
+    with Session(engine) as s:
+        b = s.get(CompanyBranch, int(bid)) if bid else None
+        if not b:
+            raise HTTPException(404, "الفرع غير موجود")
+        company = s.get(Company, b.company_id)
+        if not company or company.owner_id != user.id:
+            raise HTTPException(403, "غير مصرّح")
+        for e in s.exec(select(CompanyEntry).where(CompanyEntry.branch_id == b.id)).all():
+            s.delete(e)
+        s.delete(b)
+        s.commit()
+        return {"ok": True}
+
+
+# ===== ضبط هدف الفرع (الأهداف) =====
+@app.post("/company/set-target")
+def company_set_target(data: dict, user: User = Depends(get_current_user)):
+    bid = data.get("branch_id")
+    with Session(engine) as s:
+        b = s.get(CompanyBranch, int(bid)) if bid else None
+        if not b:
+            raise HTTPException(404, "الفرع غير موجود")
+        company = s.get(Company, b.company_id)
+        if not company or company.owner_id != user.id:
+            raise HTTPException(403, "غير مصرّح")
+        if "target_sales" in data:
+            b.target_sales = float(data.get("target_sales") or 0)
+        if "target_customers" in data:
+            b.target_customers = int(data.get("target_customers") or 0)
+        s.add(b)
+        s.commit()
+        return {"ok": True}
+
+
+# ===== إدخال بيانات دورية لفرع (يبدأ الحساب فوراً) =====
+@app.post("/company/entry")
+def company_entry(data: dict, user: User = Depends(get_current_user)):
+    require_company_access(user)
+    bid = data.get("branch_id")
+    with Session(engine) as s:
+        branch = s.get(CompanyBranch, int(bid)) if bid else None
+        if not branch:
+            raise HTTPException(404, "الفرع غير موجود")
+        company = s.get(Company, branch.company_id)
+        if not company or company.owner_id != user.id:
+            raise HTTPException(403, "غير مصرّح")
+
+        period = (data.get("period") or datetime.now().strftime("%Y-%m")).strip()
+        sales = float(data.get("sales") or 0)
+        invoices = int(data.get("invoices") or 0)
+        customers = int(data.get("customers") or 0)
+        new_customers = int(data.get("new_customers") or 0)
+        repeat_customers = int(data.get("repeat_customers") or 0)
+        expenses = float(data.get("expenses") or 0)
+        discounts = float(data.get("discounts") or 0)
+        top_products = (data.get("top_products") or "").strip()
+        notes = (data.get("notes") or "").strip()
+
+        if sales <= 0:
+            raise HTTPException(400, "أدخل قيمة مبيعات صحيحة")
+
+        prev = s.exec(
+            select(CompanyEntry).where(CompanyEntry.branch_id == branch.id).order_by(CompanyEntry.created_at.desc())
+        ).first()
+        prev_sales = prev.sales if prev else None
+
+        m = compute_company_metrics(sales, invoices, customers, repeat_customers, expenses, prev_sales)
+        entry = CompanyEntry(
+            company_id=company.id, branch_id=branch.id, branch_name=branch.name, period=period,
+            sales=sales, invoices=invoices, customers=customers, new_customers=new_customers,
+            repeat_customers=repeat_customers, expenses=expenses, discounts=discounts,
+            top_products=top_products, notes=notes,
+            profit=m["profit"], margin=m["margin"], avg_invoice=m["avg_invoice"],
+            repeat_rate=m["repeat_rate"], growth=m["growth"], branch_score=m["branch_score"],
+        )
+        s.add(entry)
+        s.commit()
+        s.refresh(entry)
+
+        log_activity(user.name, f"أدخل بيانات فرع {branch.name} ({period})", user.email)
+        return {"ok": True, "entry_id": entry.id, "branch": branch.name, "metrics": m}
+
+
+# ===== لوحة المدير التنفيذي — كل المؤشرات في استجابة واحدة =====
+@app.get("/company/dashboard")
+def company_dashboard(user: User = Depends(get_current_user)):
+    require_company_access(user)
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id)
+        if not company or company.owner_id != user.id:
+            raise HTTPException(403, "غير مصرّح")
 
         branches = s.exec(
-            select(Branch).where(Branch.company_id == company.id, Branch.is_active == 1)
+            select(CompanyBranch).where(CompanyBranch.company_id == company.id, CompanyBranch.is_active == 1)
         ).all()
 
-        # جمع بيانات الفروع
-        branch_reports = []
-        latest_list = []
-        total_revenue = total_profit = total_expenses = total_orders = 0
-
+        branch_data = []
         for b in branches:
             entries = s.exec(
-                select(Entry).where(Entry.restaurant == b.name).order_by(Entry.created_at.desc())
+                select(CompanyEntry).where(CompanyEntry.branch_id == b.id).order_by(CompanyEntry.created_at.desc())
             ).all()
             if not entries:
+                branch_data.append({
+                    "id": b.id, "name": b.name, "city": b.city, "type": b.branch_type,
+                    "lat": b.lat, "lng": b.lng, "has_data": False,
+                    "score": 0, "level": "بدون بيانات", "color": "#94a3b8",
+                })
                 continue
             latest = entries[0]
-            latest_list.append(latest)
-            total_revenue += latest.revenue
-            total_profit += latest.profit
-            total_expenses += latest.expenses
-            total_orders += latest.orders
-
-            # اتجاه آخر تحليلين
-            trend = "stable"
-            if len(entries) >= 2:
-                diff = latest.revenue - entries[1].revenue
-                trend = "up" if diff > 0 else ("down" if diff < 0 else "stable")
-
-            branch_reports.append({
-                "name": b.name,
-                "revenue": round(latest.revenue),
-                "profit": round(latest.profit),
-                "margin": latest.margin,
-                "orders": latest.orders,
-                "health_score": latest.health_score,
-                "trend": trend,
-                "top_alert": latest.top_alert or "",
-                "top_decision": latest.top_decision or "",
-                "top_item": latest.top_item or "",
+            prev = entries[1] if len(entries) > 1 else None
+            level, color = score_level(latest.branch_score)
+            trend = "same"
+            score_change = 0
+            if prev:
+                score_change = latest.branch_score - prev.branch_score
+                trend = "up" if score_change > 0 else ("down" if score_change < 0 else "same")
+            branch_data.append({
+                "id": b.id, "name": b.name, "city": b.city, "type": b.branch_type,
+                "lat": b.lat, "lng": b.lng, "has_data": True,
+                "sales": round(latest.sales), "customers": latest.customers, "invoices": latest.invoices,
+                "avg_invoice": latest.avg_invoice, "margin": latest.margin, "profit": round(latest.profit),
+                "expenses": round(latest.expenses), "repeat_rate": latest.repeat_rate, "growth": latest.growth,
+                "score": latest.branch_score, "level": level, "color": color,
+                "trend": trend, "score_change": score_change,
+                "top_products": latest.top_products, "period": latest.period,
+                "target_sales": round(b.target_sales),
+                "target_pct": round((latest.sales / b.target_sales) * 100, 1) if b.target_sales > 0 else 0,
+                "history": [{"period": e.period, "sales": round(e.sales), "score": e.branch_score,
+                             "margin": e.margin, "customers": e.customers} for e in reversed(entries)],
             })
 
-        if not branch_reports:
+        active = [b for b in branch_data if b["has_data"]]
+        total_sales = sum(b["sales"] for b in active)
+        total_customers = sum(b["customers"] for b in active)
+        total_invoices = sum(b["invoices"] for b in active)
+        total_profit = sum(b["profit"] for b in active)
+        total_expenses = sum(b["expenses"] for b in active)
+        avg_invoice = round(total_sales / total_invoices, 1) if total_invoices > 0 else 0
+        avg_margin = round((total_profit / total_sales) * 100, 1) if total_sales > 0 else 0
+        overall_score = round(sum(b["score"] for b in active) / len(active)) if active else 0
+
+        ranking = sorted(active, key=lambda x: x["score"], reverse=True)
+        best = ranking[0] if ranking else None
+        worst = ranking[-1] if len(ranking) > 1 else None
+
+        # تحليل الأسباب (الفرع الأضعف مقابل متوسط الشركة)
+        root_cause = None
+        if worst and len(active) > 1:
+            cnt = len(active)
+            avg_sales = total_sales / cnt
+            avg_cust = total_customers / cnt
+            avg_rep = sum(b["repeat_rate"] for b in active) / cnt
+
+            def pct_diff(val, avg):
+                return round(((val - avg) / avg) * 100) if avg > 0 else 0
+
+            factors = [
+                {"label": "متوسط الفاتورة", "diff": pct_diff(worst["avg_invoice"], avg_invoice)},
+                {"label": "عدد العملاء", "diff": pct_diff(worst["customers"], avg_cust)},
+                {"label": "العملاء المتكررون", "diff": pct_diff(worst["repeat_rate"], avg_rep)},
+                {"label": "المبيعات", "diff": pct_diff(worst["sales"], avg_sales)},
+            ]
+            factors = sorted([f for f in factors if f["diff"] < 0], key=lambda f: f["diff"])
+            root_cause = {"branch": worst["name"], "factors": factors[:4]}
+
+        # التنبؤ بالأداء (30 يوم) لكل فرع له تاريخ كافٍ
+        forecast = []
+        for b in active:
+            hist = [h["sales"] for h in b["history"]]
+            if len(hist) >= 2:
+                f = build_forecast(hist[:-1], hist[-1])
+                if f:
+                    forecast.append({
+                        "branch": b["name"], "rate": f["avg_rate"],
+                        "next_cons": f["next_month_cons"], "next_opt": f["next_month_opt"],
+                        "dir": "up" if f["avg_rate"] >= 0 else "down",
+                    })
+
+        # مقارنة الفروع المتشابهة (حسب النوع)
+        groups = {}
+        for b in active:
+            groups.setdefault(b["type"], []).append(b)
+        similar = []
+        for gtype, items in groups.items():
+            if len(items) >= 2:
+                items_sorted = sorted(items, key=lambda x: x["score"], reverse=True)
+                similar.append({
+                    "type": gtype,
+                    "branches": [{"name": x["name"], "score": x["score"], "sales": x["sales"]} for x in items_sorted],
+                })
+
+        excellent = len([b for b in active if b["score"] >= 70])
+        good = len([b for b in active if 55 <= b["score"] < 70])
+        mid = len([b for b in active if 40 <= b["score"] < 55])
+        weak = len([b for b in active if b["score"] < 40])
+
+        return {
+            "company": {"id": company.id, "name": company.name, "sector": company.sector},
+            "has_data": len(active) > 0,
+            "summary": {
+                "total_sales": round(total_sales), "total_customers": total_customers,
+                "total_invoices": total_invoices, "total_profit": round(total_profit),
+                "total_expenses": round(total_expenses), "avg_invoice": avg_invoice,
+                "avg_margin": avg_margin, "overall_score": overall_score,
+                "branch_count": len(branches), "active_count": len(active),
+                "best_branch": best["name"] if best else "", "worst_branch": worst["name"] if worst else "",
+                "excellent": excellent, "good": good, "mid": mid, "weak": weak,
+            },
+            "branches": branch_data,
+            "ranking": ranking,
+            "root_cause": root_cause,
+            "best_practice": best,
+            "forecast": forecast,
+            "similar": similar,
+        }
+
+
+# ===== تفاصيل فرع واحد + تاريخه =====
+@app.get("/company/branch/{branch_id}")
+def company_branch_detail(branch_id: int, user: User = Depends(get_current_user)):
+    require_company_access(user)
+    with Session(engine) as s:
+        b = s.get(CompanyBranch, branch_id)
+        if not b:
+            raise HTTPException(404, "الفرع غير موجود")
+        company = s.get(Company, b.company_id)
+        if not company or company.owner_id != user.id:
+            raise HTTPException(403, "غير مصرّح")
+        entries = s.exec(
+            select(CompanyEntry).where(CompanyEntry.branch_id == b.id).order_by(CompanyEntry.created_at)
+        ).all()
+        latest = entries[-1] if entries else None
+        return {
+            "branch": {"id": b.id, "name": b.name, "city": b.city, "type": b.branch_type,
+                       "target_sales": b.target_sales, "target_customers": b.target_customers},
+            "latest": ({
+                "period": latest.period, "sales": round(latest.sales), "customers": latest.customers,
+                "invoices": latest.invoices, "avg_invoice": latest.avg_invoice, "margin": latest.margin,
+                "profit": round(latest.profit), "repeat_rate": latest.repeat_rate, "growth": latest.growth,
+                "score": latest.branch_score, "top_products": latest.top_products,
+                "smart_message": latest.smart_message,
+            } if latest else None),
+            "history": [{"period": e.period, "sales": round(e.sales), "score": e.branch_score,
+                         "margin": e.margin, "customers": e.customers} for e in entries],
+        }
+
+
+# ===== تحليل Gemini (للشركة كاملة أو لفرع) =====
+@app.post("/company/analyze")
+def company_analyze(data: dict, user: User = Depends(get_current_user)):
+    require_company_access(user)
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    scope = (data.get("scope") or "company").strip()
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id)
+        if not company or company.owner_id != user.id:
+            raise HTTPException(403, "غير مصرّح")
+        branches = s.exec(
+            select(CompanyBranch).where(CompanyBranch.company_id == company.id, CompanyBranch.is_active == 1)
+        ).all()
+        rows = []
+        for b in branches:
+            e = s.exec(
+                select(CompanyEntry).where(CompanyEntry.branch_id == b.id).order_by(CompanyEntry.created_at.desc())
+            ).first()
+            if e:
+                rows.append((b, e))
+        if not rows:
+            raise HTTPException(400, "لا توجد بيانات كافية. أدخل بيانات الفروع أولاً.")
+
+        sector_name = SECTOR_NAMES.get(company.sector, "شركة")
+
+        if scope == "branch":
+            bid = int(data.get("branch_id") or 0)
+            target = next(((b, e) for (b, e) in rows if b.id == bid), None)
+            if not target:
+                raise HTTPException(400, "لا توجد بيانات لهذا الفرع")
+            b, e = target
+            n = len(rows)
+            avg_margin = round(sum(x[1].margin for x in rows) / n, 1)
+            avg_inv = round(sum(x[1].avg_invoice for x in rows) / n, 1)
+            avg_score = round(sum(x[1].branch_score for x in rows) / n)
+            hist = s.exec(
+                select(CompanyEntry).where(CompanyEntry.branch_id == b.id).order_by(CompanyEntry.created_at)
+            ).all()
+            hist_txt = " ← ".join(f"{h.period}: {round(h.sales)}ر ({h.branch_score}/100)" for h in hist[-6:]) or "فترة واحدة"
+            prompt = build_branch_prompt(company, sector_name, b, e, avg_margin, avg_inv, avg_score, hist_txt)
+            txt = company_gemini(prompt)
+            if txt:
+                clean, _a, _d, _o = extract_exec(txt)
+                txt = clean
+                e.smart_message = clean
+                s.add(e)
+                s.commit()
+            return {"ok": True, "scope": "branch", "branch": b.name,
+                    "analysis": txt or "تعذّر توليد التحليل، حاول بعد قليل."}
+
+        prompt = build_company_prompt(company, sector_name, rows)
+        txt = company_gemini(prompt)
+        if txt:
+            clean, _a, _d, _o = extract_exec(txt)
+            txt = clean
+        log_activity(user.name, f"ولّد تحليل شركة: {company.name}", user.email)
+        return {"ok": True, "scope": "company", "company": company.name,
+                "analysis": txt or "تعذّر توليد التحليل، حاول بعد قليل."}
+
+
+# ===== اسأل نبّاه الذكي (صندوق المحادثة) =====
+@app.post("/company/ask")
+def company_ask(data: dict, user: User = Depends(get_current_user)):
+    require_company_access(user)
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    q = (data.get("question") or "").strip()
+    if not q:
+        raise HTTPException(400, "اكتب سؤالك")
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id)
+        if not company or company.owner_id != user.id:
+            raise HTTPException(403, "غير مصرّح")
+        branches = s.exec(
+            select(CompanyBranch).where(CompanyBranch.company_id == company.id, CompanyBranch.is_active == 1)
+        ).all()
+        rows = []
+        for b in branches:
+            e = s.exec(
+                select(CompanyEntry).where(CompanyEntry.branch_id == b.id).order_by(CompanyEntry.created_at.desc())
+            ).first()
+            if e:
+                rows.append(f"- {b.name} ({b.city or '—'}): مبيعات {round(e.sales)}ر، عملاء {e.customers}، "
+                            f"هامش {e.margin}%، تكرار {e.repeat_rate}%، مؤشر {e.branch_score}/100")
+        context = "\n".join(rows) if rows else "لا توجد بيانات فروع بعد."
+        prompt = f"""أنت "نبّاه"، مساعد تحليلي لشركة "{company.name}". أجب عن سؤال المالك بدقة واختصار اعتماداً على بيانات الفروع التالية فقط. لا تخترع أرقاماً، وإن لم تكفِ البيانات قل ذلك صراحة. بالعربية ولهجة مهنية واضحة.
+
+# بيانات الفروع (آخر فترة لكل فرع):
+{context}
+
+# سؤال المالك:
+{q}
+
+أجب مباشرة، ومتى ما ناسب اذكر أرقاماً داعمة وخطوة عملية واحدة."""
+        txt = company_gemini(prompt)
+        return {"ok": True, "answer": txt or "تعذّر توليد الإجابة، حاول بعد قليل."}
+
+
+# ===== بيانات التقرير التنفيذي (للطباعة) =====
+@app.get("/company/report")
+def company_report(user: User = Depends(get_current_user)):
+    require_company_access(user)
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id)
+        if not company or company.owner_id != user.id:
+            raise HTTPException(403, "غير مصرّح")
+        branches = s.exec(
+            select(CompanyBranch).where(CompanyBranch.company_id == company.id, CompanyBranch.is_active == 1)
+        ).all()
+        rows = []
+        for b in branches:
+            e = s.exec(
+                select(CompanyEntry).where(CompanyEntry.branch_id == b.id).order_by(CompanyEntry.created_at.desc())
+            ).first()
+            if e:
+                rows.append((b, e))
+        if not rows:
             return {"company": {"name": company.name}, "empty": True}
 
-        # ترتيب
-        branch_reports.sort(key=lambda x: x["health_score"], reverse=True)
-        n = len(branch_reports)
-        company_health = round(sum(b["health_score"] for b in branch_reports) / n)
-        avg_margin = round(sum(b["margin"] for b in branch_reports) / n, 1)
+        n = len(rows)
+        total_sales = sum(e.sales for _, e in rows)
+        total_profit = sum(e.profit for _, e in rows)
+        total_customers = sum(e.customers for _, e in rows)
+        avg_margin = round((total_profit / total_sales) * 100, 1) if total_sales else 0
+        overall = round(sum(e.branch_score for _, e in rows) / n)
+        ranked = sorted(rows, key=lambda x: x[1].branch_score, reverse=True)
+        best = ranked[0]
+        worst = ranked[-1]
 
-        best = branch_reports[0]
-        worst = branch_reports[-1]
+        branch_rows = [{
+            "name": b.name, "city": b.city, "sales": round(e.sales), "customers": e.customers,
+            "margin": e.margin, "score": e.branch_score, "growth": e.growth,
+            "level": score_level(e.branch_score)[0],
+        } for b, e in ranked]
 
-        # أهم القرارات التنفيذية (مجمّعة)
         key_decisions = []
-        # 1. الفرع الأضعف
-        if worst["health_score"] < 50:
+        if worst[1].branch_score < 45:
             key_decisions.append({
                 "priority": "عاجل",
-                "title": f"تدخّل فوري في فرع {worst['name']}",
-                "detail": f"درجة صحته {worst['health_score']}/100 وهامشه {worst['margin']}٪. " + (worst["top_alert"] or "يحتاج مراجعة شاملة للمصروفات والمبيعات."),
+                "title": f"تدخّل فوري في فرع {worst[0].name}",
+                "detail": f"مؤشره {worst[1].branch_score}/100 وهامشه {worst[1].margin}٪ — يحتاج مراجعة شاملة للمبيعات والمصروفات.",
             })
-        # 2. تعميم نجاح الأفضل
-        if best["health_score"] >= 75:
+        if best[1].branch_score >= 70:
             key_decisions.append({
                 "priority": "فرصة",
-                "title": f"تعميم نموذج فرع {best['name']}",
-                "detail": f"الأعلى أداءً ({best['health_score']}/100). ادرس أسلوبه" + (f" وأكثر أصنافه مبيعاً ({best['top_item']})" if best['top_item'] else "") + " وطبّقه على باقي الفروع.",
+                "title": f"تعميم نموذج فرع {best[0].name}",
+                "detail": f"الأعلى أداءً ({best[1].branch_score}/100). ادرس أسلوبه وطبّقه على باقي الفروع.",
             })
-        # 3. الهامش العام
-        if avg_margin < 20:
+        if avg_margin < 18:
             key_decisions.append({
                 "priority": "مهم",
                 "title": "متوسط هامش الشركة منخفض",
-                "detail": f"الهامش العام {avg_margin}٪ دون المستوى الصحي. راجع التسعير وهيكل التكاليف عبر الفروع.",
+                "detail": f"الهامش العام {avg_margin}٪ — راجع التسعير وهيكل التكاليف عبر الفروع.",
             })
-
-        # توزيع حالة الفروع
-        excellent = len([b for b in branch_reports if b["health_score"] >= 70])
-        warning = len([b for b in branch_reports if 45 <= b["health_score"] < 70])
-        critical = len([b for b in branch_reports if b["health_score"] < 45])
 
         from datetime import datetime as _dt
         return {
-            "company": {"name": company.name, "sector": company.sector},
+            "company": {"name": company.name, "sector": SECTOR_NAMES.get(company.sector, "شركة")},
             "generated_at": _dt.now().strftime("%Y-%m-%d %H:%M"),
-            "summary": {
-                "total_revenue": round(total_revenue),
-                "total_profit": round(total_profit),
-                "total_expenses": round(total_expenses),
-                "total_orders": total_orders,
-                "company_health": company_health,
-                "avg_margin": avg_margin,
-                "branch_count": n,
-                "best_branch": best["name"],
-                "worst_branch": worst["name"],
-                "excellent": excellent,
-                "warning": warning,
-                "critical": critical,
-            },
-            "branches": branch_reports,
-            "key_decisions": key_decisions,
             "empty": False,
+            "summary": {
+                "total_sales": round(total_sales), "total_profit": round(total_profit),
+                "total_customers": total_customers, "avg_margin": avg_margin,
+                "overall_score": overall, "branch_count": n,
+                "best_branch": best[0].name, "worst_branch": worst[0].name,
+            },
+            "branches": branch_rows,
+            "key_decisions": key_decisions,
         }
