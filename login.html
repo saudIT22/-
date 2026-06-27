@@ -70,8 +70,6 @@
   </div>
 
 <script>
-  // ملاحظة: لا نحوّل تلقائياً حتى لو فيه token قديم — قد يكون منتهي
-
   async function login() {
     const email = document.getElementById("email").value.trim();
     const password = document.getElementById("password").value;
@@ -101,6 +99,14 @@
         localStorage.setItem("nabbah_name", out.name);
         localStorage.setItem("nabbah_active", out.is_active);
         msg.className = "msg ok"; msg.innerText = "تم الدخول، جارٍ التحويل...";
+        // توجيه ذكي: لو المستخدم عنده شركة → لوحة الشركة مباشرة
+        try {
+          const ci = await fetch("/company/info", { headers: { "Authorization": "Bearer " + out.token } });
+          if (ci.ok) {
+            const info = await ci.json();
+            if (info.has_company) { window.location.href = "company-dashboard.html"; return; }
+          }
+        } catch (e) {}
         window.location.href = out.is_active == 1 ? "dashboard.html" : "trial.html";
       }
     } catch (e) {
