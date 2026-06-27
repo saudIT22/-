@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نبّاه · التدفق النقدي</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#0a0f0c;--panel:#101a15;--panel2:#0e1712;--line:#1d2c24;
+    --mint:#10b981;--mint-deep:#0c8f64;--gold:#f5b301;--orange:#f59e0b;--red:#ef4444;
+    --txt:#e8f1ec;--txt-soft:#9fb4aa;--txt-mute:#678075;--r:16px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--txt);line-height:1.7;min-height:100vh}
+  body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.5;
+    background:radial-gradient(circle at 1px 1px,rgba(16,185,129,.05) 1px,transparent 0);background-size:26px 26px}
+  a{text-decoration:none;color:inherit}
+  .wrap{max-width:840px;margin:0 auto;padding:0 16px;position:relative;z-index:1}
+  header{position:sticky;top:0;z-index:40;background:rgba(10,15,12,.86);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+  .head-in{max-width:840px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:900;font-size:20px;color:#fff}
+  .brand .bell{width:36px;height:36px;border-radius:11px;background:var(--mint);display:grid;place-items:center;font-size:17px;transform:rotate(-5deg)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;font-family:inherit;font-weight:700;cursor:pointer;border:none;border-radius:11px;font-size:14px;transition:.18s}
+  .btn-mint{background:var(--mint);color:#04130d;padding:11px 18px}.btn-mint:hover{background:var(--mint-deep)}
+  .btn-ghost{background:var(--panel);color:var(--txt-soft);padding:10px 15px;border:1px solid var(--line)}
+  .page-head{padding:24px 0 12px}.page-head h1{font-size:25px;font-weight:900}.page-head p{color:var(--txt-soft);font-size:14.5px;margin-top:3px}
+  .state{padding:50px 20px;text-align:center;color:var(--txt-soft)}
+  .spin{width:32px;height:32px;border:3px solid var(--line);border-top-color:var(--mint);border-radius:50%;animation:sp 1s linear infinite;margin:0 auto 12px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px;margin-bottom:14px}
+  .panel h2{font-size:15.5px;font-weight:800;margin-bottom:2px}.panel .sub{font-size:12.5px;color:var(--txt-mute);margin-bottom:14px}
+
+  .alert{border-radius:var(--r);padding:16px 18px;margin-bottom:14px;font-weight:700;font-size:14.5px;display:flex;align-items:center;gap:12px;border:1px solid}
+  .alert.critical{background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.4);color:#fca5a5}
+  .alert.warning{background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.4);color:#fcd34d}
+  .alert.positive{background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.4);color:#6ee7b7}
+  .alert .ai{font-size:24px}
+
+  .hero{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+  .hero-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:20px;text-align:center;position:relative;overflow:hidden}
+  .hero-card .lbl{font-size:13px;color:var(--txt-soft);font-weight:600}
+  .hero-card .big{font-size:42px;font-weight:900;letter-spacing:-.03em;margin:4px 0;line-height:1}
+  .hero-card .big small{font-size:16px;font-weight:700;color:var(--txt-mute)}
+  .hero-card .note{font-size:12.5px;color:var(--txt-mute)}
+  .stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;margin-bottom:14px}
+  .stat{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:13px;text-align:center}
+  .stat .sl{font-size:11.5px;color:var(--txt-soft)}.stat .sv{font-size:18px;font-weight:900;margin-top:2px}
+  .net-pos{color:var(--mint)}.net-neg{color:var(--red)}
+
+  label{display:block;font-size:13px;font-weight:700;margin-bottom:7px}
+  input{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:11px 13px;color:var(--txt);font-family:inherit;font-size:14.5px}
+  input:focus{outline:none;border-color:var(--mint)}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+  .hint{font-size:12px;color:var(--txt-mute);margin-top:5px}
+  .err{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#fca5a5;padding:11px 14px;border-radius:11px;font-size:13.5px;margin-bottom:12px;display:none}
+  .links{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 40px}
+  @media(max-width:600px){ .hero{grid-template-columns:1fr} .stat-row{grid-template-columns:1fr 1fr} }
+</style>
+</head>
+<body>
+<header>
+  <div class="head-in">
+    <a class="brand" href="company-dashboard.html"><span class="bell">🔔</span>نبّاه</a>
+    <a class="btn btn-ghost" href="company-dashboard.html">اللوحة</a>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="page-head">
+    <h1>💧 التدفق النقدي التنبؤي</h1>
+    <p>كم شهر تكفي سيولتك؟ ومتى أول عجز متوقّع؟</p>
+  </div>
+
+  <div id="loading" class="state"><div class="spin"></div>جارٍ الحساب…</div>
+
+  <div id="content" style="display:none">
+    <div id="alertBox"></div>
+
+    <div class="hero">
+      <div class="hero-card">
+        <div class="lbl">السيولة تكفي لـ</div>
+        <div class="big" id="runwayVal">—</div>
+        <div class="note" id="runwayNote">شهر</div>
+      </div>
+      <div class="hero-card">
+        <div class="lbl">أول عجز متوقّع</div>
+        <div class="big" id="deficitVal" style="font-size:28px">—</div>
+        <div class="note" id="deficitNote"></div>
+      </div>
+    </div>
+
+    <div class="stat-row">
+      <div class="stat"><div class="sl">الاحتياطي النقدي</div><div class="sv" id="sReserve">—</div></div>
+      <div class="stat"><div class="sl">صافي التدفق الشهري</div><div class="sv" id="sNet">—</div></div>
+      <div class="stat"><div class="sl">الالتزامات الشهرية</div><div class="sv" id="sObl">—</div></div>
+    </div>
+
+    <div class="panel">
+      <h2>📉 مسار السيولة (12 شهر)</h2>
+      <div class="sub">الرصيد المتوقّع شهرياً — النقطة الحمراء = العجز</div>
+      <div style="height:280px"><canvas id="chart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- settings -->
+  <div class="panel">
+    <h2>⚙️ بيانات السيولة</h2>
+    <div class="sub">عدّلها وقت ما تتغيّر — التدفق يُحسب من مبيعات/مصروفات الفروع تلقائياً</div>
+    <div class="err" id="err"></div>
+    <div class="row2">
+      <div><label>الاحتياطي النقدي الحالي (ريال)</label><input type="number" id="reserve" placeholder="0" inputmode="decimal"></div>
+      <div><label>الالتزامات الشهرية الثابتة (ريال)</label><input type="number" id="obligations" placeholder="0" inputmode="decimal"><div class="hint">رواتب مركزية، إيجارات، أقساط — غير المصروفات التشغيلية للفروع</div></div>
+    </div>
+    <button class="btn btn-mint" id="saveBtn" onclick="saveFin()">حفظ وإعادة الحساب</button>
+  </div>
+
+  <div class="links">
+    <a class="btn btn-ghost" href="company-input.html">إدخال بيانات الفروع</a>
+    <a class="btn btn-ghost" href="company-leakage.html">كشف التسرّب</a>
+  </div>
+</div>
+
+<script>
+const TOKEN=localStorage.getItem("nabbah_token")||"";
+if(!TOKEN){ window.location.href="login.html"; }
+let chartObj=null;
+async function api(p,o={}){
+  const r=await fetch(p,{...o,headers:{"Content-Type":"application/json","Authorization":"Bearer "+TOKEN,...(o.headers||{})}});
+  if(r.status===401){ localStorage.removeItem("nabbah_token"); window.location.href="login.html"; throw new Error("جلسة منتهية"); }
+  const d=await r.json().catch(()=>({})); if(!r.ok) throw new Error(d.detail||"خطأ"); return d;
+}
+const fmt=n=>(Math.round(n)||0).toLocaleString("en-US");
+
+async function load(){
+  let d; try{ d=await api("/company/cashflow"); }
+  catch(e){ document.getElementById("loading").innerHTML=`<span style="color:var(--red)">${e.message}</span>`; return; }
+  document.getElementById("loading").style.display="none";
+
+  document.getElementById("reserve").value=d.cash_reserve||"";
+  document.getElementById("obligations").value=d.monthly_obligations||"";
+
+  if(!d.has_data){
+    document.getElementById("content").style.display="none";
+    return;
+  }
+  document.getElementById("content").style.display="block";
+
+  // alert
+  const ab=document.getElementById("alertBox");
+  if(d.alert){
+    const cls=d.status==="critical"?"critical":"warning";
+    ab.innerHTML=`<div class="alert ${cls}"><span class="ai">${d.status==="critical"?"🚨":"⚠️"}</span><span>${d.alert}</span></div>`;
+  }else if(d.status==="positive"){
+    ab.innerHTML=`<div class="alert positive"><span class="ai">✅</span><span>تدفقك النقدي إيجابي — السيولة تنمو شهرياً. ${d.safety_months?`احتياطك يغطّي ${d.safety_months} شهر من الالتزامات لو توقّف الدخل.`:""}</span></div>`;
+  }else ab.innerHTML="";
+
+  // hero
+  if(d.status==="positive"){
+    document.getElementById("runwayVal").innerHTML=`∞`;
+    document.getElementById("runwayNote").textContent="تدفق إيجابي — لا يوجد عجز متوقّع";
+    document.getElementById("deficitVal").textContent="لا يوجد";
+    document.getElementById("deficitNote").textContent="السيولة تنمو";
+  }else{
+    document.getElementById("runwayVal").innerHTML=`${d.runway_months ?? "—"}<small> شهر</small>`;
+    const col=d.status==="critical"?"var(--red)":d.status==="warning"?"var(--orange)":"var(--gold)";
+    document.getElementById("runwayVal").style.color=col;
+    document.getElementById("runwayNote").textContent=d.status==="critical"?"وضع حرج":"راقب عن قرب";
+    document.getElementById("deficitVal").textContent=d.deficit_label||"—";
+    document.getElementById("deficitVal").style.color="var(--red)";
+    document.getElementById("deficitNote").textContent="الرصيد يصبح سالباً";
+  }
+
+  document.getElementById("sReserve").textContent=fmt(d.cash_reserve)+" ر";
+  const net=document.getElementById("sNet");
+  net.textContent=(d.monthly_net>=0?"+":"")+fmt(d.monthly_net)+" ر";
+  net.className="sv "+(d.monthly_net>=0?"net-pos":"net-neg");
+  document.getElementById("sObl").textContent=fmt(d.monthly_obligations)+" ر";
+
+  renderChart(d);
+}
+
+function renderChart(d){
+  const labels=d.projection.map(p=>p.short);
+  const data=d.projection.map(p=>p.balance);
+  const pointColors=d.projection.map((p,i)=> (d.deficit_index!==null && i===d.deficit_index) ? "#ef4444" : (p.balance<0?"#ef4444":"#10b981"));
+  const pointSizes=d.projection.map((p,i)=> (d.deficit_index!==null && i===d.deficit_index) ? 8 : 3);
+  if(chartObj) chartObj.destroy();
+  chartObj=new Chart(document.getElementById("chart"),{
+    type:"line",
+    data:{labels,datasets:[{data,borderColor:"#10b981",borderWidth:2.5,
+      backgroundColor:(ctx)=>{const c=ctx.chart.ctx;const g=c.createLinearGradient(0,0,0,260);
+        g.addColorStop(0,"rgba(16,185,129,.25)");g.addColorStop(1,"rgba(16,185,129,0)");return g;},
+      fill:true,tension:.35,pointBackgroundColor:pointColors,pointRadius:pointSizes,pointBorderColor:"#0a0f0c"}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.raw)+" ريال"}}},
+      scales:{x:{ticks:{color:"#678075",maxRotation:0,autoSkip:true,maxTicksLimit:7},grid:{display:false}},
+        y:{ticks:{color:"#678075",callback:v=>fmt(v)},grid:{color:"#16221c"},
+          afterDataLimits:(a)=>{ if(a.min>0)a.min=0; }}}}
+  });
+}
+
+async function saveFin(){
+  document.getElementById("err").style.display="none";
+  const btn=document.getElementById("saveBtn"); btn.disabled=true; btn.textContent="جارٍ الحفظ…";
+  try{
+    await api("/company/financials",{method:"POST",body:JSON.stringify({
+      cash_reserve:+document.getElementById("reserve").value||0,
+      monthly_obligations:+document.getElementById("obligations").value||0})});
+    document.getElementById("loading").style.display="block";
+    document.getElementById("content").style.display="none";
+    await load();
+  }catch(e){ const er=document.getElementById("err"); er.textContent=e.message; er.style.display="block"; }
+  btn.disabled=false; btn.textContent="حفظ وإعادة الحساب";
+}
+
+load();
+</script>
+</body>
+</html>
