@@ -277,6 +277,32 @@
       <div class="fc-grid" id="forecast"></div>
     </div>
 
+    <!-- Decision Simulator -->
+    <div class="panel">
+      <h2>🎛️ محاكي القرارات</h2>
+      <div class="sub">شوف أثر قراراتك على المبيعات والربح قبل ما تنفّذها — حسابات قطعية</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-bottom:12px">
+        <div>
+          <label style="font-size:12.5px;font-weight:700;display:block;margin-bottom:6px">النطاق</label>
+          <select id="simScope" style="width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px;color:var(--txt);font-family:inherit"></select>
+        </div>
+        <div>
+          <label style="font-size:12.5px;font-weight:700;display:block;margin-bottom:6px">تغيير الأسعار %</label>
+          <input id="simPrice" type="number" value="0" style="width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px;color:var(--txt);font-family:inherit">
+        </div>
+        <div>
+          <label style="font-size:12.5px;font-weight:700;display:block;margin-bottom:6px">إنفاق تسويقي % من المبيعات</label>
+          <input id="simMkt" type="number" value="0" style="width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px;color:var(--txt);font-family:inherit">
+        </div>
+        <div>
+          <label style="font-size:12.5px;font-weight:700;display:block;margin-bottom:6px">تغيير الموظفين (+/−)</label>
+          <input id="simStaff" type="number" value="0" style="width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px;color:var(--txt);font-family:inherit">
+        </div>
+      </div>
+      <button class="btn btn-mint" id="simBtn" onclick="simulate()">حاكِ الأثر</button>
+      <div id="simOut" style="display:none;margin-top:14px"></div>
+    </div>
+
     <!-- AI company analysis -->
     <div class="panel">
       <h2>🧠 التحليل التنفيذي بالذكاء الاصطناعي</h2>
@@ -309,6 +335,9 @@
 
   <div class="foot-links" id="footLinks" style="display:none">
     <a class="btn btn-ghost" href="company-input.html">إدخال بيانات الفروع</a>
+    <a class="btn btn-ghost" href="company-cashflow.html">💧 التدفق النقدي</a>
+    <a class="btn btn-ghost" href="company-leakage.html">🛡️ كشف التسرّب</a>
+    <a class="btn btn-ghost" href="company-team.html">👥 صلاحيات الفريق</a>
     <a class="btn btn-ghost" href="company-report.html">التقرير التنفيذي</a>
     <a class="btn btn-ghost" href="dashboard.html">قسم الأفراد / المطاعم</a>
   </div>
@@ -399,6 +428,51 @@ async function loadDashboard(){
   renderBestPractice(d.best_practice);
   renderSimilar(d.similar);
   renderForecast(d.forecast);
+  populateSimulator(d.branches.filter(b=>b.has_data));
+}
+
+function populateSimulator(branches){
+  const sel=document.getElementById("simScope");
+  let html=`<option value="company">كل الشركة</option>`;
+  html+=branches.map(b=>`<option value="branch:${b.id}">${b.name}</option>`).join("");
+  sel.innerHTML=html;
+}
+
+async function simulate(){
+  const btn=document.getElementById("simBtn"), out=document.getElementById("simOut");
+  const sv=document.getElementById("simScope").value;
+  const payload={ price_pct:+document.getElementById("simPrice").value||0,
+    marketing_pct:+document.getElementById("simMkt").value||0,
+    staff_change:+document.getElementById("simStaff").value||0 };
+  if(sv.startsWith("branch:")){ payload.scope="branch"; payload.branch_id=sv.split(":")[1]; }
+  else payload.scope="company";
+  btn.disabled=true; btn.textContent="جارٍ الحساب…";
+  try{
+    const r=await api("/company/simulate",{method:"POST",body:JSON.stringify(payload)});
+    const vCol=r.delta.profit>0?"var(--mint)":r.delta.profit<0?"var(--red)":"var(--txt-soft)";
+    const sign=n=>(n>0?"+":"")+fmt(n);
+    out.style.display="block";
+    out.innerHTML=`
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px">
+        <div style="background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:14px">
+          <div style="font-size:12px;color:var(--txt-mute);margin-bottom:8px">الوضع الحالي — ${r.label}</div>
+          <div style="font-size:13px;color:var(--txt-soft);line-height:2">
+            المبيعات: <b style="color:var(--txt)">${fmt(r.base.sales)} ر</b><br>
+            الربح: <b style="color:var(--txt)">${fmt(r.base.profit)} ر</b><br>
+            الهامش: <b style="color:var(--txt)">${r.base.margin}%</b></div>
+        </div>
+        <div style="background:linear-gradient(160deg,${vCol}14,transparent);border:1px solid ${vCol}44;border-radius:12px;padding:14px">
+          <div style="font-size:12px;color:var(--txt-mute);margin-bottom:8px">بعد القرار</div>
+          <div style="font-size:13px;color:var(--txt-soft);line-height:2">
+            المبيعات: <b style="color:var(--txt)">${fmt(r.projected.sales)} ر</b> <span style="color:${vCol}">(${sign(r.delta.sales)})</span><br>
+            الربح: <b style="color:var(--txt)">${fmt(r.projected.profit)} ر</b> <span style="color:${vCol}">(${sign(r.delta.profit)})</span><br>
+            الهامش: <b style="color:var(--txt)">${r.projected.margin}%</b> <span style="color:${vCol}">(${r.delta.margin>0?"+":""}${r.delta.margin})</span></div>
+        </div>
+      </div>
+      <div style="margin-top:11px;padding:11px 14px;border-radius:11px;background:${vCol}14;color:${vCol};font-weight:800;font-size:14px;text-align:center">
+        الأثر على الربح: ${sign(r.delta.profit)} ريال شهرياً — قرار ${r.verdict}</div>`;
+  }catch(e){ out.style.display="block"; out.innerHTML=`<div style="color:var(--red)">${e.message}</div>`; }
+  btn.disabled=false; btn.textContent="حاكِ الأثر";
 }
 
 function renderRanking(rows){
