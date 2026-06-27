@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نبّاه · كشف التسرّب</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0f0c;--panel:#101a15;--panel2:#0e1712;--line:#1d2c24;
+    --mint:#10b981;--gold:#f5b301;--orange:#f59e0b;--red:#ef4444;
+    --txt:#e8f1ec;--txt-soft:#9fb4aa;--txt-mute:#678075;--r:16px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--txt);line-height:1.7;min-height:100vh}
+  body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.5;
+    background:radial-gradient(circle at 1px 1px,rgba(16,185,129,.05) 1px,transparent 0);background-size:26px 26px}
+  a{text-decoration:none;color:inherit}
+  .wrap{max-width:780px;margin:0 auto;padding:0 16px;position:relative;z-index:1}
+  header{position:sticky;top:0;z-index:40;background:rgba(10,15,12,.86);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+  .head-in{max-width:780px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:900;font-size:20px;color:#fff}
+  .brand .bell{width:36px;height:36px;border-radius:11px;background:var(--mint);display:grid;place-items:center;font-size:17px;transform:rotate(-5deg)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;font-family:inherit;font-weight:700;cursor:pointer;border:none;border-radius:11px;font-size:14px;transition:.18s}
+  .btn-ghost{background:var(--panel);color:var(--txt-soft);padding:10px 15px;border:1px solid var(--line)}
+  .page-head{padding:24px 0 12px}.page-head h1{font-size:25px;font-weight:900}.page-head p{color:var(--txt-soft);font-size:14.5px;margin-top:3px}
+  .state{padding:50px 20px;text-align:center;color:var(--txt-soft)}
+  .spin{width:32px;height:32px;border:3px solid var(--line);border-top-color:var(--mint);border-radius:50%;animation:sp 1s linear infinite;margin:0 auto 12px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+
+  .summary{display:flex;align-items:center;gap:14px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;margin-bottom:16px}
+  .summary .n{font-size:34px;font-weight:900}
+  .summary .t{font-size:14px;color:var(--txt-soft)}
+
+  .branch{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;margin-bottom:12px;border-right:4px solid var(--line)}
+  .branch-top{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+  .risk-badge{width:54px;height:54px;border-radius:13px;display:grid;place-items:center;flex-shrink:0;font-weight:900;font-size:18px}
+  .branch-name{font-weight:800;font-size:16.5px}
+  .branch-meta{font-size:12.5px;color:var(--txt-mute)}
+  .lvl{margin-inline-start:auto;font-weight:800;font-size:13px;padding:5px 12px;border-radius:100px}
+  .reasons{display:flex;flex-direction:column;gap:9px;margin-top:4px}
+  .reason{display:flex;gap:10px;align-items:flex-start;background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:11px 13px}
+  .reason .sev{width:8px;height:8px;border-radius:50%;margin-top:7px;flex-shrink:0}
+  .reason .rt{font-weight:700;font-size:13.5px}
+  .reason .rd{font-size:13px;color:var(--txt-soft)}
+  .clean{font-size:13.5px;color:var(--mint);font-weight:600}
+  .single-note{font-size:12px;color:var(--txt-mute);margin-top:6px}
+  .links{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 40px}
+</style>
+</head>
+<body>
+<header>
+  <div class="head-in">
+    <a class="brand" href="company-dashboard.html"><span class="bell">🔔</span>نبّاه</a>
+    <a class="btn btn-ghost" href="company-dashboard.html">اللوحة</a>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="page-head">
+    <h1>🛡️ كشف التسرّب والاحتيال</h1>
+    <p>يرصد القفزات المشبوهة وفجوات البيع-الإيداع ويرتّب الفروع حسب المخاطرة</p>
+  </div>
+
+  <div id="loading" class="state"><div class="spin"></div>جارٍ الفحص…</div>
+  <div id="content" style="display:none">
+    <div id="summary"></div>
+    <div id="list"></div>
+  </div>
+
+  <div class="links">
+    <a class="btn btn-ghost" href="company-input.html">إدخال بيانات الفروع</a>
+    <a class="btn btn-ghost" href="company-cashflow.html">التدفق النقدي</a>
+  </div>
+</div>
+
+<script>
+const TOKEN=localStorage.getItem("nabbah_token")||"";
+if(!TOKEN){ window.location.href="login.html"; }
+async function api(p,o={}){
+  const r=await fetch(p,{...o,headers:{"Content-Type":"application/json","Authorization":"Bearer "+TOKEN,...(o.headers||{})}});
+  if(r.status===401){ localStorage.removeItem("nabbah_token"); window.location.href="login.html"; throw new Error("جلسة منتهية"); }
+  const d=await r.json().catch(()=>({})); if(!r.ok) throw new Error(d.detail||"خطأ"); return d;
+}
+const SEVC={high:"#ef4444",medium:"#f59e0b",low:"#f5b301"};
+
+async function load(){
+  let d; try{ d=await api("/company/leakage"); }
+  catch(e){ document.getElementById("loading").innerHTML=`<span style="color:var(--red)">${e.message}</span>`; return; }
+  document.getElementById("loading").style.display="none";
+  document.getElementById("content").style.display="block";
+
+  const withData=d.branches.filter(b=>b.level!=="بدون بيانات");
+  const sumColor=d.flagged_count>0?"var(--red)":"var(--mint)";
+  document.getElementById("summary").innerHTML=`
+    <div class="summary">
+      <div class="n" style="color:${sumColor}">${d.flagged_count}</div>
+      <div><div style="font-weight:800;font-size:16px">${d.flagged_count>0?"فرع/فروع تحتاج مراجعة":"لا فروع مشبوهة"}</div>
+      <div class="t">متوسط نسبة مصروفات الشركة ${d.company_expense_ratio}% · فُحص ${withData.length} فرع</div></div>
+    </div>`;
+
+  if(!withData.length){
+    document.getElementById("list").innerHTML=`<div class="branch"><div class="clean">لا توجد بيانات كافية بعد. أدخل بيانات الفروع (فترتين على الأقل لكل فرع) ليبدأ الكشف.</div></div>`;
+    return;
+  }
+
+  document.getElementById("list").innerHTML=d.branches.map(b=>{
+    if(b.level==="بدون بيانات") return "";
+    const reasons=b.reasons.length?`<div class="reasons">${b.reasons.map(r=>`
+      <div class="reason"><span class="sev" style="background:${SEVC[r.severity]||'#f5b301'}"></span>
+      <div><div class="rt">${r.type}</div><div class="rd">${r.detail}</div></div></div>`).join("")}</div>`
+      : `<div class="clean">✅ لا مؤشرات تسرّب — الفرع ضمن النطاق الطبيعي.</div>${b.single?'<div class="single-note">فترة واحدة فقط — الكشف يقوى مع تراكم الفترات.</div>':''}`;
+    return `<div class="branch" style="border-right-color:${b.color}">
+      <div class="branch-top">
+        <div class="risk-badge" style="background:${b.color}22;color:${b.color}">${b.risk}</div>
+        <div><div class="branch-name">${b.name}</div><div class="branch-meta">${b.city||"—"} · درجة المخاطرة ${b.risk}/100</div></div>
+        <span class="lvl" style="background:${b.color}22;color:${b.color}">${b.level}</span>
+      </div>
+      ${reasons}
+    </div>`;
+  }).join("");
+}
+load();
+</script>
+</body>
+</html>
