@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نبّاه · الضريبة والزكاة</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0a0f0c;--panel:#101a15;--panel2:#0e1712;--line:#1d2c24;--mint:#10b981;--mint-deep:#0c8f64;--gold:#f5b301;--blue:#3b82f6;--red:#ef4444;--txt:#e8f1ec;--txt-soft:#9fb4aa;--txt-mute:#678075;--r:16px;}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--txt);line-height:1.7;min-height:100vh}
+  body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.5;background:radial-gradient(circle at 1px 1px,rgba(16,185,129,.05) 1px,transparent 0);background-size:26px 26px}
+  a{text-decoration:none;color:inherit}
+  .wrap{max-width:760px;margin:0 auto;padding:0 16px;position:relative;z-index:1}
+  header{position:sticky;top:0;z-index:40;background:rgba(10,15,12,.86);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+  .head-in{max-width:760px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:900;font-size:20px;color:#fff}
+  .brand .bell{width:36px;height:36px;border-radius:11px;background:var(--mint);display:grid;place-items:center;font-size:17px;transform:rotate(-5deg)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;font-family:inherit;font-weight:700;cursor:pointer;border:none;border-radius:11px;font-size:14px;transition:.18s}
+  .btn-ghost{background:var(--panel);color:var(--txt-soft);padding:10px 15px;border:1px solid var(--line)}
+  .page-head{padding:24px 0 12px}.page-head h1{font-size:25px;font-weight:900}.page-head p{color:var(--txt-soft);font-size:14.5px;margin-top:3px}
+  .state{padding:40px 20px;text-align:center;color:var(--txt-soft)}
+  .spin{width:32px;height:32px;border:3px solid var(--line);border-top-color:var(--mint);border-radius:50%;animation:sp 1s linear infinite;margin:0 auto 12px}@keyframes sp{to{transform:rotate(360deg)}}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:20px;margin-bottom:14px}
+  .panel h2{font-size:16px;font-weight:800;margin-bottom:3px;display:flex;align-items:center;gap:8px}
+  .panel .sub{font-size:12.5px;color:var(--txt-mute);margin-bottom:16px}
+  label{display:block;font-size:13px;font-weight:700;margin-bottom:6px}
+  input,select{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:11px 13px;color:var(--txt);font-family:inherit;font-size:14.5px}
+  input:focus,select:focus{outline:none;border-color:var(--mint)}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+  .calc-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+  .calc-row:last-child{border-bottom:none}
+  .calc-row .cl{font-size:14px;color:var(--txt-soft)}.calc-row .cv{font-size:15px;font-weight:800}
+  .result-big{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:16px;margin-top:14px;display:flex;justify-content:space-between;align-items:center}
+  .result-big .rl{font-size:14px;font-weight:700}.result-big .rv{font-size:24px;font-weight:900}
+  .note{font-size:12px;color:var(--txt-mute);margin-top:12px;line-height:1.7;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:11px 13px}
+  .toggle{display:flex;gap:8px;margin-bottom:14px}
+  .toggle button{flex:1;background:var(--panel2);border:1px solid var(--line);color:var(--txt-soft);padding:9px;border-radius:9px;font-family:inherit;font-weight:700;cursor:pointer;font-size:13px}
+  .toggle button.on{background:var(--mint);color:#04130d;border-color:var(--mint)}
+  .links{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 40px}
+  .grand{background:linear-gradient(160deg,rgba(16,185,129,.12),transparent);border:1.5px solid var(--mint)}
+  @media(max-width:560px){.row2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <div class="head-in">
+    <a class="brand" href="company-dashboard.html"><span class="bell">🔔</span>نبّاه</a>
+    <a class="btn btn-ghost" href="company-dashboard.html">اللوحة</a>
+  </div>
+</header>
+<div class="wrap">
+  <div class="page-head"><h1>🧾 الضريبة والزكاة</h1><p>حساب دقيق لضريبة القيمة المضافة (15%) والزكاة (2.5%)</p></div>
+
+  <div id="loading" class="state"><div class="spin"></div>جارٍ التحميل…</div>
+  <div id="pending" class="state" style="display:none"></div>
+
+  <div id="content" style="display:none">
+    <!-- VAT -->
+    <div class="panel">
+      <h2>💵 ضريبة القيمة المضافة (VAT 15%)</h2>
+      <div class="sub">الفرق بين ضريبة المبيعات وضريبة المشتريات = المستحق للهيئة</div>
+      <div class="row2">
+        <div><label>المبيعات الخاضعة للضريبة (ريال)</label><input type="number" id="vatSales" oninput="calcVat()" inputmode="decimal"></div>
+        <div><label>المشتريات/المصروفات الخاضعة (ريال)</label><input type="number" id="vatPurch" oninput="calcVat()" inputmode="decimal"></div>
+      </div>
+      <div class="calc-row"><span class="cl">ضريبة المخرجات (على المبيعات) 15%</span><span class="cv" id="outVat">0</span></div>
+      <div class="calc-row"><span class="cl">ضريبة المدخلات (على المشتريات) 15%</span><span class="cv" id="inVat">0</span></div>
+      <div class="result-big"><span class="rl">صافي الضريبة المستحقة</span><span class="rv" id="netVat" style="color:var(--mint)">0 ر</span></div>
+      <div class="note">إذا كانت النتيجة سالبة، يعني لديك رصيد ضريبي قابل للاسترداد أو الترحيل. ضريبة القيمة المضافة في السعودية 15% على السلع والخدمات الخاضعة.</div>
+    </div>
+
+    <!-- Zakat -->
+    <div class="panel">
+      <h2>🕌 الزكاة (2.5%)</h2>
+      <div class="sub">تُحسب على الوعاء الزكوي = مصادر التمويل − الأصول غير المتداولة</div>
+      <div class="toggle">
+        <button id="zRateH" class="on" onclick="setZRate('h')">سنة هجرية (2.5%)</button>
+        <button id="zRateG" onclick="setZRate('g')">سنة ميلادية (2.5775%)</button>
+      </div>
+      <div style="font-size:13px;font-weight:800;color:var(--mint);margin:6px 0 8px">يُضاف (مصادر التمويل):</div>
+      <div class="row2">
+        <div><label>رأس المال + الأرباح المبقاة + الاحتياطيات</label><input type="number" id="zEquity" oninput="calcZakat()" inputmode="decimal"></div>
+        <div><label>القروض والتمويل طويل الأجل + المخصصات</label><input type="number" id="zLongDebt" oninput="calcZakat()" inputmode="decimal"></div>
+      </div>
+      <div style="font-size:13px;font-weight:800;color:var(--red);margin:6px 0 8px">يُطرح (أصول غير متداولة):</div>
+      <div class="row2">
+        <div><label>صافي الأصول الثابتة</label><input type="number" id="zFixed" oninput="calcZakat()" inputmode="decimal"></div>
+        <div><label>الاستثمارات طويلة الأجل + الخسائر المرحّلة</label><input type="number" id="zInvest" oninput="calcZakat()" inputmode="decimal"></div>
+      </div>
+      <div class="calc-row"><span class="cl">الوعاء الزكوي</span><span class="cv" id="zBase">0</span></div>
+      <div class="result-big"><span class="rl">الزكاة المستحقة</span><span class="rv" id="zakatDue" style="color:var(--gold)">0 ر</span></div>
+      <div class="note">⚠️ الزكاة الدقيقة تعتمد على القوائم المالية الكاملة وقد تُحسب على أعلى قيمة بين الوعاء الزكوي وصافي الربح المعدّل. هذا تقدير إرشادي — للإقرار الرسمي راجع محاسباً قانونياً أو منصة هيئة الزكاة والضريبة والجمارك (ZATCA).</div>
+    </div>
+
+    <!-- Total -->
+    <div class="panel grand">
+      <h2>📊 إجمالي الالتزامات</h2>
+      <div class="result-big" style="background:transparent;border:none;padding:6px 0">
+        <span class="rl">ضريبة + زكاة</span><span class="rv" id="grandTotal" style="color:#fff">0 ر</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="links">
+    <a class="btn btn-ghost" href="company-dashboard.html">اللوحة</a>
+    <a class="btn btn-ghost" href="company-cashflow.html">التدفق النقدي</a>
+  </div>
+</div>
+<script>
+const TOKEN=localStorage.getItem("nabbah_token")||"";
+if(!TOKEN){ window.location.href="login.html"; }
+let zRate=0.025;
+async function api(p){
+  const r=await fetch(p,{headers:{"Authorization":"Bearer "+TOKEN}});
+  if(r.status===401){ localStorage.removeItem("nabbah_token"); window.location.href="login.html"; throw new Error("جلسة"); }
+  const d=await r.json().catch(()=>({})); 
+  const err=new Error(d.detail||"خطأ"); err.status=r.status;
+  if(!r.ok) throw err;
+  return d;
+}
+const fmt=n=>(Math.round(n)||0).toLocaleString("en-US");
+
+async function load(){
+  try{
+    const d=await api("/company/tax-defaults");
+    document.getElementById("loading").style.display="none";
+    document.getElementById("content").style.display="block";
+    document.getElementById("vatSales").value=d.sales||"";
+    document.getElementById("vatPurch").value=d.expenses||"";
+    calcVat(); calcZakat();
+  }catch(e){
+    document.getElementById("loading").style.display="none";
+    if(e.status===402){
+      const p=document.getElementById("pending"); p.style.display="block";
+      p.innerHTML=`⏳ شركتك قيد التفعيل — بعد التفعيل من الإدارة تنفتح لك هذه الخدمة. <a href="company-dashboard.html" style="color:var(--mint)">رجوع للوحة</a>`;
+    }else{
+      // ما فيه بيانات؟ خلّيه يحسب يدوياً
+      document.getElementById("content").style.display="block";
+      calcVat(); calcZakat();
+    }
+  }
+}
+function calcVat(){
+  const sales=+document.getElementById("vatSales").value||0;
+  const purch=+document.getElementById("vatPurch").value||0;
+  const out=sales*0.15, inp=purch*0.15, net=out-inp;
+  document.getElementById("outVat").textContent=fmt(out)+" ر";
+  document.getElementById("inVat").textContent=fmt(inp)+" ر";
+  const nv=document.getElementById("netVat");
+  nv.textContent=fmt(net)+" ر";
+  nv.style.color=net>=0?"var(--mint)":"var(--blue)";
+  calcTotal();
+}
+function setZRate(t){
+  zRate=t==="h"?0.025:0.025775;
+  document.getElementById("zRateH").classList.toggle("on",t==="h");
+  document.getElementById("zRateG").classList.toggle("on",t==="g");
+  calcZakat();
+}
+function calcZakat(){
+  const add=(+document.getElementById("zEquity").value||0)+(+document.getElementById("zLongDebt").value||0);
+  const sub=(+document.getElementById("zFixed").value||0)+(+document.getElementById("zInvest").value||0);
+  const base=Math.max(add-sub,0);
+  const zakat=base*zRate;
+  document.getElementById("zBase").textContent=fmt(base)+" ر";
+  document.getElementById("zakatDue").textContent=fmt(zakat)+" ر";
+  calcTotal();
+}
+function calcTotal(){
+  const vat=Math.max(+(document.getElementById("netVat").textContent.replace(/[^\d-]/g,""))||0,0);
+  const zakat=+(document.getElementById("zakatDue").textContent.replace(/[^\d-]/g,""))||0;
+  document.getElementById("grandTotal").textContent=fmt(vat+zakat)+" ر";
+}
+load();
+</script>
+</body>
+</html>
