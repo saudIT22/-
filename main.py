@@ -1,6 +1,7 @@
 import os
 import time
 import re
+import json
 import jwt
 import bcrypt
 from dotenv import load_dotenv
@@ -144,6 +145,7 @@ class CompanyEntry(SQLModel, table=True):
     deposited: float = 0                          # المبلغ المُودَع فعلياً (لكشف فجوة البيع-الإيداع)
     discounts: float = 0                          # الخصومات
     top_products: str = ""                        # أكثر الأصناف مبيعاً (نص: صنف1 | صنف2 | صنف3)
+    extra_data: str = ""                          # بيانات إضافية حسب القطاع/المستوى (JSON)
     notes: str = ""                               # ملاحظات
     # ----- محسوبة تلقائياً -----
     profit: float = 0
@@ -200,6 +202,7 @@ def run_migrations():
             'ALTER TABLE company ADD COLUMN IF NOT EXISTS cash_reserve DOUBLE PRECISION DEFAULT 0',
             'ALTER TABLE company ADD COLUMN IF NOT EXISTS monthly_obligations DOUBLE PRECISION DEFAULT 0',
             'ALTER TABLE companyentry ADD COLUMN IF NOT EXISTS deposited DOUBLE PRECISION DEFAULT 0',
+            'ALTER TABLE companyentry ADD COLUMN IF NOT EXISTS extra_data VARCHAR DEFAULT \'\'',
         ]
     else:
         # SQLite - أبسط، لكن ما يدعم IF NOT EXISTS بنفس الطريقة
@@ -221,6 +224,8 @@ def run_migrations():
                     ecols = [row[1] for row in conn.execute(text("PRAGMA table_info(companyentry)"))]
                     if "deposited" not in ecols:
                         migrations.append("ALTER TABLE companyentry ADD COLUMN deposited REAL DEFAULT 0")
+                    if "extra_data" not in ecols:
+                        migrations.append("ALTER TABLE companyentry ADD COLUMN extra_data VARCHAR DEFAULT ''")
                 except Exception:
                     pass
         except Exception:
@@ -1227,10 +1232,17 @@ def trends(user: User = Depends(get_current_user)):
 # ============================================================
 
 SECTOR_NAMES = {
-    "retail": "تجزئة",
     "fnb": "مطاعم وكافيهات",
+    "retail": "تجارة تجزئة",
+    "ecommerce": "تجارة إلكترونية",
+    "manufacturing": "تصنيع",
+    "contracting": "مقاولات",
+    "distribution": "توزيع",
     "services": "خدمات",
-    "other": "شركة",
+    "clinics": "عيادات",
+    "hospitals": "مستشفيات",
+    "logistics": "لوجستيات",
+    "other": "أخرى",
 }
 
 # إحداثيات أبرز المدن السعودية (للخريطة)
@@ -1435,6 +1447,14 @@ def build_branch_prompt(company, sector_name, b, e, avg_margin, avg_inv, avg_sco
     tgt = ""
     if b.target_sales > 0:
         tgt = f"\n- هدف المبيعات: {round(b.target_sales)} ريال (التحقيق {round((e.sales / b.target_sales) * 100)}%)"
+    extra_txt = ""
+    if getattr(e, "extra_data", ""):
+        try:
+            ed = json.loads(e.extra_data)
+            if isinstance(ed, dict) and ed:
+                extra_txt = "\n- مؤشرات إضافية للقطaع: " + " | ".join(f"{k}: {v}" for k, v in ed.items() if str(v).strip())
+        except Exception:
+            pass
     return f"""أنت "نبّاه"، مستشار تنفيذي بخبرة طويلة. تحلّل أداء فرع "{b.name}" ضمن شركة "{company.name}" ({sector_name}) وتقارنه بباقي فروع الشركة.
 
 # بيانات الفرع (مؤكدة — لا تخترع):
@@ -1442,7 +1462,7 @@ def build_branch_prompt(company, sector_name, b, e, avg_margin, avg_inv, avg_sco
 - المبيعات: {round(e.sales)} ريال | العملاء: {e.customers} | الفواتير: {e.invoices}
 - متوسط الفاتورة: {e.avg_invoice} ريال | الهامش: {e.margin}% | صافي الربح: {round(e.profit)} ريال
 - العملاء المتكررون: {e.repeat_rate}% | النمو عن الفترة السابقة: {e.growth}%
-- المنتجات الأكثر مبيعاً: {e.top_products or 'غير مُدخلة'}
+- المنتجات الأكثر مبيعاً: {e.top_products or 'غير مُدخلة'}{extra_txt}
 - مؤشر أداء الفرع: {e.branch_score}/100{tgt}
 - مسار الفرع عبر الفترات: {hist_txt}
 
@@ -1759,6 +1779,8 @@ def company_entry(data: dict, user: User = Depends(get_current_user)):
             discounts = float(data.get("discounts") or 0)
             top_products = (str(data.get("top_products") or "")).strip()
             notes = (str(data.get("notes") or "")).strip()
+            extra = data.get("extra") or {}
+            extra_data = json.dumps(extra, ensure_ascii=False) if isinstance(extra, dict) and extra else ""
         except (ValueError, TypeError):
             raise HTTPException(400, "فيه قيمة غير رقمية في الحقول — تأكد أن المبالغ والأعداد أرقام صحيحة")
 
@@ -1778,6 +1800,7 @@ def company_entry(data: dict, user: User = Depends(get_current_user)):
                 sales=sales, invoices=invoices, customers=customers, new_customers=new_customers,
                 repeat_customers=repeat_customers, expenses=expenses, discounts=discounts,
                 deposited=deposited, top_products=top_products, notes=notes,
+                extra_data=extra_data,
                 profit=m["profit"], margin=m["margin"], avg_invoice=m["avg_invoice"],
                 repeat_rate=m["repeat_rate"], growth=m["growth"], branch_score=m["branch_score"],
             )
