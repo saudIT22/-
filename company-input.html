@@ -72,15 +72,19 @@
   <div class="err" id="err"></div>
 
   <div class="card" id="formCard">
-    <div class="row2">
-      <div class="field">
-        <label>الفرع</label>
-        <select id="branch"></select>
+    <div class="field">
+      <label>الفرع</label>
+      <input id="branch" list="branchList" placeholder="اكتب اسم الفرع أو اختر من القائمة" autocomplete="off">
+      <datalist id="branchList"></datalist>
+      <div class="hint">اكتب اسم فرع موجود، أو اكتب اسماً جديداً ويُضاف تلقائياً</div>
+    </div>
+    <div class="field">
+      <label>الفترة (الشهر والسنة)</label>
+      <div class="row2" style="margin-bottom:0">
+        <select id="periodMonth"></select>
+        <select id="periodYear"></select>
       </div>
-      <div class="field">
-        <label>الفترة</label>
-        <input type="month" id="period">
-      </div>
+      <div class="hint">تقدر تسجّل فترات سابقة (سنوات ماضية) لبناء الاتجاه والتنبؤ</div>
     </div>
 
     <div class="sec-title">الأساسيات</div>
@@ -130,54 +134,78 @@
 <script>
 const TOKEN = localStorage.getItem("nabbah_token") || "";
 if(!TOKEN){ window.location.href="login.html"; }
-let lastBranchId=null, lastBranchName="";
+let lastBranchId=null, lastBranchName="", BRANCHES=[];
+const AR_MONTHS=["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
 
 async function api(path,opts={}){
   const res=await fetch(path,{...opts,headers:{"Content-Type":"application/json","Authorization":"Bearer "+TOKEN,...(opts.headers||{})}});
   if(res.status===401){ localStorage.removeItem("nabbah_token"); window.location.href="login.html"; throw new Error("جلسة منتهية"); }
-  const data=await res.json().catch(()=>({}));
-  if(!res.ok) throw new Error(data.detail||"حدث خطأ");
+  const raw=await res.text(); let data={}; try{ data=JSON.parse(raw); }catch(_){}
+  if(!res.ok) throw new Error(data.detail ? `${data.detail}` : `خطأ ${res.status}`);
   return data;
 }
 const fmt=n=>(Math.round(n)||0).toLocaleString("en-US");
 function showErr(m){ const e=document.getElementById("err"); e.textContent=m; e.style.display="block"; window.scrollTo({top:0,behavior:"smooth"}); }
 
+function fillPeriod(){
+  const now=new Date();
+  const mSel=document.getElementById("periodMonth"), ySel=document.getElementById("periodYear");
+  mSel.innerHTML=AR_MONTHS.map((m,i)=>`<option value="${i+1}" ${i===now.getMonth()?"selected":""}>${m}</option>`).join("");
+  let yrs=""; const cur=now.getFullYear();
+  for(let y=cur;y>=cur-6;y--){ yrs+=`<option value="${y}" ${y===cur?"selected":""}>${y}</option>`; }
+  ySel.innerHTML=yrs;
+}
+function getPeriod(){
+  const y=document.getElementById("periodYear").value;
+  const m=String(document.getElementById("periodMonth").value).padStart(2,"0");
+  return `${y}-${m}`;
+}
+
 async function init(){
-  // الفترة الحالية افتراضياً
-  const now=new Date(); document.getElementById("period").value=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
+  fillPeriod();
   try{
     const info=await api("/company/info");
     if(!info.has_company){ window.location.href="company-register.html"; return; }
-    document.getElementById("ph").textContent=`شركة: ${info.active.name} — اختر الفرع وأدخل بياناته.`;
-    const sel=document.getElementById("branch");
-    if(!info.branches.length){ sel.innerHTML=`<option>لا توجد فروع — أضفها من اللوحة</option>`; return; }
-    sel.innerHTML=info.branches.map(b=>`<option value="${b.id}">${b.name}${b.city?" · "+b.city:""}</option>`).join("");
+    document.getElementById("ph").textContent=`شركة: ${info.active.name} — اكتب الفرع وأدخل بياناته.`;
+    BRANCHES=info.branches||[];
+    document.getElementById("branchList").innerHTML=BRANCHES.map(b=>`<option value="${b.name}">${b.city||""}</option>`).join("");
   }catch(e){ showErr(e.message); }
+}
+
+async function resolveBranchId(typed){
+  // موجود؟ (مطابقة غير حساسة لحالة الأحرف)
+  const found=BRANCHES.find(b=>b.name.trim().toLowerCase()===typed.toLowerCase());
+  if(found) return found.id;
+  // جديد → أنشئه تلقائياً
+  const r=await api("/company/add-branch",{method:"POST",body:JSON.stringify({name:typed,city:"",type:"standalone"})});
+  BRANCHES.push({id:r.branch_id,name:typed,city:""});
+  return r.branch_id;
 }
 
 async function saveEntry(){
   document.getElementById("err").style.display="none";
-  const branch_id=document.getElementById("branch").value;
-  const period=document.getElementById("period").value;
+  const typed=document.getElementById("branch").value.trim();
   const sales=+document.getElementById("sales").value||0;
-  if(!branch_id){ return showErr("اختر فرعاً"); }
-  if(sales<=0){ return showErr("أدخل قيمة مبيعات صحيحة"); }
+  if(!typed){ return showErr("اكتب اسم الفرع"); }
+  if(sales<=0){ return showErr("أدخل قيمة مبيعات صحيحة (أكبر من صفر)"); }
 
-  const payload={ branch_id, period,
-    sales,
-    expenses:+document.getElementById("expenses").value||0,
-    invoices:+document.getElementById("invoices").value||0,
-    customers:+document.getElementById("customers").value||0,
-    new_customers:+document.getElementById("new_customers").value||0,
-    repeat_customers:+document.getElementById("repeat_customers").value||0,
-    discounts:+document.getElementById("discounts").value||0,
-    deposited:+document.getElementById("deposited").value||0,
-    top_products:document.getElementById("top_products").value.trim(),
-    notes:document.getElementById("notes").value.trim(),
-  };
   const btn=document.getElementById("save"); btn.disabled=true; btn.textContent="جارٍ الحساب…";
   try{
+    const branch_id=await resolveBranchId(typed);
+    const payload={ branch_id, period:getPeriod(),
+      sales,
+      expenses:+document.getElementById("expenses").value||0,
+      invoices:+document.getElementById("invoices").value||0,
+      customers:+document.getElementById("customers").value||0,
+      new_customers:+document.getElementById("new_customers").value||0,
+      repeat_customers:+document.getElementById("repeat_customers").value||0,
+      discounts:+document.getElementById("discounts").value||0,
+      deposited:+document.getElementById("deposited").value||0,
+      top_products:document.getElementById("top_products").value.trim(),
+      notes:document.getElementById("notes").value.trim(),
+    };
     const r=await api("/company/entry",{method:"POST",body:JSON.stringify(payload)});
+    lastBranchId=branch_id;
     showResult(r);
   }catch(e){ showErr(e.message); }
   btn.disabled=false; btn.textContent="حفظ وحساب المؤشرات";
@@ -186,7 +214,6 @@ async function saveEntry(){
 function levelOf(s){ return s>=70?["ممتاز","#10b981"]:s>=55?["جيد","#f5b301"]:s>=40?["متوسط","#f59e0b"]:["ضعيف","#ef4444"]; }
 
 function showResult(r){
-  lastBranchId=document.getElementById("branch").value;
   lastBranchName=r.branch;
   const m=r.metrics, [lvl,col]=levelOf(m.branch_score);
   document.getElementById("formCard").style.display="none";
@@ -218,7 +245,7 @@ async function analyzeBranch(){
 }
 
 function resetForm(){
-  ["sales","expenses","invoices","customers","new_customers","repeat_customers","discounts","deposited","top_products","notes"].forEach(id=>document.getElementById(id).value="");
+  ["branch","sales","expenses","invoices","customers","new_customers","repeat_customers","discounts","deposited","top_products","notes"].forEach(id=>document.getElementById(id).value="");
   document.getElementById("result").style.display="none";
   document.getElementById("formCard").style.display="block";
   window.scrollTo({top:0,behavior:"smooth"});
