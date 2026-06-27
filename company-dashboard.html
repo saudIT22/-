@@ -206,6 +206,17 @@
     </div>
   </div>
 
+  <!-- Pending activation -->
+  <div id="pending" style="display:none">
+    <div class="empty-cta">
+      <div class="big">⏳</div>
+      <h3 id="pendingTitle">شركتك قيد التفعيل</h3>
+      <p>تم تسجيل شركتك بنجاح ✅ وهي الآن بانتظار تفعيل الاشتراك. بمجرد التفعيل تنفتح لك كل خدمات قسم الشركات (اللوحة، مقارنة الفروع، التدفق النقدي، كشف التسرّب، وغيرها).</p>
+      <a class="btn btn-mint" href="https://wa.me/" id="pendingContact" target="_blank">تواصل لإتمام التفعيل</a>
+      <div style="margin-top:14px"><a href="index.html#enterprise-pricing" style="color:var(--mint);font-size:13.5px">عرض الباقات والأسعار</a></div>
+    </div>
+  </div>
+
   <!-- No data yet (company exists, no entries) -->
   <div id="noData" style="display:none">
     <div class="empty-cta">
@@ -334,6 +345,7 @@
   </div>
 
   <div class="foot-links" id="footLinks" style="display:none">
+    <a class="btn btn-ghost" href="company-branches.html">🔀 مقارنة الفروع</a>
     <a class="btn btn-ghost" href="company-input.html">إدخال بيانات الفروع</a>
     <a class="btn btn-ghost" href="company-cashflow.html">💧 التدفق النقدي</a>
     <a class="btn btn-ghost" href="company-leakage.html">🛡️ كشف التسرّب</a>
@@ -382,6 +394,11 @@ async function init(){
       return;
     }
     document.getElementById("coName").textContent = info.active.name;
+    if(info.subscribed === false || (info.active && info.active.is_active === 0)){
+      hide("loading"); show("pending"); show("switchWrap");
+      document.getElementById("pendingTitle").textContent = `"${info.active.name}" قيد التفعيل`;
+      return;
+    }
     await loadDashboard();
   }catch(e){
     hide("loading");
