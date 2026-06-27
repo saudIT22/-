@@ -1529,7 +1529,8 @@ def company_info(user: User = Depends(get_current_user)):
             "has_company": True,
             "max_reached": len(companies) >= 3,
             "companies": comp_list,
-            "active": {"id": active.id, "name": active.name, "sector": active.sector},
+            "active": {"id": active.id, "name": active.name, "sector": active.sector, "is_active": active.is_active},
+            "subscribed": active.is_active == 1,
             "branches": b_list,
         }
 
@@ -1556,7 +1557,7 @@ def company_create(data: dict, user: User = Depends(get_current_user)):
             if c.name.strip().lower() == name.lower():
                 raise HTTPException(400, f"لديك شركة بنفس الاسم '{name}'")
 
-        company = Company(name=name, owner_id=user.id, sector=sector)
+        company = Company(name=name, owner_id=user.id, sector=sector, is_active=0)
         s.add(company)
         s.commit()
         s.refresh(company)
@@ -1646,6 +1647,8 @@ def company_add_branch(data: dict, user: User = Depends(get_current_user)):
         company = s.get(Company, user.company_id)
         if not company or company.owner_id != user.id:
             raise HTTPException(403, "غير مصرّح")
+        if company.is_active != 1:
+            raise HTTPException(402, "شركتك قيد التفعيل — فعّلها من لوحة الإدارة")
         lat, lng = geocode_city(city, company.id + len(name) + 7)
         b = CompanyBranch(company_id=company.id, name=name, city=city,
                           branch_type=btype, lat=lat, lng=lng)
@@ -1685,6 +1688,8 @@ def company_set_target(data: dict, user: User = Depends(get_current_user)):
         company = s.get(Company, b.company_id)
         if not company or company.owner_id != user.id:
             raise HTTPException(403, "غير مصرّح")
+        if company.is_active != 1:
+            raise HTTPException(402, "شركتك قيد التفعيل — فعّلها من لوحة الإدارة")
         if "target_sales" in data:
             b.target_sales = float(data.get("target_sales") or 0)
         if "target_customers" in data:
@@ -1705,6 +1710,8 @@ def company_entry(data: dict, user: User = Depends(get_current_user)):
         company = s.get(Company, branch.company_id)
         if not company or company.owner_id != user.id:
             raise HTTPException(403, "غير مصرّح بهذا الفرع")
+        if company.is_active != 1:
+            raise HTTPException(402, "شركتك قيد التفعيل — فعّلها من لوحة الإدارة")
 
         try:
             period = (str(data.get("period") or datetime.now().strftime("%Y-%m"))).strip()
@@ -1771,6 +1778,8 @@ def company_dashboard(user: User = Depends(get_current_user)):
         company = s.get(Company, user.company_id)
         if not company or company.owner_id != user.id:
             raise HTTPException(403, "غير مصرّح")
+        if company.is_active != 1:
+            raise HTTPException(402, "شركتك قيد التفعيل — فعّلها من لوحة الإدارة")
 
         branches = s.exec(
             select(CompanyBranch).where(CompanyBranch.company_id == company.id, CompanyBranch.is_active == 1)
@@ -1907,6 +1916,8 @@ def company_branch_detail(branch_id: int, user: User = Depends(get_current_user)
         company = s.get(Company, b.company_id)
         if not company or company.owner_id != user.id:
             raise HTTPException(403, "غير مصرّح")
+        if company.is_active != 1:
+            raise HTTPException(402, "شركتك قيد التفعيل — فعّلها من لوحة الإدارة")
         entries = s.exec(
             select(CompanyEntry).where(CompanyEntry.branch_id == b.id).order_by(CompanyEntry.created_at)
         ).all()
@@ -1936,6 +1947,8 @@ def company_analyze(data: dict, user: User = Depends(get_current_user)):
         company = s.get(Company, user.company_id)
         if not company or company.owner_id != user.id:
             raise HTTPException(403, "غير مصرّح")
+        if company.is_active != 1:
+            raise HTTPException(402, "شركتك قيد التفعيل — فعّلها من لوحة الإدارة")
         branches = s.exec(
             select(CompanyBranch).where(CompanyBranch.company_id == company.id, CompanyBranch.is_active == 1)
         ).all()
@@ -1998,6 +2011,8 @@ def company_ask(data: dict, user: User = Depends(get_current_user)):
         company = s.get(Company, user.company_id)
         if not company or company.owner_id != user.id:
             raise HTTPException(403, "غير مصرّح")
+        if company.is_active != 1:
+            raise HTTPException(402, "شركتك قيد التفعيل — فعّلها من لوحة الإدارة")
         branches = s.exec(
             select(CompanyBranch).where(CompanyBranch.company_id == company.id, CompanyBranch.is_active == 1)
         ).all()
@@ -2032,6 +2047,8 @@ def company_report(user: User = Depends(get_current_user)):
         company = s.get(Company, user.company_id)
         if not company or company.owner_id != user.id:
             raise HTTPException(403, "غير مصرّح")
+        if company.is_active != 1:
+            raise HTTPException(402, "شركتك قيد التفعيل — فعّلها من لوحة الإدارة")
         branches = s.exec(
             select(CompanyBranch).where(CompanyBranch.company_id == company.id, CompanyBranch.is_active == 1)
         ).all()
@@ -2140,6 +2157,8 @@ def company_financials(data: dict, user: User = Depends(get_current_user)):
         company = s.get(Company, user.company_id)
         if not company or company.owner_id != user.id:
             raise HTTPException(403, "غير مصرّح")
+        if company.is_active != 1:
+            raise HTTPException(402, "شركتك قيد التفعيل — فعّلها من لوحة الإدارة")
         if "cash_reserve" in data:
             company.cash_reserve = float(data.get("cash_reserve") or 0)
         if "monthly_obligations" in data:
@@ -2158,6 +2177,8 @@ def company_cashflow(user: User = Depends(get_current_user)):
         company = s.get(Company, user.company_id)
         if not company or company.owner_id != user.id:
             raise HTTPException(403, "غير مصرّح")
+        if company.is_active != 1:
+            raise HTTPException(402, "شركتك قيد التفعيل — فعّلها من لوحة الإدارة")
 
         est = company_monthly_estimate(s, company.id)
         reserve = company.cash_reserve or 0
@@ -2305,6 +2326,8 @@ def company_leakage(user: User = Depends(get_current_user)):
         company = s.get(Company, user.company_id)
         if not company or company.owner_id != user.id:
             raise HTTPException(403, "غير مصرّح")
+        if company.is_active != 1:
+            raise HTTPException(402, "شركتك قيد التفعيل — فعّلها من لوحة الإدارة")
         branches = s.exec(
             select(CompanyBranch).where(CompanyBranch.company_id == company.id, CompanyBranch.is_active == 1)
         ).all()
@@ -2385,6 +2408,8 @@ def company_team(user: User = Depends(get_current_user)):
         company = s.get(Company, user.company_id)
         if not company or company.owner_id != user.id:
             raise HTTPException(403, "غير مصرّح")
+        if company.is_active != 1:
+            raise HTTPException(402, "شركتك قيد التفعيل — فعّلها من لوحة الإدارة")
         owner = s.get(User, company.owner_id)
         branches = s.exec(
             select(CompanyBranch).where(CompanyBranch.company_id == company.id, CompanyBranch.is_active == 1)
@@ -2428,6 +2453,8 @@ def company_team_add(data: dict, user: User = Depends(get_current_user)):
         company = s.get(Company, user.company_id)
         if not company or company.owner_id != user.id:
             raise HTTPException(403, "غير مصرّح")
+        if company.is_active != 1:
+            raise HTTPException(402, "شركتك قيد التفعيل — فعّلها من لوحة الإدارة")
         existing = s.exec(select(CompanyMember).where(CompanyMember.company_id == company.id)).all()
         if email:
             for m in existing:
@@ -2452,6 +2479,8 @@ def company_team_remove(data: dict, user: User = Depends(get_current_user)):
         company = s.get(Company, mem.company_id)
         if not company or company.owner_id != user.id:
             raise HTTPException(403, "غير مصرّح")
+        if company.is_active != 1:
+            raise HTTPException(402, "شركتك قيد التفعيل — فعّلها من لوحة الإدارة")
         s.delete(mem)
         s.commit()
         return {"ok": True}
@@ -2481,6 +2510,8 @@ def company_simulate(data: dict, user: User = Depends(get_current_user)):
         company = s.get(Company, user.company_id)
         if not company or company.owner_id != user.id:
             raise HTTPException(403, "غير مصرّح")
+        if company.is_active != 1:
+            raise HTTPException(402, "شركتك قيد التفعيل — فعّلها من لوحة الإدارة")
 
         # القاعدة: فرع محدد أو إجمالي الشركة
         base_sales = base_expenses = 0.0
@@ -2551,3 +2582,64 @@ def company_simulate(data: dict, user: User = Depends(get_current_user)):
             "inputs": {"price_pct": price_pct, "marketing_pct": marketing_pct,
                        "staff_change": staff_change, "staff_cost": staff_cost},
         }
+
+
+# ============================================================
+# ===== إدارة الشركات من لوحة الأدمن =====
+# ============================================================
+
+@app.get("/admin/companies")
+def admin_list_companies(_: bool = Depends(verify_admin)):
+    """قائمة كل الشركات المسجّلة مع حالتها."""
+    with Session(engine) as s:
+        companies = s.exec(select(Company)).all()
+        result = []
+        for c in companies:
+            owner = s.get(User, c.owner_id)
+            branch_count = len(s.exec(
+                select(CompanyBranch).where(CompanyBranch.company_id == c.id, CompanyBranch.is_active == 1)
+            ).all())
+            entries_count = len(s.exec(select(CompanyEntry).where(CompanyEntry.company_id == c.id)).all())
+            result.append({
+                "id": c.id,
+                "name": c.name,
+                "sector": SECTOR_NAMES.get(c.sector, c.sector),
+                "owner_name": owner.name if owner else "—",
+                "owner_email": owner.email if owner else "—",
+                "branch_count": branch_count,
+                "entries_count": entries_count,
+                "is_active": c.is_active,
+                "created_at": c.created_at.isoformat() if c.created_at else None,
+            })
+        result.sort(key=lambda x: x["created_at"] or "", reverse=True)
+        return result
+
+
+@app.post("/admin/company-activate")
+def admin_company_activate(data: dict, _: bool = Depends(verify_admin)):
+    """تفعيل شركة."""
+    cid = data.get("company_id")
+    with Session(engine) as s:
+        company = s.get(Company, int(cid)) if cid else None
+        if not company:
+            raise HTTPException(404, "الشركة غير موجودة")
+        company.is_active = 1
+        s.add(company)
+        s.commit()
+        log_activity("الأدمن", f"فعّل الشركة: {company.name}", "")
+        return {"ok": True, "message": f"تم تفعيل {company.name}"}
+
+
+@app.post("/admin/company-deactivate")
+def admin_company_deactivate(data: dict, _: bool = Depends(verify_admin)):
+    """إيقاف شركة."""
+    cid = data.get("company_id")
+    with Session(engine) as s:
+        company = s.get(Company, int(cid)) if cid else None
+        if not company:
+            raise HTTPException(404, "الشركة غير موجودة")
+        company.is_active = 0
+        s.add(company)
+        s.commit()
+        log_activity("الأدمن", f"أوقف الشركة: {company.name}", "")
+        return {"ok": True, "message": f"تم إيقاف {company.name}"}
