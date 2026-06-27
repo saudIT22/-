@@ -108,6 +108,8 @@ class Company(SQLModel, table=True):
     owner_id: int = Field(index=True)            # المالك (user_id)
     plan: str = "enterprise"
     sector: str = "retail"                       # retail/fnb/services/other — نشاط الشركة
+    cash_reserve: float = 0                       # الاحتياطي النقدي الحالي (للتدفق النقدي)
+    monthly_obligations: float = 0                # الالتزامات الشهرية الثابتة (رواتب/إيجار/أقساط)
     is_active: int = 1
     created_at: datetime = Field(default_factory=datetime.now)
 
@@ -139,6 +141,7 @@ class CompanyEntry(SQLModel, table=True):
     new_customers: int = 0                        # عملاء جدد
     repeat_customers: int = 0                     # عملاء متكررون
     expenses: float = 0                           # المصروفات
+    deposited: float = 0                          # المبلغ المُودَع فعلياً (لكشف فجوة البيع-الإيداع)
     discounts: float = 0                          # الخصومات
     top_products: str = ""                        # أكثر الأصناف مبيعاً (نص: صنف1 | صنف2 | صنف3)
     notes: str = ""                               # ملاحظات
@@ -168,6 +171,17 @@ db_url = os.getenv("DATABASE_URL", "sqlite:///nabbah.db")
 if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
 engine = create_engine(db_url)
+class CompanyMember(SQLModel, table=True):
+    """أعضاء فريق الشركة وصلاحياتهم."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    name: str = ""
+    email: str = ""
+    role: str = "staff"                          # manager/accountant/staff (المالك ضمني)
+    branch_id: Optional[int] = None              # لمدير فرع معيّن (اختياري)
+    created_at: datetime = Field(default_factory=datetime.now)
+
+
 SQLModel.metadata.create_all(engine)
 
 
@@ -183,6 +197,9 @@ def run_migrations():
         migrations = [
             'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS company_id INTEGER',
             'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS company_role VARCHAR DEFAULT \'\'',
+            'ALTER TABLE company ADD COLUMN IF NOT EXISTS cash_reserve DOUBLE PRECISION DEFAULT 0',
+            'ALTER TABLE company ADD COLUMN IF NOT EXISTS monthly_obligations DOUBLE PRECISION DEFAULT 0',
+            'ALTER TABLE companyentry ADD COLUMN IF NOT EXISTS deposited DOUBLE PRECISION DEFAULT 0',
         ]
     else:
         # SQLite - أبسط، لكن ما يدعم IF NOT EXISTS بنفس الطريقة
@@ -194,6 +211,18 @@ def run_migrations():
                     migrations.append("ALTER TABLE user ADD COLUMN company_id INTEGER")
                 if "company_role" not in cols:
                     migrations.append("ALTER TABLE user ADD COLUMN company_role VARCHAR DEFAULT ''")
+                # أعمدة التدفق النقدي والتسرّب
+                try:
+                    ccols = [row[1] for row in conn.execute(text("PRAGMA table_info(company)"))]
+                    if "cash_reserve" not in ccols:
+                        migrations.append("ALTER TABLE company ADD COLUMN cash_reserve REAL DEFAULT 0")
+                    if "monthly_obligations" not in ccols:
+                        migrations.append("ALTER TABLE company ADD COLUMN monthly_obligations REAL DEFAULT 0")
+                    ecols = [row[1] for row in conn.execute(text("PRAGMA table_info(companyentry)"))]
+                    if "deposited" not in ecols:
+                        migrations.append("ALTER TABLE companyentry ADD COLUMN deposited REAL DEFAULT 0")
+                except Exception:
+                    pass
         except Exception:
             pass
 
@@ -1680,6 +1709,7 @@ def company_entry(data: dict, user: User = Depends(get_current_user)):
         new_customers = int(data.get("new_customers") or 0)
         repeat_customers = int(data.get("repeat_customers") or 0)
         expenses = float(data.get("expenses") or 0)
+        deposited = float(data.get("deposited") or 0)
         discounts = float(data.get("discounts") or 0)
         top_products = (data.get("top_products") or "").strip()
         notes = (data.get("notes") or "").strip()
@@ -1697,6 +1727,7 @@ def company_entry(data: dict, user: User = Depends(get_current_user)):
             company_id=company.id, branch_id=branch.id, branch_name=branch.name, period=period,
             sales=sales, invoices=invoices, customers=customers, new_customers=new_customers,
             repeat_customers=repeat_customers, expenses=expenses, discounts=discounts,
+            deposited=deposited,
             top_products=top_products, notes=notes,
             profit=m["profit"], margin=m["margin"], avg_invoice=m["avg_invoice"],
             repeat_rate=m["repeat_rate"], growth=m["growth"], branch_score=m["branch_score"],
@@ -2041,4 +2072,460 @@ def company_report(user: User = Depends(get_current_user)):
             },
             "branches": branch_rows,
             "key_decisions": key_decisions,
+        }
+
+
+# ============================================================
+# ===== الخدمة 5: التدفق النقدي التنبؤي (Cash Runway) =====
+# ============================================================
+
+AR_MONTHS = ["", "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
+             "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"]
+
+
+def _avg_recent(entries, attr, k=3):
+    """متوسط آخر k قيم لخاصية معيّنة (لتقدير شهري مستقر)."""
+    vals = [getattr(e, attr) for e in entries[-k:]] if entries else []
+    return (sum(vals) / len(vals)) if vals else 0
+
+
+def company_monthly_estimate(s, company_id):
+    """يقدّر المبيعات/المصروفات/الربح الشهرية للشركة من متوسط آخر فترات كل فرع."""
+    branches = s.exec(
+        select(CompanyBranch).where(CompanyBranch.company_id == company_id, CompanyBranch.is_active == 1)
+    ).all()
+    sales = expenses = profit = 0.0
+    have_data = False
+    for b in branches:
+        ents = s.exec(
+            select(CompanyEntry).where(CompanyEntry.branch_id == b.id).order_by(CompanyEntry.created_at)
+        ).all()
+        if not ents:
+            continue
+        have_data = True
+        sales += _avg_recent(ents, "sales")
+        expenses += _avg_recent(ents, "expenses")
+        profit += _avg_recent(ents, "profit")
+    return {"sales": round(sales), "expenses": round(expenses), "profit": round(profit), "have_data": have_data}
+
+
+@app.post("/company/financials")
+def company_financials(data: dict, user: User = Depends(get_current_user)):
+    """ضبط الاحتياطي النقدي والالتزامات الشهرية."""
+    if not user.company_id:
+        raise HTTPException(400, "لا توجد شركة نشطة")
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id)
+        if not company or company.owner_id != user.id:
+            raise HTTPException(403, "غير مصرّح")
+        if "cash_reserve" in data:
+            company.cash_reserve = float(data.get("cash_reserve") or 0)
+        if "monthly_obligations" in data:
+            company.monthly_obligations = float(data.get("monthly_obligations") or 0)
+        s.add(company)
+        s.commit()
+        return {"ok": True, "cash_reserve": company.cash_reserve, "monthly_obligations": company.monthly_obligations}
+
+
+@app.get("/company/cashflow")
+def company_cashflow(user: User = Depends(get_current_user)):
+    """التدفق النقدي التنبؤي: كم شهر تكفي السيولة + نقطة العجز المتوقّعة."""
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id)
+        if not company or company.owner_id != user.id:
+            raise HTTPException(403, "غير مصرّح")
+
+        est = company_monthly_estimate(s, company.id)
+        reserve = company.cash_reserve or 0
+        obligations = company.monthly_obligations or 0
+
+        # صافي التدفق الشهري = ربح التشغيل − الالتزامات الثابتة
+        monthly_net = round(est["profit"] - obligations)
+
+        needs_setup = (reserve <= 0 and obligations <= 0)
+
+        # حالة + runway
+        runway_months = None
+        deficit_label = None
+        if monthly_net >= 0:
+            status = "positive"
+            # أشهر الأمان لو توقّف الدخل تماماً
+            safety_months = round(reserve / obligations, 1) if obligations > 0 else None
+        else:
+            burn = abs(monthly_net)
+            runway_months = round(reserve / burn, 1) if burn > 0 else None
+            safety_months = runway_months
+            if runway_months is None:
+                status = "unknown"
+            elif runway_months < 3:
+                status = "critical"
+            elif runway_months < 6:
+                status = "warning"
+            else:
+                status = "watch"
+
+        # إسقاط رصيد السيولة 12 شهر
+        now = datetime.now()
+        projection = []
+        bal = reserve
+        deficit_index = None
+        for i in range(0, 13):
+            m = ((now.month - 1 + i) % 12) + 1
+            y = now.year + ((now.month - 1 + i) // 12)
+            if i > 0:
+                bal += monthly_net
+            projection.append({"i": i, "label": f"{AR_MONTHS[m]} {y}", "short": f"{m}/{y}", "balance": round(bal)})
+            if deficit_index is None and bal < 0 and i > 0:
+                deficit_index = i
+                deficit_label = f"{AR_MONTHS[m]} {y}"
+
+        alert = None
+        if status == "critical":
+            alert = f"⚠️ تحذير حرج: السيولة تكفي {runway_months} شهر فقط. أول عجز متوقّع في {deficit_label}."
+        elif status == "warning":
+            alert = f"انتبه: السيولة تكفي {runway_months} شهر. راقب المصروفات قبل {deficit_label}."
+
+        return {
+            "company": {"name": company.name},
+            "needs_setup": needs_setup,
+            "has_data": est["have_data"],
+            "cash_reserve": round(reserve),
+            "monthly_obligations": round(obligations),
+            "monthly_sales": est["sales"],
+            "monthly_expenses": est["expenses"],
+            "monthly_profit": est["profit"],
+            "monthly_net": monthly_net,
+            "status": status,
+            "runway_months": runway_months,
+            "safety_months": safety_months,
+            "deficit_label": deficit_label,
+            "deficit_index": deficit_index,
+            "projection": projection,
+            "alert": alert,
+        }
+
+
+# ============================================================
+# ===== الخدمة 6: كشف التسرّب والاحتيال (Leakage Detection) =====
+# ============================================================
+
+def detect_leakage(entries, company_expense_ratio):
+    """يحلّل تاريخ فرع ويرجّع درجة مخاطرة + أسباب الاشتباه.
+    entries: مرتّبة زمنياً تصاعدياً."""
+    if not entries:
+        return {"risk": 0, "reasons": []}
+    latest = entries[-1]
+    prior = entries[:-1]
+    reasons = []
+    risk = 0
+
+    # متوسطات تاريخية (قبل آخر فترة)
+    avg_exp = _avg_recent(prior, "expenses") if prior else latest.expenses
+    avg_sales = _avg_recent(prior, "sales") if prior else latest.sales
+    avg_margin = (sum(e.margin for e in prior) / len(prior)) if prior else latest.margin
+
+    sales_growth = ((latest.sales - avg_sales) / avg_sales * 100) if avg_sales > 0 else 0
+    exp_growth = ((latest.expenses - avg_exp) / avg_exp * 100) if avg_exp > 0 else 0
+
+    # 1) قفزة مصروفات بلا مبيعات مقابلة
+    if prior and exp_growth >= 20 and sales_growth < (exp_growth - 15):
+        risk += 30
+        reasons.append({"type": "قفزة مصروفات", "severity": "high",
+                        "detail": f"المصروفات ارتفعت {round(exp_growth)}% بينما المبيعات تغيّرت {round(sales_growth)}% فقط."})
+
+    # 2) فجوة بيع-إيداع
+    if latest.deposited and latest.deposited > 0 and latest.sales > 0:
+        gap = (latest.sales - latest.deposited) / latest.sales * 100
+        if gap >= 5:
+            risk += 35
+            reasons.append({"type": "فجوة بيع-إيداع", "severity": "high",
+                            "detail": f"المبيعات {round(latest.sales)}ر والمُودَع {round(latest.deposited)}ر — فجوة {round(gap)}%."})
+
+    # 3) انهيار الهامش
+    if prior and (avg_margin - latest.margin) >= 10:
+        risk += 20
+        reasons.append({"type": "تراجع الهامش", "severity": "medium",
+                        "detail": f"الهامش نزل من {round(avg_margin)}% إلى {latest.margin}% (−{round(avg_margin - latest.margin)} نقطة)."})
+
+    # 4) خصومات مرتفعة
+    if latest.sales > 0 and latest.discounts > 0:
+        disc_ratio = latest.discounts / latest.sales * 100
+        if disc_ratio >= 15:
+            risk += 15
+            reasons.append({"type": "خصومات مرتفعة", "severity": "medium",
+                            "detail": f"الخصومات {round(disc_ratio)}% من المبيعات."})
+
+    # 5) هبوط مبيعات مع ثبات/ارتفاع المصروفات
+    if prior and sales_growth <= -15 and exp_growth >= -3:
+        risk += 20
+        reasons.append({"type": "هبوط مبيعات بلا خفض تكاليف", "severity": "medium",
+                        "detail": f"المبيعات نزلت {round(abs(sales_growth))}% والمصروفات ثابتة تقريباً."})
+
+    # 6) نسبة مصروفات أعلى بكثير من متوسط الشركة
+    if latest.sales > 0:
+        br_ratio = latest.expenses / latest.sales * 100
+        if company_expense_ratio > 0 and br_ratio >= company_expense_ratio + 15:
+            risk += 15
+            reasons.append({"type": "مصروفات أعلى من الشركة", "severity": "low",
+                            "detail": f"نسبة مصروفات الفرع {round(br_ratio)}% مقابل {round(company_expense_ratio)}% متوسط الشركة."})
+
+    return {"risk": min(risk, 100), "reasons": reasons}
+
+
+@app.get("/company/leakage")
+def company_leakage(user: User = Depends(get_current_user)):
+    """كشف الفروع المشبوهة (تسرّب/احتيال) وترتيبها حسب درجة المخاطرة."""
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id)
+        if not company or company.owner_id != user.id:
+            raise HTTPException(403, "غير مصرّح")
+        branches = s.exec(
+            select(CompanyBranch).where(CompanyBranch.company_id == company.id, CompanyBranch.is_active == 1)
+        ).all()
+
+        # متوسط نسبة المصروفات للشركة
+        tot_sales = tot_exp = 0.0
+        per_branch = []
+        for b in branches:
+            ents = s.exec(
+                select(CompanyEntry).where(CompanyEntry.branch_id == b.id).order_by(CompanyEntry.created_at)
+            ).all()
+            if ents:
+                tot_sales += ents[-1].sales
+                tot_exp += ents[-1].expenses
+            per_branch.append((b, ents))
+        company_exp_ratio = (tot_exp / tot_sales * 100) if tot_sales > 0 else 0
+
+        results = []
+        for b, ents in per_branch:
+            if not ents:
+                results.append({"id": b.id, "name": b.name, "city": b.city,
+                                "risk": 0, "level": "بدون بيانات", "color": "#94a3b8",
+                                "single": len(ents) < 2, "reasons": []})
+                continue
+            r = detect_leakage(ents, company_exp_ratio)
+            risk = r["risk"]
+            if risk >= 60:
+                level, color = "خطر مرتفع", "#ef4444"
+            elif risk >= 30:
+                level, color = "اشتباه متوسط", "#f59e0b"
+            elif risk >= 1:
+                level, color = "اشتباه منخفض", "#f5b301"
+            else:
+                level, color = "سليم", "#10b981"
+            results.append({
+                "id": b.id, "name": b.name, "city": b.city,
+                "risk": risk, "level": level, "color": color,
+                "single": len(ents) < 2, "reasons": r["reasons"],
+            })
+
+        results.sort(key=lambda x: x["risk"], reverse=True)
+        flagged = len([x for x in results if x["risk"] >= 30])
+        return {
+            "company": {"name": company.name},
+            "company_expense_ratio": round(company_exp_ratio, 1),
+            "flagged_count": flagged,
+            "branches": results,
+        }
+
+
+# ===== صفحات الخدمتين =====
+@app.get("/company-cashflow.html")
+def page_company_cashflow():
+    return FileResponse("company-cashflow.html")
+
+@app.get("/company-leakage.html")
+def page_company_leakage():
+    return FileResponse("company-leakage.html")
+
+
+# ============================================================
+# ===== الخدمة 3: صلاحيات الفريق (Team Permissions) =====
+# ============================================================
+
+ROLE_INFO = {
+    "owner":      {"label": "مالك", "perms": "كل الصلاحيات: إدارة الشركة والفروع والفريق وكل التحليلات."},
+    "manager":    {"label": "مدير فرع", "perms": "إدخال بيانات فرعه ومتابعة أدائه وتحليلاته."},
+    "accountant": {"label": "محاسب", "perms": "الاطّلاع على التقارير المالية والتدفق النقدي وكشف التسرّب."},
+    "staff":      {"label": "موظف", "perms": "إدخال البيانات التشغيلية فقط."},
+}
+
+
+@app.get("/company/team")
+def company_team(user: User = Depends(get_current_user)):
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id)
+        if not company or company.owner_id != user.id:
+            raise HTTPException(403, "غير مصرّح")
+        owner = s.get(User, company.owner_id)
+        branches = s.exec(
+            select(CompanyBranch).where(CompanyBranch.company_id == company.id, CompanyBranch.is_active == 1)
+        ).all()
+        branch_map = {b.id: b.name for b in branches}
+        members = s.exec(select(CompanyMember).where(CompanyMember.company_id == company.id)).all()
+        team = [{
+            "id": "owner", "name": (owner.name if owner else "المالك"), "email": (owner.email if owner else ""),
+            "role": "owner", "role_label": "مالك", "perms": ROLE_INFO["owner"]["perms"],
+            "branch": "", "removable": False,
+        }]
+        for m in members:
+            ri = ROLE_INFO.get(m.role, ROLE_INFO["staff"])
+            team.append({
+                "id": m.id, "name": m.name, "email": m.email, "role": m.role,
+                "role_label": ri["label"], "perms": ri["perms"],
+                "branch": branch_map.get(m.branch_id, "") if m.branch_id else "",
+                "removable": True,
+            })
+        return {
+            "company": {"name": company.name},
+            "team": team,
+            "roles": [{"key": k, "label": v["label"], "perms": v["perms"]} for k, v in ROLE_INFO.items() if k != "owner"],
+            "branches": [{"id": b.id, "name": b.name} for b in branches],
+        }
+
+
+@app.post("/company/team/add")
+def company_team_add(data: dict, user: User = Depends(get_current_user)):
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    name = (data.get("name") or "").strip()
+    email = (data.get("email") or "").strip()
+    role = (data.get("role") or "staff").strip()
+    branch_id = data.get("branch_id")
+    if not name:
+        raise HTTPException(400, "اسم العضو مطلوب")
+    if role not in ("manager", "accountant", "staff"):
+        raise HTTPException(400, "صلاحية غير صحيحة")
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id)
+        if not company or company.owner_id != user.id:
+            raise HTTPException(403, "غير مصرّح")
+        existing = s.exec(select(CompanyMember).where(CompanyMember.company_id == company.id)).all()
+        if email:
+            for m in existing:
+                if m.email and m.email.lower() == email.lower():
+                    raise HTTPException(400, f"العضو ({email}) مضاف مسبقاً")
+        bid = int(branch_id) if branch_id else None
+        mem = CompanyMember(company_id=company.id, name=name, email=email, role=role, branch_id=bid)
+        s.add(mem)
+        s.commit()
+        s.refresh(mem)
+        log_activity(user.name, f"أضاف عضو فريق: {name} ({role})", user.email)
+        return {"ok": True, "member_id": mem.id}
+
+
+@app.post("/company/team/remove")
+def company_team_remove(data: dict, user: User = Depends(get_current_user)):
+    mid = data.get("member_id")
+    with Session(engine) as s:
+        mem = s.get(CompanyMember, int(mid)) if mid else None
+        if not mem:
+            raise HTTPException(404, "العضو غير موجود")
+        company = s.get(Company, mem.company_id)
+        if not company or company.owner_id != user.id:
+            raise HTTPException(403, "غير مصرّح")
+        s.delete(mem)
+        s.commit()
+        return {"ok": True}
+
+
+@app.get("/company-team.html")
+def page_company_team():
+    return FileResponse("company-team.html")
+
+
+# ============================================================
+# ===== الخدمة 2 (إكمال): محاكي القرارات (Decision Simulator) =====
+# ============================================================
+
+@app.post("/company/simulate")
+def company_simulate(data: dict, user: User = Depends(get_current_user)):
+    """يحاكي أثر قرارات (رفع أسعار/تسويق/توظيف) على المبيعات والربح — معادلات قطعية."""
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    scope = (data.get("scope") or "company").strip()
+    price_pct = float(data.get("price_pct") or 0)          # تغيير الأسعار %
+    marketing_pct = float(data.get("marketing_pct") or 0)  # إنفاق تسويقي كنسبة من المبيعات %
+    staff_change = int(data.get("staff_change") or 0)      # تغيير عدد الموظفين (+/-)
+    staff_cost = float(data.get("staff_cost") or 5000)     # تكلفة الموظف الشهرية
+
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id)
+        if not company or company.owner_id != user.id:
+            raise HTTPException(403, "غير مصرّح")
+
+        # القاعدة: فرع محدد أو إجمالي الشركة
+        base_sales = base_expenses = 0.0
+        label = company.name
+        if scope == "branch" and data.get("branch_id"):
+            b = s.get(CompanyBranch, int(data.get("branch_id")))
+            if not b or b.company_id != company.id:
+                raise HTTPException(404, "الفرع غير موجود")
+            e = s.exec(
+                select(CompanyEntry).where(CompanyEntry.branch_id == b.id).order_by(CompanyEntry.created_at.desc())
+            ).first()
+            if not e:
+                raise HTTPException(400, "لا توجد بيانات لهذا الفرع")
+            base_sales = e.sales
+            base_expenses = e.expenses
+            label = b.name
+        else:
+            branches = s.exec(
+                select(CompanyBranch).where(CompanyBranch.company_id == company.id, CompanyBranch.is_active == 1)
+            ).all()
+            for b in branches:
+                e = s.exec(
+                    select(CompanyEntry).where(CompanyEntry.branch_id == b.id).order_by(CompanyEntry.created_at.desc())
+                ).first()
+                if e:
+                    base_sales += e.sales
+                    base_expenses += e.expenses
+            if base_sales <= 0:
+                raise HTTPException(400, "لا توجد بيانات كافية للمحاكاة")
+
+        base_profit = base_sales - base_expenses
+        base_margin = round((base_profit / base_sales) * 100, 1) if base_sales > 0 else 0
+
+        # --- نموذج الأثر (مرونة محافظة) ---
+        # رفع الأسعار: مرونة طلب -0.5 (رفع 10% → حجم -5%)
+        p = price_pct / 100.0
+        price_factor = (1 + p) * (1 + (-0.5) * p)
+        new_sales = base_sales * price_factor
+
+        # التسويق: كل 1% إنفاق → +0.8% مبيعات (متناقص قليلاً)، والتكلفة تُضاف للمصروفات
+        mk = marketing_pct / 100.0
+        marketing_uplift = base_sales * mk * 0.8
+        marketing_cost = base_sales * mk
+        new_sales += marketing_uplift
+
+        # التوظيف: كل موظف +2% سعة مبيعات (بحد +10%) وتكلفته تُضاف
+        cap = min(abs(staff_change) * 0.02, 0.10) * (1 if staff_change > 0 else -1)
+        new_sales *= (1 + cap)
+        new_expenses = base_expenses + marketing_cost + (staff_change * staff_cost)
+
+        new_profit = new_sales - new_expenses
+        new_margin = round((new_profit / new_sales) * 100, 1) if new_sales > 0 else 0
+
+        d_sales = round(new_sales - base_sales)
+        d_profit = round(new_profit - base_profit)
+        d_margin = round(new_margin - base_margin, 1)
+
+        verdict = "إيجابي" if d_profit > 0 else ("سلبي" if d_profit < 0 else "متعادل")
+
+        return {
+            "scope": scope, "label": label,
+            "base": {"sales": round(base_sales), "expenses": round(base_expenses),
+                     "profit": round(base_profit), "margin": base_margin},
+            "projected": {"sales": round(new_sales), "expenses": round(new_expenses),
+                          "profit": round(new_profit), "margin": new_margin},
+            "delta": {"sales": d_sales, "profit": d_profit, "margin": d_margin},
+            "verdict": verdict,
+            "inputs": {"price_pct": price_pct, "marketing_pct": marketing_pct,
+                       "staff_change": staff_change, "staff_cost": staff_cost},
         }
