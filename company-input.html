@@ -120,7 +120,7 @@
       </div>
     </div>
     <div class="metrics" id="metrics"></div>
-    <button class="btn btn-mint" id="anBtn" style="width:100%;padding:13px" onclick="analyzeBranch()">حلّل هذا الفرع بالذكاء الاصطناعي</button>
+    <button class="btn btn-mint" id="anBtn" style="width:100%;padding:13px" onclick="analyzeBranch()">التحليل التنفيذي للفرع</button>
     <div class="ai-out" id="aiOut"></div>
     <div style="display:flex;gap:9px;margin-top:14px">
       <button class="btn btn-ghost" style="flex:1" onclick="resetForm()">إدخال فرع آخر</button>
@@ -234,7 +234,7 @@ function showResult(r){
   ];
   document.getElementById("metrics").innerHTML=cells.map(c=>`<div class="m"><div class="ml">${c[0]}</div><div class="mv">${c[1]}</div></div>`).join("");
   document.getElementById("aiOut").classList.remove("show");
-  document.getElementById("anBtn").textContent="حلّل هذا الفرع بالذكاء الاصطناعي";
+  document.getElementById("anBtn").textContent="التحليل التنفيذي للفرع";
   window.scrollTo({top:0,behavior:"smooth"});
 }
 
