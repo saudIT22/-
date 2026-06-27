@@ -1484,6 +1484,10 @@ def page_company_input():
 def page_company_report():
     return FileResponse("company-report.html")
 
+@app.get("/company-branches.html")
+def page_company_branches():
+    return FileResponse("company-branches.html")
+
 
 # ===== معلومات الشركة النشطة + قائمة الشركات (للتوجيه والتبديل) =====
 @app.get("/company/info")
@@ -1697,25 +1701,28 @@ def company_entry(data: dict, user: User = Depends(get_current_user)):
     with Session(engine) as s:
         branch = s.get(CompanyBranch, int(bid)) if bid else None
         if not branch:
-            raise HTTPException(404, "الفرع غير موجود")
+            raise HTTPException(404, "الفرع غير موجود — اكتب اسم فرع صحيح أو أضف فرعاً جديداً")
         company = s.get(Company, branch.company_id)
         if not company or company.owner_id != user.id:
-            raise HTTPException(403, "غير مصرّح")
+            raise HTTPException(403, "غير مصرّح بهذا الفرع")
 
-        period = (data.get("period") or datetime.now().strftime("%Y-%m")).strip()
-        sales = float(data.get("sales") or 0)
-        invoices = int(data.get("invoices") or 0)
-        customers = int(data.get("customers") or 0)
-        new_customers = int(data.get("new_customers") or 0)
-        repeat_customers = int(data.get("repeat_customers") or 0)
-        expenses = float(data.get("expenses") or 0)
-        deposited = float(data.get("deposited") or 0)
-        discounts = float(data.get("discounts") or 0)
-        top_products = (data.get("top_products") or "").strip()
-        notes = (data.get("notes") or "").strip()
+        try:
+            period = (str(data.get("period") or datetime.now().strftime("%Y-%m"))).strip()
+            sales = float(data.get("sales") or 0)
+            invoices = int(float(data.get("invoices") or 0))
+            customers = int(float(data.get("customers") or 0))
+            new_customers = int(float(data.get("new_customers") or 0))
+            repeat_customers = int(float(data.get("repeat_customers") or 0))
+            expenses = float(data.get("expenses") or 0)
+            deposited = float(data.get("deposited") or 0)
+            discounts = float(data.get("discounts") or 0)
+            top_products = (str(data.get("top_products") or "")).strip()
+            notes = (str(data.get("notes") or "")).strip()
+        except (ValueError, TypeError):
+            raise HTTPException(400, "فيه قيمة غير رقمية في الحقول — تأكد أن المبالغ والأعداد أرقام صحيحة")
 
         if sales <= 0:
-            raise HTTPException(400, "أدخل قيمة مبيعات صحيحة")
+            raise HTTPException(400, "أدخل قيمة مبيعات صحيحة (أكبر من صفر)")
 
         prev = s.exec(
             select(CompanyEntry).where(CompanyEntry.branch_id == branch.id).order_by(CompanyEntry.created_at.desc())
@@ -1723,18 +1730,33 @@ def company_entry(data: dict, user: User = Depends(get_current_user)):
         prev_sales = prev.sales if prev else None
 
         m = compute_company_metrics(sales, invoices, customers, repeat_customers, expenses, prev_sales)
-        entry = CompanyEntry(
-            company_id=company.id, branch_id=branch.id, branch_name=branch.name, period=period,
-            sales=sales, invoices=invoices, customers=customers, new_customers=new_customers,
-            repeat_customers=repeat_customers, expenses=expenses, discounts=discounts,
-            deposited=deposited,
-            top_products=top_products, notes=notes,
-            profit=m["profit"], margin=m["margin"], avg_invoice=m["avg_invoice"],
-            repeat_rate=m["repeat_rate"], growth=m["growth"], branch_score=m["branch_score"],
-        )
-        s.add(entry)
-        s.commit()
-        s.refresh(entry)
+
+        def build_entry():
+            return CompanyEntry(
+                company_id=company.id, branch_id=branch.id, branch_name=branch.name, period=period,
+                sales=sales, invoices=invoices, customers=customers, new_customers=new_customers,
+                repeat_customers=repeat_customers, expenses=expenses, discounts=discounts,
+                deposited=deposited, top_products=top_products, notes=notes,
+                profit=m["profit"], margin=m["margin"], avg_invoice=m["avg_invoice"],
+                repeat_rate=m["repeat_rate"], growth=m["growth"], branch_score=m["branch_score"],
+            )
+
+        try:
+            entry = build_entry()
+            s.add(entry)
+            s.commit()
+            s.refresh(entry)
+        except Exception as e:
+            s.rollback()
+            # محاولة إصلاح ذاتي: عمود ناقص؟ شغّل الترحيل وأعد المحاولة مرة
+            try:
+                run_migrations()
+                entry = build_entry()
+                s.add(entry)
+                s.commit()
+                s.refresh(entry)
+            except Exception as e2:
+                raise HTTPException(500, f"تعذّر حفظ البيانات: {str(e2)[:180]}")
 
         log_activity(user.name, f"أدخل بيانات فرع {branch.name} ({period})", user.email)
         return {"ok": True, "entry_id": entry.id, "branch": branch.name, "metrics": m}
