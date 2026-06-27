@@ -40,6 +40,8 @@
   .err{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#fca5a5;padding:11px 14px;border-radius:11px;font-size:13.5px;margin-bottom:14px;display:none}
   .hint{font-size:12px;color:var(--txt-mute);margin-top:5px}
   .sec-title{font-size:12.5px;font-weight:800;color:var(--mint);letter-spacing:.02em;margin:6px 0 12px;text-transform:none}
+  .lvlBtn{flex:1;background:var(--panel2);border:1px solid var(--line);color:var(--txt-soft);padding:10px 6px;border-radius:11px;font-family:inherit;font-weight:800;cursor:pointer;font-size:13.5px;line-height:1.3;transition:.15s}
+  .lvlBtn.on{background:var(--mint);color:#04130d;border-color:var(--mint)}
 
   .result{display:none}
   .metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:6px 0 16px}
@@ -87,6 +89,14 @@
       <div class="hint">تقدر تسجّل فترات سابقة (سنوات ماضية) لبناء الاتجاه والتنبؤ</div>
     </div>
 
+    <div class="sec-title" id="levelTitle">مستوى الإدخال</div>
+    <div style="display:flex;gap:8px;margin-bottom:6px" id="levels">
+      <button type="button" class="lvlBtn on" data-l="1" onclick="setLevel(1)">⚡ سريع<br><span style="font-weight:500;font-size:11px;opacity:.8">٥ دقائق</span></button>
+      <button type="button" class="lvlBtn" data-l="2" onclick="setLevel(2)">📊 متوسط<br><span style="font-weight:500;font-size:11px;opacity:.8">١٥ دقيقة</span></button>
+      <button type="button" class="lvlBtn" data-l="3" onclick="setLevel(3)">🧠 متقدّم<br><span style="font-weight:500;font-size:11px;opacity:.8">شامل</span></button>
+    </div>
+    <div class="hint" id="sectorHint" style="margin-bottom:14px">الحقول تتغيّر حسب قطاع شركتك ومستوى الإدخال</div>
+
     <div class="sec-title">الأساسيات</div>
     <div class="row2">
       <div class="field"><label>إجمالي المبيعات (ريال)</label><input type="number" id="sales" placeholder="0" inputmode="decimal"></div>
@@ -97,15 +107,12 @@
       <div class="field"><label>عدد العملاء</label><input type="number" id="customers" placeholder="0" inputmode="numeric"></div>
     </div>
 
-    <div class="sec-title">تفاصيل إضافية (اختياري)</div>
-    <div class="row2">
-      <div class="field"><label>عملاء جدد</label><input type="number" id="new_customers" placeholder="0" inputmode="numeric"></div>
-      <div class="field"><label>عملاء متكررون</label><input type="number" id="repeat_customers" placeholder="0" inputmode="numeric"></div>
+    <div id="extraWrap" style="display:none">
+      <div class="sec-title" id="extraTitle">تفاصيل إضافية</div>
+      <div id="extraFields"></div>
     </div>
-    <div class="field"><label>الخصومات (ريال)</label><input type="number" id="discounts" placeholder="0" inputmode="decimal"></div>
-    <div class="field"><label>المبلغ المُودَع في البنك (ريال)</label><input type="number" id="deposited" placeholder="0" inputmode="decimal"><div class="hint">يُفعّل كشف فجوة البيع-الإيداع في خدمة كشف التسرّب</div></div>
-    <div class="field"><label>أكثر ٣ أصناف مبيعاً</label><input id="top_products" placeholder="مثال: لاتيه | كرواسون | موهيتو"><div class="hint">افصل بينها بعلامة |</div></div>
-    <div class="field"><label>ملاحظات</label><textarea id="notes" rows="2" placeholder="أي سياق يساعد التحليل…"></textarea></div>
+
+    <div class="field" style="margin-top:14px"><label>ملاحظات</label><textarea id="notes" rows="2" placeholder="أي سياق يساعد التحليل…"></textarea></div>
 
     <button class="btn btn-mint" id="save" style="width:100%;padding:14px" onclick="saveEntry()">حفظ وحساب المؤشرات</button>
   </div>
@@ -135,7 +142,64 @@
 const TOKEN = localStorage.getItem("nabbah_token") || "";
 if(!TOKEN){ window.location.href="login.html"; }
 let lastBranchId=null, lastBranchName="", BRANCHES=[];
+let SECTOR="other", LEVEL=1, RENDERED=[];
 const AR_MONTHS=["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
+
+// كتالوج الحقول: الحقول ذات key تُحفظ كأعمدة، والباقي ضمن البيانات الإضافية حسب القطاع
+const L2_COMMON=[
+  {key:"new_customers",label:"عملاء جدد",t:"num"},
+  {key:"repeat_customers",label:"عملاء متكررون",t:"num"},
+  {key:"discounts",label:"الخصومات (ريال)",t:"num"},
+  {key:"deposited",label:"المبلغ المُودَع بالبنك (ريال)",t:"num",hint:"يُفعّل كشف فجوة البيع-الإيداع"},
+  {label:"الرواتب (ريال)",t:"num"},
+  {label:"الإيجارات (ريال)",t:"num"},
+  {label:"التسويق (ريال)",t:"num"},
+  {label:"قيمة المخزون (ريال)",t:"num"},
+  {label:"المرتجعات (ريال)",t:"num"},
+  {key:"top_products",label:"أكثر ٣ أصناف مبيعاً",t:"text",hint:"افصل بينها بعلامة |"},
+];
+const SECTOR_L2={
+  fnb:[{label:"نسبة الهدر %",t:"num"},{label:"الطلبات أونلاين",t:"num"},{label:"متوسط وقت التحضير (دقيقة)",t:"num"}],
+  retail:[{label:"معدل التحويل %",t:"num"},{label:"المبيعات لكل متر مربع (ريال)",t:"num"},{label:"دوران المخزون (مرة)",t:"num"}],
+  ecommerce:[{label:"معدل التحويل %",t:"num"},{label:"السلات المتروكة %",t:"num"},{label:"تكلفة الشحن (ريال)",t:"num"},{label:"تكلفة اكتساب العميل CAC (ريال)",t:"num"}],
+  manufacturing:[{label:"الطاقة الإنتاجية %",t:"num"},{label:"نسبة العيوب %",t:"num"},{label:"عدد الأعطال",t:"num"}],
+  contracting:[{label:"المشاريع النشطة",t:"num"},{label:"المشاريع المتأخرة",t:"num"},{label:"نسبة الإنجاز %",t:"num"}],
+  distribution:[{label:"عدد نقاط البيع",t:"num"},{label:"معدل التوزيع %",t:"num"},{label:"تأخر الموردين (يوم)",t:"num"}],
+  services:[{label:"عدد العقود",t:"num"},{label:"رضا العملاء %",t:"num"},{label:"مدة الاستجابة (ساعة)",t:"num"}],
+  clinics:[{label:"عدد المرضى",t:"num"},{label:"نسبة الإشغال %",t:"num"},{label:"متوسط الإيراد للمريض (ريال)",t:"num"}],
+  hospitals:[{label:"عدد المرضى",t:"num"},{label:"نسبة إشغال الأسرّة %",t:"num"},{label:"متوسط مدة البقاء (يوم)",t:"num"}],
+  logistics:[{label:"عدد الشحنات",t:"num"},{label:"التسليم في الوقت %",t:"num"},{label:"تكلفة لكل شحنة (ريال)",t:"num"}],
+  other:[],
+};
+const L3_COMMON=[
+  {label:"عدد الموظفين",t:"num"},{label:"المستقيلون",t:"num"},{label:"معدل دوران الموظفين %",t:"num"},
+  {label:"الذمم المدينة (ريال)",t:"num"},{label:"الذمم الدائنة (ريال)",t:"num"},
+  {label:"NPS",t:"num"},{label:"عدد الشكاوى",t:"num"},
+];
+const SECTOR_LABEL={fnb:"مطاعم وكافيهات",retail:"تجارة تجزئة",ecommerce:"تجارة إلكترونية",manufacturing:"تصنيع",contracting:"مقاولات",distribution:"توزيع",services:"خدمات",clinics:"عيادات",hospitals:"مستشفيات",logistics:"لوجستيات",other:"شركة"};
+
+function fieldHTML(f,id){
+  const hint=f.hint?`<div class="hint">${f.hint}</div>`:"";
+  const type=f.t==="text"?"":'type="number" inputmode="decimal"';
+  return `<div class="field"><label>${f.label}</label><input id="${id}" ${type} placeholder="${f.t==='text'?'':'0'}">${hint}</div>`;
+}
+function renderFields(){
+  RENDERED=[];
+  const wrap=document.getElementById("extraWrap");
+  if(LEVEL<2){ wrap.style.display="none"; document.getElementById("extraFields").innerHTML=""; return; }
+  let list=[...L2_COMMON, ...(SECTOR_L2[SECTOR]||[])];
+  if(LEVEL>=3) list=list.concat(L3_COMMON);
+  let html="";
+  list.forEach((f,i)=>{ const id="x_"+i; RENDERED.push({id,key:f.key||null,label:f.label,t:f.t}); html+=fieldHTML(f,id); });
+  document.getElementById("extraFields").innerHTML=html;
+  wrap.style.display="block";
+  document.getElementById("extraTitle").textContent = LEVEL>=3 ? "تفاصيل متقدّمة (مالية · موارد بشرية · قطاع)" : "تفاصيل حسب القطاع";
+}
+function setLevel(n){
+  LEVEL=n;
+  document.querySelectorAll(".lvlBtn").forEach(b=>b.classList.toggle("on",+b.dataset.l===n));
+  renderFields();
+}
 
 async function api(path,opts={}){
   const res=await fetch(path,{...opts,headers:{"Content-Type":"application/json","Authorization":"Bearer "+TOKEN,...(opts.headers||{})}});
@@ -172,6 +236,9 @@ async function init(){
       return;
     }
     document.getElementById("ph").textContent=`شركة: ${info.active.name} — اكتب الفرع وأدخل بياناته.`;
+    SECTOR=(info.active.sector)||"other";
+    document.getElementById("sectorHint").textContent=`قطاع شركتك: ${SECTOR_LABEL[SECTOR]||"شركة"} — الحقول تتكيّف معه. ابدأ بالمستوى السريع، وكل ما تدخل أكثر يصير التحليل أعمق.`;
+    renderFields();
     BRANCHES=info.branches||[];
     document.getElementById("branchList").innerHTML=BRANCHES.map(b=>`<option value="${b.name}">${b.city||""}</option>`).join("");
   }catch(e){ showErr(e.message); }
@@ -197,18 +264,22 @@ async function saveEntry(){
   const btn=document.getElementById("save"); btn.disabled=true; btn.textContent="جارٍ الحساب…";
   try{
     const branch_id=await resolveBranchId(typed);
+    const num=id=>{const el=document.getElementById(id);return el?(+el.value||0):0;};
     const payload={ branch_id, period:getPeriod(),
       sales,
-      expenses:+document.getElementById("expenses").value||0,
-      invoices:+document.getElementById("invoices").value||0,
-      customers:+document.getElementById("customers").value||0,
-      new_customers:+document.getElementById("new_customers").value||0,
-      repeat_customers:+document.getElementById("repeat_customers").value||0,
-      discounts:+document.getElementById("discounts").value||0,
-      deposited:+document.getElementById("deposited").value||0,
-      top_products:document.getElementById("top_products").value.trim(),
+      expenses:num("expenses"),
+      invoices:num("invoices"),
+      customers:num("customers"),
       notes:document.getElementById("notes").value.trim(),
+      extra:{},
     };
+    // الحقول الديناميكية: ذات key → أعمدة، الباقي → extra (حسب القطاع)
+    RENDERED.forEach(f=>{
+      const el=document.getElementById(f.id); if(!el) return;
+      const v=el.value.trim(); if(v==="") return;
+      if(f.key){ payload[f.key] = f.t==="text" ? v : (+v||0); }
+      else { payload.extra[f.label] = v; }
+    });
     const r=await api("/company/entry",{method:"POST",body:JSON.stringify(payload)});
     lastBranchId=branch_id;
     showResult(r);
@@ -250,7 +321,8 @@ async function analyzeBranch(){
 }
 
 function resetForm(){
-  ["branch","sales","expenses","invoices","customers","new_customers","repeat_customers","discounts","deposited","top_products","notes"].forEach(id=>document.getElementById(id).value="");
+  ["branch","sales","expenses","invoices","customers","notes"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
+  renderFields();
   document.getElementById("result").style.display="none";
   document.getElementById("formCard").style.display="block";
   window.scrollTo({top:0,behavior:"smooth"});
