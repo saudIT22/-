@@ -1488,6 +1488,40 @@ def page_company_report():
 def page_company_branches():
     return FileResponse("company-branches.html")
 
+@app.get("/company-tax.html")
+def page_company_tax():
+    return FileResponse("company-tax.html")
+
+
+# ===== الضريبة والزكاة: بيانات افتراضية من الشركة =====
+@app.get("/company/tax-defaults")
+def company_tax_defaults(user: User = Depends(get_current_user)):
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id)
+        if not company or company.owner_id != user.id:
+            raise HTTPException(403, "غير مصرّح")
+        if company.is_active != 1:
+            raise HTTPException(402, "شركتك قيد التفعيل — فعّلها من لوحة الإدارة")
+        branches = s.exec(
+            select(CompanyBranch).where(CompanyBranch.company_id == company.id, CompanyBranch.is_active == 1)
+        ).all()
+        sales = expenses = 0.0
+        for b in branches:
+            e = s.exec(
+                select(CompanyEntry).where(CompanyEntry.branch_id == b.id).order_by(CompanyEntry.created_at.desc())
+            ).first()
+            if e:
+                sales += e.sales
+                expenses += e.expenses
+        return {
+            "company": company.name,
+            "sales": round(sales),
+            "expenses": round(expenses),
+            "profit": round(sales - expenses),
+        }
+
 
 # ===== معلومات الشركة النشطة + قائمة الشركات (للتوجيه والتبديل) =====
 @app.get("/company/info")
