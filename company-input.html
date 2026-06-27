@@ -166,6 +166,11 @@ async function init(){
   try{
     const info=await api("/company/info");
     if(!info.has_company){ window.location.href="company-register.html"; return; }
+    if(info.subscribed===false){
+      document.getElementById("formCard").style.display="none";
+      document.getElementById("ph").innerHTML=`⏳ شركة "${info.active.name}" قيد التفعيل — بعد تفعيل الاشتراك من الإدارة تنفتح لك إضافة البيانات. <a href="company-dashboard.html" style="color:var(--mint)">رجوع للوحة</a>`;
+      return;
+    }
     document.getElementById("ph").textContent=`شركة: ${info.active.name} — اكتب الفرع وأدخل بياناته.`;
     BRANCHES=info.branches||[];
     document.getElementById("branchList").innerHTML=BRANCHES.map(b=>`<option value="${b.name}">${b.city||""}</option>`).join("");
