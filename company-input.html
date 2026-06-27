@@ -99,6 +99,7 @@
       <div class="field"><label>عملاء متكررون</label><input type="number" id="repeat_customers" placeholder="0" inputmode="numeric"></div>
     </div>
     <div class="field"><label>الخصومات (ريال)</label><input type="number" id="discounts" placeholder="0" inputmode="decimal"></div>
+    <div class="field"><label>المبلغ المُودَع في البنك (ريال)</label><input type="number" id="deposited" placeholder="0" inputmode="decimal"><div class="hint">يُفعّل كشف فجوة البيع-الإيداع في خدمة كشف التسرّب</div></div>
     <div class="field"><label>أكثر ٣ أصناف مبيعاً</label><input id="top_products" placeholder="مثال: لاتيه | كرواسون | موهيتو"><div class="hint">افصل بينها بعلامة |</div></div>
     <div class="field"><label>ملاحظات</label><textarea id="notes" rows="2" placeholder="أي سياق يساعد التحليل…"></textarea></div>
 
@@ -170,6 +171,7 @@ async function saveEntry(){
     new_customers:+document.getElementById("new_customers").value||0,
     repeat_customers:+document.getElementById("repeat_customers").value||0,
     discounts:+document.getElementById("discounts").value||0,
+    deposited:+document.getElementById("deposited").value||0,
     top_products:document.getElementById("top_products").value.trim(),
     notes:document.getElementById("notes").value.trim(),
   };
@@ -216,7 +218,7 @@ async function analyzeBranch(){
 }
 
 function resetForm(){
-  ["sales","expenses","invoices","customers","new_customers","repeat_customers","discounts","top_products","notes"].forEach(id=>document.getElementById(id).value="");
+  ["sales","expenses","invoices","customers","new_customers","repeat_customers","discounts","deposited","top_products","notes"].forEach(id=>document.getElementById(id).value="");
   document.getElementById("result").style.display="none";
   document.getElementById("formCard").style.display="block";
   window.scrollTo({top:0,behavior:"smooth"});
