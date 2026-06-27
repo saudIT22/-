@@ -73,9 +73,16 @@
     <div class="field">
       <label>نشاط الشركة</label>
       <div class="sectors" id="sectors">
-        <div class="sec active" data-s="retail">🛍️ تجزئة</div>
-        <div class="sec" data-s="fnb">🍽️ مطاعم وكافيهات</div>
+        <div class="sec active" data-s="fnb">🍽️ مطاعم وكافيهات</div>
+        <div class="sec" data-s="retail">🛍️ تجارة تجزئة</div>
+        <div class="sec" data-s="ecommerce">🛒 تجارة إلكترونية</div>
+        <div class="sec" data-s="manufacturing">🏭 تصنيع</div>
+        <div class="sec" data-s="contracting">🏗️ مقاولات</div>
+        <div class="sec" data-s="distribution">🚚 توزيع</div>
         <div class="sec" data-s="services">🧰 خدمات</div>
+        <div class="sec" data-s="clinics">🩺 عيادات</div>
+        <div class="sec" data-s="hospitals">🏥 مستشفيات</div>
+        <div class="sec" data-s="logistics">📦 لوجستيات</div>
         <div class="sec" data-s="other">🏢 أخرى</div>
       </div>
     </div>
@@ -104,7 +111,7 @@
 <script>
 const TOKEN = localStorage.getItem("nabbah_token") || "";
 if(!TOKEN){ window.location.href="login.html"; }
-let sector="retail";
+let sector="fnb";
 
 document.querySelectorAll(".sec").forEach(el=>el.onclick=()=>{
   document.querySelectorAll(".sec").forEach(x=>x.classList.remove("active"));
