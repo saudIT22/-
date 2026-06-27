@@ -8,7 +8,7 @@
 <style>
   :root{--mint:#10b981;--mint-deep:#047857;--mint-darker:#065f46;--mint-soft:#ecfdf5;
     --ink:#0f1d18;--ink-soft:#475a52;--ink-muted:#8ba89f;--bg:#f4f9f7;--line:#e0ece8;
-    --red:#ef4444;--red-soft:#fef2f2;--amber:#f59e0b;--amber-soft:#fef3c7;}
+    --red:#ef4444;--red-soft:#fef2f2;--amber:#f59e0b;--amber-soft:#fef3c7;--blue:#3b82f6;--blue-soft:#eff6ff;}
   *{margin:0;padding:0;box-sizing:border-box;font-family:'Tajawal',sans-serif}
   body{background:var(--bg);color:var(--ink);min-height:100vh;padding:20px}
   .wrap{max-width:1200px;margin:0 auto}
@@ -23,8 +23,6 @@
   .out-btn{background:#fff;border:1.5px solid var(--line);padding:8px 16px;border-radius:10px;
     font-family:'Tajawal';font-weight:700;cursor:pointer;color:var(--ink-soft)}
   .out-btn:hover{border-color:var(--red);color:var(--red)}
-
-  /* صندوق دخول */
   .login-box{background:#fff;border:1px solid var(--line);border-radius:18px;padding:38px 34px;
     max-width:420px;margin:60px auto;box-shadow:0 16px 50px rgba(6,95,70,.08)}
   .login-box h2{text-align:center;font-size:22px;font-weight:800;margin-bottom:8px}
@@ -35,15 +33,11 @@
   .btn-primary{width:100%;padding:14px;background:var(--mint);color:#fff;border:none;border-radius:12px;
     font-family:'Tajawal';font-size:16px;font-weight:800;cursor:pointer}
   .btn-primary:hover{background:var(--mint-deep)}
-
-  /* إحصائيات */
   .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
   @media(max-width:760px){.stats{grid-template-columns:repeat(2,1fr)}}
   .stat{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px}
   .stat .lbl{color:var(--ink-muted);font-size:12.5px;font-weight:600;margin-bottom:6px}
   .stat .val{font-size:26px;font-weight:900;color:var(--mint-darker)}
-
-  /* جدول */
   .table-box{background:#fff;border:1px solid var(--line);border-radius:18px;overflow:hidden}
   .table-head{padding:16px 22px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
   .table-head h3{font-size:17px;font-weight:800}
@@ -58,6 +52,7 @@
   .b-active{background:var(--mint-soft);color:var(--mint-darker)}
   .b-inactive{background:var(--red-soft);color:var(--red)}
   .b-trial{background:var(--amber-soft);color:var(--amber)}
+  .b-pending{background:var(--amber-soft);color:var(--amber)}
   .actions{display:flex;gap:6px;flex-wrap:wrap}
   .act-btn{padding:6px 11px;border-radius:8px;font-family:'Tajawal';font-weight:700;cursor:pointer;
     border:none;font-size:12.5px}
@@ -66,8 +61,6 @@
   .act-off{background:#fff;border:1.5px solid var(--line);color:var(--red)}
   .act-off:hover{border-color:var(--red)}
   .empty{text-align:center;padding:60px 20px;color:var(--ink-muted)}
-
-  /* مودال التفعيل */
   .modal-back{position:fixed;inset:0;background:rgba(15,29,24,.55);display:none;align-items:center;justify-content:center;z-index:999;padding:20px}
   .modal-back.show{display:flex}
   .modal{background:#fff;border-radius:18px;padding:28px;max-width:380px;width:100%}
@@ -79,7 +72,6 @@
   .modal-actions button{flex:1;padding:12px;border-radius:10px;font-family:'Tajawal';font-weight:800;cursor:pointer;border:none}
   .cancel{background:#fff;border:1.5px solid var(--line) !important;color:var(--ink-soft)}
   .confirm{background:var(--mint);color:#fff}
-
   .toast{position:fixed;bottom:24px;right:24px;background:var(--mint-darker);color:#fff;
     padding:13px 20px;border-radius:11px;font-weight:700;box-shadow:0 8px 24px rgba(0,0,0,.18);
     z-index:10000;display:none}
@@ -88,10 +80,7 @@
 </style>
 </head>
 <body>
-
 <div class="wrap">
-
-  <!-- صندوق تسجيل دخول الإدارة -->
   <div id="login-screen" class="login-box">
     <h2>🔐 لوحة إدارة نبّاه</h2>
     <p>أدخل كلمة المسؤول للدخول</p>
@@ -99,7 +88,6 @@
     <button class="btn-primary" onclick="loginAdmin()">دخول</button>
   </div>
 
-  <!-- المحتوى الرئيسي بعد الدخول -->
   <div id="main-screen" style="display:none">
     <header>
       <div class="logo">
@@ -130,15 +118,8 @@
         <table id="users-tbl">
           <thead>
             <tr>
-              <th>الاسم</th>
-              <th>البريد</th>
-              <th>الجوال</th>
-              <th>المنشأة</th>
-              <th>الباقة</th>
-              <th>الحالة</th>
-              <th>التحاليل</th>
-              <th>ينتهي</th>
-              <th>إجراء</th>
+              <th>الاسم</th><th>البريد</th><th>الجوال</th><th>المنشأة</th>
+              <th>الباقة</th><th>الحالة</th><th>التحاليل</th><th>ينتهي</th><th>إجراء</th>
             </tr>
           </thead>
           <tbody id="users-body"></tbody>
@@ -146,7 +127,25 @@
       </div>
     </div>
 
-    <!-- سجل النشاط -->
+    <!-- ===== الشركات ===== -->
+    <div class="table-box" style="margin-top:20px">
+      <div class="table-head">
+        <h3>🏢 الشركات المسجّلة</h3>
+        <button class="refresh" onclick="loadCompanies()">🔄 تحديث</button>
+      </div>
+      <div class="table-scroll">
+        <table id="companies-tbl">
+          <thead>
+            <tr>
+              <th>الشركة</th><th>النشاط</th><th>المالك</th><th>البريد</th>
+              <th>الفروع</th><th>التحاليل</th><th>الحالة</th><th>إجراء</th>
+            </tr>
+          </thead>
+          <tbody id="companies-body"></tbody>
+        </table>
+      </div>
+    </div>
+
     <div class="table-box" style="margin-top:20px">
       <div class="table-head">
         <h3>📋 سجل النشاط</h3>
@@ -157,7 +156,6 @@
   </div>
 </div>
 
-<!-- مودال التفعيل -->
 <div class="modal-back" id="modal" onclick="if(event.target===this)closeModal()">
   <div class="modal">
     <h3>تفعيل اشتراك العميل</h3>
@@ -184,7 +182,6 @@
 
 <div class="toast" id="toast"></div>
 
-<!-- مودال تفاصيل العميل -->
 <div class="modal-back" id="detail-modal" onclick="if(event.target===this)closeDetail()">
   <div class="modal" style="max-width:480px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
@@ -199,31 +196,23 @@
   let adminKey = sessionStorage.getItem("nabbah_admin_key") || "";
   let currentUserId = null;
 
-  // عند فتح الصفحة، لو في key محفوظ، جرّب الدخول مباشرة
-  if (adminKey) {
-    showMain();
-    loadUsers();
-  }
+  if (adminKey) { showMain(); loadUsers(); }
 
   function showMain() {
     document.getElementById("login-screen").style.display = "none";
     document.getElementById("main-screen").style.display = "block";
   }
-
   function showLogin() {
     document.getElementById("login-screen").style.display = "block";
     document.getElementById("main-screen").style.display = "none";
   }
-
   async function loginAdmin() {
     const key = document.getElementById("admin-key").value.trim();
     if (!key) { toast("اكتب كلمة المسؤول", true); return; }
     adminKey = key;
     sessionStorage.setItem("nabbah_admin_key", key);
-    showMain();
-    loadUsers();
+    showMain(); loadUsers();
   }
-
   function logoutAdmin() {
     adminKey = "";
     sessionStorage.removeItem("nabbah_admin_key");
@@ -234,18 +223,13 @@
   async function loadUsers() {
     try {
       const res = await fetch("/admin/users", { headers: { "X-Admin-Key": adminKey } });
-      if (res.status === 403) {
-        toast("كلمة المسؤول غير صحيحة", true);
-        logoutAdmin();
-        return;
-      }
+      if (res.status === 403) { toast("كلمة المسؤول غير صحيحة", true); logoutAdmin(); return; }
       const users = await res.json();
       renderUsers(users);
       loadStats();
+      loadCompanies();
       loadActivity();
-    } catch (e) {
-      toast("تعذّر الاتصال بالخادم", true);
-    }
+    } catch (e) { toast("تعذّر الاتصال بالخادم", true); }
   }
 
   async function loadStats() {
@@ -261,6 +245,64 @@
       document.getElementById("s-monthly").innerText = st.monthly_revenue.toLocaleString() + " ﷼";
       document.getElementById("s-yearly").innerText = st.yearly_revenue.toLocaleString() + " ﷼";
     } catch (e) {}
+  }
+
+  async function loadCompanies() {
+    try {
+      const res = await fetch("/admin/companies", { headers: { "X-Admin-Key": adminKey } });
+      if (!res.ok) return;
+      const companies = await res.json();
+      const body = document.getElementById("companies-body");
+      if (!companies || companies.length === 0) {
+        body.innerHTML = '<tr><td colspan="8" class="empty">لا توجد شركات مسجّلة بعد</td></tr>';
+        return;
+      }
+      body.innerHTML = companies.map(c => {
+        const status = c.is_active === 1
+          ? '<span class="badge-pill b-active">مفعّلة</span>'
+          : '<span class="badge-pill b-pending">قيد التفعيل</span>';
+        const btn = c.is_active === 1
+          ? `<button class="act-btn act-off" onclick="deactivateCompany(${c.id},'${escape(c.name)}')">إيقاف</button>`
+          : `<button class="act-btn act-on" onclick="activateCompany(${c.id},'${escape(c.name)}')">تفعيل</button>`;
+        return `<tr>
+          <td><b style="color:#065f46">${escape(c.name)}</b></td>
+          <td>${escape(c.sector)}</td>
+          <td>${escape(c.owner_name)}</td>
+          <td>${escape(c.owner_email)}</td>
+          <td style="text-align:center"><b>${c.branch_count}</b></td>
+          <td style="text-align:center">${c.entries_count}</td>
+          <td>${status}</td>
+          <td><div class="actions">${btn}</div></td>
+        </tr>`;
+      }).join("");
+    } catch (e) {}
+  }
+
+  async function activateCompany(id, name) {
+    try {
+      const res = await fetch("/admin/company-activate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Admin-Key": adminKey },
+        body: JSON.stringify({ company_id: id })
+      });
+      const out = await res.json();
+      if (res.ok) { toast(out.message); loadCompanies(); }
+      else toast(out.detail || "فشل التفعيل", true);
+    } catch (e) { toast("خطأ بالاتصال", true); }
+  }
+
+  async function deactivateCompany(id, name) {
+    if (!confirm("إيقاف شركة " + name + "؟")) return;
+    try {
+      const res = await fetch("/admin/company-deactivate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Admin-Key": adminKey },
+        body: JSON.stringify({ company_id: id })
+      });
+      const out = await res.json();
+      if (res.ok) { toast(out.message); loadCompanies(); }
+      else toast(out.detail || "فشل الإيقاف", true);
+    } catch (e) { toast("خطأ بالاتصال", true); }
   }
 
   async function loadActivity() {
@@ -289,10 +331,7 @@
       body.innerHTML = '<tr><td colspan="9" class="empty">لا يوجد عملاء مسجّلين بعد</td></tr>';
       return;
     }
-    const planNames = {
-      "": "—", "basic": "أساسية", "pro": "احترافية",
-      "executive": "تنفيذية", "trial": "تجربة", "trial_used": "تجربة منتهية"
-    };
+    const planNames = {"": "—","basic": "أساسية","pro": "احترافية","executive": "تنفيذية","trial": "تجربة","trial_used": "تجربة منتهية"};
     body.innerHTML = users.map(u => {
       const statusBadge = u.is_active === 1
         ? (u.plan === "trial" ? '<span class="badge-pill b-trial">تجريبي</span>' : '<span class="badge-pill b-active">مفعّل</span>')
@@ -322,12 +361,10 @@
     document.getElementById("m-email").innerText = email;
     document.getElementById("modal").classList.add("show");
   }
-
   function closeModal() {
     document.getElementById("modal").classList.remove("show");
     currentUserId = null;
   }
-
   async function confirmActivate() {
     const plan = document.getElementById("m-plan").value;
     const days = parseInt(document.getElementById("m-days").value);
@@ -342,7 +379,6 @@
       else toast(out.detail || "فشل التفعيل", true);
     } catch (e) { toast("خطأ بالاتصال", true); }
   }
-
   async function deactivate(userId, email) {
     if (!confirm("إيقاف اشتراك " + email + "؟")) return;
     try {
@@ -370,9 +406,7 @@
         entriesHtml = '<div style="margin-top:12px"><b>التحاليل (' + u.entries.length + '):</b><div style="max-height:140px;overflow-y:auto;margin-top:6px">' +
           u.entries.map(e => `<div style="padding:6px 0;border-bottom:1px solid #f0f5f3;font-size:13px">📊 ${escape(e.restaurant)} <span style="color:#8ba89f">— ${fmt(e.created_at)}</span></div>`).join("") +
           '</div></div>';
-      } else {
-        entriesHtml = '<div style="margin-top:12px;color:#8ba89f">لا توجد تحاليل بعد</div>';
-      }
+      } else { entriesHtml = '<div style="margin-top:12px;color:#8ba89f">لا توجد تحاليل بعد</div>'; }
       document.getElementById("detail-body").innerHTML = `
         <div><b>الاسم:</b> ${escape(u.name)}</div>
         <div><b>البريد:</b> ${escape(u.email)}</div>
@@ -383,15 +417,11 @@
         <div><b>تاريخ التسجيل:</b> ${fmt(u.created_at)}</div>
         <div><b>بداية الاشتراك:</b> ${fmt(u.subscription_start)}</div>
         <div><b>نهاية الاشتراك:</b> ${fmt(u.subscription_end)}</div>
-        ${entriesHtml}
-      `;
+        ${entriesHtml}`;
       document.getElementById("detail-modal").classList.add("show");
     } catch (e) { toast("خطأ بالاتصال", true); }
   }
-
-  function closeDetail() {
-    document.getElementById("detail-modal").classList.remove("show");
-  }
+  function closeDetail() { document.getElementById("detail-modal").classList.remove("show"); }
 
   function toast(msg, isErr) {
     const t = document.getElementById("toast");
@@ -399,7 +429,6 @@
     t.className = "toast show" + (isErr ? " err" : "");
     setTimeout(() => t.classList.remove("show"), 3000);
   }
-
   document.getElementById("admin-key").addEventListener("keydown", e => { if (e.key === "Enter") loginAdmin(); });
 </script>
 </body>
