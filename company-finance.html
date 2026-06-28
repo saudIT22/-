@@ -37,6 +37,14 @@
   .saved-box{background:var(--panel2);border:1px dashed var(--line);border-radius:10px;padding:10px 12px;margin-bottom:14px;font-size:12.5px;color:var(--txt-mute);display:none}
   .links{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 40px}
   @media(max-width:560px){.grid2,.row2{grid-template-columns:1fr}}
+
+  .ai-out{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:16px;margin-top:13px;font-size:14px;line-height:1.85;display:none}
+  .ai-out.show{display:block}
+  .ai-out h1,.ai-out h2{font-size:15.5px;margin:13px 0 6px;color:var(--mint)}
+  .ai-out h3{font-size:14px;margin:11px 0 5px}
+  .ai-out p{margin:6px 0;color:var(--txt-soft)}
+  .ai-out ul,.ai-out ol{margin:6px 22px;color:var(--txt-soft)}
+  .ai-out strong{color:var(--txt)}
 </style>
 </head>
 <body>
@@ -105,6 +113,14 @@
       <button class="btn btn-mint" id="saveBtn" style="width:100%;padding:13px;margin-top:8px" onclick="save()">حفظ بيانات الوحدة المالية الموسّعة</button>
     </div>
   </div>
+
+
+    <div class="panel">
+      <h2>🧑‍💼 التحليل التنفيذي للوحدة</h2>
+      <div class="sub">مستشارك التنفيذي في نبّاه يقرأ بيانات هذه الوحدة + بيانات الفروع الأساسية ويعطيك أسباب وقرارات</div>
+      <button class="btn btn-mint" id="anBtn" style="width:100%;padding:13px" onclick="analyze()">اطلب التحليل التنفيذي</button>
+      <div class="ai-out" id="aiOut"></div>
+    </div>
 
   <div class="links">
     <a class="btn btn-ghost" href="company-dashboard.html">اللوحة</a>
@@ -211,6 +227,38 @@ async function save(){
   }
   btn.disabled=false; btn.textContent="حفظ بيانات الوحدة المالية الموسّعة";
 }
+
+async function analyze(){
+  const btn=document.getElementById("anBtn"), out=document.getElementById("aiOut");
+  const sv=document.getElementById("scope").value;
+  btn.disabled=true; btn.textContent="جارٍ التحليل…";
+  out.classList.remove("show");
+  try{
+    const payload = sv ? {scope:"branch", branch_id:+sv} : {scope:"company"};
+    const r=await api("/company/analyze",{method:"POST",body:JSON.stringify(payload)});
+    out.innerHTML=mdToHtml(r.analysis||"");
+    out.classList.add("show");
+    out.scrollIntoView({behavior:"smooth",block:"nearest"});
+  }catch(e){
+    out.innerHTML=`<p style="color:var(--red)">${e.message}</p>`;
+    out.classList.add("show");
+  }
+  btn.disabled=false; btn.textContent="إعادة التحليل";
+}
+
+function mdToHtml(md){
+  if(!md) return "";
+  let h=md.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  h=h.replace(/^### (.+)$/gm,"<h3>$1</h3>");
+  h=h.replace(/^## (.+)$/gm,"<h2>$1</h2>");
+  h=h.replace(/^# (.+)$/gm,"<h1>$1</h1>");
+  h=h.replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>");
+  h=h.replace(/^[-*] (.+)$/gm,"<li>$1</li>");
+  h=h.replace(/(<li>.*<\/li>\n?)+/g,m=>"<ul>"+m+"</ul>");
+  h=h.split(/\n\n+/).map(p=>p.match(/^<(h\d|ul|ol|li)/)?p:`<p>${p.replace(/\n/g,"<br>")}</p>`).join("\n");
+  return h;
+}
+
 load();
 </script>
 </body>
