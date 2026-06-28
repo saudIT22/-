@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نبّاه · مركز القيادة التنفيذي</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0a0f0c;--panel:#101a15;--panel2:#0e1712;--line:#1d2c24;--mint:#10b981;--mint-deep:#0c8f64;--gold:#f5b301;--orange:#f59e0b;--red:#ef4444;--blue:#3b82f6;--purple:#a855f7;--txt:#e8f1ec;--txt-soft:#9fb4aa;--txt-mute:#678075;--r:16px;}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--txt);line-height:1.7;min-height:100vh}
+  body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.5;background:radial-gradient(circle at 1px 1px,rgba(16,185,129,.05) 1px,transparent 0);background-size:26px 26px}
+  a{text-decoration:none;color:inherit}
+  .wrap{max-width:980px;margin:0 auto;padding:0 16px;position:relative;z-index:1}
+  header{position:sticky;top:0;z-index:40;background:rgba(10,15,12,.86);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+  .head-in{max-width:980px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:900;font-size:20px;color:#fff}
+  .brand .bell{width:36px;height:36px;border-radius:11px;background:var(--mint);display:grid;place-items:center;font-size:17px;transform:rotate(-5deg)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;font-family:inherit;font-weight:700;cursor:pointer;border:none;border-radius:11px;font-size:14px;transition:.18s;text-decoration:none}
+  .btn-ghost{background:var(--panel);color:var(--txt-soft);padding:10px 15px;border:1px solid var(--line)}
+  .btn-mint{background:var(--mint);color:#04130d;padding:10px 16px}.btn-mint:hover{background:var(--mint-deep)}
+  .hero{padding:24px 0 14px}
+  .hero h1{font-size:26px;font-weight:900;margin-bottom:5px}
+  .hero p{color:var(--txt-soft);font-size:14.5px}
+  .hero .stamp{color:var(--txt-mute);font-size:12.5px;margin-top:4px}
+  .state{padding:50px 20px;text-align:center;color:var(--txt-soft)}
+  .spin{width:32px;height:32px;border:3px solid var(--line);border-top-color:var(--mint);border-radius:50%;animation:sp 1s linear infinite;margin:0 auto 12px}@keyframes sp{to{transform:rotate(360deg)}}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+  .k{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px}
+  .k .l{font-size:11.5px;color:var(--txt-soft);font-weight:700}
+  .k .v{font-size:22px;font-weight:900;margin-top:4px;letter-spacing:-.02em}
+  .k .v small{font-size:13px;color:var(--txt-mute);font-weight:700}
+
+  .section{margin-bottom:18px}
+  .section-h{display:flex;align-items:center;gap:10px;margin-bottom:11px}
+  .section-h .t{font-size:18px;font-weight:900}
+  .section-h .c{margin-inline-start:auto;font-size:12.5px;color:var(--txt-mute);font-weight:700}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 17px;margin-bottom:10px;display:flex;gap:13px;align-items:flex-start}
+  .card .ico{font-size:22px;flex-shrink:0;width:40px;height:40px;display:grid;place-items:center;border-radius:11px;background:var(--panel2)}
+  .card .body{flex:1;min-width:0}
+  .card .pr{font-size:11px;font-weight:800;padding:2px 9px;border-radius:100px;display:inline-block;margin-bottom:5px}
+  .card .pr.urgent{background:rgba(239,68,68,.16);color:#fca5a5}
+  .card .pr.important{background:rgba(245,158,11,.16);color:#fbbf24}
+  .card .pr.opp{background:rgba(16,185,129,.16);color:#6ee7b7}
+  .card .title{font-weight:800;font-size:15px;margin-bottom:3px}
+  .card .detail{font-size:13.5px;color:var(--txt-soft);line-height:1.65}
+  .card .act{margin-top:8px}
+  .card .act a{font-size:12.5px;color:var(--mint);font-weight:700}
+  .card.urgent{border-color:rgba(239,68,68,.35)}
+  .card.opp{border-color:rgba(16,185,129,.25)}
+
+  .alerts{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:18px}
+  .alert-item{display:flex;gap:9px;align-items:center;padding:7px 0;font-size:13.5px;color:var(--txt-soft)}
+  .alert-item:not(:last-child){border-bottom:1px solid var(--line)}
+
+  .empty-good{text-align:center;padding:26px;background:var(--panel);border:1px solid var(--line);border-radius:14px;color:var(--txt-soft)}
+  .empty-good .e{font-size:34px;margin-bottom:6px}
+  .data-coverage{background:linear-gradient(160deg,rgba(59,130,246,.1),transparent);border:1px solid rgba(59,130,246,.3);border-radius:12px;padding:13px 15px;margin-bottom:18px;display:flex;gap:11px;align-items:center;font-size:13.5px}
+  .data-coverage .ico{font-size:22px}
+  .data-coverage b{color:#93c5fd}
+
+  .links{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 40px}
+  @media(max-width:760px){.kpis{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<header>
+  <div class="head-in">
+    <a class="brand" href="company-dashboard.html"><span class="bell">🔔</span>نبّاه</a>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-mint" onclick="load()" id="refreshBtn">🔄 تحديث</button>
+      <a class="btn btn-ghost" href="company-dashboard.html">اللوحة</a>
+    </div>
+  </div>
+</header>
+<div class="wrap">
+  <div class="hero">
+    <h1>🎛️ مركز القيادة التنفيذي</h1>
+    <p>كل ما تحتاجه كرئيس تنفيذي في شاشة واحدة — قرارات، فرص، تنبيهات</p>
+    <div class="stamp" id="stamp"></div>
+  </div>
+
+  <div id="loading" class="state"><div class="spin"></div>جارٍ تجميع كل المصادر…</div>
+  <div id="error" class="state" style="display:none;color:var(--red)"></div>
+
+  <div id="content" style="display:none">
+    <div class="kpis" id="kpis"></div>
+    <div class="data-coverage" id="coverage" style="display:none"></div>
+    <div id="alertsBox"></div>
+
+    <div class="section">
+      <div class="section-h"><div class="t">⚡ قرارات تحتاج اتخاذها اليوم</div><div class="c" id="decCount"></div></div>
+      <div id="decisions"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-h"><div class="t">🌱 فرص النمو</div><div class="c" id="oppCount"></div></div>
+      <div id="opportunities"></div>
+    </div>
+  </div>
+
+  <div class="links">
+    <a class="btn btn-ghost" href="company-dashboard.html">اللوحة الرئيسية</a>
+    <a class="btn btn-ghost" href="company-branches.html">مقارنة الفروع</a>
+    <a class="btn btn-ghost" href="company-cashflow.html">التدفق النقدي</a>
+    <a class="btn btn-ghost" href="company-leakage.html">كشف التسرّب</a>
+  </div>
+</div>
+<script>
+const TOKEN=localStorage.getItem("nabbah_token")||"";
+if(!TOKEN){ window.location.href="login.html"; }
+async function api(p){
+  const r=await fetch(p,{headers:{"Authorization":"Bearer "+TOKEN}});
+  if(r.status===401){ localStorage.removeItem("nabbah_token"); window.location.href="login.html"; throw new Error("جلسة"); }
+  const d=await r.json().catch(()=>({}));
+  const er=new Error(d.detail||"خطأ"); er.status=r.status;
+  if(!r.ok) throw er;
+  return d;
+}
+const fmt=n=>(Math.round(n)||0).toLocaleString("en-US");
+
+async function load(){
+  document.getElementById("loading").style.display="block";
+  document.getElementById("content").style.display="none";
+  document.getElementById("error").style.display="none";
+  document.getElementById("refreshBtn").disabled=true;
+  try{
+    const d=await api("/company/command-center");
+    document.getElementById("loading").style.display="none";
+    document.getElementById("content").style.display="block";
+    document.getElementById("stamp").textContent=`${d.company.name} · ${d.company.sector} · ${d.generated_at}`;
+    renderKPIs(d.kpis);
+    renderCoverage(d);
+    renderAlerts(d.alerts);
+    renderDecisions(d.decisions);
+    renderOpportunities(d.opportunities);
+  }catch(e){
+    document.getElementById("loading").style.display="none";
+    const er=document.getElementById("error"); er.style.display="block";
+    if(e.status===402) er.innerHTML=`⏳ شركتك قيد التفعيل — فعّلها من لوحة الإدارة. <a href="company-dashboard.html" style="color:var(--mint)">رجوع</a>`;
+    else if(e.status===403) er.innerHTML=`<a href="company-register.html" style="color:var(--mint)">سجّل شركتك أولاً</a>`;
+    else er.textContent=e.message;
+  }
+  document.getElementById("refreshBtn").disabled=false;
+}
+
+function renderKPIs(k){
+  document.getElementById("kpis").innerHTML=`
+    <div class="k"><div class="l">إجمالي المبيعات</div><div class="v">${fmt(k.total_sales)}<small> ر</small></div></div>
+    <div class="k"><div class="l">صافي الربح</div><div class="v" style="color:${k.total_profit>=0?'var(--mint)':'var(--red)'}">${fmt(k.total_profit)}<small> ر</small></div></div>
+    <div class="k"><div class="l">هامش الربح</div><div class="v">${k.margin}<small>%</small></div></div>
+    <div class="k"><div class="l">الفروع النشطة</div><div class="v">${k.branches_with_data}<small> / ${k.branches_count}</small></div></div>`;
+}
+
+function renderCoverage(d){
+  const box=document.getElementById("coverage");
+  const pct=Math.round((d.modules_filled/d.modules_total)*100);
+  if(pct<60){
+    box.style.display="flex";
+    box.innerHTML=`<span class="ico">🧩</span><div>تغطية البيانات: <b>${pct}%</b> (${d.modules_filled}/${d.modules_total} وحدة). كل وحدة إضافية تزيد دقة التحليل والتنبؤات. <a href="company-dashboard.html" style="color:var(--mint)">اذهب للوحات</a></div>`;
+  }else box.style.display="none";
+}
+
+function renderAlerts(arr){
+  const box=document.getElementById("alertsBox");
+  if(!arr||!arr.length){ box.innerHTML=""; return; }
+  box.innerHTML=`<div class="alerts">${arr.map(a=>`<div class="alert-item"><span style="font-size:17px">${a.icon}</span><span>${a.msg}</span></div>`).join("")}</div>`;
+}
+
+function renderDecisions(arr){
+  document.getElementById("decCount").textContent=arr.length?`${arr.length} قرار`:"";
+  const box=document.getElementById("decisions");
+  if(!arr.length){
+    box.innerHTML=`<div class="empty-good"><div class="e">✅</div><div style="font-weight:800;color:var(--mint)">لا قرارات عاجلة</div><div style="font-size:13px;margin-top:4px">شركتك في وضع مستقر — راجع الفرص أدناه</div></div>`;
+    return;
+  }
+  box.innerHTML=arr.map(d=>{
+    const cls=d.priority==="عاجل"?"urgent":"important";
+    return `<div class="card ${d.priority==='عاجل'?'urgent':''}">
+      <div class="ico">${d.icon}</div>
+      <div class="body">
+        <span class="pr ${cls}">${d.priority}</span>
+        <div class="title">${d.title}</div>
+        <div class="detail">${d.detail}</div>
+        <div class="act"><a href="${d.link||'#'}">${d.action||'افتح'} ←</a></div>
+      </div></div>`;
+  }).join("");
+}
+
+function renderOpportunities(arr){
+  document.getElementById("oppCount").textContent=arr.length?`${arr.length} فرصة`:"";
+  const box=document.getElementById("opportunities");
+  if(!arr.length){
+    box.innerHTML=`<div class="empty-good"><div class="e">🌱</div><div style="font-size:13px">أكمل بيانات الوحدات لاكتشاف فرص النمو</div></div>`;
+    return;
+  }
+  box.innerHTML=arr.map(o=>`<div class="card opp">
+    <div class="ico">${o.icon}</div>
+    <div class="body">
+      <span class="pr opp">فرصة</span>
+      <div class="title">${o.title}</div>
+      <div class="detail">${o.detail}</div>
+      ${o.link?`<div class="act"><a href="${o.link}">استكشف ←</a></div>`:""}
+    </div></div>`).join("");
+}
+
+load();
+</script>
+</body>
+</html>
