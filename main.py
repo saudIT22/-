@@ -184,6 +184,17 @@ class CompanyMember(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.now)
 
 
+class CompanyModuleEntry(SQLModel, table=True):
+    """إدخالات الوحدات الموسّعة (مالية/مبيعات/عملاء/...). تُحفظ مرنة كـ JSON."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    branch_id: Optional[int] = Field(default=None, index=True)  # None = على مستوى الشركة
+    module: str = Field(index=True)                              # finance / sales / customers / ...
+    period: str = ""                                             # YYYY-MM
+    data: str = ""                                               # JSON
+    created_at: datetime = Field(default_factory=datetime.now)
+
+
 SQLModel.metadata.create_all(engine)
 
 
@@ -1455,6 +1466,32 @@ def build_branch_prompt(company, sector_name, b, e, avg_margin, avg_inv, avg_sco
                 extra_txt = "\n- مؤشرات إضافية للقطaع: " + " | ".join(f"{k}: {v}" for k, v in ed.items() if str(v).strip())
         except Exception:
             pass
+
+    # بيانات وحدات ERP المصغّر (مالية/مبيعات/عملاء) — آخر إدخال لكل وحدة
+    modules_txt = ""
+    try:
+        with Session(engine) as _ms:
+            for mod in ("finance", "sales", "customers"):
+                me = _ms.exec(
+                    select(CompanyModuleEntry).where(
+                        CompanyModuleEntry.company_id == b.company_id,
+                        CompanyModuleEntry.module == mod,
+                    ).where(
+                        (CompanyModuleEntry.branch_id == b.id) | (CompanyModuleEntry.branch_id == None)
+                    ).order_by(CompanyModuleEntry.created_at.desc())
+                ).first()
+                if me and me.data:
+                    try:
+                        md = json.loads(me.data)
+                        if isinstance(md, dict) and md:
+                            label = MODULE_LABEL.get(mod, mod)
+                            top = " | ".join(f"{k}: {v}" for k, v in list(md.items())[:8] if str(v).strip())
+                            if top:
+                                modules_txt += f"\n- {label}: {top}"
+                    except Exception:
+                        pass
+    except Exception:
+        pass
     return f"""أنت "نبّاه"، مستشار تنفيذي بخبرة طويلة. تحلّل أداء فرع "{b.name}" ضمن شركة "{company.name}" ({sector_name}) وتقارنه بباقي فروع الشركة.
 
 # بيانات الفرع (مؤكدة — لا تخترع):
@@ -1462,7 +1499,7 @@ def build_branch_prompt(company, sector_name, b, e, avg_margin, avg_inv, avg_sco
 - المبيعات: {round(e.sales)} ريال | العملاء: {e.customers} | الفواتير: {e.invoices}
 - متوسط الفاتورة: {e.avg_invoice} ريال | الهامش: {e.margin}% | صافي الربح: {round(e.profit)} ريال
 - العملاء المتكررون: {e.repeat_rate}% | النمو عن الفترة السابقة: {e.growth}%
-- المنتجات الأكثر مبيعاً: {e.top_products or 'غير مُدخلة'}{extra_txt}
+- المنتجات الأكثر مبيعاً: {e.top_products or 'غير مُدخلة'}{extra_txt}{modules_txt}
 - مؤشر أداء الفرع: {e.branch_score}/100{tgt}
 - مسار الفرع عبر الفترات: {hist_txt}
 
@@ -2700,3 +2737,109 @@ def admin_company_deactivate(data: dict, _: bool = Depends(verify_admin)):
         s.commit()
         log_activity("الأدمن", f"أوقف الشركة: {company.name}", "")
         return {"ok": True, "message": f"تم إيقاف {company.name}"}
+
+
+# ============================================================
+# ===== وحدات ERP المصغّر: مالية / مبيعات / عملاء =====
+# ============================================================
+
+ALLOWED_MODULES = {"finance", "sales", "customers"}
+MODULE_LABEL = {"finance": "المالية", "sales": "المبيعات", "customers": "العملاء"}
+
+
+def _module_guard(s, user, module):
+    if module not in ALLOWED_MODULES:
+        raise HTTPException(400, "وحدة غير معروفة")
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    company = s.get(Company, user.company_id)
+    if not company or company.owner_id != user.id:
+        raise HTTPException(403, "غير مصرّح")
+    if company.is_active != 1:
+        raise HTTPException(402, "شركتك قيد التفعيل — فعّلها من لوحة الإدارة")
+    return company
+
+
+@app.post("/company/module/save")
+def company_module_save(payload: dict, user: User = Depends(get_current_user)):
+    """حفظ بيانات وحدة (مالية/مبيعات/عملاء) لفرع معيّن أو لكل الشركة."""
+    module = (payload.get("module") or "").strip()
+    period = (payload.get("period") or datetime.now().strftime("%Y-%m")).strip()
+    branch_id = payload.get("branch_id")
+    data = payload.get("data") or {}
+    if not isinstance(data, dict):
+        raise HTTPException(400, "البيانات غير صالحة")
+    # نظّف القيم الفارغة
+    cleaned = {k: v for k, v in data.items() if v is not None and str(v).strip() != ""}
+    with Session(engine) as s:
+        company = _module_guard(s, user, module)
+        bid = int(branch_id) if branch_id else None
+        if bid:
+            br = s.get(CompanyBranch, bid)
+            if not br or br.company_id != company.id:
+                raise HTTPException(404, "الفرع غير موجود")
+        try:
+            entry = CompanyModuleEntry(
+                company_id=company.id, branch_id=bid, module=module,
+                period=period, data=json.dumps(cleaned, ensure_ascii=False),
+            )
+            s.add(entry)
+            s.commit()
+            s.refresh(entry)
+        except Exception as e:
+            s.rollback()
+            raise HTTPException(500, f"تعذّر الحفظ: {str(e)[:160]}")
+        log_activity(user.name, f"حفظ بيانات وحدة {MODULE_LABEL.get(module, module)} ({period})", user.email)
+        return {"ok": True, "id": entry.id, "period": period, "module": module, "fields": len(cleaned)}
+
+
+@app.get("/company/module/{module}")
+def company_module_get(module: str, user: User = Depends(get_current_user)):
+    """يجلب آخر إدخال محفوظ لكل فرع (وعلى مستوى الشركة) + قائمة الفروع."""
+    with Session(engine) as s:
+        company = _module_guard(s, user, module)
+        branches = s.exec(
+            select(CompanyBranch).where(CompanyBranch.company_id == company.id, CompanyBranch.is_active == 1)
+        ).all()
+        all_entries = s.exec(
+            select(CompanyModuleEntry).where(
+                CompanyModuleEntry.company_id == company.id,
+                CompanyModuleEntry.module == module,
+            ).order_by(CompanyModuleEntry.created_at.desc())
+        ).all()
+        latest_by_branch = {}  # key: branch_id (or 0 لمستوى الشركة) -> dict
+        for e in all_entries:
+            key = e.branch_id or 0
+            if key in latest_by_branch:
+                continue
+            try:
+                d = json.loads(e.data) if e.data else {}
+            except Exception:
+                d = {}
+            latest_by_branch[key] = {"period": e.period, "data": d, "saved_at": e.created_at.isoformat()}
+        return {
+            "company": {"id": company.id, "name": company.name, "sector": company.sector},
+            "module": module,
+            "label": MODULE_LABEL.get(module, module),
+            "branches": [{"id": b.id, "name": b.name, "city": b.city} for b in branches],
+            "company_level": latest_by_branch.get(0),
+            "per_branch": [
+                {"branch_id": b.id, "name": b.name, "saved": latest_by_branch.get(b.id)}
+                for b in branches
+            ],
+            "history_count": len(all_entries),
+        }
+
+
+# Endpoints الصفحات
+@app.get("/company-finance.html")
+def page_company_finance():
+    return FileResponse("company-finance.html")
+
+@app.get("/company-sales.html")
+def page_company_sales():
+    return FileResponse("company-sales.html")
+
+@app.get("/company-customers.html")
+def page_company_customers():
+    return FileResponse("company-customers.html")
