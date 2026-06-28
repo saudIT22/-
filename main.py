@@ -1471,7 +1471,7 @@ def build_branch_prompt(company, sector_name, b, e, avg_margin, avg_inv, avg_sco
     modules_txt = ""
     try:
         with Session(engine) as _ms:
-            for mod in ("finance", "sales", "customers"):
+            for mod in ("finance", "sales", "customers", "hr", "ops", "inventory", "procurement"):
                 me = _ms.exec(
                     select(CompanyModuleEntry).where(
                         CompanyModuleEntry.company_id == b.company_id,
@@ -2743,8 +2743,11 @@ def admin_company_deactivate(data: dict, _: bool = Depends(verify_admin)):
 # ===== وحدات ERP المصغّر: مالية / مبيعات / عملاء =====
 # ============================================================
 
-ALLOWED_MODULES = {"finance", "sales", "customers"}
-MODULE_LABEL = {"finance": "المالية", "sales": "المبيعات", "customers": "العملاء"}
+ALLOWED_MODULES = {"finance", "sales", "customers", "hr", "ops", "inventory", "procurement"}
+MODULE_LABEL = {
+    "finance": "المالية", "sales": "المبيعات", "customers": "العملاء",
+    "hr": "الموارد البشرية", "ops": "التشغيل", "inventory": "المخزون", "procurement": "المشتريات",
+}
 
 
 def _module_guard(s, user, module):
@@ -2843,3 +2846,19 @@ def page_company_sales():
 @app.get("/company-customers.html")
 def page_company_customers():
     return FileResponse("company-customers.html")
+
+@app.get("/company-hr.html")
+def page_company_hr():
+    return FileResponse("company-hr.html")
+
+@app.get("/company-ops.html")
+def page_company_ops():
+    return FileResponse("company-ops.html")
+
+@app.get("/company-inventory.html")
+def page_company_inventory():
+    return FileResponse("company-inventory.html")
+
+@app.get("/company-procurement.html")
+def page_company_procurement():
+    return FileResponse("company-procurement.html")
