@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نبّاه · التنبؤ بالأداء</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root{--bg:#0a0f0c;--panel:#101a15;--panel2:#0e1712;--line:#1d2c24;--mint:#10b981;--mint-deep:#0c8f64;--gold:#f5b301;--red:#ef4444;--blue:#3b82f6;--txt:#e8f1ec;--txt-soft:#9fb4aa;--txt-mute:#678075;--r:16px;}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--txt);line-height:1.7;min-height:100vh}
+  body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.5;background:radial-gradient(circle at 1px 1px,rgba(16,185,129,.05) 1px,transparent 0);background-size:26px 26px}
+  a{text-decoration:none;color:inherit}
+  .wrap{max-width:880px;margin:0 auto;padding:0 16px;position:relative;z-index:1}
+  header{position:sticky;top:0;z-index:40;background:rgba(10,15,12,.86);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+  .head-in{max-width:880px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:900;font-size:20px;color:#fff}
+  .brand .bell{width:36px;height:36px;border-radius:11px;background:var(--mint);display:grid;place-items:center;font-size:17px;transform:rotate(-5deg)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;font-family:inherit;font-weight:700;cursor:pointer;border:none;border-radius:11px;font-size:14px;transition:.18s;text-decoration:none}
+  .btn-ghost{background:var(--panel);color:var(--txt-soft);padding:10px 15px;border:1px solid var(--line)}
+  .page-head{padding:24px 0 12px}.page-head h1{font-size:25px;font-weight:900}.page-head p{color:var(--txt-soft);font-size:14.5px;margin-top:3px}
+  .state{padding:50px 20px;text-align:center;color:var(--txt-soft)}
+  .spin{width:32px;height:32px;border:3px solid var(--line);border-top-color:var(--mint);border-radius:50%;animation:sp 1s linear infinite;margin:0 auto 12px}@keyframes sp{to{transform:rotate(360deg)}}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px;margin-bottom:14px}
+  .panel h2{font-size:15.5px;font-weight:800;margin-bottom:3px}.panel .sub{font-size:12.5px;color:var(--txt-mute);margin-bottom:14px}
+  .hero-kpis{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+  .hk{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;text-align:center}
+  .hk .l{font-size:12.5px;color:var(--txt-soft)}
+  .hk .v{font-size:30px;font-weight:900;margin-top:4px;letter-spacing:-.02em}
+  .hk .s{font-size:11.5px;color:var(--txt-mute);margin-top:3px}
+  .branch-card{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:10px}
+  .bc-h{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .bc-h .nm{font-weight:800;font-size:15px;flex:1}
+  .conf{font-size:11px;font-weight:800;padding:3px 9px;border-radius:100px}
+  .conf.high{background:rgba(16,185,129,.16);color:#6ee7b7}
+  .conf.mid{background:rgba(245,179,1,.16);color:#fbbf24}
+  .conf.low{background:rgba(239,68,68,.16);color:#fca5a5}
+  .row{display:flex;gap:14px;font-size:13px;color:var(--txt-soft);flex-wrap:wrap}
+  .row b{color:var(--txt)}
+  .growth-pos{color:var(--mint)}.growth-neg{color:var(--red)}
+  .links{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 40px}
+  @media(max-width:560px){.hero-kpis{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <div class="head-in">
+    <a class="brand" href="company-dashboard.html"><span class="bell">🔔</span>نبّاه</a>
+    <a class="btn btn-ghost" href="company-command-center.html">مركز القيادة</a>
+  </div>
+</header>
+<div class="wrap">
+  <div class="page-head"><h1>🔮 التنبؤ بالأداء</h1><p>توقعات المبيعات والأرباح للستة أشهر القادمة — بناءً على معدل النمو الفعلي لكل فرع</p></div>
+
+  <div id="loading" class="state"><div class="spin"></div>جارٍ حساب التوقعات…</div>
+  <div id="error" class="state" style="display:none;color:var(--red)"></div>
+
+  <div id="content" style="display:none">
+    <div class="hero-kpis">
+      <div class="hk">
+        <div class="l">إجمالي المبيعات المتوقّعة (٦ أشهر)</div>
+        <div class="v" id="totalSales" style="color:var(--mint)">—</div>
+        <div class="s">على مستوى الشركة</div>
+      </div>
+      <div class="hk">
+        <div class="l">إجمالي الأرباح المتوقّعة (٦ أشهر)</div>
+        <div class="v" id="totalProfit" style="color:var(--gold)">—</div>
+        <div class="s">بناءً على هامش الربح الحالي</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>📈 توقع الشركة (٦ أشهر)</h2>
+      <div class="sub">المبيعات والأرباح المتوقعة شهرياً</div>
+      <div style="height:280px"><canvas id="companyChart"></canvas></div>
+    </div>
+
+    <div class="panel">
+      <h2>🏬 توقع كل فرع</h2>
+      <div class="sub">معدل النمو + الإجمالي المتوقع + درجة الثقة لكل فرع</div>
+      <div id="branchList"></div>
+    </div>
+
+    <div class="panel" style="background:linear-gradient(160deg,rgba(59,130,246,.08),transparent);border-color:rgba(59,130,246,.3)">
+      <h2 style="color:#93c5fd">ℹ️ كيف يحسب نبّاه التنبؤ؟</h2>
+      <p style="font-size:13.5px;color:var(--txt-soft);line-height:1.85">
+        لكل فرع، نحسب معدل النمو الشهري من آخر ٣ فترات إدخال (محدّد ضمن ±١٥٪ لتفادي المبالغات)،
+        ثم نطبّقه شهرياً على المبيعات الحالية. الأرباح تُحسب بهامش الربح الفعلي الحالي.
+        <br><br>
+        <b style="color:#93c5fd">الثقة:</b>
+        عالية = ٤ فترات إدخال أو أكثر · متوسطة = ٢-٣ فترات · منخفضة = فترة واحدة فقط.
+        كل ما زادت بيانات الفروع، زادت دقة التنبؤ.
+      </p>
+    </div>
+  </div>
+
+  <div class="links">
+    <a class="btn btn-ghost" href="company-dashboard.html">اللوحة</a>
+    <a class="btn btn-ghost" href="company-risks.html">⚠️ محرّك المخاطر</a>
+    <a class="btn btn-ghost" href="company-board.html">📋 عرض مجلس الإدارة</a>
+  </div>
+</div>
+<script>
+const TOKEN=localStorage.getItem("nabbah_token")||"";
+if(!TOKEN){ window.location.href="login.html"; }
+async function api(p){
+  const r=await fetch(p,{headers:{"Authorization":"Bearer "+TOKEN}});
+  if(r.status===401){ localStorage.removeItem("nabbah_token"); window.location.href="login.html"; throw new Error("جلسة"); }
+  const d=await r.json().catch(()=>({}));
+  const er=new Error(d.detail||"خطأ"); er.status=r.status;
+  if(!r.ok) throw er;
+  return d;
+}
+const fmt=n=>(Math.round(n)||0).toLocaleString("en-US");
+
+async function load(){
+  try{
+    const d=await api("/company/predictions");
+    document.getElementById("loading").style.display="none";
+    document.getElementById("content").style.display="block";
+
+    if(!d.has_history){
+      document.getElementById("content").innerHTML=`<div class="panel" style="text-align:center;padding:36px">
+        <div style="font-size:40px;margin-bottom:10px">📊</div>
+        <div style="font-weight:800;font-size:18px;margin-bottom:6px">يحتاج فترتين إدخال على الأقل لكل فرع</div>
+        <div style="color:var(--txt-soft);margin-bottom:14px">التنبؤ يبني على معدل النمو — يحتاج تاريخاً.</div>
+        <a class="btn btn-ghost" href="company-input.html">أدخل بيانات فترة جديدة</a></div>`;
+      return;
+    }
+
+    document.getElementById("totalSales").textContent=fmt(d.company_projection.total_sales_6m)+" ر";
+    document.getElementById("totalProfit").textContent=fmt(d.company_projection.total_profit_6m)+" ر";
+    renderCompanyChart(d.labels, d.company_projection);
+    renderBranches(d.branch_forecasts);
+  }catch(e){
+    document.getElementById("loading").style.display="none";
+    const er=document.getElementById("error"); er.style.display="block";
+    if(e.status===402) er.innerHTML=`⏳ شركتك قيد التفعيل. <a href="company-dashboard.html" style="color:var(--mint)">رجوع</a>`;
+    else er.textContent=e.message;
+  }
+}
+
+function renderCompanyChart(labels, proj){
+  new Chart(document.getElementById("companyChart"),{
+    type:"bar",
+    data:{labels,datasets:[
+      {label:"المبيعات",data:proj.sales,backgroundColor:"#10b98155",borderColor:"#10b981",borderWidth:1,borderRadius:6},
+      {label:"الأرباح",data:proj.profit,backgroundColor:"#f5b30155",borderColor:"#f5b301",borderWidth:1,borderRadius:6},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:"#9fb4aa",font:{family:"Tajawal"}}},
+        tooltip:{callbacks:{label:c=>c.dataset.label+": "+fmt(c.raw)+" ر"}}},
+      scales:{x:{ticks:{color:"#678075"},grid:{display:false}},
+        y:{ticks:{color:"#678075",callback:v=>fmt(v)},grid:{color:"#16221c"}}}}
+  });
+}
+
+function renderBranches(arr){
+  if(!arr.length){ document.getElementById("branchList").innerHTML=`<p style="color:var(--txt-mute);text-align:center;padding:14px">لا توجد فروع ببيانات.</p>`; return; }
+  document.getElementById("branchList").innerHTML=arr.map(b=>{
+    const cClass=b.confidence==="عالية"?"high":b.confidence==="متوسطة"?"mid":"low";
+    const gClass=b.monthly_growth_pct>=0?"growth-pos":"growth-neg";
+    const gSign=b.monthly_growth_pct>=0?"+":"";
+    return `<div class="branch-card">
+      <div class="bc-h">
+        <div class="nm">${b.branch}</div>
+        <span class="conf ${cClass}">ثقة ${b.confidence}</span>
+      </div>
+      <div class="row">
+        <span>المبيعات الحالية: <b>${fmt(b.current_sales)}</b> ر</span>
+        <span>النمو الشهري: <b class="${gClass}">${gSign}${b.monthly_growth_pct}%</b></span>
+        <span>توقع ٦ أشهر: <b style="color:var(--mint)">${fmt(b.total_6m_sales)}</b> ر</span>
+        <span>أرباح متوقعة: <b style="color:var(--gold)">${fmt(b.total_6m_profit)}</b> ر</span>
+      </div>
+    </div>`;
+  }).join("");
+}
+load();
+</script>
+</body>
+</html>
