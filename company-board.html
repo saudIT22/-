@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نبّاه · عرض مجلس الإدارة</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0a0f0c;--panel:#101a15;--panel2:#0e1712;--line:#1d2c24;--mint:#10b981;--mint-deep:#0c8f64;--gold:#f5b301;--red:#ef4444;--blue:#3b82f6;--txt:#e8f1ec;--txt-soft:#9fb4aa;--txt-mute:#678075;--r:16px;}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--txt);line-height:1.7;min-height:100vh}
+  body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.5;background:radial-gradient(circle at 1px 1px,rgba(16,185,129,.05) 1px,transparent 0);background-size:26px 26px}
+  a{text-decoration:none;color:inherit}
+  .wrap{max-width:880px;margin:0 auto;padding:0 16px;position:relative;z-index:1}
+  header{position:sticky;top:0;z-index:40;background:rgba(10,15,12,.86);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+  .head-in{max-width:880px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:900;font-size:20px;color:#fff}
+  .brand .bell{width:36px;height:36px;border-radius:11px;background:var(--mint);display:grid;place-items:center;font-size:17px;transform:rotate(-5deg)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;font-family:inherit;font-weight:700;cursor:pointer;border:none;border-radius:11px;font-size:14px;transition:.18s;text-decoration:none}
+  .btn-mint{background:var(--mint);color:#04130d;padding:10px 18px}.btn-mint:hover{background:var(--mint-deep)}
+  .btn-ghost{background:var(--panel);color:var(--txt-soft);padding:10px 15px;border:1px solid var(--line)}
+  .state{padding:50px 20px;text-align:center;color:var(--txt-soft)}
+  .spin{width:32px;height:32px;border:3px solid var(--line);border-top-color:var(--mint);border-radius:50%;animation:sp 1s linear infinite;margin:0 auto 12px}@keyframes sp{to{transform:rotate(360deg)}}
+
+  .deck{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:28px;margin:24px 0}
+  .deck-head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid var(--mint);padding-bottom:18px;margin-bottom:22px}
+  .deck-head .ttl{font-size:24px;font-weight:900}
+  .deck-head .meta{font-size:12.5px;color:var(--txt-mute);text-align:left}
+  .logo-r{display:flex;align-items:center;gap:8px;font-weight:900;color:var(--mint)}
+  .sec{margin:22px 0}
+  .sec-h{font-size:16px;font-weight:900;color:var(--mint);margin-bottom:11px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line);padding-bottom:8px}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:11px}
+  .k{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:13px;text-align:center}
+  .k .l{font-size:11.5px;color:var(--txt-soft)}.k .v{font-size:20px;font-weight:900;margin-top:3px}
+  .list{display:flex;flex-direction:column;gap:8px}
+  .item{background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:11px 14px;display:flex;gap:10px;align-items:flex-start}
+  .item .pr{font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:100px;flex-shrink:0;margin-top:2px}
+  .item .pr.u{background:rgba(239,68,68,.16);color:#fca5a5}
+  .item .pr.i{background:rgba(245,158,11,.16);color:#fbbf24}
+  .item .pr.o{background:rgba(16,185,129,.16);color:#6ee7b7}
+  .item .pr.r{background:rgba(168,85,247,.16);color:#c4b5fd}
+  .item .body .t{font-weight:800;font-size:14px}
+  .item .body .d{font-size:13px;color:var(--txt-soft);margin-top:3px}
+  .pred-box{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:14px 16px;text-align:center}
+  .pred-box .l{font-size:12px;color:var(--txt-soft)}
+  .pred-box .v{font-size:24px;font-weight:900;margin-top:3px}
+  .pred-row{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+  .footer{text-align:center;color:var(--txt-mute);font-size:12px;margin-top:24px;padding-top:14px;border-top:1px solid var(--line)}
+  @media(max-width:560px){.kpis{grid-template-columns:repeat(2,1fr)}.pred-row{grid-template-columns:1fr}}
+  @media print{
+    header,.no-print{display:none!important}
+    body{background:#fff;color:#000}
+    body::before{display:none}
+    .deck{border:none;background:#fff;box-shadow:none}
+    .deck-head{border-bottom-color:#10b981}
+    .item,.k,.pred-box{background:#fafafa;border-color:#e5e7eb}
+    .sec-h{color:#065f46}
+    .item .d{color:#374151}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="head-in">
+    <a class="brand" href="company-dashboard.html"><span class="bell">🔔</span>نبّاه</a>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-mint no-print" onclick="window.print()">🖨️ طباعة / PDF</button>
+      <a class="btn btn-ghost" href="company-dashboard.html">اللوحة</a>
+    </div>
+  </div>
+</header>
+<div class="wrap">
+  <div id="loading" class="state"><div class="spin"></div>جارٍ توليد عرض مجلس الإدارة…</div>
+  <div id="error" class="state" style="display:none;color:var(--red)"></div>
+  <div id="content" style="display:none"></div>
+</div>
+<script>
+const TOKEN=localStorage.getItem("nabbah_token")||"";
+if(!TOKEN){ window.location.href="login.html"; }
+async function api(p){
+  const r=await fetch(p,{headers:{"Authorization":"Bearer "+TOKEN}});
+  if(r.status===401){ localStorage.removeItem("nabbah_token"); window.location.href="login.html"; throw new Error("جلسة"); }
+  const d=await r.json().catch(()=>({}));
+  const er=new Error(d.detail||"خطأ"); er.status=r.status;
+  if(!r.ok) throw er;
+  return d;
+}
+const fmt=n=>(Math.round(n)||0).toLocaleString("en-US");
+
+async function load(){
+  try{
+    // نجمّع من 3 مصادر بالتوازي
+    const [cc, pred, risks] = await Promise.all([
+      api("/company/command-center"),
+      api("/company/predictions").catch(()=>null),
+      api("/company/risks").catch(()=>null),
+    ]);
+    document.getElementById("loading").style.display="none";
+    document.getElementById("content").style.display="block";
+    render(cc, pred, risks);
+  }catch(e){
+    document.getElementById("loading").style.display="none";
+    const er=document.getElementById("error"); er.style.display="block";
+    if(e.status===402) er.innerHTML=`⏳ شركتك قيد التفعيل. <a href="company-dashboard.html" style="color:var(--mint)">رجوع</a>`;
+    else er.textContent=e.message;
+  }
+}
+
+function render(cc, pred, risks){
+  const k=cc.kpis;
+  let predHtml="";
+  if(pred && pred.has_history){
+    predHtml=`
+      <div class="sec">
+        <div class="sec-h">🔮 توقعات الستة أشهر القادمة</div>
+        <div class="pred-row">
+          <div class="pred-box"><div class="l">إجمالي المبيعات المتوقّعة</div><div class="v" style="color:var(--mint)">${fmt(pred.company_projection.total_sales_6m)} ر</div></div>
+          <div class="pred-box"><div class="l">إجمالي الأرباح المتوقّعة</div><div class="v" style="color:var(--gold)">${fmt(pred.company_projection.total_profit_6m)} ر</div></div>
+        </div>
+      </div>`;
+  }
+  let risksHtml="";
+  if(risks && risks.risks && risks.risks.length){
+    const top=risks.risks.filter(r=>r.score>=45).slice(0,4);
+    if(top.length){
+      risksHtml=`
+        <div class="sec">
+          <div class="sec-h">⚠️ المخاطر الرئيسية (مؤشّر عام: ${risks.overall_risk}/100 — ${risks.overall_level})</div>
+          <div class="list">${top.map(r=>`<div class="item"><span class="pr r">${r.score}</span>
+            <div class="body"><div class="t">${r.icon} ${r.title}</div>
+            <div class="d">${r.reasons.slice(0,2).join(" · ")}</div></div></div>`).join("")}</div>
+        </div>`;
+    }
+  }
+
+  document.getElementById("content").innerHTML=`
+    <div class="deck">
+      <div class="deck-head">
+        <div>
+          <div class="ttl">عرض مجلس الإدارة</div>
+          <div style="color:var(--txt-soft);font-size:14px;margin-top:2px">${cc.company.name} · ${cc.company.sector}</div>
+        </div>
+        <div>
+          <div class="logo-r"><span>🔔</span>نبّاه</div>
+          <div class="meta">${cc.generated_at}</div>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-h">⚡ الملخّص التنفيذي</div>
+        <div class="kpis">
+          <div class="k"><div class="l">إجمالي المبيعات</div><div class="v">${fmt(k.total_sales)}<span style="font-size:12px"> ر</span></div></div>
+          <div class="k"><div class="l">صافي الربح</div><div class="v" style="color:${k.total_profit>=0?'var(--mint)':'var(--red)'}">${fmt(k.total_profit)}<span style="font-size:12px"> ر</span></div></div>
+          <div class="k"><div class="l">هامش الربح</div><div class="v">${k.margin}%</div></div>
+          <div class="k"><div class="l">الفروع النشطة</div><div class="v">${k.branches_with_data}<span style="font-size:12px"> / ${k.branches_count}</span></div></div>
+        </div>
+      </div>
+
+      ${cc.decisions.length?`
+      <div class="sec">
+        <div class="sec-h">🎯 القرارات المقترحة (${cc.decisions.length})</div>
+        <div class="list">${cc.decisions.map(d=>{
+          const cls=d.priority==="عاجل"?"u":"i";
+          return `<div class="item"><span class="pr ${cls}">${d.priority}</span>
+          <div class="body"><div class="t">${d.icon} ${d.title}</div>
+          <div class="d">${d.detail}</div></div></div>`;
+        }).join("")}</div>
+      </div>`:""}
+
+      ${cc.opportunities.length?`
+      <div class="sec">
+        <div class="sec-h">🌱 فرص النمو (${cc.opportunities.length})</div>
+        <div class="list">${cc.opportunities.map(o=>`<div class="item"><span class="pr o">فرصة</span>
+          <div class="body"><div class="t">${o.icon} ${o.title}</div>
+          <div class="d">${o.detail}</div></div></div>`).join("")}</div>
+      </div>`:""}
+
+      ${predHtml}
+      ${risksHtml}
+
+      ${cc.alerts.length?`
+      <div class="sec">
+        <div class="sec-h">🚨 تنبيهات</div>
+        <div class="list">${cc.alerts.map(a=>`<div class="item"><div class="body"><div class="d">${a.icon} ${a.msg}</div></div></div>`).join("")}</div>
+      </div>`:""}
+
+      <div class="footer">عرض مولّد آلياً بواسطة منصة نبّاه · ${cc.generated_at}</div>
+    </div>
+  `;
+}
+load();
+</script>
+</body>
+</html>
