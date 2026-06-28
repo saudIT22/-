@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نبّاه · الوحدة المالية الموسّعة</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0a0f0c;--panel:#101a15;--panel2:#0e1712;--line:#1d2c24;--mint:#10b981;--mint-deep:#0c8f64;--gold:#f5b301;--red:#ef4444;--txt:#e8f1ec;--txt-soft:#9fb4aa;--txt-mute:#678075;--r:16px;}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--txt);line-height:1.7;min-height:100vh}
+  body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.5;background:radial-gradient(circle at 1px 1px,rgba(16,185,129,.05) 1px,transparent 0);background-size:26px 26px}
+  a{text-decoration:none;color:inherit}
+  .wrap{max-width:780px;margin:0 auto;padding:0 16px;position:relative;z-index:1}
+  header{position:sticky;top:0;z-index:40;background:rgba(10,15,12,.86);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+  .head-in{max-width:780px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:900;font-size:20px;color:#fff}
+  .brand .bell{width:36px;height:36px;border-radius:11px;background:var(--mint);display:grid;place-items:center;font-size:17px;transform:rotate(-5deg)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;font-family:inherit;font-weight:700;cursor:pointer;border:none;border-radius:11px;font-size:14px;transition:.18s}
+  .btn-mint{background:var(--mint);color:#04130d;padding:11px 18px}.btn-mint:hover{background:var(--mint-deep)}.btn-mint:disabled{opacity:.6}
+  .btn-ghost{background:var(--panel);color:var(--txt-soft);padding:10px 15px;border:1px solid var(--line)}
+  .page-head{padding:24px 0 12px}.page-head h1{font-size:25px;font-weight:900}.page-head p{color:var(--txt-soft);font-size:14.5px;margin-top:3px}
+  .state{padding:40px 20px;text-align:center;color:var(--txt-soft)}
+  .spin{width:32px;height:32px;border:3px solid var(--line);border-top-color:var(--mint);border-radius:50%;animation:sp 1s linear infinite;margin:0 auto 12px}@keyframes sp{to{transform:rotate(360deg)}}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px;margin-bottom:14px}
+  .panel h2{font-size:15.5px;font-weight:800;margin-bottom:2px}.panel .sub{font-size:12.5px;color:var(--txt-mute);margin-bottom:14px}
+  label{display:block;font-size:13px;font-weight:700;margin-bottom:6px}
+  input,select{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:11px 13px;color:var(--txt);font-family:inherit;font-size:14.5px}
+  input:focus,select:focus{outline:none;border-color:var(--mint)}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:6px}
+  .sec-h{font-size:12.5px;font-weight:800;color:var(--mint);margin:14px 0 8px}
+  .hint{font-size:11.5px;color:var(--txt-mute);margin-top:5px}
+  .field{margin-bottom:8px}
+  .err{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#fca5a5;padding:10px 13px;border-radius:10px;font-size:13px;margin:10px 0;display:none}
+  .ok{background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.35);color:#6ee7b7;padding:11px 13px;border-radius:11px;font-size:13.5px;margin:10px 0;display:none;font-weight:700}
+  .saved-box{background:var(--panel2);border:1px dashed var(--line);border-radius:10px;padding:10px 12px;margin-bottom:14px;font-size:12.5px;color:var(--txt-mute);display:none}
+  .links{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 40px}
+  @media(max-width:560px){.grid2,.row2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <div class="head-in">
+    <a class="brand" href="company-dashboard.html"><span class="bell">🔔</span>نبّاه</a>
+    <a class="btn btn-ghost" href="company-dashboard.html">اللوحة</a>
+  </div>
+</header>
+<div class="wrap">
+  <div class="page-head"><h1>💰 الوحدة المالية الموسّعة</h1><p>بنود مالية تفصيلية تكمّل المبيعات والمصروفات الأساسية — تقوّي التحليل التنفيذي والتدفق النقدي</p></div>
+
+  <div id="loading" class="state"><div class="spin"></div>جارٍ التحميل…</div>
+  <div id="pending" class="state" style="display:none"></div>
+
+  <div id="content" style="display:none">
+    <div class="panel">
+      <h2>إعدادات الإدخال</h2>
+      <div class="sub">اختر الفرع (أو "على مستوى الشركة") والفترة</div>
+      <div class="row2">
+        <div><label>النطاق</label><select id="scope"></select></div>
+        <div><label>الفترة</label>
+          <div class="row2" style="margin-bottom:0">
+            <select id="periodMonth"></select>
+            <select id="periodYear"></select>
+          </div>
+        </div>
+      </div>
+      <div class="saved-box" id="savedBox"></div>
+    </div>
+
+    <div class="panel">
+      <h2>الحقول</h2>
+      <div class="sub">املأ ما هو متاح لديك — الحقول الفارغة تُتجاهل</div>
+<div class="sec-h">تكاليف مباشرة وبنود التشغيل</div>
+<div class="grid2">
+  <div class="field"><label>تكلفة المبيعات COGS (ريال)</label><input id="f_0" type="number" inputmode="decimal" placeholder="0"><div class="hint">تكلفة شراء/إنتاج البضاعة المباعة</div></div>
+  <div class="field"><label>الرواتب الإجمالية (ريال)</label><input id="f_1" type="number" inputmode="decimal" placeholder="0"></div>
+  <div class="field"><label>الإيجارات (ريال)</label><input id="f_2" type="number" inputmode="decimal" placeholder="0"></div>
+  <div class="field"><label>التسويق والإعلانات (ريال)</label><input id="f_3" type="number" inputmode="decimal" placeholder="0"></div>
+  <div class="field"><label>النقل والشحن (ريال)</label><input id="f_4" type="number" inputmode="decimal" placeholder="0"></div>
+  <div class="field"><label>الكهرباء والمرافق (ريال)</label><input id="f_5" type="number" inputmode="decimal" placeholder="0"></div>
+</div>
+<div class="sec-h">الذمم والمديونيات</div>
+<div class="grid2">
+  <div class="field"><label>الذمم المدينة — مستحقات لك (ريال)</label><input id="f_6" type="number" inputmode="decimal" placeholder="0"><div class="hint">مبالغ على عملاء لم تُحصَّل بعد</div></div>
+  <div class="field"><label>الذمم الدائنة — مستحقات عليك (ريال)</label><input id="f_7" type="number" inputmode="decimal" placeholder="0"><div class="hint">مبالغ لموردين لم تُسدَّد بعد</div></div>
+  <div class="field"><label>الديون قصيرة الأجل (ريال)</label><input id="f_8" type="number" inputmode="decimal" placeholder="0"></div>
+  <div class="field"><label>الديون طويلة الأجل (ريال)</label><input id="f_9" type="number" inputmode="decimal" placeholder="0"></div>
+</div>
+<div class="sec-h">السيولة والملاءة</div>
+<div class="grid2">
+  <div class="field"><label>النقد في الصندوق والبنك (ريال)</label><input id="f_10" type="number" inputmode="decimal" placeholder="0"></div>
+  <div class="field"><label>الأصول المتداولة (ريال)</label><input id="f_11" type="number" inputmode="decimal" placeholder="0"><div class="hint">نقد + ذمم + مخزون</div></div>
+  <div class="field"><label>الالتزامات المتداولة (ريال)</label><input id="f_12" type="number" inputmode="decimal" placeholder="0"><div class="hint">ديون قصيرة + دائنة</div></div>
+  <div class="field"><label>رأس المال العامل (ريال)</label><input id="f_13" type="number" inputmode="decimal" placeholder="0"><div class="hint">الأصول المتداولة − الالتزامات المتداولة</div></div>
+</div>
+<div class="sec-h">الضرائب والإيجارات الرأسمالية</div>
+<div class="grid2">
+  <div class="field"><label>الضرائب المستحقة (ريال)</label><input id="f_14" type="number" inputmode="decimal" placeholder="0"><div class="hint">ضريبة قيمة مضافة + ضرائب أخرى</div></div>
+  <div class="field"><label>الاستهلاكات الشهرية (ريال)</label><input id="f_15" type="number" inputmode="decimal" placeholder="0"></div>
+</div>
+
+      <div class="err" id="err"></div>
+      <div class="ok" id="ok"></div>
+      <button class="btn btn-mint" id="saveBtn" style="width:100%;padding:13px;margin-top:8px" onclick="save()">حفظ بيانات الوحدة المالية الموسّعة</button>
+    </div>
+  </div>
+
+  <div class="links">
+    <a class="btn btn-ghost" href="company-dashboard.html">اللوحة</a>
+    <a class="btn btn-ghost" href="company-input.html">إدخال أساسي</a>
+  </div>
+</div>
+<script>
+const TOKEN=localStorage.getItem("nabbah_token")||"";
+if(!TOKEN){ window.location.href="login.html"; }
+const MODULE="finance";
+const KEYS=[["f_0",'تكلفة المبيعات COGS (ريال)'], ["f_1",'الرواتب الإجمالية (ريال)'], ["f_2",'الإيجارات (ريال)'], ["f_3",'التسويق والإعلانات (ريال)'], ["f_4",'النقل والشحن (ريال)'], ["f_5",'الكهرباء والمرافق (ريال)'], ["f_6",'الذمم المدينة — مستحقات لك (ريال)'], ["f_7",'الذمم الدائنة — مستحقات عليك (ريال)'], ["f_8",'الديون قصيرة الأجل (ريال)'], ["f_9",'الديون طويلة الأجل (ريال)'], ["f_10",'النقد في الصندوق والبنك (ريال)'], ["f_11",'الأصول المتداولة (ريال)'], ["f_12",'الالتزامات المتداولة (ريال)'], ["f_13",'رأس المال العامل (ريال)'], ["f_14",'الضرائب المستحقة (ريال)'], ["f_15",'الاستهلاكات الشهرية (ريال)']];
+const AR_MONTHS=["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
+let BRANCHES=[], DATA=null;
+
+async function api(p,o={}){
+  const r=await fetch(p,{...o,headers:{"Content-Type":"application/json","Authorization":"Bearer "+TOKEN,...(o.headers||{})}});
+  if(r.status===401){ localStorage.removeItem("nabbah_token"); window.location.href="login.html"; throw new Error("جلسة منتهية"); }
+  const d=await r.json().catch(()=>({}));
+  const er=new Error(d.detail||"خطأ"); er.status=r.status;
+  if(!r.ok) throw er;
+  return d;
+}
+function fillPeriod(){
+  const now=new Date();
+  const m=document.getElementById("periodMonth"), y=document.getElementById("periodYear");
+  m.innerHTML=AR_MONTHS.map((mn,i)=>`<option value="${i+1}" ${i===now.getMonth()?"selected":""}>${mn}</option>`).join("");
+  const c=now.getFullYear(); let yh="";
+  for(let yr=c;yr>=c-6;yr--) yh+=`<option value="${yr}" ${yr===c?"selected":""}>${yr}</option>`;
+  y.innerHTML=yh;
+}
+function getPeriod(){
+  const y=document.getElementById("periodYear").value;
+  const m=String(document.getElementById("periodMonth").value).padStart(2,"0");
+  return `${y}-${m}`;
+}
+
+async function load(){
+  fillPeriod();
+  try{
+    const d=await api("/company/module/"+MODULE);
+    DATA=d; BRANCHES=d.branches||[];
+    document.getElementById("loading").style.display="none";
+    document.getElementById("content").style.display="block";
+    let opts=`<option value="">على مستوى الشركة</option>`;
+    opts+=BRANCHES.map(b=>`<option value="${b.id}">فرع: ${b.name}</option>`).join("");
+    document.getElementById("scope").innerHTML=opts;
+    document.getElementById("scope").addEventListener("change",showLastSaved);
+    showLastSaved();
+  }catch(e){
+    document.getElementById("loading").style.display="none";
+    if(e.status===402){
+      const p=document.getElementById("pending"); p.style.display="block";
+      p.innerHTML=`⏳ شركتك قيد التفعيل — بعد التفعيل تنفتح هذه الوحدة. <a href="company-dashboard.html" style="color:var(--mint)">رجوع</a>`;
+    }else if(e.status===403){
+      window.location.href="company-register.html";
+    }else{
+      const p=document.getElementById("pending"); p.style.display="block";
+      p.innerHTML=`<span style="color:var(--red)">${e.message}</span>`;
+    }
+  }
+}
+function showLastSaved(){
+  if(!DATA) return;
+  const box=document.getElementById("savedBox");
+  const sv=document.getElementById("scope").value;
+  let saved=null;
+  if(!sv){ saved=DATA.company_level; }
+  else{ const it=(DATA.per_branch||[]).find(p=>String(p.branch_id)===String(sv)); saved=it?it.saved:null; }
+  // مسح الحقول
+  KEYS.forEach(([id])=>{ const el=document.getElementById(id); if(el) el.value=""; });
+  if(saved && saved.data){
+    box.style.display="block";
+    const dt=new Date(saved.saved_at);
+    box.innerHTML=`آخر حفظ: <b style="color:var(--mint)">${saved.period||"—"}</b> · ${dt.toLocaleDateString("ar-SA")}`;
+    // تعبئة الحقول من المحفوظ
+    KEYS.forEach(([id,label])=>{
+      if(saved.data[label]!==undefined){ const el=document.getElementById(id); if(el) el.value=saved.data[label]; }
+    });
+  }else{ box.style.display="none"; }
+}
+
+async function save(){
+  document.getElementById("err").style.display="none";
+  document.getElementById("ok").style.display="none";
+  const data={};
+  KEYS.forEach(([id,label])=>{
+    const v=document.getElementById(id).value.trim();
+    if(v!=="") data[label]=Number(v.replace(/,/g,""))||v;
+  });
+  if(Object.keys(data).length===0){
+    const er=document.getElementById("err"); er.textContent="املأ حقلاً واحداً على الأقل"; er.style.display="block"; return;
+  }
+  const btn=document.getElementById("saveBtn"); btn.disabled=true; btn.textContent="جارٍ الحفظ…";
+  try{
+    const payload={ module:MODULE, period:getPeriod(), data };
+    const sv=document.getElementById("scope").value;
+    if(sv) payload.branch_id=+sv;
+    const r=await api("/company/module/save",{method:"POST",body:JSON.stringify(payload)});
+    const ok=document.getElementById("ok"); ok.textContent=`✅ تم الحفظ — ${r.fields} حقل (${r.period})`; ok.style.display="block";
+    // إعادة تحميل لإظهار آخر محفوظ
+    const d=await api("/company/module/"+MODULE); DATA=d; showLastSaved();
+  }catch(e){
+    const er=document.getElementById("err"); er.textContent=e.message; er.style.display="block";
+  }
+  btn.disabled=false; btn.textContent="حفظ بيانات الوحدة المالية الموسّعة";
+}
+load();
+</script>
+</body>
+</html>
