@@ -1471,7 +1471,7 @@ def build_branch_prompt(company, sector_name, b, e, avg_margin, avg_inv, avg_sco
     modules_txt = ""
     try:
         with Session(engine) as _ms:
-            for mod in ("finance", "sales", "customers", "hr", "ops", "inventory", "procurement"):
+            for mod in ("finance", "sales", "customers", "hr", "ops", "inventory", "procurement", "events", "competitors"):
                 me = _ms.exec(
                     select(CompanyModuleEntry).where(
                         CompanyModuleEntry.company_id == b.company_id,
@@ -2743,10 +2743,11 @@ def admin_company_deactivate(data: dict, _: bool = Depends(verify_admin)):
 # ===== وحدات ERP المصغّر: مالية / مبيعات / عملاء =====
 # ============================================================
 
-ALLOWED_MODULES = {"finance", "sales", "customers", "hr", "ops", "inventory", "procurement"}
+ALLOWED_MODULES = {"finance", "sales", "customers", "hr", "ops", "inventory", "procurement", "events", "competitors"}
 MODULE_LABEL = {
     "finance": "المالية", "sales": "المبيعات", "customers": "العملاء",
     "hr": "الموارد البشرية", "ops": "التشغيل", "inventory": "المخزون", "procurement": "المشتريات",
+    "events": "الأحداث المؤثرة", "competitors": "المنافسون",
 }
 
 
@@ -2862,3 +2863,213 @@ def page_company_inventory():
 @app.get("/company-procurement.html")
 def page_company_procurement():
     return FileResponse("company-procurement.html")
+
+
+# ============================================================
+# ===== مركز القيادة التنفيذي (Executive Command Center) =====
+# ============================================================
+
+@app.get("/company/command-center")
+def company_command_center(user: User = Depends(get_current_user)):
+    """يجمّع كل المصادر ويعطي الرئيس التنفيذي: 4 قرارات + 4 فرص + التنبيهات."""
+    with Session(engine) as s:
+        if not user.company_id:
+            raise HTTPException(403, "لا توجد شركة نشطة")
+        company = s.get(Company, user.company_id)
+        if not company or company.owner_id != user.id:
+            raise HTTPException(403, "غير مصرّح")
+        if company.is_active != 1:
+            raise HTTPException(402, "شركتك قيد التفعيل — فعّلها من لوحة الإدارة")
+
+        branches = s.exec(
+            select(CompanyBranch).where(CompanyBranch.company_id == company.id, CompanyBranch.is_active == 1)
+        ).all()
+
+        # جمع آخر إدخال لكل فرع
+        branch_data = []
+        total_sales = total_expenses = 0.0
+        for b in branches:
+            e = s.exec(
+                select(CompanyEntry).where(CompanyEntry.branch_id == b.id).order_by(CompanyEntry.created_at.desc())
+            ).first()
+            if e:
+                branch_data.append({"branch": b, "entry": e})
+                total_sales += e.sales
+                total_expenses += e.expenses
+
+        decisions = []      # قرارات تنفيذية (عاجلة)
+        opportunities = []  # فرص نمو
+        alerts = []         # تنبيهات
+        kpis = {
+            "total_sales": round(total_sales),
+            "total_profit": round(total_sales - total_expenses),
+            "margin": round((total_sales - total_expenses) / total_sales * 100, 1) if total_sales > 0 else 0,
+            "branches_count": len(branches),
+            "branches_with_data": len(branch_data),
+        }
+
+        # ===== كشف تلقائي للمشاكل والفرص =====
+        # 1) فروع ضعيفة الأداء (مؤشّر < 40)
+        weak = [bd for bd in branch_data if bd["entry"].branch_score < 40]
+        if weak:
+            names = "، ".join(bd["branch"].name for bd in weak[:3])
+            decisions.append({
+                "priority": "عاجل", "icon": "🚨",
+                "title": f"{len(weak)} فرع ضعيف الأداء يحتاج تدخّل فوري",
+                "detail": f"الفروع: {names}. مؤشّرها أقل من 40/100.",
+                "action": "افتح مقارنة الفروع لمعرفة السبب الجذري",
+                "link": "company-branches.html",
+            })
+
+        # 2) فروع بهامش منخفض جداً (<10%)
+        thin = [bd for bd in branch_data if bd["entry"].margin < 10 and bd["entry"].sales > 0]
+        if thin:
+            decisions.append({
+                "priority": "عاجل", "icon": "💸",
+                "title": f"{len(thin)} فرع بهامش ربح منخفض جداً",
+                "detail": f"هامش الربح أقل من 10% — راجع التكاليف فوراً.",
+                "action": "حلّل الأسباب عبر التحليل التنفيذي",
+                "link": "company-dashboard.html",
+            })
+
+        # 3) فروع تراجعت مبيعاتها (نمو سالب أكثر من 15%-)
+        declining = [bd for bd in branch_data if bd["entry"].growth <= -15]
+        if declining:
+            names = "، ".join(bd["branch"].name for bd in declining[:3])
+            decisions.append({
+                "priority": "مهم", "icon": "📉",
+                "title": f"تراجع حاد في مبيعات {len(declining)} فرع",
+                "detail": f"{names} — تراجع المبيعات تجاوز 15%.",
+                "action": "افحص أسباب التراجع",
+                "link": "company-branches.html",
+            })
+
+        # 4) كشف التسرّب
+        try:
+            company_exp_ratio = (total_expenses / total_sales * 100) if total_sales > 0 else 0
+            high_risk = 0
+            for bd in branch_data:
+                ents = s.exec(
+                    select(CompanyEntry).where(CompanyEntry.branch_id == bd["branch"].id).order_by(CompanyEntry.created_at)
+                ).all()
+                if ents:
+                    r = detect_leakage(ents, company_exp_ratio)
+                    if r["risk"] >= 60:
+                        high_risk += 1
+            if high_risk > 0:
+                decisions.append({
+                    "priority": "عاجل", "icon": "🛡️",
+                    "title": f"اشتباه تسرّب/احتيال في {high_risk} فرع",
+                    "detail": "تم كشف مؤشرات قوية على تسرّب — راجعها فوراً.",
+                    "action": "افتح كشف التسرّب",
+                    "link": "company-leakage.html",
+                })
+        except Exception:
+            pass
+
+        # 5) التدفق النقدي
+        try:
+            cash = company.cash_reserve or 0
+            obligations = company.monthly_obligations or 0
+            # تقدير صافي شهري من البيانات
+            monthly_net = round((total_sales - total_expenses) / max(len(branch_data), 1)) - obligations
+            if monthly_net < 0 and cash > 0:
+                runway = round(cash / abs(monthly_net), 1)
+                if runway < 3:
+                    decisions.append({
+                        "priority": "عاجل", "icon": "💧",
+                        "title": f"السيولة تكفي {runway} شهر فقط",
+                        "detail": "وضع حرج في التدفق النقدي — قرارات تخفيض تكلفة عاجلة.",
+                        "action": "افتح التدفق النقدي",
+                        "link": "company-cashflow.html",
+                    })
+        except Exception:
+            pass
+
+        # ===== الفرص =====
+        # فروع ممتازة لتعميم ممارساتها
+        strong = [bd for bd in branch_data if bd["entry"].branch_score >= 70]
+        if strong:
+            best = max(strong, key=lambda x: x["entry"].branch_score)
+            opportunities.append({
+                "icon": "⭐", "title": f"فرع {best['branch'].name} يتفوّق — عمّم ممارساته",
+                "detail": f"مؤشّر {best['entry'].branch_score}/100. ادرس ممارساته وطبّقها على الفروع الأضعف لرفع الأداء العام.",
+                "link": "company-branches.html",
+            })
+
+        # نمو إيجابي قوي
+        growing = [bd for bd in branch_data if bd["entry"].growth >= 15]
+        if growing:
+            opportunities.append({
+                "icon": "📈", "title": f"{len(growing)} فرع ينمو بقوة",
+                "detail": "فروع ينمو فيها الطلب — فرصة لزيادة الاستثمار/الموظفين/المخزون.",
+                "link": "company-dashboard.html",
+            })
+
+        # عدم استكمال البيانات → فرصة تحسين الذكاء
+        modules_with_data = 0
+        for mod in ALLOWED_MODULES:
+            cnt = s.exec(
+                select(CompanyModuleEntry).where(
+                    CompanyModuleEntry.company_id == company.id,
+                    CompanyModuleEntry.module == mod,
+                )
+            ).all()
+            if cnt:
+                modules_with_data += 1
+        if modules_with_data < 4:
+            opportunities.append({
+                "icon": "🧩", "title": "أكمل وحدات الـ ERP لتحليل أعمق",
+                "detail": f"تم تعبئة {modules_with_data} وحدة فقط من {len(ALLOWED_MODULES)} — كل وحدة إضافية تزيد دقة التحليل.",
+                "link": "company-dashboard.html",
+            })
+
+        # هامش ربح ممتاز على مستوى الشركة
+        if kpis["margin"] >= 25 and len(branch_data) > 0:
+            opportunities.append({
+                "icon": "💎", "title": "هامش ربح ممتاز — فرصة توسّع",
+                "detail": f"هامش الشركة {kpis['margin']}% — وضع مالي قوي يدعم افتتاح فرع جديد أو زيادة التسويق.",
+                "link": "company-dashboard.html",
+            })
+
+        # ===== التنبيهات السريعة =====
+        if not branch_data:
+            alerts.append({"icon": "📋", "msg": "لا توجد بيانات فروع بعد — ابدأ بإدخال البيانات الأساسية"})
+        else:
+            if kpis["margin"] < 15:
+                alerts.append({"icon": "⚠️", "msg": f"هامش الشركة الإجمالي {kpis['margin']}% — تحت المعدل الصحّي"})
+            if len([bd for bd in branch_data if bd["entry"].repeat_rate < 20]) > 0:
+                alerts.append({"icon": "👥", "msg": "معدل تكرار العملاء منخفض في بعض الفروع — راجع تجربة العميل"})
+
+        # ترتيب القرارات: عاجل أولاً
+        priority_order = {"عاجل": 0, "مهم": 1, "متوسط": 2}
+        decisions.sort(key=lambda d: priority_order.get(d["priority"], 9))
+
+        # اقتطاع لأهم 4
+        decisions = decisions[:4]
+        opportunities = opportunities[:4]
+
+        return {
+            "company": {"name": company.name, "sector": SECTOR_NAMES.get(company.sector, company.sector)},
+            "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "kpis": kpis,
+            "decisions": decisions,
+            "opportunities": opportunities,
+            "alerts": alerts,
+            "modules_filled": modules_with_data,
+            "modules_total": len(ALLOWED_MODULES),
+        }
+
+
+# Routes الصفحات الجديدة
+@app.get("/company-events.html")
+def page_company_events():
+    return FileResponse("company-events.html")
+
+@app.get("/company-competitors.html")
+def page_company_competitors():
+    return FileResponse("company-competitors.html")
+
+@app.get("/company-command-center.html")
+def page_company_command_center():
+    return FileResponse("company-command-center.html")
