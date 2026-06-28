@@ -3073,3 +3073,304 @@ def page_company_competitors():
 @app.get("/company-command-center.html")
 def page_company_command_center():
     return FileResponse("company-command-center.html")
+
+
+# ============================================================
+# ===== Prediction AI: التنبؤ بالمبيعات والأرباح =====
+# ============================================================
+
+@app.get("/company/predictions")
+def company_predictions(user: User = Depends(get_current_user)):
+    """يحسب توقعات الـ 6 أشهر القادمة بناءً على معدل النمو الفعلي لكل فرع."""
+    with Session(engine) as s:
+        if not user.company_id:
+            raise HTTPException(403, "لا توجد شركة نشطة")
+        company = s.get(Company, user.company_id)
+        if not company or company.owner_id != user.id:
+            raise HTTPException(403, "غير مصرّح")
+        if company.is_active != 1:
+            raise HTTPException(402, "شركتك قيد التفعيل — فعّلها من لوحة الإدارة")
+
+        branches = s.exec(
+            select(CompanyBranch).where(CompanyBranch.company_id == company.id, CompanyBranch.is_active == 1)
+        ).all()
+
+        branch_forecasts = []
+        total_sales_proj = [0.0] * 6
+        total_profit_proj = [0.0] * 6
+        has_history = False
+
+        for b in branches:
+            ents = s.exec(
+                select(CompanyEntry).where(CompanyEntry.branch_id == b.id).order_by(CompanyEntry.created_at)
+            ).all()
+            if not ents:
+                continue
+
+            last = ents[-1]
+            # حساب معدل النمو من آخر 3 فترات (أو كل المتاح)
+            recent = ents[-min(4, len(ents)):]
+            growth_rates = []
+            for i in range(1, len(recent)):
+                if recent[i-1].sales > 0:
+                    g = (recent[i].sales - recent[i-1].sales) / recent[i-1].sales
+                    growth_rates.append(g)
+            avg_growth = sum(growth_rates) / len(growth_rates) if growth_rates else 0
+            # قيد على النمو الشهري (±15% حد أقصى لتفادي مبالغات)
+            avg_growth = max(-0.15, min(0.15, avg_growth))
+
+            if len(ents) >= 2:
+                has_history = True
+
+            margin = (last.profit / last.sales) if last.sales > 0 else 0
+            # ثقة التنبؤ
+            if len(ents) >= 4:
+                confidence = "عالية"
+            elif len(ents) >= 2:
+                confidence = "متوسطة"
+            else:
+                confidence = "منخفضة"
+
+            months_sales = []
+            months_profit = []
+            base_sales = last.sales
+            for m in range(6):
+                base_sales = base_sales * (1 + avg_growth)
+                months_sales.append(round(base_sales))
+                months_profit.append(round(base_sales * margin))
+                total_sales_proj[m] += base_sales
+                total_profit_proj[m] += base_sales * margin
+
+            branch_forecasts.append({
+                "branch": b.name,
+                "current_sales": round(last.sales),
+                "current_profit": round(last.profit),
+                "monthly_growth_pct": round(avg_growth * 100, 1),
+                "confidence": confidence,
+                "history_points": len(ents),
+                "next_6m_sales": months_sales,
+                "next_6m_profit": months_profit,
+                "total_6m_sales": round(sum(months_sales)),
+                "total_6m_profit": round(sum(months_profit)),
+            })
+
+        # توليد أسماء الأشهر القادمة
+        now = datetime.now()
+        ar_months = ["", "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
+                     "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"]
+        labels = []
+        for i in range(1, 7):
+            m = ((now.month - 1 + i) % 12) + 1
+            y = now.year + ((now.month - 1 + i) // 12)
+            labels.append(f"{ar_months[m]} {y}")
+
+        return {
+            "company": {"name": company.name},
+            "has_history": has_history,
+            "labels": labels,
+            "branch_forecasts": branch_forecasts,
+            "company_projection": {
+                "sales": [round(v) for v in total_sales_proj],
+                "profit": [round(v) for v in total_profit_proj],
+                "total_sales_6m": round(sum(total_sales_proj)),
+                "total_profit_6m": round(sum(total_profit_proj)),
+            },
+        }
+
+
+# ============================================================
+# ===== AI Risk Engine: محرك المخاطر =====
+# ============================================================
+
+@app.get("/company/risks")
+def company_risks(user: User = Depends(get_current_user)):
+    """يحدّد المخاطر الأربع: سيولة، فقد عملاء، انخفاض أرباح، تعثّر تشغيلي."""
+    with Session(engine) as s:
+        if not user.company_id:
+            raise HTTPException(403, "لا توجد شركة نشطة")
+        company = s.get(Company, user.company_id)
+        if not company or company.owner_id != user.id:
+            raise HTTPException(403, "غير مصرّح")
+        if company.is_active != 1:
+            raise HTTPException(402, "شركتك قيد التفعيل — فعّلها من لوحة الإدارة")
+
+        branches = s.exec(
+            select(CompanyBranch).where(CompanyBranch.company_id == company.id, CompanyBranch.is_active == 1)
+        ).all()
+
+        # جمع آخر إدخال لكل فرع
+        total_sales = total_expenses = 0.0
+        margin_sum = 0.0
+        margin_count = 0
+        repeat_sum = 0.0
+        repeat_count = 0
+        growth_values = []
+        for b in branches:
+            e = s.exec(
+                select(CompanyEntry).where(CompanyEntry.branch_id == b.id).order_by(CompanyEntry.created_at.desc())
+            ).first()
+            if e:
+                total_sales += e.sales
+                total_expenses += e.expenses
+                if e.sales > 0:
+                    margin_sum += e.margin
+                    margin_count += 1
+                if e.repeat_rate > 0:
+                    repeat_sum += e.repeat_rate
+                    repeat_count += 1
+                if e.growth != 0:
+                    growth_values.append(e.growth)
+
+        avg_margin = margin_sum / margin_count if margin_count else 0
+        avg_repeat = repeat_sum / repeat_count if repeat_count else 0
+        avg_growth = sum(growth_values) / len(growth_values) if growth_values else 0
+        monthly_net = total_sales - total_expenses
+
+        risks = []
+
+        # 1) مخاطر السيولة
+        liquidity_score = 0
+        liquidity_reasons = []
+        cash = company.cash_reserve or 0
+        obligations = company.monthly_obligations or 0
+        if obligations > 0 and cash > 0:
+            runway = cash / max(abs(min(monthly_net - obligations, 0)), 1)
+            if runway < 3:
+                liquidity_score = 85; liquidity_reasons.append(f"السيولة تكفي {round(runway,1)} شهر فقط")
+            elif runway < 6:
+                liquidity_score = 50; liquidity_reasons.append(f"السيولة تكفي {round(runway,1)} شهر — راقب")
+            else:
+                liquidity_score = 15; liquidity_reasons.append("السيولة بحالة آمنة")
+        else:
+            liquidity_score = 30; liquidity_reasons.append("بيانات السيولة غير مكتملة — أدخلها في صفحة التدفق النقدي")
+        if monthly_net < 0:
+            liquidity_score = max(liquidity_score, 70); liquidity_reasons.append("صافي تشغيل سالب")
+        risks.append({
+            "title": "مخاطر السيولة", "icon": "💧", "score": min(liquidity_score, 100),
+            "reasons": liquidity_reasons, "link": "company-cashflow.html",
+            "action": "افتح التدفق النقدي وراجع الالتزامات",
+        })
+
+        # 2) فقد العملاء
+        churn_score = 0
+        churn_reasons = []
+        if avg_repeat < 20 and repeat_count > 0:
+            churn_score = 75; churn_reasons.append(f"معدل تكرار العملاء منخفض ({round(avg_repeat)}%)")
+        elif avg_repeat < 35 and repeat_count > 0:
+            churn_score = 45; churn_reasons.append(f"معدل تكرار متوسط ({round(avg_repeat)}%) — يحتاج تحسين")
+        elif repeat_count == 0:
+            churn_score = 35; churn_reasons.append("لم تُدخل بيانات العملاء المتكررين")
+        else:
+            churn_score = 15; churn_reasons.append(f"تكرار العملاء جيد ({round(avg_repeat)}%)")
+        # إذا في وحدة العملاء بيانات NPS
+        try:
+            ce = s.exec(
+                select(CompanyModuleEntry).where(
+                    CompanyModuleEntry.company_id == company.id,
+                    CompanyModuleEntry.module == "customers",
+                ).order_by(CompanyModuleEntry.created_at.desc())
+            ).first()
+            if ce and ce.data:
+                cdata = json.loads(ce.data)
+                for k, v in cdata.items():
+                    if "NPS" in k:
+                        try:
+                            nps = float(v)
+                            if nps < 0:
+                                churn_score = max(churn_score, 80); churn_reasons.append(f"NPS سالب ({round(nps)})")
+                            elif nps < 30:
+                                churn_score = max(churn_score, 55); churn_reasons.append(f"NPS منخفض ({round(nps)})")
+                        except Exception: pass
+        except Exception: pass
+        risks.append({
+            "title": "فقد العملاء", "icon": "👋", "score": min(churn_score, 100),
+            "reasons": churn_reasons, "link": "company-customers.html",
+            "action": "افحص وحدة العملاء وحسّن الاحتفاظ",
+        })
+
+        # 3) انخفاض الأرباح
+        profit_score = 0
+        profit_reasons = []
+        if avg_margin < 10 and margin_count > 0:
+            profit_score = 80; profit_reasons.append(f"هامش الربح {round(avg_margin)}% — منخفض جداً")
+        elif avg_margin < 20 and margin_count > 0:
+            profit_score = 45; profit_reasons.append(f"هامش الربح {round(avg_margin)}% — دون المعدل")
+        elif margin_count == 0:
+            profit_score = 30; profit_reasons.append("لا توجد بيانات هامش")
+        else:
+            profit_score = 15; profit_reasons.append(f"هامش الربح صحي ({round(avg_margin)}%)")
+        if avg_growth < -10:
+            profit_score = max(profit_score, 75); profit_reasons.append(f"تراجع مبيعات بمعدل {round(avg_growth)}%")
+        risks.append({
+            "title": "انخفاض الأرباح", "icon": "📉", "score": min(profit_score, 100),
+            "reasons": profit_reasons, "link": "company-dashboard.html",
+            "action": "حلّل الفروع الأضعف وراجع التكاليف",
+        })
+
+        # 4) تعثّر تشغيلي (من وحدتي التشغيل والمشتريات)
+        ops_score = 0
+        ops_reasons = []
+        try:
+            for mod in ("ops", "procurement"):
+                me = s.exec(
+                    select(CompanyModuleEntry).where(
+                        CompanyModuleEntry.company_id == company.id,
+                        CompanyModuleEntry.module == mod,
+                    ).order_by(CompanyModuleEntry.created_at.desc())
+                ).first()
+                if me and me.data:
+                    d = json.loads(me.data)
+                    for k, v in d.items():
+                        try:
+                            val = float(v)
+                            if "متأخر" in k and val > 0:
+                                ops_score = max(ops_score, 60); ops_reasons.append(f"{k}: {round(val)}")
+                            if "الالتزام" in k and val < 80:
+                                ops_score = max(ops_score, 55); ops_reasons.append(f"{k}: {round(val)}% (يحتاج تحسين)")
+                            if "الأعطال" in k and val > 0:
+                                ops_score = max(ops_score, 45); ops_reasons.append(f"{k}: {round(val)}")
+                        except Exception: pass
+        except Exception: pass
+        if not ops_reasons:
+            ops_score = 20; ops_reasons.append("لا توجد مؤشرات تعثّر — أو لم تُدخل بيانات التشغيل بعد")
+        risks.append({
+            "title": "تعثّر تشغيلي", "icon": "⚙️", "score": min(ops_score, 100),
+            "reasons": ops_reasons, "link": "company-ops.html",
+            "action": "افتح وحدة التشغيل والمشتريات",
+        })
+
+        # ترتيب حسب الخطورة
+        for r in risks:
+            if r["score"] >= 70: r["level"] = "خطر مرتفع"; r["color"] = "#ef4444"
+            elif r["score"] >= 45: r["level"] = "خطر متوسط"; r["color"] = "#f59e0b"
+            elif r["score"] >= 25: r["level"] = "خطر منخفض"; r["color"] = "#f5b301"
+            else: r["level"] = "آمن"; r["color"] = "#10b981"
+        risks.sort(key=lambda x: x["score"], reverse=True)
+
+        overall = round(sum(r["score"] for r in risks) / len(risks)) if risks else 0
+        if overall >= 60: overall_level = "خطر مرتفع"; overall_color = "#ef4444"
+        elif overall >= 40: overall_level = "خطر متوسط"; overall_color = "#f59e0b"
+        else: overall_level = "آمن نسبياً"; overall_color = "#10b981"
+
+        return {
+            "company": {"name": company.name},
+            "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "overall_risk": overall,
+            "overall_level": overall_level,
+            "overall_color": overall_color,
+            "risks": risks,
+        }
+
+
+# ===== Routes الصفحات الجديدة =====
+@app.get("/company-predictions.html")
+def page_company_predictions():
+    return FileResponse("company-predictions.html")
+
+@app.get("/company-risks.html")
+def page_company_risks():
+    return FileResponse("company-risks.html")
+
+@app.get("/company-board.html")
+def page_company_board():
+    return FileResponse("company-board.html")
