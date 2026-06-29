@@ -245,7 +245,7 @@ async function analyze(){
   btn.disabled=true; btn.textContent="جارٍ التحليل…";
   out.classList.remove("show");
   try{
-    const payload = sv ? {scope:"branch", branch_id:+sv} : {scope:"company"};
+    const payload = {scope:"module", module:"competitors"};
     const r=await api("/company/analyze",{method:"POST",body:JSON.stringify(payload)});
     out.innerHTML=mdToHtml(r.analysis||"");
     out.classList.add("show");
@@ -277,7 +277,7 @@ async function analyze(){
   btn.disabled=true; btn.textContent="جارٍ التحليل…";
   out.classList.remove("show");
   try{
-    const payload = sv ? {scope:"branch", branch_id:+sv} : {scope:"company"};
+    const payload = {scope:"module", module:"competitors"};
     const r=await api("/company/analyze",{method:"POST",body:JSON.stringify(payload)});
     out.innerHTML=mdToHtml(r.analysis||"");
     out.classList.add("show");
