@@ -2058,6 +2058,71 @@ def company_analyze(data: dict, user: User = Depends(get_current_user)):
 
         sector_name = SECTOR_NAMES.get(company.sector, "شركة")
 
+        # === تحليل وحدة محددة فقط ===
+        if scope == "module":
+            module = (data.get("module") or "").strip()
+            if module not in ALLOWED_MODULES:
+                raise HTTPException(400, "وحدة غير معروفة")
+            mlabel = MODULE_LABEL.get(module, module)
+            # نجمع آخر إدخال للوحدة (مستوى الشركة + كل فرع)
+            module_rows = s.exec(
+                select(CompanyModuleEntry).where(
+                    CompanyModuleEntry.company_id == company.id,
+                    CompanyModuleEntry.module == module,
+                ).order_by(CompanyModuleEntry.created_at.desc())
+            ).all()
+            seen = set(); module_snapshots = []
+            for me in module_rows:
+                key = me.branch_id or 0
+                if key in seen: continue
+                seen.add(key)
+                try:
+                    md = json.loads(me.data) if me.data else {}
+                except Exception:
+                    md = {}
+                if md:
+                    if me.branch_id:
+                        br = s.get(CompanyBranch, me.branch_id)
+                        scope_name = f"فرع {br.name}" if br else f"فرع #{me.branch_id}"
+                    else:
+                        scope_name = "على مستوى الشركة"
+                    module_snapshots.append((scope_name, me.period, md))
+            if not module_snapshots:
+                raise HTTPException(400, f"لا توجد بيانات في وحدة {mlabel} — احفظ بيانات الوحدة أولاً")
+
+            # ملخّص مالي عام مختصر (سياق ضروري)
+            total_sales = sum(r[1].sales for r in rows)
+            total_profit = sum(r[1].profit for r in rows)
+            margin = round((total_profit / total_sales) * 100, 1) if total_sales > 0 else 0
+
+            lines = [f"السياق: شركة \"{company.name}\" في قطاع {sector_name}، {len(rows)} فروع، إجمالي مبيعات {round(total_sales)} ريال، هامش الربح {margin}%.",
+                     "",
+                     f"بيانات وحدة \"{mlabel}\" (آخر إدخال):"]
+            for sn, period, md in module_snapshots:
+                lines.append(f"\n— {sn} ({period}):")
+                for k, v in md.items():
+                    lines.append(f"  • {k}: {v}")
+            data_block = "\n".join(lines)
+
+            prompt = f"""أنت مستشار تنفيذي متخصّص في "{mlabel}" تتحدث بالعربية بأسلوب محترف ومباشر.
+
+{data_block}
+
+اكتب تحليلاً مركّزاً على وحدة "{mlabel}" فقط (لا تحلل الفروع أو الشركة بشكل عام). يتضمن:
+1. **القراءة السريعة** — جملتان تلخّصان وضع هذه الوحدة.
+2. **أبرز ٢-٣ مؤشرات قوية** أو إيجابية في الوحدة.
+3. **أبرز ٢-٣ مخاطر أو ثغرات** يجب الانتباه لها.
+4. **القرارات الموصى بها** — ٣ قرارات تنفيذية مرتبة بحسب الأولوية ضمن نطاق هذه الوحدة فقط.
+
+اكتب بصيغة Markdown، عناوين ## واضحة، نقاط مرتّبة، أرقام محددة كلما أمكن. لا تخرج عن نطاق وحدة {mlabel}."""
+            txt = company_gemini(prompt)
+            if txt:
+                clean, _a, _d, _o = extract_exec(txt)
+                txt = clean
+            log_activity(user.name, f"حلّل وحدة {mlabel}", user.email)
+            return {"ok": True, "scope": "module", "module": module, "label": mlabel,
+                    "analysis": txt or "تعذّر توليد التحليل، حاول بعد قليل."}
+
         if scope == "branch":
             bid = int(data.get("branch_id") or 0)
             target = next(((b, e) for (b, e) in rows if b.id == bid), None)
@@ -3374,3 +3439,182 @@ def page_company_risks():
 @app.get("/company-board.html")
 def page_company_board():
     return FileResponse("company-board.html")
+
+
+# ============================================================
+# ===== AI Health Score — مؤشر صحة الشركة الشامل =====
+# ============================================================
+
+@app.get("/company/health-score")
+def company_health_score(user: User = Depends(get_current_user)):
+    """٥ محاور: الربحية، السيولة، النمو، رضا العملاء، إدارة المخاطر — مع شرح."""
+    with Session(engine) as s:
+        if not user.company_id:
+            raise HTTPException(403, "لا توجد شركة نشطة")
+        company = s.get(Company, user.company_id)
+        if not company or company.owner_id != user.id:
+            raise HTTPException(403, "غير مصرّح")
+        if company.is_active != 1:
+            raise HTTPException(402, "شركتك قيد التفعيل — فعّلها من لوحة الإدارة")
+
+        branches = s.exec(
+            select(CompanyBranch).where(CompanyBranch.company_id == company.id, CompanyBranch.is_active == 1)
+        ).all()
+        rows = []
+        for b in branches:
+            e = s.exec(
+                select(CompanyEntry).where(CompanyEntry.branch_id == b.id).order_by(CompanyEntry.created_at.desc())
+            ).first()
+            if e: rows.append((b, e))
+
+        if not rows:
+            raise HTTPException(400, "لا توجد بيانات فروع — أدخل البيانات الأساسية أولاً")
+
+        total_sales = sum(r[1].sales for r in rows)
+        total_expenses = sum(r[1].expenses for r in rows)
+        margin_vals = [r[1].margin for r in rows if r[1].sales > 0]
+        avg_margin = sum(margin_vals) / len(margin_vals) if margin_vals else 0
+        repeat_vals = [r[1].repeat_rate for r in rows if r[1].repeat_rate > 0]
+        avg_repeat = sum(repeat_vals) / len(repeat_vals) if repeat_vals else 0
+        growth_vals = [r[1].growth for r in rows if r[1].growth != 0]
+        avg_growth = sum(growth_vals) / len(growth_vals) if growth_vals else 0
+
+        # ١) الربحية (0-100)
+        if avg_margin >= 25: profitability = 95
+        elif avg_margin >= 18: profitability = 80
+        elif avg_margin >= 12: profitability = 60
+        elif avg_margin >= 6: profitability = 40
+        elif avg_margin > 0: profitability = 20
+        else: profitability = 10
+
+        # ٢) السيولة (0-100)
+        cash = company.cash_reserve or 0
+        obligations = company.monthly_obligations or 0
+        monthly_net = total_sales - total_expenses - obligations
+        if monthly_net >= 0 and cash > 0:
+            liquidity = 90
+        elif monthly_net >= 0:
+            liquidity = 75
+        elif cash > 0 and obligations > 0:
+            runway = cash / max(abs(monthly_net), 1)
+            if runway >= 6: liquidity = 65
+            elif runway >= 3: liquidity = 45
+            else: liquidity = 20
+        else:
+            liquidity = 50  # بيانات ناقصة
+
+        # ٣) النمو (0-100)
+        if avg_growth >= 15: growth = 95
+        elif avg_growth >= 5: growth = 80
+        elif avg_growth >= 0: growth = 65
+        elif avg_growth >= -5: growth = 45
+        elif avg_growth >= -15: growth = 25
+        else: growth = 10
+
+        # ٤) رضا العملاء (0-100) — من معدل التكرار + NPS لو موجود
+        cust_score = 50
+        if repeat_vals:
+            if avg_repeat >= 50: cust_score = 90
+            elif avg_repeat >= 35: cust_score = 75
+            elif avg_repeat >= 20: cust_score = 55
+            else: cust_score = 30
+        # تحسين بـ NPS إن وُجد
+        try:
+            ce = s.exec(
+                select(CompanyModuleEntry).where(
+                    CompanyModuleEntry.company_id == company.id,
+                    CompanyModuleEntry.module == "customers",
+                ).order_by(CompanyModuleEntry.created_at.desc())
+            ).first()
+            if ce and ce.data:
+                cd = json.loads(ce.data)
+                for k, v in cd.items():
+                    if "NPS" in k:
+                        try:
+                            nps = float(v)
+                            if nps >= 50: cust_score = max(cust_score, 90)
+                            elif nps >= 30: cust_score = max(cust_score, 75)
+                            elif nps >= 0: cust_score = max(cust_score, 55)
+                            else: cust_score = min(cust_score, 35)
+                        except Exception: pass
+        except Exception: pass
+
+        # ٥) إدارة المخاطر (0-100) — معكوس مؤشر التسرّب
+        risk_score = 80  # افتراضي جيد
+        try:
+            company_exp_ratio = (total_expenses / total_sales * 100) if total_sales > 0 else 0
+            high_risk_count = 0
+            for b, _ in rows:
+                ents = s.exec(
+                    select(CompanyEntry).where(CompanyEntry.branch_id == b.id).order_by(CompanyEntry.created_at)
+                ).all()
+                if ents:
+                    r = detect_leakage(ents, company_exp_ratio)
+                    if r["risk"] >= 60: high_risk_count += 1
+            if high_risk_count >= 3: risk_score = 30
+            elif high_risk_count == 2: risk_score = 45
+            elif high_risk_count == 1: risk_score = 65
+        except Exception: pass
+
+        axes = [
+            {"key": "profitability", "label": "الربحية", "score": profitability,
+             "metric": f"هامش الربح {round(avg_margin,1)}%",
+             "icon": "💰"},
+            {"key": "liquidity", "label": "السيولة", "score": liquidity,
+             "metric": f"احتياطي {round(cash)} ر · صافي شهري {round(monthly_net)} ر",
+             "icon": "💧"},
+            {"key": "growth", "label": "النمو", "score": growth,
+             "metric": f"معدّل النمو {round(avg_growth,1)}%",
+             "icon": "📈"},
+            {"key": "customers", "label": "رضا العملاء", "score": cust_score,
+             "metric": f"تكرار {round(avg_repeat)}%" if repeat_vals else "بيانات محدودة",
+             "icon": "❤️"},
+            {"key": "risks", "label": "إدارة المخاطر", "score": risk_score,
+             "metric": "تسرّب منخفض" if risk_score >= 65 else "تسرّب محتمل",
+             "icon": "🛡️"},
+        ]
+
+        # الدرجة الشاملة بأوزان
+        weights = {"profitability": 0.25, "liquidity": 0.25, "growth": 0.20, "customers": 0.15, "risks": 0.15}
+        overall = sum(a["score"] * weights[a["key"]] for a in axes)
+        overall = round(overall)
+
+        if overall >= 80: level = "ممتاز"; color = "#10b981"
+        elif overall >= 65: level = "جيد"; color = "#34d399"
+        elif overall >= 50: level = "مقبول"; color = "#f5b301"
+        elif overall >= 35: level = "ضعيف"; color = "#f59e0b"
+        else: level = "حرج"; color = "#ef4444"
+
+        # تلوين كل محور
+        for a in axes:
+            if a["score"] >= 75: a["color"] = "#10b981"; a["light"] = "🟢"
+            elif a["score"] >= 55: a["color"] = "#f5b301"; a["light"] = "🟡"
+            elif a["score"] >= 35: a["color"] = "#f59e0b"; a["light"] = "🟠"
+            else: a["color"] = "#ef4444"; a["light"] = "🔴"
+
+        # أضعف محور = السبب الرئيسي
+        weakest = min(axes, key=lambda x: x["score"])
+        explanations = {
+            "profitability": "هامش الربح منخفض — راجع التكاليف ورفع الأسعار في الفروع الأقوى.",
+            "liquidity": "السيولة تحت ضغط — راجع الالتزامات الشهرية وأدخل بيانات التدفق النقدي.",
+            "growth": "النمو متباطئ — راجع استراتيجية التسويق والاحتفاظ بالعملاء.",
+            "customers": "رضا العملاء يحتاج تحسين — راجع وحدة العملاء والـ NPS.",
+            "risks": "مؤشرات تسرّب في بعض الفروع — افتح صفحة كشف التسرّب.",
+        }
+        main_cause = explanations.get(weakest["key"], "راجع البيانات لمعرفة السبب.")
+
+        return {
+            "company": {"name": company.name},
+            "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "overall": overall,
+            "level": level,
+            "color": color,
+            "axes": axes,
+            "weakest_axis": weakest["label"],
+            "main_cause": main_cause,
+        }
+
+
+@app.get("/company-health.html")
+def page_company_health():
+    return FileResponse("company-health.html")
