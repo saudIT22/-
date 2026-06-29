@@ -194,6 +194,22 @@ function showLastSaved(){
   }else{ box.style.display="none"; }
 }
 
+
+function validateData(data){
+  for(const [k,v] of Object.entries(data)){
+    if(typeof v!=="number") continue;
+    // الحقول التي تحتوي على % لا تتجاوز 100
+    if(k.includes("%") && (v>100 || v<0)){
+      return `قيمة "${k}" يجب أن تكون بين 0 و 100 (الإدخال الحالي: ${v})`;
+    }
+    // الأرقام السالبة في الحقول المالية والكمية غير مسموحة عادةً (ما عدا الربح والصافي)
+    if(v<0 && !k.includes("صافي") && !k.includes("ربح")){
+      return `قيمة "${k}" لا يمكن أن تكون سالبة`;
+    }
+  }
+  return null;
+}
+
 async function save(){
   document.getElementById("err").style.display="none";
   document.getElementById("ok").style.display="none";
@@ -202,6 +218,7 @@ async function save(){
     const v=document.getElementById(id).value.trim();
     if(v!=="") data[label]=Number(v.replace(/,/g,""))||v;
   });
+  const ve=validateData(data); if(ve){const er=document.getElementById("err"); er.textContent=ve; er.style.display="block"; return;}
   if(Object.keys(data).length===0){
     const er=document.getElementById("err"); er.textContent="املأ حقلاً واحداً على الأقل"; er.style.display="block"; return;
   }
@@ -226,7 +243,7 @@ async function analyze(){
   btn.disabled=true; btn.textContent="جارٍ التحليل…";
   out.classList.remove("show");
   try{
-    const payload = sv ? {scope:"branch", branch_id:+sv} : {scope:"company"};
+    const payload = {scope:"module", module:"hr"};
     const r=await api("/company/analyze",{method:"POST",body:JSON.stringify(payload)});
     out.innerHTML=mdToHtml(r.analysis||"");
     out.classList.add("show");
