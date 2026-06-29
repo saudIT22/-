@@ -3618,3 +3618,200 @@ def company_health_score(user: User = Depends(get_current_user)):
 @app.get("/company-health.html")
 def page_company_health():
     return FileResponse("company-health.html")
+
+
+# ============================================================
+# ===== جودة البيانات لكل وحدة =====
+# ============================================================
+
+# الحقول المهمة لكل وحدة (للحساب المرجعي)
+MODULE_KEY_FIELDS = {
+    "finance":     16, "sales":       10, "customers":  8,
+    "hr":          12, "ops":         6,  "inventory":  8,
+    "procurement": 10, "events":      8,  "competitors": 12,
+}
+
+@app.get("/company/data-quality")
+def company_data_quality(user: User = Depends(get_current_user)):
+    """يحسب جودة بيانات كل وحدة + جودة شاملة."""
+    with Session(engine) as s:
+        if not user.company_id:
+            raise HTTPException(403, "لا توجد شركة نشطة")
+        company = s.get(Company, user.company_id)
+        if not company or company.owner_id != user.id:
+            raise HTTPException(403, "غير مصرّح")
+        if company.is_active != 1:
+            raise HTTPException(402, "شركتك قيد التفعيل")
+
+        modules = []
+        for mod, expected in MODULE_KEY_FIELDS.items():
+            entries = s.exec(
+                select(CompanyModuleEntry).where(
+                    CompanyModuleEntry.company_id == company.id,
+                    CompanyModuleEntry.module == mod,
+                ).order_by(CompanyModuleEntry.created_at.desc())
+            ).all()
+            if not entries:
+                quality = 0; status = "❌"; level = "لا بيانات"
+            else:
+                seen = set(); filled_count = 0
+                for me in entries:
+                    key = me.branch_id or 0
+                    if key in seen: continue
+                    seen.add(key)
+                    try:
+                        md = json.loads(me.data) if me.data else {}
+                        filled_count = max(filled_count, len(md))
+                    except Exception: pass
+                quality = min(round((filled_count / expected) * 100), 100)
+                if quality >= 75: status = "🟢"; level = "ممتازة"
+                elif quality >= 45: status = "🟡"; level = "متوسطة"
+                else: status = "🟠"; level = "ضعيفة"
+            modules.append({
+                "module": mod, "label": MODULE_LABEL.get(mod, mod),
+                "quality": quality, "status": status, "level": level,
+                "filled": filled_count if entries else 0, "expected": expected,
+            })
+
+        # أساسيات الفروع
+        branches_with_data = 0; branches_total = 0
+        for b in s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company.id, CompanyBranch.is_active == 1)).all():
+            branches_total += 1
+            if s.exec(select(CompanyEntry).where(CompanyEntry.branch_id == b.id)).first():
+                branches_with_data += 1
+        basics_quality = round((branches_with_data / branches_total) * 100) if branches_total else 0
+
+        overall = round(sum(m["quality"] for m in modules) / len(modules) * 0.7 + basics_quality * 0.3) if modules else 0
+        if overall >= 75: overall_status = "🟢"; overall_level = "موثوقية عالية"
+        elif overall >= 45: overall_status = "🟡"; overall_level = "موثوقية متوسطة"
+        else: overall_status = "🟠"; overall_level = "موثوقية محدودة"
+
+        return {
+            "company": {"name": company.name},
+            "overall_quality": overall,
+            "overall_status": overall_status,
+            "overall_level": overall_level,
+            "basics": {"quality": basics_quality, "branches_with_data": branches_with_data, "branches_total": branches_total},
+            "modules": modules,
+            "note": "كل ما زادت جودة البيانات، زادت دقة التحليل والتنبؤ والمخاطر.",
+        }
+
+
+# ============================================================
+# ===== وحدة الأهداف والنتائج =====
+# ============================================================
+
+@app.post("/company/goals/save")
+def company_goals_save(data: dict, user: User = Depends(get_current_user)):
+    """يحفظ أهداف الشركة كسجلّ في جدول الوحدات (module=goals)."""
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id)
+        if not company or company.owner_id != user.id:
+            raise HTTPException(403, "غير مصرّح")
+        if company.is_active != 1:
+            raise HTTPException(402, "شركتك قيد التفعيل")
+        goals = data.get("goals") or {}
+        cleaned = {k: v for k, v in goals.items() if v is not None and str(v).strip() != ""}
+        entry = CompanyModuleEntry(
+            company_id=company.id, branch_id=None, module="goals",
+            period=data.get("period") or datetime.now().strftime("%Y"),
+            data=json.dumps(cleaned, ensure_ascii=False),
+        )
+        s.add(entry); s.commit(); s.refresh(entry)
+        return {"ok": True, "fields": len(cleaned)}
+
+
+@app.get("/company/goals")
+def company_goals_get(user: User = Depends(get_current_user)):
+    """يجلب آخر أهداف + يحسب نسبة الإنجاز مقابل البيانات الفعلية."""
+    with Session(engine) as s:
+        if not user.company_id:
+            raise HTTPException(403, "لا توجد شركة نشطة")
+        company = s.get(Company, user.company_id)
+        if not company or company.owner_id != user.id:
+            raise HTTPException(403, "غير مصرّح")
+        if company.is_active != 1:
+            raise HTTPException(402, "شركتك قيد التفعيل")
+
+        last = s.exec(
+            select(CompanyModuleEntry).where(
+                CompanyModuleEntry.company_id == company.id,
+                CompanyModuleEntry.module == "goals",
+            ).order_by(CompanyModuleEntry.created_at.desc())
+        ).first()
+        goals = {}
+        period = ""
+        if last and last.data:
+            try: goals = json.loads(last.data)
+            except Exception: goals = {}
+            period = last.period
+
+        # الفعلي من بيانات الفروع
+        total_sales = total_profit = total_customers = 0.0
+        repeat_vals = []; growth_vals = []; total_expenses = 0.0
+        for b in s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company.id, CompanyBranch.is_active == 1)).all():
+            e = s.exec(
+                select(CompanyEntry).where(CompanyEntry.branch_id == b.id).order_by(CompanyEntry.created_at.desc())
+            ).first()
+            if e:
+                total_sales += e.sales; total_profit += e.profit
+                total_expenses += e.expenses; total_customers += e.customers
+                if e.repeat_rate > 0: repeat_vals.append(e.repeat_rate)
+                if e.growth != 0: growth_vals.append(e.growth)
+
+        avg_repeat = sum(repeat_vals)/len(repeat_vals) if repeat_vals else 0
+
+        # مقارنة هدف vs فعلي
+        comparisons = []
+        def cmp(label, goal_key, actual, unit="ر"):
+            try: goal = float(goals.get(goal_key, 0) or 0)
+            except: goal = 0
+            if goal <= 0: return
+            pct = round((actual / goal) * 100, 1) if goal > 0 else 0
+            remaining = max(round(goal - actual), 0)
+            if pct >= 100: status = "🟢"; level = "تحقق"
+            elif pct >= 80: status = "🟢"; level = "قريب من الهدف"
+            elif pct >= 60: status = "🟡"; level = "في المسار"
+            elif pct >= 40: status = "🟠"; level = "متعثّر"
+            else: status = "🔴"; level = "بعيد"
+            comparisons.append({
+                "label": label, "goal": round(goal), "actual": round(actual),
+                "pct": pct, "remaining": remaining, "status": status, "level": level, "unit": unit,
+            })
+        cmp("هدف المبيعات", "هدف المبيعات (ريال)", total_sales)
+        cmp("هدف الربح", "هدف الربح (ريال)", total_profit)
+        cmp("هدف العملاء", "هدف عدد العملاء", total_customers, unit="عميل")
+        cmp("هدف معدل الاحتفاظ", "هدف معدل الاحتفاظ %", avg_repeat, unit="%")
+        # خفض المصاريف (هدف أقل)
+        try:
+            exp_goal = float(goals.get("هدف سقف المصروفات (ريال)", 0) or 0)
+            if exp_goal > 0:
+                pct_under = round((1 - total_expenses/exp_goal) * 100, 1) if exp_goal>0 else 0
+                pct = round((exp_goal/total_expenses)*100, 1) if total_expenses>0 else 100
+                if total_expenses <= exp_goal: status = "🟢"; level = f"تحت السقف ({pct_under}%)"
+                else: status = "🔴"; level = f"تجاوز السقف"
+                comparisons.append({
+                    "label": "سقف المصروفات", "goal": round(exp_goal), "actual": round(total_expenses),
+                    "pct": pct, "remaining": 0, "status": status, "level": level, "unit": "ر",
+                })
+        except: pass
+
+        return {
+            "company": {"name": company.name},
+            "period": period,
+            "goals": goals,
+            "comparisons": comparisons,
+            "has_goals": len(goals) > 0,
+        }
+
+
+@app.get("/company-goals.html")
+def page_company_goals():
+    return FileResponse("company-goals.html")
+
+@app.get("/company-data-quality.html")
+def page_company_quality():
+    return FileResponse("company-data-quality.html")
+
