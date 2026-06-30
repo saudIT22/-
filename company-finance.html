@@ -107,7 +107,22 @@
   <div class="field"><label>الاستهلاكات الشهرية (ريال)<span style="color:#f5b301;margin-inline-start:6px;font-size:11px">⭐⭐⭐</span></label><input id="f_15" type="number" inputmode="decimal" placeholder="0"></div>
 </div>
 
-            <div class="err" id="err"></div>
+                  <div class="sec-h">📡 مصدر البيانات</div>
+      <div class="field" style="margin-bottom:14px">
+        <label>من أين أتت هذه البيانات؟</label>
+        <select id="data_source" style="width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:11px 13px;color:var(--txt);font-family:inherit;font-size:14.5px">
+          <option value="manual">يدوي</option>
+          <option value="excel">Excel</option>
+          <option value="pos">POS</option>
+          <option value="erp">ERP</option>
+          <option value="accounting">نظام محاسبة</option>
+          <option value="api">API</option>
+          <option value="sap">SAP</option>
+          <option value="other">أخرى</option>
+        </select>
+        <div class="hint">يساعد المدير على معرفة موثوقية البيانات</div>
+      </div>
+      <div class="err" id="err"></div>
       <div class="ok" id="ok"></div>
       <button class="btn btn-mint" id="saveBtn" style="width:100%;padding:13px;margin-top:8px" onclick="save()">حفظ بيانات الوحدة المالية الموسّعة</button>
     </div>
@@ -191,6 +206,7 @@ function showLastSaved(){
   // مسح الحقول
   KEYS.forEach(([id])=>{ const el=document.getElementById(id); if(el) el.value=""; });
   if(saved && saved.data){
+    if(saved.data.__source){const el=document.getElementById("data_source");if(el)el.value=saved.data.__source;}
     box.style.display="block";
     const dt=new Date(saved.saved_at);
     box.innerHTML=`آخر حفظ: <b style="color:var(--mint)">${saved.period||"—"}</b> · ${dt.toLocaleDateString("ar-SA")}`;
@@ -221,6 +237,7 @@ async function save(){
   document.getElementById("err").style.display="none";
   document.getElementById("ok").style.display="none";
   const data={};
+  data.__source = document.getElementById("data_source").value;
   KEYS.forEach(([id,label])=>{
     const v=document.getElementById(id).value.trim();
     if(v!=="") data[label]=Number(v.replace(/,/g,""))||v;
