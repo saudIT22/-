@@ -6,9 +6,11 @@ import jwt
 import bcrypt
 from dotenv import load_dotenv
 from google import genai
-from fastapi import FastAPI, HTTPException, Header, Depends
+from fastapi import FastAPI, HTTPException, Header, Depends, UploadFile, File, Form
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+import csv
+import io
 from pydantic import BaseModel
 from typing import Optional
 from sqlmodel import SQLModel, Field, create_engine, Session, select
@@ -4139,3 +4141,382 @@ def page_company_benchmarks():
 @app.get("/company-root-cause.html")
 def page_company_root_cause():
     return FileResponse("company-root-cause.html")
+
+
+# ============================================================
+# ===== مركز الرفع الذكي: Excel/CSV → كل الوحدات =====
+# ============================================================
+
+# قاموس التطابق الذكي: مفتاح القاموس = الحقل القياسي عندنا، القيم = أسماء محتملة
+SMART_FIELD_MAP = {
+    # ===== الفروع (أساسي) =====
+    "branch_name":      ["branch","فرع","اسم الفرع","name","branch name"],
+    "city":             ["city","مدينة","المدينة"],
+    "period":           ["period","فترة","الفترة","month","شهر","date","تاريخ"],
+    # ===== مبيعات أساسية =====
+    "sales":            ["sales","مبيعات","إجمالي المبيعات","total sales","revenue","الإيرادات","المبيعات"],
+    "expenses":         ["expenses","مصروفات","المصروفات","cost","التكاليف","تكاليف"],
+    "invoices":         ["invoices","فواتير","عدد الفواتير","orders","طلبات","عدد الطلبات","bills"],
+    "customers":        ["customers","عملاء","عدد العملاء","عدد الزبائن","clients"],
+    "new_customers":    ["new customers","عملاء جدد","new"],
+    "repeat_customers": ["repeat","عملاء متكررون","returning"],
+    "discounts":        ["discounts","خصومات","الخصومات"],
+    "deposited":        ["deposited","مودع","المبلغ المُودَع","bank deposit","الإيداع"],
+    "top_products":     ["top products","أكثر مبيعاً","أكثر الأصناف","best sellers"],
+    # ===== المالية =====
+    "cogs":             ["cogs","تكلفة المبيعات","cost of goods","تكلفة البضاعة"],
+    "salaries":         ["salaries","الرواتب","الراتب","payroll","رواتب"],
+    "rent":             ["rent","إيجار","الإيجار","إيجارات","الإيجارات","rents"],
+    "marketing":        ["marketing","تسويق","التسويق","ads","الإعلانات"],
+    "utilities":        ["utilities","كهرباء","المرافق"],
+    "logistics_cost":   ["shipping","نقل","الشحن"],
+    "ar":               ["receivables","ذمم مدينة","المدينون","accounts receivable"],
+    "ap":               ["payables","ذمم دائنة","الدائنون","accounts payable"],
+    "cash":             ["cash","النقد","نقد","البنك","cash and bank"],
+    "short_debt":       ["short term debt","ديون قصيرة","قروض قصيرة"],
+    "long_debt":        ["long term debt","ديون طويلة","قروض طويلة"],
+    # ===== العملاء =====
+    "lost_customers":   ["lost","مفقودون","عملاء مفقودون","churned"],
+    "nps":              ["nps","صافي المرشحين"],
+    "satisfaction":     ["satisfaction","رضا","نسبة الرضا","csat"],
+    "complaints":       ["complaints","شكاوى","الشكاوى"],
+    # ===== الموارد البشرية =====
+    "employees":        ["employees","عدد الموظفين","الموظفين","staff","headcount"],
+    "resignations":     ["resignations","المستقيلين","المستقيلون","quits"],
+    "absence":          ["absence","الغياب","غياب","absences"],
+    "training":         ["training","التدريب","تدريب"],
+    "saudization":      ["saudization","السعودة","نسبة السعودة"],
+    "vacancies":        ["vacancies","الشواغر","الوظائف الشاغرة"],
+    # ===== المخزون =====
+    "inventory_value":  ["inventory value","قيمة المخزون","stock value"],
+    "dead_stock":       ["dead stock","مخزون راكد","المخزون الراكد","المخزون الزائد"],
+    "stockouts":        ["stockouts","نفاد المخزون","نفاذ المخزون"],
+    "waste":            ["waste","هدر","الهدر","الفاقد","spoilage"],
+    # ===== المشتريات =====
+    "suppliers":        ["suppliers","الموردين","عدد الموردين","vendors"],
+    "purchases":        ["purchases","المشتريات","قيمة المشتريات","total purchases"],
+    "supplier_delay":   ["supplier delay","تأخر المورد","lead time"],
+    # ===== تشغيل =====
+    "active_projects":  ["active projects","مشاريع نشطة","الطلبات النشطة"],
+    "delayed_projects": ["delayed","متأخرة","الطلبات المتأخرة"],
+    "on_time_orders":   ["on time","في الوقت","الطلبات في الوقت"],
+    "breakdowns":       ["breakdowns","الأعطال","عدد الأعطال"],
+    # ===== إعدادات الشركة =====
+    "cash_reserve":     ["cash reserve","الاحتياطي النقدي"],
+    "monthly_obligations":["monthly obligations","الالتزامات الشهرية"],
+}
+
+
+def _norm(s):
+    """تطبيع للمقارنة: lowercase + إزالة فراغات وعلامات."""
+    if s is None: return ""
+    s = str(s).strip().lower()
+    s = s.replace("(ريال)", "").replace("(ر)", "").replace("ريال", "").replace("(يوم)", "")
+    s = s.replace("%", "").replace("(", " ").replace(")", " ")
+    return " ".join(s.split())
+
+
+def match_column(header):
+    """يطابق عنوان عمود مع حقل قياسي."""
+    h = _norm(header)
+    if not h: return None
+    # تطابق دقيق
+    for std, names in SMART_FIELD_MAP.items():
+        for nm in names:
+            if _norm(nm) == h:
+                return std
+    # تطابق احتواء
+    for std, names in SMART_FIELD_MAP.items():
+        for nm in names:
+            n = _norm(nm)
+            if n and (n in h or h in n) and len(n) >= 3:
+                return std
+    return None
+
+
+def parse_csv(data_bytes):
+    """يقرأ CSV ويرجع (headers, rows)."""
+    # نحاول UTF-8 ثم cp1256 ثم latin-1
+    for enc in ("utf-8-sig", "utf-8", "cp1256", "latin-1"):
+        try:
+            text = data_bytes.decode(enc)
+            break
+        except Exception: continue
+    else:
+        raise HTTPException(400, "تعذّر قراءة ترميز الملف — احفظه بصيغة UTF-8")
+    reader = csv.reader(io.StringIO(text))
+    rows = list(reader)
+    if not rows: return [], []
+    return [str(c).strip() for c in rows[0]], rows[1:]
+
+
+def parse_excel(data_bytes):
+    """يقرأ Excel باستخدام openpyxl. لو غير مثبّت يرجع خطأ واضح."""
+    try:
+        import openpyxl
+    except ImportError:
+        raise HTTPException(400, "دعم Excel غير متوفّر — احفظ الملف كـ CSV ثم ارفعه")
+    try:
+        wb = openpyxl.load_workbook(io.BytesIO(data_bytes), data_only=True, read_only=True)
+        ws = wb.active
+        all_rows = list(ws.iter_rows(values_only=True))
+        if not all_rows: return [], []
+        headers = [str(c).strip() if c is not None else "" for c in all_rows[0]]
+        rows = [[c for c in r] for r in all_rows[1:] if any(c is not None for c in r)]
+        return headers, rows
+    except Exception as e:
+        raise HTTPException(400, f"تعذّر قراءة الملف: {str(e)[:120]}")
+
+
+def _to_num(v):
+    """يحوّل لرقم لو ممكن، وإلا يرجع None."""
+    if v is None: return None
+    if isinstance(v, (int, float)): return float(v)
+    s = str(v).strip().replace(",", "").replace("ريال", "").replace("%", "")
+    if not s: return None
+    try: return float(s)
+    except: return None
+
+
+@app.post("/company/upload-preview")
+async def company_upload_preview(file: UploadFile = File(...), user: User = Depends(get_current_user)):
+    """يقرأ الملف، يطابق الأعمدة، يرجع معاينة قبل الحفظ."""
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id)
+        if not company or company.owner_id != user.id:
+            raise HTTPException(403, "غير مصرّح")
+        if company.is_active != 1:
+            raise HTTPException(402, "شركتك قيد التفعيل")
+
+    data = await file.read()
+    name = (file.filename or "").lower()
+    if name.endswith(".csv"):
+        headers, rows = parse_csv(data)
+    elif name.endswith((".xlsx", ".xlsm")):
+        headers, rows = parse_excel(data)
+    else:
+        raise HTTPException(400, "ادعم CSV أو Excel (.csv .xlsx) فقط")
+
+    if not headers or not rows:
+        raise HTTPException(400, "الملف فاضي أو لا يحوي صفوف")
+
+    # تطابق الأعمدة
+    matched = []
+    for i, h in enumerate(headers):
+        std = match_column(h)
+        matched.append({"index": i, "original": h, "matched": std, "label": SMART_FIELD_MAP.get(std, [std])[0] if std else None})
+    matched_count = sum(1 for m in matched if m["matched"])
+
+    # عيّنة ٥ صفوف بقيم منظّفة
+    sample = []
+    for r in rows[:5]:
+        sample.append([(_to_num(c) if _to_num(c) is not None else (str(c).strip() if c is not None else "")) for c in r])
+
+    return {
+        "filename": file.filename,
+        "total_rows": len(rows),
+        "headers": headers,
+        "matched": matched,
+        "matched_count": matched_count,
+        "unmatched_count": len(headers) - matched_count,
+        "sample": sample,
+        "guidance": "راجع تطابق الأعمدة، ثم اضغط 'استورد' لتوزيع البيانات على الوحدات.",
+    }
+
+
+@app.post("/company/upload-import")
+async def company_upload_import(file: UploadFile = File(...), user: User = Depends(get_current_user)):
+    """يستورد الملف ويوزّع البيانات: ينشئ فروع جديدة + يحفظ CompanyEntry + يحدّث الوحدات."""
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    data = await file.read()
+    name = (file.filename or "").lower()
+    if name.endswith(".csv"):
+        headers, rows = parse_csv(data)
+    elif name.endswith((".xlsx", ".xlsm")):
+        headers, rows = parse_excel(data)
+    else:
+        raise HTTPException(400, "ادعم CSV أو Excel فقط")
+
+    # خريطة index → standard field
+    col_map = {}
+    for i, h in enumerate(headers):
+        std = match_column(h)
+        if std: col_map[i] = std
+
+    if not col_map:
+        raise HTTPException(400, "لم نتعرّف على أي عمود — تأكد من أسماء الأعمدة (مثل: الفرع، المبيعات، المصروفات…)")
+
+    # حقول الفروع الأساسية (تذهب لـ CompanyEntry)
+    BASE_FIELDS = {"sales","expenses","invoices","customers","new_customers","repeat_customers",
+                   "discounts","deposited","top_products"}
+    # حقول كل وحدة (تذهب لـ CompanyModuleEntry حسب الوحدة)
+    MODULE_OF = {
+        "cogs":"finance","salaries":"finance","rent":"finance","marketing":"finance",
+        "utilities":"finance","logistics_cost":"finance","ar":"finance","ap":"finance",
+        "cash":"finance","short_debt":"finance","long_debt":"finance",
+        "lost_customers":"customers","nps":"customers","satisfaction":"customers","complaints":"customers",
+        "employees":"hr","resignations":"hr","absence":"hr","training":"hr","saudization":"hr","vacancies":"hr",
+        "inventory_value":"inventory","dead_stock":"inventory","stockouts":"inventory","waste":"inventory",
+        "suppliers":"procurement","purchases":"procurement","supplier_delay":"procurement",
+        "active_projects":"ops","delayed_projects":"ops","on_time_orders":"ops","breakdowns":"ops",
+    }
+    FIELD_LABELS_AR = {
+        "cogs":"تكلفة المبيعات COGS (ريال)","salaries":"الرواتب الإجمالية (ريال)","rent":"الإيجارات (ريال)",
+        "marketing":"التسويق والإعلانات (ريال)","utilities":"الكهرباء والمرافق (ريال)","logistics_cost":"النقل والشحن (ريال)",
+        "ar":"الذمم المدينة — مستحقات لك (ريال)","ap":"الذمم الدائنة — مستحقات عليك (ريال)",
+        "cash":"النقد في الصندوق والبنك (ريال)","short_debt":"الديون قصيرة الأجل (ريال)","long_debt":"الديون طويلة الأجل (ريال)",
+        "lost_customers":"عملاء مفقودون (لم يعودوا)","nps":"درجة NPS (-100 إلى +100)",
+        "satisfaction":"نسبة رضا العملاء %","complaints":"عدد الشكاوى",
+        "employees":"عدد الموظفين الإجمالي","resignations":"المستقيلون / المنفصلون","absence":"أيام الغياب",
+        "training":"ميزانية التدريب (ريال)","saudization":"نسبة السعودة %","vacancies":"الوظائف الشاغرة",
+        "inventory_value":"قيمة المخزون الحالية (ريال)","dead_stock":"قيمة المخزون الراكد (ريال)",
+        "stockouts":"عدد مرات نفاد المخزون","waste":"قيمة الهدر (ريال)",
+        "suppliers":"عدد الموردين النشطين","purchases":"إجمالي قيمة المشتريات (ريال)",
+        "supplier_delay":"متوسط تأخر المورد (يوم)",
+        "active_projects":"المشاريع/الطلبات النشطة","delayed_projects":"المشاريع/الطلبات المتأخرة",
+        "on_time_orders":"عدد الطلبات المنفّذة في الوقت المحدد","breakdowns":"عدد الأعطال",
+    }
+
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id)
+        if not company or company.owner_id != user.id:
+            raise HTTPException(403, "غير مصرّح")
+        if company.is_active != 1:
+            raise HTTPException(402, "شركتك قيد التفعيل")
+
+        existing_branches = {b.name.strip().lower(): b for b in s.exec(
+            select(CompanyBranch).where(CompanyBranch.company_id == company.id)
+        ).all()}
+
+        created_branches = 0
+        created_entries = 0
+        # تجميع بيانات الوحدات لكل فرع
+        module_data_per_branch = {}  # {branch_id: {module: {label: value}}}
+        company_level_modules = {}    # {module: {label: value}} لو ما فيه فرع
+
+        for r in rows:
+            if not any(c is not None and str(c).strip() != "" for c in r):
+                continue
+            # استخرج القيم حسب التطابق
+            extracted = {}
+            for i, std in col_map.items():
+                if i < len(r):
+                    val = r[i]
+                    if std in ("branch_name","city","period","top_products"):
+                        extracted[std] = str(val).strip() if val is not None else ""
+                    else:
+                        n = _to_num(val)
+                        if n is not None: extracted[std] = n
+
+            # الفرع
+            branch_name = extracted.get("branch_name", "").strip()
+            branch = None
+            if branch_name:
+                key = branch_name.lower()
+                if key in existing_branches:
+                    branch = existing_branches[key]
+                else:
+                    branch = CompanyBranch(company_id=company.id, name=branch_name,
+                                           city=extracted.get("city","").strip(), type="standalone")
+                    s.add(branch); s.commit(); s.refresh(branch)
+                    existing_branches[key] = branch
+                    created_branches += 1
+
+            # CompanyEntry (لو فيه فرع + مبيعات)
+            if branch and "sales" in extracted and extracted["sales"] > 0:
+                period = extracted.get("period") or datetime.now().strftime("%Y-%m")
+                # تأكد من صياغة YYYY-MM
+                period = str(period).strip()
+                if len(period) >= 7 and period[4] == "-":
+                    period = period[:7]
+                prev = s.exec(
+                    select(CompanyEntry).where(CompanyEntry.branch_id == branch.id).order_by(CompanyEntry.created_at.desc())
+                ).first()
+                prev_sales = prev.sales if prev else None
+                m = compute_company_metrics(
+                    sales=extracted.get("sales", 0),
+                    invoices=int(extracted.get("invoices", 0)),
+                    customers=int(extracted.get("customers", 0)),
+                    repeat_customers=int(extracted.get("repeat_customers", 0)),
+                    expenses=extracted.get("expenses", 0),
+                    prev_sales=prev_sales,
+                )
+                entry = CompanyEntry(
+                    company_id=company.id, branch_id=branch.id, branch_name=branch.name, period=period,
+                    sales=extracted.get("sales", 0),
+                    expenses=extracted.get("expenses", 0),
+                    invoices=int(extracted.get("invoices", 0)),
+                    customers=int(extracted.get("customers", 0)),
+                    new_customers=int(extracted.get("new_customers", 0)),
+                    repeat_customers=int(extracted.get("repeat_customers", 0)),
+                    discounts=extracted.get("discounts", 0),
+                    deposited=extracted.get("deposited", 0),
+                    top_products=str(extracted.get("top_products", "")),
+                    profit=m["profit"], margin=m["margin"], avg_invoice=m["avg_invoice"],
+                    repeat_rate=m["repeat_rate"], growth=m["growth"], branch_score=m["branch_score"],
+                )
+                s.add(entry); s.commit()
+                created_entries += 1
+
+            # توزيع بيانات الوحدات
+            for std, val in extracted.items():
+                if std in MODULE_OF and FIELD_LABELS_AR.get(std):
+                    mod = MODULE_OF[std]
+                    label = FIELD_LABELS_AR[std]
+                    bid = branch.id if branch else 0
+                    bucket = module_data_per_branch.setdefault(bid, {}).setdefault(mod, {})
+                    bucket[label] = val
+
+            # إعدادات شركة (احتياطي والتزامات)
+            if "cash_reserve" in extracted:
+                company.cash_reserve = float(extracted["cash_reserve"])
+            if "monthly_obligations" in extracted:
+                company.monthly_obligations = float(extracted["monthly_obligations"])
+
+        # احفظ بيانات الوحدات
+        module_entries_count = 0
+        now_period = datetime.now().strftime("%Y-%m")
+        for bid, mods in module_data_per_branch.items():
+            for mod, fields in mods.items():
+                if not fields: continue
+                fields["__source"] = "excel" if name.endswith(("xlsx","xlsm")) else "csv"
+                entry = CompanyModuleEntry(
+                    company_id=company.id,
+                    branch_id=bid if bid > 0 else None,
+                    module=mod,
+                    period=now_period,
+                    data=json.dumps(fields, ensure_ascii=False),
+                )
+                s.add(entry); module_entries_count += 1
+
+        s.add(company)
+        s.commit()
+        log_activity(user.name, f"رفع ملف {file.filename}: {created_entries} سجل + {module_entries_count} وحدة", user.email)
+
+        return {
+            "ok": True,
+            "filename": file.filename,
+            "created_branches": created_branches,
+            "created_entries": created_entries,
+            "module_entries": module_entries_count,
+            "matched_columns": len(col_map),
+            "summary": f"تم استيراد البيانات بنجاح. {created_branches} فرع جديد، {created_entries} إدخال فترة، {module_entries_count} وحدة محدّثة.",
+        }
+
+
+@app.get("/company-upload.html")
+def page_company_upload():
+    return FileResponse("company-upload.html")
+
+
+@app.get("/nabbah-data-template.xlsx")
+def download_template():
+    """تنزيل قالب Excel الجاهز للعميل."""
+    return FileResponse(
+        "nabbah-data-template.xlsx",
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        filename="nabbah-data-template.xlsx",
+    )
