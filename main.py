@@ -3815,3 +3815,327 @@ def page_company_goals():
 def page_company_quality():
     return FileResponse("company-data-quality.html")
 
+
+
+# ============================================================
+# ===== Benchmarks: المرجعية الصناعية لكل قطاع =====
+# ============================================================
+# مصدر القيم: مراجع عامة لمتوسطات قطاعات الشركات المتوسطة بالسوق السعودي/الخليجي.
+# تُستخدم للمقارنة الإرشادية فقط، ليست أرقاماً رسمية.
+
+SECTOR_BENCHMARKS = {
+    "fnb": {
+        "margin": {"value": 12, "label": "هامش الربح %", "higher_is_better": True},
+        "repeat_rate": {"value": 35, "label": "معدل تكرار العملاء %", "higher_is_better": True},
+        "growth": {"value": 8, "label": "النمو الشهري %", "higher_is_better": True},
+        "expense_ratio": {"value": 70, "label": "نسبة المصروفات للمبيعات %", "higher_is_better": False},
+    },
+    "retail": {
+        "margin": {"value": 18, "label": "هامش الربح %", "higher_is_better": True},
+        "repeat_rate": {"value": 30, "label": "معدل تكرار العملاء %", "higher_is_better": True},
+        "growth": {"value": 5, "label": "النمو الشهري %", "higher_is_better": True},
+        "expense_ratio": {"value": 65, "label": "نسبة المصروفات %", "higher_is_better": False},
+    },
+    "ecommerce": {
+        "margin": {"value": 22, "label": "هامش الربح %", "higher_is_better": True},
+        "repeat_rate": {"value": 25, "label": "معدل تكرار العملاء %", "higher_is_better": True},
+        "growth": {"value": 12, "label": "النمو الشهري %", "higher_is_better": True},
+        "expense_ratio": {"value": 60, "label": "نسبة المصروفات %", "higher_is_better": False},
+    },
+    "manufacturing": {
+        "margin": {"value": 16, "label": "هامش الربح %", "higher_is_better": True},
+        "repeat_rate": {"value": 50, "label": "معدل تكرار العملاء %", "higher_is_better": True},
+        "growth": {"value": 4, "label": "النمو الشهري %", "higher_is_better": True},
+        "expense_ratio": {"value": 72, "label": "نسبة المصروفات %", "higher_is_better": False},
+    },
+    "contracting": {
+        "margin": {"value": 10, "label": "هامش الربح %", "higher_is_better": True},
+        "repeat_rate": {"value": 40, "label": "معدل تكرار العملاء %", "higher_is_better": True},
+        "growth": {"value": 6, "label": "النمو الشهري %", "higher_is_better": True},
+        "expense_ratio": {"value": 78, "label": "نسبة المصروفات %", "higher_is_better": False},
+    },
+    "distribution": {
+        "margin": {"value": 8, "label": "هامش الربح %", "higher_is_better": True},
+        "repeat_rate": {"value": 55, "label": "معدل تكرار العملاء %", "higher_is_better": True},
+        "growth": {"value": 5, "label": "النمو الشهري %", "higher_is_better": True},
+        "expense_ratio": {"value": 80, "label": "نسبة المصروفات %", "higher_is_better": False},
+    },
+    "services": {
+        "margin": {"value": 25, "label": "هامش الربح %", "higher_is_better": True},
+        "repeat_rate": {"value": 45, "label": "معدل تكرار العملاء %", "higher_is_better": True},
+        "growth": {"value": 7, "label": "النمو الشهري %", "higher_is_better": True},
+        "expense_ratio": {"value": 60, "label": "نسبة المصروفات %", "higher_is_better": False},
+    },
+    "clinics": {
+        "margin": {"value": 28, "label": "هامش الربح %", "higher_is_better": True},
+        "repeat_rate": {"value": 50, "label": "معدل تكرار المرضى %", "higher_is_better": True},
+        "growth": {"value": 6, "label": "النمو الشهري %", "higher_is_better": True},
+        "expense_ratio": {"value": 58, "label": "نسبة المصروفات %", "higher_is_better": False},
+    },
+    "hospitals": {
+        "margin": {"value": 15, "label": "هامش الربح %", "higher_is_better": True},
+        "repeat_rate": {"value": 45, "label": "معدل تكرار المرضى %", "higher_is_better": True},
+        "growth": {"value": 4, "label": "النمو الشهري %", "higher_is_better": True},
+        "expense_ratio": {"value": 72, "label": "نسبة المصروفات %", "higher_is_better": False},
+    },
+    "logistics": {
+        "margin": {"value": 12, "label": "هامش الربح %", "higher_is_better": True},
+        "repeat_rate": {"value": 60, "label": "معدل تكرار العملاء %", "higher_is_better": True},
+        "growth": {"value": 6, "label": "النمو الشهري %", "higher_is_better": True},
+        "expense_ratio": {"value": 75, "label": "نسبة المصروفات %", "higher_is_better": False},
+    },
+    "other": {
+        "margin": {"value": 15, "label": "هامش الربح %", "higher_is_better": True},
+        "repeat_rate": {"value": 35, "label": "معدل تكرار العملاء %", "higher_is_better": True},
+        "growth": {"value": 5, "label": "النمو الشهري %", "higher_is_better": True},
+        "expense_ratio": {"value": 70, "label": "نسبة المصروفات %", "higher_is_better": False},
+    },
+}
+
+
+@app.get("/company/benchmarks")
+def company_benchmarks(user: User = Depends(get_current_user)):
+    """يقارن أداء شركتك مع متوسط قطاعك."""
+    with Session(engine) as s:
+        if not user.company_id:
+            raise HTTPException(403, "لا توجد شركة نشطة")
+        company = s.get(Company, user.company_id)
+        if not company or company.owner_id != user.id:
+            raise HTTPException(403, "غير مصرّح")
+        if company.is_active != 1:
+            raise HTTPException(402, "شركتك قيد التفعيل")
+
+        sector = company.sector or "other"
+        bench = SECTOR_BENCHMARKS.get(sector, SECTOR_BENCHMARKS["other"])
+        sector_label = SECTOR_NAMES.get(sector, "أخرى")
+
+        # حساب الفعلي
+        branches = s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company.id, CompanyBranch.is_active == 1)).all()
+        rows = []
+        for b in branches:
+            e = s.exec(select(CompanyEntry).where(CompanyEntry.branch_id == b.id).order_by(CompanyEntry.created_at.desc())).first()
+            if e: rows.append(e)
+        if not rows:
+            raise HTTPException(400, "لا توجد بيانات فروع — أدخل البيانات أولاً")
+
+        total_sales = sum(e.sales for e in rows)
+        total_expenses = sum(e.expenses for e in rows)
+        margin_vals = [e.margin for e in rows if e.sales > 0]
+        repeat_vals = [e.repeat_rate for e in rows if e.repeat_rate > 0]
+        growth_vals = [e.growth for e in rows if e.growth != 0]
+
+        actuals = {
+            "margin": round(sum(margin_vals)/len(margin_vals), 1) if margin_vals else 0,
+            "repeat_rate": round(sum(repeat_vals)/len(repeat_vals), 1) if repeat_vals else 0,
+            "growth": round(sum(growth_vals)/len(growth_vals), 1) if growth_vals else 0,
+            "expense_ratio": round((total_expenses/total_sales)*100, 1) if total_sales else 0,
+        }
+
+        comparisons = []
+        for key, b in bench.items():
+            actual = actuals.get(key, 0)
+            target = b["value"]
+            diff = round(actual - target, 1)
+            # تقدير الفجوة
+            if b["higher_is_better"]:
+                gap_pct = round((actual - target) / target * 100, 1) if target else 0
+                better = actual >= target
+            else:
+                gap_pct = round((target - actual) / target * 100, 1) if target else 0
+                better = actual <= target
+
+            if better and abs(gap_pct) < 10:
+                status = "🟢"; verdict = "مطابق للسوق"; color = "#10b981"
+            elif better:
+                status = "🟢"; verdict = "متفوّق على السوق"; color = "#10b981"
+            elif abs(gap_pct) < 10:
+                status = "🟡"; verdict = "قريب من السوق"; color = "#f5b301"
+            elif abs(gap_pct) < 25:
+                status = "🟠"; verdict = "دون متوسط السوق"; color = "#f59e0b"
+            else:
+                status = "🔴"; verdict = "فجوة كبيرة"; color = "#ef4444"
+
+            comparisons.append({
+                "key": key, "label": b["label"],
+                "actual": actual, "benchmark": target,
+                "diff": diff, "gap_pct": gap_pct,
+                "higher_is_better": b["higher_is_better"],
+                "status": status, "verdict": verdict, "color": color,
+            })
+
+        # ملخّص عام
+        green = sum(1 for c in comparisons if c["status"] == "🟢")
+        red = sum(1 for c in comparisons if c["status"] in ("🟠", "🔴"))
+        if green >= len(comparisons) * 0.75:
+            summary = f"أداء قوي مقابل قطاع {sector_label} — متفوّق في معظم المؤشرات."
+        elif red >= len(comparisons) * 0.5:
+            summary = f"عدة فجوات مقابل متوسطات قطاع {sector_label} — تحتاج خطة تحسين."
+        else:
+            summary = f"أداء متباين مقابل قطاع {sector_label} — نقاط قوة ونقاط للتحسين."
+
+        return {
+            "company": {"name": company.name},
+            "sector": sector_label,
+            "comparisons": comparisons,
+            "summary": summary,
+            "note": "المرجعية تقديرية إرشادية لمتوسطات القطاع، وليست أرقاماً رسمية. تُستخدم للمقارنة العامة فقط.",
+        }
+
+
+# ============================================================
+# ===== AI Root Cause: تحليل الأسباب الجذرية بالأدلة =====
+# ============================================================
+
+@app.get("/company/root-cause")
+def company_root_cause(user: User = Depends(get_current_user)):
+    """يكتشف الأسباب الجذرية لانخفاض الربحية مع نسبة الإسهام والأدلة."""
+    with Session(engine) as s:
+        if not user.company_id:
+            raise HTTPException(403, "لا توجد شركة نشطة")
+        company = s.get(Company, user.company_id)
+        if not company or company.owner_id != user.id:
+            raise HTTPException(403, "غير مصرّح")
+        if company.is_active != 1:
+            raise HTTPException(402, "شركتك قيد التفعيل")
+
+        branches = s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company.id, CompanyBranch.is_active == 1)).all()
+        rows = []
+        for b in branches:
+            ents = s.exec(select(CompanyEntry).where(CompanyEntry.branch_id == b.id).order_by(CompanyEntry.created_at.desc())).all()
+            if ents: rows.append((b, ents))
+        if not rows:
+            raise HTTPException(400, "لا توجد بيانات فروع")
+
+        # المؤشّر الذي نحلل سببه: الربح
+        total_sales = sum(r[1][0].sales for r in rows)
+        total_expenses = sum(r[1][0].expenses for r in rows)
+        total_profit = total_sales - total_expenses
+        avg_margin = (total_profit/total_sales*100) if total_sales else 0
+        avg_growth = sum(r[1][0].growth for r in rows)/len(rows) if rows else 0
+
+        sector = company.sector or "other"
+        bench = SECTOR_BENCHMARKS.get(sector, SECTOR_BENCHMARKS["other"])
+
+        # ============= الكشف =============
+        causes = []  # كل سبب: title, contribution, confidence, evidence, recommendation
+
+        # 1) هامش الربح أقل من القطاع
+        bench_margin = bench["margin"]["value"]
+        if avg_margin < bench_margin - 3:
+            gap = bench_margin - avg_margin
+            causes.append({
+                "title": "هامش الربح أقل من متوسط القطاع",
+                "contribution": min(round(gap * 4), 35),
+                "confidence": 85 if len(rows) >= 3 else 65,
+                "evidence": [
+                    f"هامشك الفعلي: {round(avg_margin,1)}%",
+                    f"متوسط قطاع {SECTOR_NAMES.get(sector,'')}: {bench_margin}%",
+                    f"الفجوة: {round(gap,1)} نقطة مئوية",
+                ],
+                "recommendation": "راجع التسعير وتكلفة المبيعات. خفّض ٢-٣ بنود مصاريف غير حرجة.",
+            })
+
+        # 2) فروع ضعيفة تجرّ الإجمالي
+        weak = [r for r in rows if r[1][0].branch_score < 50]
+        if weak and len(weak) >= max(1, len(rows)//3):
+            weak_loss = sum(r[1][0].sales*0.1 for r in weak)  # تقدير: 10% من مبيعات الضعيف لو حسّن
+            causes.append({
+                "title": f"{len(weak)} فرع ضعيف الأداء يخفض الإجمالي",
+                "contribution": min(round((weak_loss/max(total_sales,1))*100), 30),
+                "confidence": 90,
+                "evidence": [
+                    f"الفروع الضعيفة: {'، '.join(w[0].name for w in weak[:3])}",
+                    f"مؤشّر أداءها أقل من 50/100",
+                    f"تساهم بـ{round(sum(w[1][0].sales for w in weak)/total_sales*100,1)}% من المبيعات بإنتاجية أدنى من المتوقع",
+                ],
+                "recommendation": "افتح مقارنة الفروع وطبّق ممارسات الفرع الأفضل على هذه الفروع.",
+            })
+
+        # 3) ارتفاع المصروفات للمبيعات
+        exp_ratio = (total_expenses/total_sales*100) if total_sales else 0
+        bench_exp = bench["expense_ratio"]["value"]
+        if exp_ratio > bench_exp + 5:
+            gap = exp_ratio - bench_exp
+            causes.append({
+                "title": "نسبة المصروفات أعلى من متوسط القطاع",
+                "contribution": min(round(gap * 2), 30),
+                "confidence": 80,
+                "evidence": [
+                    f"نسبة مصروفاتك: {round(exp_ratio,1)}%",
+                    f"متوسط القطاع: {bench_exp}%",
+                    f"المصاريف الزائدة المقدرة: {round(total_sales*(gap/100))} ريال",
+                ],
+                "recommendation": "راجع وحدة المالية: COGS والرواتب والإيجارات — وأكبر بنود التسرّب.",
+            })
+
+        # 4) تراجع النمو
+        if avg_growth < -5:
+            causes.append({
+                "title": "تراجع المبيعات (نمو سالب)",
+                "contribution": min(round(abs(avg_growth) * 2), 25),
+                "confidence": 85,
+                "evidence": [
+                    f"متوسط النمو الشهري: {round(avg_growth,1)}%",
+                    f"عدد الفروع المتراجعة: {len([r for r in rows if r[1][0].growth<0])}/{len(rows)}",
+                ],
+                "recommendation": "افحص الأحداث المؤثرة، راجع التسويق والمنافسين، تحقق من رضا العملاء.",
+            })
+
+        # 5) ضعف الاحتفاظ بالعملاء
+        repeat_vals = [r[1][0].repeat_rate for r in rows if r[1][0].repeat_rate > 0]
+        avg_repeat = sum(repeat_vals)/len(repeat_vals) if repeat_vals else 0
+        bench_repeat = bench["repeat_rate"]["value"]
+        if repeat_vals and avg_repeat < bench_repeat - 5:
+            gap = bench_repeat - avg_repeat
+            causes.append({
+                "title": "ضعف معدل تكرار العملاء",
+                "contribution": min(round(gap), 20),
+                "confidence": 75,
+                "evidence": [
+                    f"معدل تكرارك: {round(avg_repeat)}%",
+                    f"متوسط القطاع: {bench_repeat}%",
+                    f"الفجوة: {round(gap)} نقطة",
+                ],
+                "recommendation": "افتح وحدة العملاء — راجع NPS، شكاوى، مدة الاستجابة.",
+            })
+
+        # 6) مؤشرات تسرّب
+        try:
+            company_exp_ratio = (total_expenses / total_sales * 100) if total_sales else 0
+            risky = []
+            for b, ents in rows:
+                r = detect_leakage(ents, company_exp_ratio)
+                if r["risk"] >= 60:
+                    risky.append((b.name, r["risk"]))
+            if risky:
+                causes.append({
+                    "title": "اشتباه تسرّب في بعض الفروع",
+                    "contribution": min(len(risky)*10, 20),
+                    "confidence": 80,
+                    "evidence": [f"فرع {n} — درجة مخاطرة {s}/100" for n, s in risky[:3]],
+                    "recommendation": "افتح صفحة كشف التسرّب وراجع التفاصيل.",
+                })
+        except Exception: pass
+
+        # ترتيب حسب المساهمة
+        causes.sort(key=lambda c: c["contribution"], reverse=True)
+        causes = causes[:5]  # أعلى ٥ أسباب
+        total_contribution = sum(c["contribution"] for c in causes)
+
+        return {
+            "company": {"name": company.name},
+            "metric": "تراجع الربحية",
+            "current_value": f"هامش الربح {round(avg_margin,1)}% — متوسط القطاع {bench_margin}%",
+            "causes": causes,
+            "total_explained": min(total_contribution, 95),
+            "summary": f"اكتشف نبّاه {len(causes)} أسباب رئيسية تُفسّر حوالي {min(total_contribution,95)}% من فجوة الأداء." if causes else "لا توجد أسباب جذرية واضحة — الأداء قريب من المتوقع.",
+        }
+
+
+@app.get("/company-benchmarks.html")
+def page_company_benchmarks():
+    return FileResponse("company-benchmarks.html")
+
+@app.get("/company-root-cause.html")
+def page_company_root_cause():
+    return FileResponse("company-root-cause.html")
