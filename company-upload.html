@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نبّاه · رفع البيانات</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0a0f0c;--panel:#101a15;--panel2:#0e1712;--line:#1d2c24;--mint:#10b981;--mint-deep:#0c8f64;--gold:#f5b301;--red:#ef4444;--blue:#3b82f6;--txt:#e8f1ec;--txt-soft:#9fb4aa;--txt-mute:#678075;--r:16px;}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--txt);line-height:1.7;min-height:100vh}
+  body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.5;background:radial-gradient(circle at 1px 1px,rgba(16,185,129,.05) 1px,transparent 0);background-size:26px 26px}
+  a{text-decoration:none;color:inherit}
+  .wrap{max-width:880px;margin:0 auto;padding:0 16px;position:relative;z-index:1}
+  header{position:sticky;top:0;z-index:40;background:rgba(10,15,12,.86);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+  .head-in{max-width:880px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:900;font-size:20px;color:#fff}
+  .brand .bell{width:36px;height:36px;border-radius:11px;background:var(--mint);display:grid;place-items:center;font-size:17px;transform:rotate(-5deg)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;font-family:inherit;font-weight:700;cursor:pointer;border:none;border-radius:11px;font-size:14px;text-decoration:none;transition:.2s}
+  .btn-mint{background:var(--mint);color:#04130d;padding:12px 22px}.btn-mint:hover{background:var(--mint-deep)}.btn-mint:disabled{opacity:.6;cursor:not-allowed}
+  .btn-ghost{background:var(--panel);color:var(--txt-soft);padding:10px 15px;border:1px solid var(--line)}
+  .page-head{padding:24px 0 14px}.page-head h1{font-size:26px;font-weight:900}.page-head p{color:var(--txt-soft);font-size:14.5px;margin-top:3px;line-height:1.7}
+
+  .upload-zone{background:var(--panel);border:2px dashed var(--line);border-radius:18px;padding:48px 24px;text-align:center;transition:.2s;cursor:pointer;margin-bottom:16px}
+  .upload-zone:hover,.upload-zone.drag{border-color:var(--mint);background:rgba(16,185,129,.04)}
+  .upload-zone .ico{font-size:54px;margin-bottom:10px}
+  .upload-zone .t{font-weight:800;font-size:17px;margin-bottom:5px}
+  .upload-zone .s{font-size:13.5px;color:var(--txt-soft)}
+  .upload-zone .types{font-size:12px;color:var(--txt-mute);margin-top:8px}
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px;margin-bottom:14px}
+  .panel h2{font-size:16px;font-weight:800;margin-bottom:3px;display:flex;align-items:center;gap:8px}
+  .panel .sub{font-size:12.5px;color:var(--txt-mute);margin-bottom:14px}
+  .state{padding:30px 20px;text-align:center;color:var(--txt-soft)}
+  .spin{width:30px;height:30px;border:3px solid var(--line);border-top-color:var(--mint);border-radius:50%;animation:sp 1s linear infinite;margin:0 auto 10px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+
+  .stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;margin-bottom:14px}
+  .stat{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:13px;text-align:center}
+  .stat .l{font-size:11.5px;color:var(--txt-soft)}
+  .stat .v{font-size:22px;font-weight:900;margin-top:2px}
+
+  .col-list{display:flex;flex-direction:column;gap:6px}
+  .col-item{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:11px}
+  .col-item.matched{border-color:rgba(16,185,129,.35)}
+  .col-item .ico{font-size:16px;width:24px;text-align:center;flex-shrink:0}
+  .col-item .orig{font-weight:700;font-size:13.5px;flex:1;min-width:0}
+  .col-item .arrow{color:var(--txt-mute);font-size:14px;flex-shrink:0}
+  .col-item .mapped{color:var(--mint);font-size:13px;font-weight:700;flex-shrink:0}
+  .col-item.unmatched .mapped{color:var(--txt-mute);font-weight:500}
+
+  .preview-tbl{width:100%;border-collapse:collapse;font-size:12.5px;overflow-x:auto;display:block}
+  .preview-tbl th,.preview-tbl td{padding:7px 9px;border:1px solid var(--line);text-align:right;white-space:nowrap}
+  .preview-tbl th{background:var(--panel2);color:var(--txt-soft);font-weight:700;font-size:11.5px}
+
+  .ok-box{background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.35);color:#6ee7b7;padding:14px 16px;border-radius:13px;margin-bottom:14px;display:none;font-weight:700}
+  .err-box{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#fca5a5;padding:13px 16px;border-radius:13px;margin-bottom:14px;display:none}
+  .info{background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.25);color:#93c5fd;padding:11px 14px;border-radius:11px;font-size:13px;margin-bottom:12px;line-height:1.7}
+
+  .examples{background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:12px 14px;font-size:12.5px;color:var(--txt-soft);line-height:1.85}
+  .examples code{background:var(--panel);padding:1px 6px;border-radius:5px;font-size:11.5px;color:var(--mint)}
+  .links{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 40px}
+  @media(max-width:560px){.stats-row{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<header>
+  <div class="head-in">
+    <a class="brand" href="company-dashboard.html"><span class="bell">🔔</span>نبّاه</a>
+    <a class="btn btn-ghost" href="company-dashboard.html">اللوحة</a>
+  </div>
+</header>
+<div class="wrap">
+  <div class="page-head">
+    <h1>📂 رفع البيانات الذكي</h1>
+    <p>ارفع ملف Excel أو CSV واحد، وسيتعرّف نبّاه على الأعمدة تلقائياً ويوزّعها على كل الوحدات: المالية، المبيعات، العملاء، المخزون… ثم تشتغل كل الخدمات (تسرّب، ضرائب، صحة، تنبؤ) بدون أي إدخال يدوي.</p>
+  </div>
+
+  <div class="ok-box" id="okBox"></div>
+  <div class="err-box" id="errBox"></div>
+
+  <!-- Step 1: Upload zone -->
+  <div id="step1">
+    <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+      <div class="ico">📤</div>
+      <div class="t">اسحب ملفك هنا أو اضغط للاختيار</div>
+      <div class="s">Excel (.xlsx) أو CSV (.csv)</div>
+      <div class="types">يدعم العربية والإنجليزية في أسماء الأعمدة</div>
+    </div>
+    <input type="file" id="fileInput" accept=".csv,.xlsx,.xlsm" style="display:none" onchange="handleFile(this.files[0])">
+
+    <div class="panel">
+      <h2>💡 كيف تجهّز ملفك</h2>
+      <div class="sub">صف عنوان في الأعلى، ثم البيانات تحته</div>
+      <div class="examples">
+        <b>أعمدة معروفة (مثال):</b><br>
+        <code>الفرع</code> <code>المدينة</code> <code>الفترة</code> <code>المبيعات</code> <code>المصروفات</code>
+        <code>عدد الفواتير</code> <code>عدد العملاء</code> <code>عملاء جدد</code> <code>عملاء متكررون</code>
+        <code>الرواتب</code> <code>الإيجارات</code> <code>التسويق</code> <code>الذمم المدينة</code> <code>الذمم الدائنة</code>
+        <code>قيمة المخزون</code> <code>عدد الموظفين</code> <code>الموردين</code> <code>المشتريات</code>
+        <code>NPS</code> <code>الشكاوى</code> <code>الأعطال</code>
+        <br><br>
+        <b>تنسيق الفترة:</b> <code>2026-03</code> أو <code>2026/03</code>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 2: Preview -->
+  <div id="step2" style="display:none">
+    <div class="panel">
+      <h2 id="fileNameTitle">📄 معاينة</h2>
+      <div class="sub" id="previewSub"></div>
+      <div class="stats-row">
+        <div class="stat"><div class="l">إجمالي الصفوف</div><div class="v" id="totalRows">—</div></div>
+        <div class="stat"><div class="l">أعمدة مُتعرَّف عليها</div><div class="v" id="matchedCols" style="color:var(--mint)">—</div></div>
+        <div class="stat"><div class="l">أعمدة غير معروفة</div><div class="v" id="unmatchedCols" style="color:var(--txt-mute)">—</div></div>
+      </div>
+      <div class="info" id="infoBox" style="display:none"></div>
+    </div>
+
+    <div class="panel">
+      <h2>🔗 تطابق الأعمدة</h2>
+      <div class="sub">الأعمدة الخضراء تم التعرّف عليها وستُستورد. الرمادية ستُتجاهل.</div>
+      <div class="col-list" id="colList"></div>
+    </div>
+
+    <div class="panel">
+      <h2>📋 معاينة البيانات (٥ صفوف)</h2>
+      <div class="sub">تحقق من شكل البيانات قبل الاستيراد</div>
+      <div style="overflow-x:auto"><table class="preview-tbl" id="previewTbl"></table></div>
+    </div>
+
+    <div style="display:flex;gap:10px;margin-bottom:14px">
+      <button class="btn btn-ghost" onclick="reset()" style="flex:1">رفع ملف آخر</button>
+      <button class="btn btn-mint" id="importBtn" onclick="doImport()" style="flex:2">✅ استيراد إلى نبّاه</button>
+    </div>
+  </div>
+
+  <!-- Step 3: Loading -->
+  <div id="step3" style="display:none" class="state">
+    <div class="spin"></div>
+    <div style="font-weight:700">جارٍ تحليل الملف وتوزيع البيانات…</div>
+    <div style="font-size:13px;color:var(--txt-mute);margin-top:4px">قد يستغرق ثواني لو الملف كبير</div>
+  </div>
+
+  <div class="links">
+    <a class="btn btn-ghost" href="company-dashboard.html">اللوحة</a>
+    <a class="btn btn-ghost" href="company-input.html">إدخال يدوي</a>
+    <a class="btn btn-ghost" href="company-data-quality.html">جودة البيانات</a>
+  </div>
+</div>
+<script>
+const TOKEN=localStorage.getItem("nabbah_token")||"";
+if(!TOKEN){ window.location.href="login.html"; }
+let CURRENT_FILE=null;
+
+function showStep(n){
+  document.getElementById("step1").style.display=n===1?"block":"none";
+  document.getElementById("step2").style.display=n===2?"block":"none";
+  document.getElementById("step3").style.display=n===3?"block":"none";
+}
+function showErr(msg){
+  const b=document.getElementById("errBox"); b.textContent=msg; b.style.display="block";
+  document.getElementById("okBox").style.display="none";
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+function showOk(msg){
+  const b=document.getElementById("okBox"); b.innerHTML=msg; b.style.display="block";
+  document.getElementById("errBox").style.display="none";
+}
+function reset(){
+  CURRENT_FILE=null;
+  document.getElementById("fileInput").value="";
+  document.getElementById("errBox").style.display="none";
+  showStep(1);
+}
+
+const dropZone=document.getElementById("dropZone");
+["dragenter","dragover"].forEach(e=>dropZone.addEventListener(e,ev=>{ev.preventDefault();dropZone.classList.add("drag")}));
+["dragleave","drop"].forEach(e=>dropZone.addEventListener(e,ev=>{ev.preventDefault();dropZone.classList.remove("drag")}));
+dropZone.addEventListener("drop",ev=>{
+  ev.preventDefault();
+  const f=ev.dataTransfer.files[0]; if(f) handleFile(f);
+});
+
+async function handleFile(file){
+  if(!file) return;
+  CURRENT_FILE=file;
+  document.getElementById("errBox").style.display="none";
+  document.getElementById("okBox").style.display="none";
+  const fd=new FormData(); fd.append("file",file);
+  showStep(3);
+  try{
+    const r=await fetch("/company/upload-preview",{
+      method:"POST", headers:{"Authorization":"Bearer "+TOKEN}, body:fd,
+    });
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok){
+      if(r.status===401){ localStorage.removeItem("nabbah_token"); window.location.href="login.html"; return; }
+      if(r.status===402){ showErr("⏳ شركتك قيد التفعيل — فعّلها من لوحة الإدارة أولاً"); showStep(1); return; }
+      throw new Error(d.detail||"خطأ في قراءة الملف");
+    }
+    renderPreview(d);
+    showStep(2);
+  }catch(e){
+    showErr(e.message); showStep(1);
+  }
+}
+
+function renderPreview(d){
+  document.getElementById("fileNameTitle").textContent=`📄 ${d.filename}`;
+  document.getElementById("previewSub").textContent="راجع التطابق، ثم استورد";
+  document.getElementById("totalRows").textContent=d.total_rows;
+  document.getElementById("matchedCols").textContent=d.matched_count;
+  document.getElementById("unmatchedCols").textContent=d.unmatched_count;
+
+  if(d.matched_count===0){
+    const ib=document.getElementById("infoBox"); ib.style.display="block";
+    ib.innerHTML="⚠️ لم يُتعرَّف على أي عمود — تأكد أن صف العناوين في الأعلى وأن الأسماء معروفة (مثلاً: الفرع، المبيعات، المصروفات…)";
+  }else if(d.unmatched_count > d.matched_count){
+    const ib=document.getElementById("infoBox"); ib.style.display="block";
+    ib.innerHTML=`💡 ${d.matched_count} عمود فقط تم التعرف عليه من أصل ${d.matched_count + d.unmatched_count}. الباقي سيُتجاهل. غيّر عناوينها إن أردت استيرادها.`;
+  }else{
+    document.getElementById("infoBox").style.display="none";
+  }
+
+  document.getElementById("colList").innerHTML=d.matched.map(c=>{
+    const cls=c.matched?"matched":"unmatched";
+    const ico=c.matched?"✅":"⚪";
+    const mapped=c.matched?`<span class="mapped">${c.label}</span>`:`<span class="mapped">سيُتجاهل</span>`;
+    return `<div class="col-item ${cls}"><span class="ico">${ico}</span><span class="orig">${c.original||"(فارغ)"}</span><span class="arrow">→</span>${mapped}</div>`;
+  }).join("");
+
+  const tbl=document.getElementById("previewTbl");
+  let html=`<thead><tr>${d.headers.map(h=>`<th>${h||""}</th>`).join("")}</tr></thead><tbody>`;
+  html+=d.sample.map(r=>`<tr>${r.map(c=>`<td>${c!==null && c!==undefined ? c : ""}</td>`).join("")}</tr>`).join("");
+  tbl.innerHTML=html+"</tbody>";
+}
+
+async function doImport(){
+  if(!CURRENT_FILE) return;
+  const fd=new FormData(); fd.append("file",CURRENT_FILE);
+  const btn=document.getElementById("importBtn"); btn.disabled=true; btn.textContent="جارٍ الاستيراد…";
+  showStep(3);
+  try{
+    const r=await fetch("/company/upload-import",{
+      method:"POST", headers:{"Authorization":"Bearer "+TOKEN}, body:fd,
+    });
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(d.detail||"فشل الاستيراد");
+    showOk(`<b style="font-size:15px">✅ تم الاستيراد بنجاح</b><br>
+      🏢 ${d.created_branches} فرع جديد · 📊 ${d.created_entries} إدخال فترة · 🧩 ${d.module_entries} وحدة محدّثة<br>
+      <a href="company-dashboard.html" style="color:#10b981;text-decoration:underline;margin-top:6px;display:inline-block">انتقل للوحة لمشاهدة النتائج ←</a>`);
+    reset();
+  }catch(e){
+    showErr(e.message); showStep(2);
+  }
+  btn.disabled=false; btn.textContent="✅ استيراد إلى نبّاه";
+}
+</script>
+</body>
+</html>
