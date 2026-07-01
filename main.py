@@ -4149,61 +4149,79 @@ def page_company_root_cause():
 
 # قاموس التطابق الذكي: مفتاح القاموس = الحقل القياسي عندنا، القيم = أسماء محتملة
 SMART_FIELD_MAP = {
-    # ===== الفروع (أساسي) =====
-    "branch_name":      ["branch","فرع","اسم الفرع","name","branch name"],
-    "city":             ["city","مدينة","المدينة"],
-    "period":           ["period","فترة","الفترة","month","شهر","date","تاريخ"],
+    # ===== أعمدة معاملات POS الخام (يلخّصها نبّاه تلقائياً) =====
+    "tx_date":          ["date","تاريخ","التاريخ","تاريخ المعاملة","trans date","transaction date","order date","تاريخ الطلب","تاريخ الفاتورة","invoice date","posting date","تاريخ الحركة","event_time","created_at","timestamp"],
+    "tx_branch":        ["branch","الفرع","فرع","branch name","store","المتجر","location","الموقع","outlet","المنفذ","site","الفرع/المتجر","store name","store_name","location_name"],
+    "tx_amount":        ["totalamount","total","amount","الإجمالي","إجمالي","قيمة الفاتورة","total amount","grand total","المبلغ الإجمالي","net","صافي","net_total","subtotal","المبلغ","total_price","order_total","invoice_total","الإجمالي مع الضريبة","بعد الضريبة"],
+    "tx_qty":           ["qty","quantity","الكمية","كمية","العدد","عدد","units","الوحدات"],
+    "tx_unit_price":    ["unitprice","unit price","السعر","price","سعر","unit_price","price per unit","سعر الوحدة"],
+    "tx_status":        ["status","الحالة","حالة","order status","payment status","transaction status","حالة الطلب"],
+    "tx_customer":      ["customerid","customer id","رقم العميل","customer","العميل","client","الزبون","customer_id","client_id","العميل رقم"],
+    "tx_product":       ["productid","product id","المنتج","product","رقم المنتج","product name","اسم المنتج","item","الصنف","sku"],
+
+    # ===== الفروع (ملخّصات) =====
+    "branch_name":      ["branch","فرع","اسم الفرع","name","branch name","الفرع","store","المتجر","outlet","location"],
+    "city":             ["city","مدينة","المدينة","town","المنطقة"],
+    "period":           ["period","فترة","الفترة","month","شهر","الشهر","date","تاريخ","reporting period","report month","الفترة المحاسبية"],
+
     # ===== مبيعات أساسية =====
-    "sales":            ["sales","مبيعات","إجمالي المبيعات","total sales","revenue","الإيرادات","المبيعات"],
-    "expenses":         ["expenses","مصروفات","المصروفات","cost","التكاليف","تكاليف"],
-    "invoices":         ["invoices","فواتير","عدد الفواتير","orders","طلبات","عدد الطلبات","bills"],
-    "customers":        ["customers","عملاء","عدد العملاء","عدد الزبائن","clients"],
-    "new_customers":    ["new customers","عملاء جدد","new"],
-    "repeat_customers": ["repeat","عملاء متكررون","returning"],
-    "discounts":        ["discounts","خصومات","الخصومات"],
-    "deposited":        ["deposited","مودع","المبلغ المُودَع","bank deposit","الإيداع"],
-    "top_products":     ["top products","أكثر مبيعاً","أكثر الأصناف","best sellers"],
+    "sales":            ["sales","مبيعات","إجمالي المبيعات","total sales","revenue","الإيرادات","المبيعات","gross sales","net sales","دخل","الدخل","total revenue","monthly sales","إيرادات","مبيعات الشهر","المداخيل"],
+    "expenses":         ["expenses","مصروفات","المصروفات","cost","التكاليف","تكاليف","expenditures","الاصروف","total expenses","operating expenses","opex","المصاريف","الصرف"],
+    "invoices":         ["invoices","فواتير","عدد الفواتير","orders","طلبات","عدد الطلبات","bills","transactions","number of orders","الطلبات","الفواتير","total orders"],
+    "customers":        ["customers","عملاء","عدد العملاء","عدد الزبائن","clients","total customers","unique customers","الزبائن","العملاء"],
+    "new_customers":    ["new customers","عملاء جدد","new","new clients","first time customers","العملاء الجدد"],
+    "repeat_customers": ["repeat","عملاء متكررون","returning","repeat customers","loyal customers","المتكررون"],
+    "discounts":        ["discounts","خصومات","الخصومات","discount","promotions","التخفيضات","العروض"],
+    "deposited":        ["deposited","مودع","المبلغ المُودَع","bank deposit","الإيداع","cash deposited","الإيداعات البنكية","المودع بالبنك"],
+    "top_products":     ["top products","أكثر مبيعاً","أكثر الأصناف","best sellers","المنتجات الأكثر","الأصناف الأعلى"],
+
     # ===== المالية =====
-    "cogs":             ["cogs","تكلفة المبيعات","cost of goods","تكلفة البضاعة"],
-    "salaries":         ["salaries","الرواتب","الراتب","payroll","رواتب"],
-    "rent":             ["rent","إيجار","الإيجار","إيجارات","الإيجارات","rents"],
-    "marketing":        ["marketing","تسويق","التسويق","ads","الإعلانات"],
-    "utilities":        ["utilities","كهرباء","المرافق"],
-    "logistics_cost":   ["shipping","نقل","الشحن"],
-    "ar":               ["receivables","ذمم مدينة","المدينون","accounts receivable"],
-    "ap":               ["payables","ذمم دائنة","الدائنون","accounts payable"],
-    "cash":             ["cash","النقد","نقد","البنك","cash and bank"],
-    "short_debt":       ["short term debt","ديون قصيرة","قروض قصيرة"],
-    "long_debt":        ["long term debt","ديون طويلة","قروض طويلة"],
+    "cogs":             ["cogs","تكلفة المبيعات","cost of goods","تكلفة البضاعة","cost of sales","تكلفة البضاعة المباعة","cost of revenue","direct costs","التكاليف المباشرة"],
+    "salaries":         ["salaries","الرواتب","الراتب","payroll","رواتب","salary","wages","الأجور","staff cost","تكلفة الموظفين","إجمالي الرواتب","مرتبات"],
+    "rent":             ["rent","إيجار","الإيجار","إيجارات","الإيجارات","rents","rental","monthly rent","الإيجار الشهري"],
+    "marketing":        ["marketing","تسويق","التسويق","ads","الإعلانات","advertising","الترويج","تكاليف التسويق","marketing cost"],
+    "utilities":        ["utilities","كهرباء","المرافق","electricity","الفواتير","water","الماء","الكهرباء والمياه"],
+    "logistics_cost":   ["shipping","نقل","الشحن","logistics","التوصيل","delivery cost","تكلفة الشحن","مصاريف النقل"],
+    "ar":               ["receivables","ذمم مدينة","المدينون","accounts receivable","a/r","المستحقات","العملاء المدينون","ذمم مدينة تجارية"],
+    "ap":               ["payables","ذمم دائنة","الدائنون","accounts payable","a/p","الالتزامات","الموردون","ذمم دائنة تجارية"],
+    "cash":             ["cash","النقد","نقد","البنك","cash and bank","cash on hand","الأرصدة النقدية","السيولة","النقدية","cash & bank"],
+    "short_debt":       ["short term debt","ديون قصيرة","قروض قصيرة","current portion","الديون قصيرة الأجل"],
+    "long_debt":        ["long term debt","ديون طويلة","قروض طويلة","الديون طويلة الأجل","long-term loans"],
+
     # ===== العملاء =====
-    "lost_customers":   ["lost","مفقودون","عملاء مفقودون","churned"],
-    "nps":              ["nps","صافي المرشحين"],
-    "satisfaction":     ["satisfaction","رضا","نسبة الرضا","csat"],
-    "complaints":       ["complaints","شكاوى","الشكاوى"],
+    "lost_customers":   ["lost","مفقودون","عملاء مفقودون","churned","خسر","العملاء المفقودون","attrition"],
+    "nps":              ["nps","صافي المرشحين","صافي مؤشر الترشيح","net promoter score","nps score"],
+    "satisfaction":     ["satisfaction","رضا","نسبة الرضا","csat","customer satisfaction","رضا العملاء","satisfaction rate"],
+    "complaints":       ["complaints","شكاوى","الشكاوى","complaint","عدد الشكاوى"],
+
     # ===== الموارد البشرية =====
-    "employees":        ["employees","عدد الموظفين","الموظفين","staff","headcount"],
-    "resignations":     ["resignations","المستقيلين","المستقيلون","quits"],
-    "absence":          ["absence","الغياب","غياب","absences"],
-    "training":         ["training","التدريب","تدريب"],
-    "saudization":      ["saudization","السعودة","نسبة السعودة"],
-    "vacancies":        ["vacancies","الشواغر","الوظائف الشاغرة"],
+    "employees":        ["employees","عدد الموظفين","الموظفين","staff","headcount","total employees","عدد العاملين","الطاقم"],
+    "resignations":     ["resignations","المستقيلين","المستقيلون","quits","terminations","تركوا العمل","الاستقالات"],
+    "absence":          ["absence","الغياب","غياب","absences","absent days","أيام الغياب"],
+    "training":         ["training","التدريب","تدريب","training cost","ميزانية التدريب","training budget"],
+    "saudization":      ["saudization","السعودة","نسبة السعودة","saudi ratio","السعوديين"],
+    "vacancies":        ["vacancies","الشواغر","الوظائف الشاغرة","open positions","openings"],
+
     # ===== المخزون =====
-    "inventory_value":  ["inventory value","قيمة المخزون","stock value"],
-    "dead_stock":       ["dead stock","مخزون راكد","المخزون الراكد","المخزون الزائد"],
-    "stockouts":        ["stockouts","نفاد المخزون","نفاذ المخزون"],
-    "waste":            ["waste","هدر","الهدر","الفاقد","spoilage"],
+    "inventory_value":  ["inventory value","قيمة المخزون","stock value","inventory","المخزون","stock","inventory total","قيمة المخزون الحالية"],
+    "dead_stock":       ["dead stock","مخزون راكد","المخزون الراكد","المخزون الزائد","slow moving","excess inventory"],
+    "stockouts":        ["stockouts","نفاد المخزون","نفاذ المخزون","out of stock","نواقص","stock out"],
+    "waste":            ["waste","هدر","الهدر","الفاقد","spoilage","wastage","التالف","الفاقد بسبب التلف"],
+
     # ===== المشتريات =====
-    "suppliers":        ["suppliers","الموردين","عدد الموردين","vendors"],
-    "purchases":        ["purchases","المشتريات","قيمة المشتريات","total purchases"],
-    "supplier_delay":   ["supplier delay","تأخر المورد","lead time"],
+    "suppliers":        ["suppliers","الموردين","عدد الموردين","vendors","suppliers count","عدد الموردين النشطين"],
+    "purchases":        ["purchases","المشتريات","قيمة المشتريات","total purchases","مشتريات","إجمالي المشتريات","procurement"],
+    "supplier_delay":   ["supplier delay","تأخر المورد","lead time","supplier lead time","متوسط التأخر"],
+
     # ===== تشغيل =====
-    "active_projects":  ["active projects","مشاريع نشطة","الطلبات النشطة"],
-    "delayed_projects": ["delayed","متأخرة","الطلبات المتأخرة"],
-    "on_time_orders":   ["on time","في الوقت","الطلبات في الوقت"],
-    "breakdowns":       ["breakdowns","الأعطال","عدد الأعطال"],
+    "active_projects":  ["active projects","مشاريع نشطة","الطلبات النشطة","open orders","in progress","قيد التنفيذ"],
+    "delayed_projects": ["delayed","متأخرة","الطلبات المتأخرة","late orders","overdue","المشاريع المتأخرة"],
+    "on_time_orders":   ["on time","في الوقت","الطلبات في الوقت","on-time delivery","الالتزام بالمواعيد","تسليم في الموعد"],
+    "breakdowns":       ["breakdowns","الأعطال","عدد الأعطال","failures","الأعطال الحرجة","downtime events"],
+
     # ===== إعدادات الشركة =====
-    "cash_reserve":     ["cash reserve","الاحتياطي النقدي"],
-    "monthly_obligations":["monthly obligations","الالتزامات الشهرية"],
+    "cash_reserve":     ["cash reserve","الاحتياطي النقدي","reserves","الاحتياطي","احتياطي السيولة"],
+    "monthly_obligations":["monthly obligations","الالتزامات الشهرية","monthly liabilities","fixed obligations","الالتزامات الثابتة"],
 }
 
 
@@ -4217,20 +4235,60 @@ def _norm(s):
 
 
 def match_column(header):
-    """يطابق عنوان عمود مع حقل قياسي."""
+    """يطابق عنوان عمود مع حقل قياسي — بذكاء عالٍ."""
     h = _norm(header)
     if not h: return None
-    # تطابق دقيق
+    # ١) تطابق دقيق
     for std, names in SMART_FIELD_MAP.items():
         for nm in names:
             if _norm(nm) == h:
                 return std
-    # تطابق احتواء
+    # ٢) تطابق احتواء (contains)
     for std, names in SMART_FIELD_MAP.items():
         for nm in names:
             n = _norm(nm)
-            if n and (n in h or h in n) and len(n) >= 3:
+            if n and len(n) >= 3 and (n in h or h in n):
                 return std
+    # ٣) تطابق كلمات (word-level) — كل كلمة من العنوان يبحث عنها
+    words = set(h.split())
+    for std, names in SMART_FIELD_MAP.items():
+        for nm in names:
+            n_words = set(_norm(nm).split())
+            if n_words and len(n_words & words) >= max(1, len(n_words) // 2):
+                return std
+    return None
+
+
+def infer_column_by_content(sample_values, header=""):
+    """يستنتج معنى عمود من محتواه (لو الاسم غامض) — يفحص أول ٢٠ قيمة."""
+    if not sample_values: return None
+    clean = [v for v in sample_values[:20] if v is not None and str(v).strip() != ""]
+    if not clean: return None
+    # هل كلها أرقام؟
+    nums = [_to_num(v) for v in clean]
+    all_numeric = all(n is not None for n in nums)
+    # هل كلها تواريخ؟
+    dates = [parse_date_to_period(v) for v in clean]
+    mostly_dates = sum(1 for d in dates if d) >= len(clean) * 0.7
+    if mostly_dates:
+        return "tx_date"
+    # هل كلها نصوص قصيرة تُشبه أسماء فروع/مدن؟
+    if not all_numeric:
+        avg_len = sum(len(str(v).strip()) for v in clean) / len(clean)
+        unique_ratio = len(set(str(v).strip() for v in clean)) / len(clean)
+        # لو تكرار عالي + نصوص قصيرة → غالباً فرع/مدينة
+        if avg_len < 25 and unique_ratio < 0.5:
+            hh = _norm(header)
+            if any(k in hh for k in ("city","مدين","location","موقع","منطقة")):
+                return "city"
+            return "tx_branch" if "branch" in hh or "فرع" in hh or "store" in hh else None
+    # لو أرقام كبيرة (>1000) وبعنوان يحوي مبلغ/إجمالي — مبيعات
+    if all_numeric:
+        avg = sum(nums) / len(nums)
+        hh = _norm(header)
+        if avg > 100:
+            if any(k in hh for k in ("total","amount","إجمالي","مبلغ","المبلغ","قيمة","sales","revenue")):
+                return "tx_amount"
     return None
 
 
@@ -4278,6 +4336,94 @@ def _to_num(v):
     except: return None
 
 
+def parse_date_to_period(val):
+    """يحوّل أي تاريخ شائع لـ YYYY-MM."""
+    if val is None: return None
+    s = str(val).strip()
+    if not s: return None
+    # YYYY-MM-DD or YYYY/MM/DD or YYYY-MM
+    if len(s) >= 7 and (s[4] in "-/"):
+        try:
+            y = int(s[:4]); m = int(s[5:7])
+            if 1 <= m <= 12 and 2000 <= y <= 2100:
+                return f"{y:04d}-{m:02d}"
+        except: pass
+    # MM/DD/YYYY or M/D/YYYY or DD/MM/YYYY
+    parts = s.replace("-", "/").split("/")
+    if len(parts) == 3:
+        try:
+            a, b, c = int(parts[0]), int(parts[1]), int(parts[2])
+            # YYYY في آخر خانة
+            if c > 1900:
+                # نفترض MM/DD/YYYY (الأكثر شيوعاً في POS الأمريكية)
+                m = a if 1 <= a <= 12 else b
+                y = c
+                if 1 <= m <= 12 and 2000 <= y <= 2100:
+                    return f"{y:04d}-{m:02d}"
+            # YYYY في أول خانة
+            elif a > 1900:
+                m = b
+                if 1 <= m <= 12:
+                    return f"{a:04d}-{m:02d}"
+        except: pass
+    return None
+
+
+def is_transactions_file(col_map):
+    """يكشف لو الملف ملف معاملات خام (يحتوي tx_date + tx_branch + tx_amount)."""
+    cols = set(col_map.values())
+    return "tx_date" in cols and "tx_branch" in cols and "tx_amount" in cols
+
+
+def aggregate_transactions(rows, col_map, headers):
+    """يلخّص معاملات POS الخام إلى صفوف شهرية بالفرع."""
+    field_to_idx = {std: idx for idx, std in col_map.items()}
+    aggregated = {}
+    for r in rows:
+        if not r or all(c is None or str(c).strip() == "" for c in r):
+            continue
+        def get(field):
+            idx = field_to_idx.get(field)
+            if idx is None or idx >= len(r): return None
+            return r[idx]
+
+        branch_name = str(get("tx_branch") or "").strip()
+        period = parse_date_to_period(get("tx_date"))
+        amount = _to_num(get("tx_amount"))
+        status = str(get("tx_status") or "").strip().lower()
+        customer = get("tx_customer")
+
+        if not branch_name or not period or amount is None:
+            continue
+
+        key = (branch_name, period)
+        bucket = aggregated.setdefault(key, {
+            "sales": 0.0, "invoices": 0, "customers_set": set(),
+            "returned_amount": 0.0, "returns_count": 0,
+        })
+
+        is_returned = status in ("returned", "refunded", "مرتجع", "ملغي", "cancelled", "canceled")
+        if is_returned:
+            bucket["returned_amount"] += amount
+            bucket["returns_count"] += 1
+        else:
+            bucket["sales"] += amount
+            bucket["invoices"] += 1
+            if customer is not None and str(customer).strip():
+                bucket["customers_set"].add(str(customer).strip())
+
+    result = {}
+    for key, b in aggregated.items():
+        result[key] = {
+            "sales": round(b["sales"], 2),
+            "invoices": b["invoices"],
+            "customers": len(b["customers_set"]),
+            "returned_amount": round(b["returned_amount"], 2),
+            "returns_count": b["returns_count"],
+        }
+    return result
+
+
 @app.post("/company/upload-preview")
 async def company_upload_preview(file: UploadFile = File(...), user: User = Depends(get_current_user)):
     """يقرأ الملف، يطابق الأعمدة، يرجع معاينة قبل الحفظ."""
@@ -4291,6 +4437,9 @@ async def company_upload_preview(file: UploadFile = File(...), user: User = Depe
             raise HTTPException(402, "شركتك قيد التفعيل")
 
     data = await file.read()
+    # حماية: حد أعلى ٢٠ MB
+    if len(data) > 20 * 1024 * 1024:
+        raise HTTPException(400, f"الملف كبير جداً ({len(data)//(1024*1024)} MB). الحد الأقصى ٢٠ MB.")
     name = (file.filename or "").lower()
     if name.endswith(".csv"):
         headers, rows = parse_csv(data)
@@ -4302,11 +4451,20 @@ async def company_upload_preview(file: UploadFile = File(...), user: User = Depe
     if not headers or not rows:
         raise HTTPException(400, "الملف فاضي أو لا يحوي صفوف")
 
-    # تطابق الأعمدة
+    # حماية: حد ١٠٠ ألف صف
+    if len(rows) > 100000:
+        raise HTTPException(400, f"عدد الصفوف كبير جداً ({len(rows)}). الحد ١٠٠,٠٠٠ صف.")
+
+    # تطابق الأعمدة (٣ مراحل: اسم، احتواء، تخمين من المحتوى)
     matched = []
     for i, h in enumerate(headers):
         std = match_column(h)
-        matched.append({"index": i, "original": h, "matched": std, "label": SMART_FIELD_MAP.get(std, [std])[0] if std else None})
+        # لو ما تطابق، جرّب التخمين من المحتوى
+        if not std:
+            sample_vals = [r[i] for r in rows[:20] if i < len(r)]
+            std = infer_column_by_content(sample_vals, h)
+        label = SMART_FIELD_MAP.get(std, [std])[0] if std else None
+        matched.append({"index": i, "original": h, "matched": std, "label": label})
     matched_count = sum(1 for m in matched if m["matched"])
 
     # عيّنة ٥ صفوف بقيم منظّفة
@@ -4332,6 +4490,8 @@ async def company_upload_import(file: UploadFile = File(...), user: User = Depen
     if not user.company_id:
         raise HTTPException(403, "لا توجد شركة نشطة")
     data = await file.read()
+    if len(data) > 20 * 1024 * 1024:
+        raise HTTPException(400, "الملف كبير جداً (أعلى من ٢٠ MB)")
     name = (file.filename or "").lower()
     if name.endswith(".csv"):
         headers, rows = parse_csv(data)
@@ -4339,11 +4499,16 @@ async def company_upload_import(file: UploadFile = File(...), user: User = Depen
         headers, rows = parse_excel(data)
     else:
         raise HTTPException(400, "ادعم CSV أو Excel فقط")
+    if len(rows) > 100000:
+        raise HTTPException(400, "عدد الصفوف كبير جداً (أعلى من ١٠٠,٠٠٠)")
 
-    # خريطة index → standard field
+    # خريطة index → standard field (مع تخمين)
     col_map = {}
     for i, h in enumerate(headers):
         std = match_column(h)
+        if not std:
+            sample_vals = [r[i] for r in rows[:20] if i < len(r)]
+            std = infer_column_by_content(sample_vals, h)
         if std: col_map[i] = std
 
     if not col_map:
