@@ -653,13 +653,19 @@ async function analyzeCompany(){
   btn.disabled=false; btn.textContent="إعادة التحليل";
 }
 
+let ASK_HISTORY=[];
 async function ask(){
   const inp=document.getElementById("askInput"), ans=document.getElementById("askAns"), btn=document.getElementById("askBtn");
   const q=inp.value.trim(); if(!q) return;
   btn.disabled=true; btn.textContent="…"; ans.classList.add("show"); ans.innerHTML="جارٍ التفكير…";
   try{
-    const r = await api("/company/ask",{method:"POST",body:JSON.stringify({question:q})});
+    const r = await api("/company/ask",{method:"POST",body:JSON.stringify({question:q, history:ASK_HISTORY})});
     ans.innerHTML = marked.parse(r.answer||"");
+    // ذاكرة المحادثة: آخر ٦ رسائل تُرسل مع كل سؤال ليفهم نبّاه سياق الحوار
+    ASK_HISTORY.push({role:"user",content:q});
+    ASK_HISTORY.push({role:"assistant",content:(r.answer||"").slice(0,400)});
+    if(ASK_HISTORY.length>6) ASK_HISTORY=ASK_HISTORY.slice(-6);
+    inp.value="";
   }catch(e){ ans.innerHTML=`<span style="color:var(--red)">${e.message}</span>`; }
   btn.disabled=false; btn.textContent="اسأل";
 }
