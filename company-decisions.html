@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نبّاه · متابعة القرارات</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0a0f0c;--panel:#101a15;--panel2:#0e1712;--line:#1d2c24;--mint:#10b981;--mint-deep:#0c8f64;--gold:#f5b301;--red:#ef4444;--txt:#e8f1ec;--txt-soft:#9fb4aa;--txt-mute:#678075;--r:16px;}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--txt);line-height:1.7;min-height:100vh}
+  body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.5;background:radial-gradient(circle at 1px 1px,rgba(16,185,129,.05) 1px,transparent 0);background-size:26px 26px}
+  a{text-decoration:none;color:inherit}
+  .wrap{max-width:820px;margin:0 auto;padding:0 16px;position:relative;z-index:1}
+  header{position:sticky;top:0;z-index:40;background:rgba(10,15,12,.86);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+  .head-in{max-width:820px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:900;font-size:20px;color:#fff}
+  .brand .bell{width:36px;height:36px;border-radius:11px;background:var(--mint);display:grid;place-items:center;font-size:17px;transform:rotate(-5deg)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;font-family:inherit;font-weight:700;cursor:pointer;border:none;border-radius:11px;font-size:14px;text-decoration:none;transition:.15s}
+  .btn-mint{background:var(--mint);color:#04130d;padding:11px 18px}.btn-mint:hover{background:var(--mint-deep)}.btn-mint:disabled{opacity:.6}
+  .btn-ghost{background:var(--panel);color:var(--txt-soft);padding:10px 15px;border:1px solid var(--line)}
+  .page-head{padding:24px 0 12px}.page-head h1{font-size:25px;font-weight:900}.page-head p{color:var(--txt-soft);font-size:14.5px;margin-top:3px}
+  .state{padding:50px 20px;text-align:center;color:var(--txt-soft)}
+  .spin{width:32px;height:32px;border:3px solid var(--line);border-top-color:var(--mint);border-radius:50%;animation:sp 1s linear infinite;margin:0 auto 12px}@keyframes sp{to{transform:rotate(360deg)}}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px;margin-bottom:14px}
+  .panel h2{font-size:15.5px;font-weight:800;margin-bottom:2px}.panel .sub{font-size:12.5px;color:var(--txt-mute);margin-bottom:14px}
+  label{display:block;font-size:13px;font-weight:700;margin-bottom:6px}
+  input,textarea{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:11px 13px;color:var(--txt);font-family:inherit;font-size:14px}
+  input:focus,textarea:focus{outline:none;border-color:var(--mint)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px}
+  .field{margin-bottom:10px}
+
+  .dcard{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:15px 17px;margin-bottom:10px;border-right:5px solid var(--mint)}
+  .dcard.done{border-right-color:var(--txt-mute);opacity:.75}
+  .dcard.overdue{border-right-color:var(--red)}
+  .d-h{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .d-h .t{font-weight:800;font-size:15px;flex:1;min-width:0}
+  .badge{font-size:10.5px;font-weight:800;padding:3px 10px;border-radius:100px;white-space:nowrap}
+  .badge.open{background:rgba(16,185,129,.15);color:#6ee7b7}
+  .badge.done{background:rgba(148,163,184,.15);color:#cbd5e1}
+  .badge.overdue{background:rgba(239,68,68,.15);color:#fca5a5}
+  .d-meta{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--txt-soft);margin-top:7px}
+  .d-meta b{color:var(--txt)}
+  .d-detail{font-size:13.5px;color:var(--txt-soft);margin-top:7px;line-height:1.7}
+  .impact{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:9px 13px;margin-top:9px;font-size:13px}
+  .d-actions{display:flex;gap:8px;margin-top:11px}
+  .empty{text-align:center;padding:30px;color:var(--txt-soft)}
+  .stats{display:flex;gap:11px;margin-bottom:14px}
+  .stat{flex:1;background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:13px;text-align:center}
+  .stat .v{font-size:24px;font-weight:900}.stat .l{font-size:11.5px;color:var(--txt-soft)}
+  .links{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 40px}
+  @media(max-width:560px){.grid2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <div class="head-in">
+    <a class="brand" href="company-dashboard.html"><span class="bell">🔔</span>نبّاه</a>
+    <a class="btn btn-ghost" href="company-command-center.html">مركز القيادة</a>
+  </div>
+</header>
+<div class="wrap">
+  <div class="page-head"><h1>⚡ متابعة القرارات</h1><p>اعتمد القرار → حدّد المسؤول والموعد والـKPI → أغلقه ويقيس نبّاه النتيجة (المبيعات قبل/بعد) تلقائياً</p></div>
+
+  <div id="loading" class="state"><div class="spin"></div>جارٍ التحميل…</div>
+  <div id="error" class="state" style="display:none;color:var(--red)"></div>
+
+  <div id="content" style="display:none">
+    <div class="stats">
+      <div class="stat"><div class="v" style="color:var(--mint)" id="stOpen">0</div><div class="l">قيد التنفيذ</div></div>
+      <div class="stat"><div class="v" style="color:var(--red)" id="stOverdue">0</div><div class="l">متأخر</div></div>
+      <div class="stat"><div class="v" id="stDone">0</div><div class="l">منجَز</div></div>
+    </div>
+
+    <div class="panel">
+      <h2>➕ اعتماد قرار جديد</h2>
+      <div class="sub">يُسجَّل خط الأساس (مبيعاتك الحالية) تلقائياً لقياس الأثر لاحقاً</div>
+      <div class="field"><label>القرار</label><input id="nTitle" placeholder="مثال: إيقاف خصومات فرع جدة"></div>
+      <div class="field"><label>التفاصيل (اختياري)</label><textarea id="nDetail" rows="2" placeholder="السياق أو الخطوات"></textarea></div>
+      <div class="grid2">
+        <div class="field"><label>المسؤول</label><input id="nOwner" placeholder="مثال: مدير فرع جدة"></div>
+        <div class="field"><label>موعد الإنجاز</label><input id="nDue" type="date"></div>
+      </div>
+      <div class="field"><label>مؤشر النجاح KPI</label><input id="nKpi" placeholder="مثال: هامش الفرع يرتفع فوق 15%"></div>
+      <div id="nErr" style="color:var(--red);font-size:13px;display:none;margin-bottom:8px"></div>
+      <button class="btn btn-mint" id="nBtn" style="width:100%;padding:12px" onclick="saveDecision()">اعتماد القرار</button>
+    </div>
+
+    <div id="list"></div>
+  </div>
+
+  <div class="links">
+    <a class="btn btn-ghost" href="company-dashboard.html">اللوحة</a>
+    <a class="btn btn-ghost" href="company-command-center.html">🎛️ مركز القيادة</a>
+    <a class="btn btn-ghost" href="company-memory.html">🧠 ذاكرة الشركة</a>
+  </div>
+</div>
+<script>
+const TOKEN=localStorage.getItem("nabbah_token")||"";
+if(!TOKEN){ window.location.href="login.html"; }
+async function api(p,o={}){
+  const r=await fetch(p,{...o,headers:{"Content-Type":"application/json","Authorization":"Bearer "+TOKEN,...(o.headers||{})}});
+  if(r.status===401){ localStorage.removeItem("nabbah_token"); window.location.href="login.html"; throw new Error("جلسة"); }
+  const d=await r.json().catch(()=>({}));
+  const er=new Error(d.detail||"خطأ"); er.status=r.status;
+  if(!r.ok) throw er;
+  return d;
+}
+const esc=s=>String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const fmt=n=>(Math.round(n)||0).toLocaleString("en-US");
+
+// دعم التعبئة المسبقة من مركز القيادة (?title=..&detail=..)
+const params=new URLSearchParams(location.search);
+window.addEventListener("DOMContentLoaded",()=>{
+  if(params.get("title")) document.getElementById("nTitle").value=params.get("title");
+  if(params.get("detail")) document.getElementById("nDetail").value=params.get("detail");
+});
+
+async function load(){
+  try{
+    const d=await api("/company/decisions");
+    document.getElementById("loading").style.display="none";
+    document.getElementById("content").style.display="block";
+    const done=d.items.filter(x=>x.status!=="open").length;
+    document.getElementById("stOpen").textContent=d.open_count;
+    document.getElementById("stOverdue").textContent=d.overdue_count;
+    document.getElementById("stDone").textContent=done;
+    render(d.items);
+  }catch(e){
+    document.getElementById("loading").style.display="none";
+    const er=document.getElementById("error"); er.style.display="block";
+    if(e.status===402) er.innerHTML=`⏳ شركتك قيد التفعيل. <a href="company-dashboard.html" style="color:var(--mint)">رجوع</a>`;
+    else er.textContent=e.message;
+  }
+}
+
+function render(items){
+  const list=document.getElementById("list");
+  if(!items.length){
+    list.innerHTML=`<div class="panel empty">⚡ لا قرارات بعد — اعتمد أول قرار من الأعلى أو من مركز القيادة.</div>`;
+    return;
+  }
+  list.innerHTML=items.map(d=>{
+    const cls=d.status!=="open"?"done":(d.overdue?"overdue":"");
+    const badge=d.status!=="open"
+      ?`<span class="badge done">✓ منجَز ${d.closed||""}</span>`
+      :(d.overdue?`<span class="badge overdue">⏰ متأخر</span>`:`<span class="badge open">قيد التنفيذ</span>`);
+    let impact="";
+    if(d.impact){
+      const c=d.impact.change_pct;
+      const col=c>=0?"var(--mint)":"var(--red)";
+      impact=`<div class="impact">📏 <b>قياس النتيجة:</b> المبيعات وقت الاعتماد ${fmt(d.impact.baseline)} ر ← عند الإغلاق ${fmt(d.impact.result)} ر (<b style="color:${col}">${c>=0?"+":""}${c}%</b>)${d.result_note?` · ${esc(d.result_note)}`:""}</div>`;
+    }else if(d.result_note){
+      impact=`<div class="impact">📝 ${esc(d.result_note)}</div>`;
+    }
+    const actions=d.status==="open"
+      ?`<div class="d-actions">
+          <button class="btn btn-mint" style="padding:8px 16px;font-size:13px" onclick="closeDecision(${d.id})">✓ إنجاز وقياس النتيجة</button>
+          <button class="btn btn-ghost" style="padding:8px 14px;font-size:13px" onclick="cancelDecision(${d.id})">إلغاء</button>
+        </div>`:"";
+    return `<div class="dcard ${cls}">
+      <div class="d-h"><div class="t">${esc(d.title)}</div>${badge}</div>
+      ${d.detail?`<div class="d-detail">${esc(d.detail)}</div>`:""}
+      <div class="d-meta">
+        ${d.owner?`<span>👤 <b>${esc(d.owner)}</b></span>`:""}
+        ${d.due_date?`<span>📅 ${d.due_date}</span>`:""}
+        ${d.kpi?`<span>🎯 ${esc(d.kpi)}</span>`:""}
+        <span style="color:var(--txt-mute)">اعتُمد ${d.created}</span>
+      </div>
+      ${impact}
+      ${actions}
+    </div>`;
+  }).join("");
+}
+
+async function saveDecision(){
+  const t=document.getElementById("nTitle").value.trim();
+  const err=document.getElementById("nErr");
+  err.style.display="none";
+  if(!t){ err.textContent="اكتب عنوان القرار"; err.style.display="block"; return; }
+  const btn=document.getElementById("nBtn"); btn.disabled=true; btn.textContent="جارٍ الاعتماد…";
+  try{
+    await api("/company/decisions/save",{method:"POST",body:JSON.stringify({
+      title:t,
+      detail:document.getElementById("nDetail").value.trim(),
+      owner:document.getElementById("nOwner").value.trim(),
+      due_date:document.getElementById("nDue").value,
+      kpi:document.getElementById("nKpi").value.trim(),
+    })});
+    ["nTitle","nDetail","nOwner","nDue","nKpi"].forEach(id=>document.getElementById(id).value="");
+    await load();
+  }catch(e){ err.textContent=e.message; err.style.display="block"; }
+  btn.disabled=false; btn.textContent="اعتماد القرار";
+}
+
+async function closeDecision(id){
+  const note=prompt("ملاحظة النتيجة (اختياري):","")||"";
+  try{ await api("/company/decisions/close",{method:"POST",body:JSON.stringify({id,status:"done",result_note:note})}); await load(); }
+  catch(e){ alert(e.message); }
+}
+async function cancelDecision(id){
+  if(!confirm("إلغاء هذا القرار؟")) return;
+  try{ await api("/company/decisions/close",{method:"POST",body:JSON.stringify({id,status:"cancelled",result_note:"أُلغي"})}); await load(); }
+  catch(e){ alert(e.message); }
+}
+load();
+</script>
+</body>
+</html>
