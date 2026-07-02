@@ -221,7 +221,11 @@ function renderPreview(d){
   document.getElementById("matchedCols").textContent=d.matched_count;
   document.getElementById("unmatchedCols").textContent=d.unmatched_count;
 
-  if(d.matched_count===0){
+  if(d.tx_summary && d.tx_summary.is_transactions){
+    const t=d.tx_summary;
+    const ib=document.getElementById("infoBox"); ib.style.display="block";
+    ib.innerHTML=`🧾 <b>تم اكتشاف ملف معاملات POS!</b> سيُلخَّص تلقائياً إلى <b>${t.summary_rows}</b> سجل شهري لـ<b>${t.branches_count}</b> فرع (${t.branches.join("، ")}) عبر <b>${t.periods_count}</b> فترة.<br>💰 إجمالي المبيعات: <b>${(t.total_sales||0).toLocaleString("en-US")}</b> ر · ↩️ المرتجعات: ${(t.total_returns||0).toLocaleString("en-US")} ر<br><span style="opacity:.8">ملاحظة: ملفات POS لا تحوي المصروفات — أضفها لاحقاً من الوحدة المالية لتحليل الربحية.</span>`;
+  }else if(d.matched_count===0){
     const ib=document.getElementById("infoBox"); ib.style.display="block";
     ib.innerHTML="⚠️ لم يُتعرَّف على أي عمود — تأكد أن صف العناوين في الأعلى وأن الأسماء معروفة (مثلاً: الفرع، المبيعات، المصروفات…)";
   }else if(d.unmatched_count > d.matched_count){
