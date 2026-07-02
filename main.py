@@ -186,6 +186,23 @@ class CompanyMember(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.now)
 
 
+class CompanyDecision(SQLModel, table=True):
+    """قرارات معتمدة قيد التنفيذ والمتابعة — تُغلق بقياس النتيجة."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    title: str = ""
+    detail: str = ""
+    owner: str = ""                 # المسؤول عن التنفيذ
+    due_date: str = ""              # موعد الإنجاز (YYYY-MM-DD)
+    kpi: str = ""                   # مؤشر النجاح
+    status: str = "open"            # open / done / cancelled
+    baseline_sales: float = 0       # مبيعات الشركة وقت اعتماد القرار (للقياس)
+    result_sales: float = 0         # مبيعات الشركة وقت الإغلاق
+    result_note: str = ""           # ملاحظة النتيجة
+    created_at: datetime = Field(default_factory=datetime.now)
+    closed_at: Optional[datetime] = None
+
+
 class CompanyMemory(SQLModel, table=True):
     """ذاكرة الشركة المؤسسية: كل تحليل وقرار وسؤال ورفع بيانات يُسجَّل هنا للأبد."""
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -5164,3 +5181,113 @@ def company_setup_status(user: User = Depends(get_current_user)):
             "pct": round(done_count / len(steps) * 100),
             "complete": done_count == len(steps),
         }
+
+
+# ============================================================
+# ===== متابعة القرارات: اعتماد → تنفيذ → قياس النتيجة =====
+# ============================================================
+
+def _company_total_sales(s, company_id):
+    """إجمالي مبيعات آخر فترة لكل فرع — خط الأساس لقياس أثر القرار."""
+    total = 0.0
+    for b in s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company_id, CompanyBranch.is_active == 1)).all():
+        e = s.exec(select(CompanyEntry).where(CompanyEntry.branch_id == b.id).order_by(CompanyEntry.created_at.desc())).first()
+        if e:
+            total += e.sales
+    return round(total, 2)
+
+
+@app.post("/company/decisions/save")
+def company_decision_save(data: dict, user: User = Depends(get_current_user)):
+    """يعتمد قراراً للمتابعة — مع تسجيل خط الأساس تلقائياً."""
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    title = (data.get("title") or "").strip()
+    if not title:
+        raise HTTPException(400, "اكتب عنوان القرار")
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id)
+        if not company or company.owner_id != user.id:
+            raise HTTPException(403, "غير مصرّح")
+        if company.is_active != 1:
+            raise HTTPException(402, "شركتك قيد التفعيل")
+        d = CompanyDecision(
+            company_id=company.id,
+            title=title[:200],
+            detail=str(data.get("detail") or "")[:1000],
+            owner=str(data.get("owner") or "")[:100],
+            due_date=str(data.get("due_date") or "")[:10],
+            kpi=str(data.get("kpi") or "")[:200],
+            baseline_sales=_company_total_sales(s, company.id),
+        )
+        s.add(d); s.commit(); s.refresh(d)
+        save_memory(company.id, "decision", f"اعتماد قرار: {title[:100]}",
+                    f"{d.detail}\nالمسؤول: {d.owner or '—'} | الموعد: {d.due_date or '—'} | KPI: {d.kpi or '—'}")
+        return {"ok": True, "id": d.id}
+
+
+@app.get("/company/decisions")
+def company_decisions_list(user: User = Depends(get_current_user)):
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id)
+        if not company or company.owner_id != user.id:
+            raise HTTPException(403, "غير مصرّح")
+        if company.is_active != 1:
+            raise HTTPException(402, "شركتك قيد التفعيل")
+        items = s.exec(
+            select(CompanyDecision).where(CompanyDecision.company_id == company.id)
+            .order_by(CompanyDecision.created_at.desc()).limit(100)
+        ).all()
+        today = datetime.now().strftime("%Y-%m-%d")
+        out = []
+        for d in items:
+            overdue = bool(d.status == "open" and d.due_date and d.due_date < today)
+            impact = None
+            if d.status == "done" and d.baseline_sales > 0 and d.result_sales > 0:
+                change = round((d.result_sales - d.baseline_sales) / d.baseline_sales * 100, 1)
+                impact = {"baseline": round(d.baseline_sales), "result": round(d.result_sales), "change_pct": change}
+            out.append({
+                "id": d.id, "title": d.title, "detail": d.detail,
+                "owner": d.owner, "due_date": d.due_date, "kpi": d.kpi,
+                "status": d.status, "overdue": overdue,
+                "created": d.created_at.strftime("%Y-%m-%d"),
+                "closed": d.closed_at.strftime("%Y-%m-%d") if d.closed_at else None,
+                "result_note": d.result_note, "impact": impact,
+            })
+        open_count = sum(1 for d in out if d["status"] == "open")
+        return {"items": out, "open_count": open_count,
+                "overdue_count": sum(1 for d in out if d["overdue"])}
+
+
+@app.post("/company/decisions/close")
+def company_decision_close(data: dict, user: User = Depends(get_current_user)):
+    """يغلق قراراً ويقيس النتيجة تلقائياً (مبيعات قبل/بعد)."""
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    did = data.get("id")
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id)
+        if not company or company.owner_id != user.id:
+            raise HTTPException(403, "غير مصرّح")
+        d = s.get(CompanyDecision, int(did)) if did else None
+        if not d or d.company_id != company.id:
+            raise HTTPException(404, "القرار غير موجود")
+        d.status = str(data.get("status") or "done")
+        d.result_note = str(data.get("result_note") or "")[:500]
+        d.result_sales = _company_total_sales(s, company.id)
+        d.closed_at = datetime.now()
+        s.add(d); s.commit()
+        change_txt = ""
+        if d.baseline_sales > 0 and d.result_sales > 0:
+            change = round((d.result_sales - d.baseline_sales) / d.baseline_sales * 100, 1)
+            change_txt = f" | المبيعات تغيّرت {change:+}% منذ الاعتماد"
+        save_memory(company.id, "decision", f"إغلاق قرار: {d.title[:100]}",
+                    f"الحالة: {d.status} | {d.result_note or 'بدون ملاحظة'}{change_txt}")
+        return {"ok": True}
+
+
+@app.get("/company-decisions.html")
+def page_company_decisions():
+    return FileResponse("company-decisions.html")
