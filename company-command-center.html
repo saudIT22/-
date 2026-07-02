@@ -191,7 +191,10 @@ function renderDecisions(arr){
         <span class="pr ${cls}">${d.priority}</span>
         <div class="title">${d.title}</div>
         <div class="detail">${d.detail}</div>
-        <div class="act"><a href="${d.link||'#'}">${d.action||'افتح'} ←</a></div>
+        <div class="act" style="display:flex;gap:12px;align-items:center">
+          <a href="${d.link||'#'}">${d.action||'افتح'} ←</a>
+          <a href="company-decisions.html?title=${encodeURIComponent(d.title)}&detail=${encodeURIComponent(d.detail)}" style="font-size:12.5px;color:#c4b5fd;font-weight:700">⚡ اعتمد للمتابعة</a>
+        </div>
       </div></div>`;
   }).join("");
 }
