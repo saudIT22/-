@@ -186,6 +186,16 @@ class CompanyMember(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.now)
 
 
+class CompanyMemory(SQLModel, table=True):
+    """ذاكرة الشركة المؤسسية: كل تحليل وقرار وسؤال ورفع بيانات يُسجَّل هنا للأبد."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    kind: str = Field(index=True)   # analysis / question / upload / goals / decision
+    title: str = ""
+    content: str = ""               # النص الكامل (تحليل/إجابة...)
+    created_at: datetime = Field(default_factory=datetime.now)
+
+
 class CompanyModuleEntry(SQLModel, table=True):
     """إدخالات الوحدات الموسّعة (مالية/مبيعات/عملاء/...). تُحفظ مرنة كـ JSON."""
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -1345,8 +1355,38 @@ def compute_company_metrics(sales, invoices, customers, repeat_customers, expens
     }
 
 
+EXEC_FRAMEWORK = """
+
+════════ قواعد صارمة للمستشار التنفيذي (إلزامية) ════════
+1) الأمانة الرقمية المطلقة: استخدم فقط الأرقام الواردة في المعطيات أعلاه. يُمنع منعاً باتاً اختلاق أي رقم أو نسبة أو اسم. أي تقدير يجب وسمه صراحة بكلمة "تقدير" مع إظهار منطق الحساب (مثال: تقدير = مبيعات الفرع 480,000 × 5% = 24,000 ريال).
+2) فجوات البيانات: إذا كانت بيانات ناقصة (مصروفات غير مدخلة، فترة واحدة فقط، لا يوجد NPS...) صرّح بذلك في بداية التحليل وأثره على دقة الاستنتاج، ولا تحسب أي مؤشر يعتمد على بيانات غير موجودة.
+3) غطِّ سلسلة القرار كاملة حيث تسمح البيانات:
+   • **ماذا حدث؟** قراءة رقمية دقيقة بالأرقام الفعلية.
+   • **لماذا حدث؟** أسباب مرتبة، لكل سبب: نسبة ثقة % + الدليل الرقمي المحدد من المعطيات.
+   • **ماذا سيحدث؟** الاتجاه المتوقع مبنياً على معدلات النمو الفعلية (وليس تمنيات).
+   • **ماذا يجب أن أفعل؟** قرارات مرتبة تنازلياً حسب الأثر المالي المتوقع بالريال، مع منطق حساب الأثر.
+   • **خطة التنفيذ:** لكل قرار: المسؤول المقترح (مدير الفرع/المالية/المشتريات...) + المدة الزمنية + مؤشر النجاح KPI + كيف نقيس النتيجة بعد ٣٠ يوماً.
+4) الأولوية دائماً للقرار ذي العائد الأعلى مقابل الجهد الأقل. اذكر التكلفة أو الجهد مقابل العائد.
+5) الأسلوب: مستشار تنفيذي محترف يخاطب رئيساً تنفيذياً سعودياً. عربي واضح ومباشر. ممنوع الحشو والعموميات ("حسّن التسويق" ❌ — "أوقف خصومات فرع جدة التي بلغت 18,000 ريال وتجاوزت 3.7% من مبيعاته" ✅).
+6) لو البيانات لا تكفي لاستنتاج قوي، قلها بوضوح واطلب البيانات المحددة الناقصة — هذا أفضل من تحليل ضعيف."""
+
+
+def save_memory(company_id: int, kind: str, title: str, content: str = ""):
+    """يسجّل حدثاً في ذاكرة الشركة المؤسسية — لا يفشل أبداً حتى لا يكسر المسار الرئيسي."""
+    try:
+        with Session(engine) as ms:
+            ms.add(CompanyMemory(
+                company_id=company_id, kind=kind,
+                title=str(title)[:200], content=str(content)[:3000],
+            ))
+            ms.commit()
+    except Exception:
+        pass
+
+
 def company_gemini(prompt: str) -> str:
     """يستدعي Gemini بنفس سلسلة الـ fallback المستخدمة في تحليل المطاعم."""
+    prompt = prompt + EXEC_FRAMEWORK
     models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-flash-latest"]
     response = None
     for model_name in models:
@@ -2122,6 +2162,8 @@ def company_analyze(data: dict, user: User = Depends(get_current_user)):
                 clean, _a, _d, _o = extract_exec(txt)
                 txt = clean
             log_activity(user.name, f"حلّل وحدة {mlabel}", user.email)
+            if txt:
+                save_memory(company.id, "analysis", f"تحليل وحدة {mlabel}", txt)
             return {"ok": True, "scope": "module", "module": module, "label": mlabel,
                     "analysis": txt or "تعذّر توليد التحليل، حاول بعد قليل."}
 
@@ -2147,6 +2189,8 @@ def company_analyze(data: dict, user: User = Depends(get_current_user)):
                 e.smart_message = clean
                 s.add(e)
                 s.commit()
+            if txt:
+                save_memory(company.id, "analysis", f"تحليل فرع {b.name}", txt)
             return {"ok": True, "scope": "branch", "branch": b.name,
                     "analysis": txt or "تعذّر توليد التحليل، حاول بعد قليل."}
 
@@ -2156,6 +2200,8 @@ def company_analyze(data: dict, user: User = Depends(get_current_user)):
             clean, _a, _d, _o = extract_exec(txt)
             txt = clean
         log_activity(user.name, f"ولّد تحليل شركة: {company.name}", user.email)
+        if txt:
+            save_memory(company.id, "analysis", "التحليل التنفيذي الشامل", txt)
         return {"ok": True, "scope": "company", "company": company.name,
                 "analysis": txt or "تعذّر توليد التحليل، حاول بعد قليل."}
 
@@ -2168,6 +2214,8 @@ def company_ask(data: dict, user: User = Depends(get_current_user)):
     q = (data.get("question") or "").strip()
     if not q:
         raise HTTPException(400, "اكتب سؤالك")
+    # ذاكرة المحادثة: آخر ٦ رسائل من الواجهة (اختياري)
+    history = data.get("history") or []
     with Session(engine) as s:
         company = s.get(Company, user.company_id)
         if not company or company.owner_id != user.id:
@@ -2177,25 +2225,135 @@ def company_ask(data: dict, user: User = Depends(get_current_user)):
         branches = s.exec(
             select(CompanyBranch).where(CompanyBranch.company_id == company.id, CompanyBranch.is_active == 1)
         ).all()
-        rows = []
-        for b in branches:
-            e = s.exec(
-                select(CompanyEntry).where(CompanyEntry.branch_id == b.id).order_by(CompanyEntry.created_at.desc())
-            ).first()
-            if e:
-                rows.append(f"- {b.name} ({b.city or '—'}): مبيعات {round(e.sales)}ر، عملاء {e.customers}، "
-                            f"هامش {e.margin}%، تكرار {e.repeat_rate}%، مؤشر {e.branch_score}/100")
-        context = "\n".join(rows) if rows else "لا توجد بيانات فروع بعد."
-        prompt = f"""أنت "نبّاه"، مساعد تحليلي لشركة "{company.name}". أجب عن سؤال المالك بدقة واختصار اعتماداً على بيانات الفروع التالية فقط. لا تخترع أرقاماً، وإن لم تكفِ البيانات قل ذلك صراحة. بالعربية ولهجة مهنية واضحة.
 
-# بيانات الفروع (آخر فترة لكل فرع):
+        # ═══ ١) بيانات الفروع: آخر فترة + تاريخ ٦ فترات لكشف الاتجاهات ═══
+        rows = []
+        total_sales = total_expenses = 0.0
+        for b in branches:
+            ents = s.exec(
+                select(CompanyEntry).where(CompanyEntry.branch_id == b.id).order_by(CompanyEntry.created_at.desc())
+            ).all()
+            if not ents:
+                continue
+            e = ents[0]
+            total_sales += e.sales
+            total_expenses += e.expenses
+            margin_txt = f"هامش {e.margin}%" if e.expenses > 0 else "المصروفات غير مدخلة"
+            line = (f"- {b.name} ({b.city or '—'}) [{e.period}]: مبيعات {round(e.sales):,}ر، فواتير {e.invoices}، "
+                    f"عملاء {e.customers}، {margin_txt}, نمو {e.growth}%، مؤشر {e.branch_score}/100")
+            hist = ents[1:7]
+            if hist:
+                trail = " | ".join(f"{h.period}: {round(h.sales):,}ر" for h in reversed(hist))
+                line += f"\n  التاريخ: {trail}"
+            rows.append(line)
+        context = "\n".join(rows) if rows else "لا توجد بيانات فروع بعد."
+
+        # ═══ ٢) بيانات الوحدات (آخر إدخال لكل وحدة) ═══
+        modules_txt = ""
+        try:
+            seen = set()
+            mod_entries = s.exec(
+                select(CompanyModuleEntry).where(
+                    CompanyModuleEntry.company_id == company.id
+                ).order_by(CompanyModuleEntry.created_at.desc())
+            ).all()
+            for me in mod_entries:
+                key = (me.module, me.branch_id or 0)
+                if key in seen or me.module == "goals":
+                    continue
+                seen.add(key)
+                try:
+                    md = json.loads(me.data) if me.data else {}
+                except Exception:
+                    continue
+                clean = {k: v for k, v in md.items() if not k.startswith("__") and str(v).strip()}
+                if clean:
+                    scope = ""
+                    if me.branch_id:
+                        br = s.get(CompanyBranch, me.branch_id)
+                        scope = f" (فرع {br.name})" if br else ""
+                    label = MODULE_LABEL.get(me.module, me.module)
+                    top = " | ".join(f"{k}: {v}" for k, v in list(clean.items())[:8])
+                    modules_txt += f"\n- {label}{scope} [{me.period}]: {top}"
+        except Exception:
+            pass
+
+        # ═══ ٣) الأهداف ═══
+        goals_txt = ""
+        try:
+            g = s.exec(
+                select(CompanyModuleEntry).where(
+                    CompanyModuleEntry.company_id == company.id,
+                    CompanyModuleEntry.module == "goals",
+                ).order_by(CompanyModuleEntry.created_at.desc())
+            ).first()
+            if g and g.data:
+                gd = json.loads(g.data)
+                goals_txt = "\n".join(f"- {k}: {v}" for k, v in gd.items())
+        except Exception:
+            pass
+
+        # ═══ ٤) مرجعية القطاع ═══
+        sector = company.sector or "other"
+        bench = SECTOR_BENCHMARKS.get(sector, SECTOR_BENCHMARKS["other"])
+        bench_txt = " | ".join(f"{b['label']}: {b['value']}" for b in bench.values())
+
+        # ═══ ٥) ذاكرة المحادثة ═══
+        hist_txt = ""
+        if isinstance(history, list) and history:
+            parts = []
+            for h in history[-6:]:
+                role = "المالك" if h.get("role") == "user" else "نبّاه"
+                content = str(h.get("content", ""))[:400]
+                parts.append(f"{role}: {content}")
+            hist_txt = "\n".join(parts)
+
+        # ═══ ٦) الذاكرة المؤسسية: آخر تحليلات وقرارات الشركة ═══
+        memory_txt = ""
+        try:
+            mems = s.exec(
+                select(CompanyMemory).where(CompanyMemory.company_id == company.id)
+                .order_by(CompanyMemory.created_at.desc()).limit(8)
+            ).all()
+            if mems:
+                memory_txt = "\n".join(
+                    f"- [{m.created_at.strftime('%Y-%m-%d')}] {m.title}: {m.content[:150]}"
+                    for m in mems
+                )
+        except Exception:
+            pass
+
+        exp_note = ""
+        if total_sales > 0 and total_expenses <= 0:
+            exp_note = "\n⚠️ تنبيه: المصروفات غير مدخلة (بيانات POS مبيعات فقط) — لا تحسب هامش أو ربح، ونبّه المالك لإضافتها."
+
+        prompt = f"""أنت "نبّاه"، المستشار التنفيذي لشركة "{company.name}" (قطاع: {SECTOR_NAMES.get(sector, 'شركة')}). أجب عن سؤال المالك بدقة اعتماداً على البيانات التالية فقط.{exp_note}
+
+# بيانات الفروع (آخر فترة + التاريخ):
 {context}
 
-# سؤال المالك:
+# بيانات وحدات الشركة:{modules_txt or " لا توجد."}
+
+# أهداف الشركة:
+{goals_txt or "لم تُحدَّد أهداف بعد."}
+
+# متوسطات قطاع {SECTOR_NAMES.get(sector, '')} (إرشادية):
+{bench_txt}
+{f'''
+# ذاكرة الشركة (تحليلات وقرارات وأحداث سابقة):
+{memory_txt}''' if memory_txt else ''}
+{f'''
+# المحادثة السابقة:
+{hist_txt}''' if hist_txt else ''}
+
+# سؤال المالك الآن:
 {q}
 
-أجب مباشرة، ومتى ما ناسب اذكر أرقاماً داعمة وخطوة عملية واحدة."""
+أجب مباشرة وباختصار مناسب لحجم السؤال. اذكر الأرقام الداعمة من البيانات أعلاه، وقارن بالقطاع متى ما كان مفيداً، واختم بخطوة عملية واحدة محددة إن ناسب."""
         txt = company_gemini(prompt)
+        log_activity(user.name, f"سأل نبّاه: {q[:60]}", user.email)
+        if txt:
+            save_memory(company.id, "question", q[:200], f"السؤال: {q}\n\nإجابة نبّاه: {txt}")
         return {"ok": True, "answer": txt or "تعذّر توليد الإجابة، حاول بعد قليل."}
 
 
@@ -2970,7 +3128,8 @@ def company_command_center(user: User = Depends(get_current_user)):
         kpis = {
             "total_sales": round(total_sales),
             "total_profit": round(total_sales - total_expenses),
-            "margin": round((total_sales - total_expenses) / total_sales * 100, 1) if total_sales > 0 else 0,
+            "margin": round((total_sales - total_expenses) / total_sales * 100, 1) if (total_sales > 0 and total_expenses > 0) else 0,
+            "expenses_missing": total_expenses <= 0 and total_sales > 0,
             "branches_count": len(branches),
             "branches_with_data": len(branch_data),
         }
@@ -2980,21 +3139,25 @@ def company_command_center(user: User = Depends(get_current_user)):
         weak = [bd for bd in branch_data if bd["entry"].branch_score < 40]
         if weak:
             names = "، ".join(bd["branch"].name for bd in weak[:3])
+            weak_sales = sum(bd["entry"].sales for bd in weak)
+            impact = round(weak_sales * 0.15)
             decisions.append({
                 "priority": "عاجل", "icon": "🚨",
                 "title": f"{len(weak)} فرع ضعيف الأداء يحتاج تدخّل فوري",
-                "detail": f"الفروع: {names}. مؤشّرها أقل من 40/100.",
+                "detail": f"الفروع: {names}. مؤشّرها أقل من 40/100. رفع أدائها لمستوى المتوسط قد يضيف ~{impact:,} ريال شهرياً (تقدير: 15% من مبيعاتها البالغة {round(weak_sales):,} ر).",
                 "action": "افتح مقارنة الفروع لمعرفة السبب الجذري",
                 "link": "company-branches.html",
             })
 
-        # 2) فروع بهامش منخفض جداً (<10%)
-        thin = [bd for bd in branch_data if bd["entry"].margin < 10 and bd["entry"].sales > 0]
+        # 2) فروع بهامش منخفض جداً (<10%) — فقط لو المصروفات مدخلة
+        thin = [bd for bd in branch_data if bd["entry"].margin < 10 and bd["entry"].sales > 0 and bd["entry"].expenses > 0]
         if thin:
+            thin_sales = sum(bd["entry"].sales for bd in thin)
+            impact = round(thin_sales * 0.05)
             decisions.append({
                 "priority": "عاجل", "icon": "💸",
                 "title": f"{len(thin)} فرع بهامش ربح منخفض جداً",
-                "detail": f"هامش الربح أقل من 10% — راجع التكاليف فوراً.",
+                "detail": f"هامش الربح أقل من 10%. تحسين الهامش 5 نقاط مئوية فقط يضيف ~{impact:,} ريال شهرياً (تقدير: 5% × مبيعاتها {round(thin_sales):,} ر).",
                 "action": "حلّل الأسباب عبر التحليل التنفيذي",
                 "link": "company-dashboard.html",
             })
@@ -3003,10 +3166,12 @@ def company_command_center(user: User = Depends(get_current_user)):
         declining = [bd for bd in branch_data if bd["entry"].growth <= -15]
         if declining:
             names = "، ".join(bd["branch"].name for bd in declining[:3])
+            dec_sales = sum(bd["entry"].sales for bd in declining)
+            impact = round(dec_sales * 0.10)
             decisions.append({
                 "priority": "مهم", "icon": "📉",
                 "title": f"تراجع حاد في مبيعات {len(declining)} فرع",
-                "detail": f"{names} — تراجع المبيعات تجاوز 15%.",
+                "detail": f"{names} — تراجع المبيعات تجاوز 15%. استرداد نصف التراجع فقط يعيد ~{impact:,} ريال شهرياً (تقدير).",
                 "action": "افحص أسباب التراجع",
                 "link": "company-branches.html",
             })
@@ -3103,7 +3268,9 @@ def company_command_center(user: User = Depends(get_current_user)):
         if not branch_data:
             alerts.append({"icon": "📋", "msg": "لا توجد بيانات فروع بعد — ابدأ بإدخال البيانات الأساسية"})
         else:
-            if kpis["margin"] < 15:
+            if kpis.get("expenses_missing"):
+                alerts.append({"icon": "📥", "msg": "المصروفات غير مدخلة (بيانات POS مبيعات فقط) — أضفها من الوحدة المالية لتفعيل تحليل الربحية والهامش"})
+            elif kpis["margin"] < 15:
                 alerts.append({"icon": "⚠️", "msg": f"هامش الشركة الإجمالي {kpis['margin']}% — تحت المعدل الصحّي"})
             if len([bd for bd in branch_data if bd["entry"].repeat_rate < 20]) > 0:
                 alerts.append({"icon": "👥", "msg": "معدل تكرار العملاء منخفض في بعض الفروع — راجع تجربة العميل"})
@@ -3119,6 +3286,18 @@ def company_command_center(user: User = Depends(get_current_user)):
         return {
             "company": {"name": company.name, "sector": SECTOR_NAMES.get(company.sector, company.sector)},
             "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "brief": {
+                "greeting": f"مرحباً {user.name.split()[0] if user.name else ''} 👋 — هذا ملخّصك التنفيذي اليوم",
+                "line": (
+                    f"عندك {len(decisions)} قرار يحتاج انتباهك و{len(opportunities)} فرصة نمو"
+                    if decisions else
+                    "لا قرارات عاجلة اليوم — شركتك في وضع مستقر، راجع الفرص أدناه"
+                ),
+                "top": [
+                    {"icon": d["icon"], "title": d["title"], "priority": d["priority"]}
+                    for d in decisions[:3]
+                ],
+            },
             "kpis": kpis,
             "decisions": decisions,
             "opportunities": opportunities,
@@ -3279,7 +3458,7 @@ def company_risks(user: User = Depends(get_current_user)):
             if e:
                 total_sales += e.sales
                 total_expenses += e.expenses
-                if e.sales > 0:
+                if e.sales > 0 and e.expenses > 0:
                     margin_sum += e.margin
                     margin_count += 1
                 if e.repeat_rate > 0:
@@ -3474,7 +3653,7 @@ def company_health_score(user: User = Depends(get_current_user)):
 
         total_sales = sum(r[1].sales for r in rows)
         total_expenses = sum(r[1].expenses for r in rows)
-        margin_vals = [r[1].margin for r in rows if r[1].sales > 0]
+        margin_vals = [r[1].margin for r in rows if r[1].sales > 0 and r[1].expenses > 0]
         avg_margin = sum(margin_vals) / len(margin_vals) if margin_vals else 0
         repeat_vals = [r[1].repeat_rate for r in rows if r[1].repeat_rate > 0]
         avg_repeat = sum(repeat_vals) / len(repeat_vals) if repeat_vals else 0
@@ -3722,6 +3901,8 @@ def company_goals_save(data: dict, user: User = Depends(get_current_user)):
             data=json.dumps(cleaned, ensure_ascii=False),
         )
         s.add(entry); s.commit(); s.refresh(entry)
+        save_memory(company.id, "goals", f"تحديث أهداف {entry.period}",
+                    " | ".join(f"{k}: {v}" for k, v in cleaned.items()))
         return {"ok": True, "fields": len(cleaned)}
 
 
@@ -3922,7 +4103,7 @@ def company_benchmarks(user: User = Depends(get_current_user)):
 
         total_sales = sum(e.sales for e in rows)
         total_expenses = sum(e.expenses for e in rows)
-        margin_vals = [e.margin for e in rows if e.sales > 0]
+        margin_vals = [e.margin for e in rows if e.sales > 0 and e.expenses > 0]
         repeat_vals = [e.repeat_rate for e in rows if e.repeat_rate > 0]
         growth_vals = [e.growth for e in rows if e.growth != 0]
 
@@ -3934,7 +4115,10 @@ def company_benchmarks(user: User = Depends(get_current_user)):
         }
 
         comparisons = []
+        _no_expenses = total_expenses <= 0
         for key, b in bench.items():
+            if key in ("margin", "expense_ratio") and _no_expenses:
+                continue  # المصروفات غير مدخلة — مقارنتها مضلّلة
             actual = actuals.get(key, 0)
             target = b["value"]
             diff = round(actual - target, 1)
@@ -4023,7 +4207,7 @@ def company_root_cause(user: User = Depends(get_current_user)):
 
         # 1) هامش الربح أقل من القطاع
         bench_margin = bench["margin"]["value"]
-        if avg_margin < bench_margin - 3:
+        if total_expenses > 0 and avg_margin < bench_margin - 3:
             gap = bench_margin - avg_margin
             causes.append({
                 "title": "هامش الربح أقل من متوسط القطاع",
@@ -4056,7 +4240,7 @@ def company_root_cause(user: User = Depends(get_current_user)):
         # 3) ارتفاع المصروفات للمبيعات
         exp_ratio = (total_expenses/total_sales*100) if total_sales else 0
         bench_exp = bench["expense_ratio"]["value"]
-        if exp_ratio > bench_exp + 5:
+        if total_expenses > 0 and exp_ratio > bench_exp + 5:
             gap = exp_ratio - bench_exp
             causes.append({
                 "title": "نسبة المصروفات أعلى من متوسط القطاع",
@@ -4472,7 +4656,26 @@ async def company_upload_preview(file: UploadFile = File(...), user: User = Depe
     for r in rows[:5]:
         sample.append([(_to_num(c) if _to_num(c) is not None else (str(c).strip() if c is not None else "")) for c in r])
 
+    # === كشف ملف معاملات POS الخام + معاينة الملخّص ===
+    tx_summary = None
+    _cmap = {m["index"]: m["matched"] for m in matched if m["matched"]}
+    if is_transactions_file(_cmap):
+        agg = aggregate_transactions(rows, _cmap, headers)
+        if agg:
+            _branches = sorted(set(k[0] for k in agg.keys()))
+            _periods = sorted(set(k[1] for k in agg.keys()))
+            tx_summary = {
+                "is_transactions": True,
+                "summary_rows": len(agg),
+                "branches_count": len(_branches),
+                "periods_count": len(_periods),
+                "total_sales": round(sum(v["sales"] for v in agg.values())),
+                "total_returns": round(sum(v["returned_amount"] for v in agg.values())),
+                "branches": _branches[:10],
+            }
+
     return {
+        "tx_summary": tx_summary,
         "filename": file.filename,
         "total_rows": len(rows),
         "headers": headers,
@@ -4513,6 +4716,119 @@ async def company_upload_import(file: UploadFile = File(...), user: User = Depen
 
     if not col_map:
         raise HTTPException(400, "لم نتعرّف على أي عمود — تأكد من أسماء الأعمدة (مثل: الفرع، المبيعات، المصروفات…)")
+
+    # ============================================================
+    # === مسار ملفات معاملات POS الخام: تلخيص تلقائي ثم حفظ ===
+    # ============================================================
+    if is_transactions_file(col_map):
+        try:
+            aggregated = aggregate_transactions(rows, col_map, headers)
+        except Exception as e:
+            raise HTTPException(400, f"خطأ أثناء تلخيص المعاملات: {type(e).__name__}: {str(e)[:180]}")
+        if not aggregated:
+            raise HTTPException(400, "لم نستطع تلخيص المعاملات — تأكد من صحة أعمدة التاريخ والفرع والمبلغ")
+        with Session(engine) as s:
+            company = s.get(Company, user.company_id)
+            if not company or company.owner_id != user.id:
+                raise HTTPException(403, "غير مصرّح")
+            if company.is_active != 1:
+                raise HTTPException(402, "شركتك قيد التفعيل")
+
+            existing_branches = {b.name.strip().lower(): b for b in s.exec(
+                select(CompanyBranch).where(CompanyBranch.company_id == company.id)
+            ).all()}
+            created_branches = created_entries = updated_entries = 0
+            last_sales_by_branch = {}   # لحساب النمو بين الفترات
+            returns_by_branch = {}      # لوحدة المبيعات (المرتجعات)
+
+            # نرتّب حسب الفترة زمنياً حتى يُحسب النمو صح
+            try:
+                for (branch_name, period), agg in sorted(aggregated.items(), key=lambda kv: (kv[0][0], kv[0][1])):
+                    key = branch_name.strip().lower()
+                    if key in existing_branches:
+                        branch = existing_branches[key]
+                    else:
+                        branch = CompanyBranch(company_id=company.id, name=branch_name.strip(), city="", branch_type="standalone")
+                        s.add(branch); s.commit(); s.refresh(branch)
+                        existing_branches[key] = branch
+                        created_branches += 1
+
+                    prev_sales = last_sales_by_branch.get(branch.id)
+                    m = compute_company_metrics(
+                        sales=agg["sales"], invoices=agg["invoices"], customers=agg["customers"],
+                        repeat_customers=0, expenses=0, prev_sales=prev_sales,
+                    )
+                    last_sales_by_branch[branch.id] = agg["sales"]
+                    returns_by_branch[branch.id] = (agg["returned_amount"], agg["returns_count"], period)
+
+                    # المصروفات غير موجودة في ملف POS → لا نختلق ربحاً وهمياً
+                    # نصفّر الربح والهامش حتى لا تتلوث مؤشرات الربحية
+                    existing_entry = s.exec(
+                        select(CompanyEntry).where(
+                            CompanyEntry.branch_id == branch.id,
+                            CompanyEntry.period == period,
+                        )
+                    ).first()
+                    if existing_entry:
+                        existing_entry.sales = agg["sales"]
+                        existing_entry.invoices = agg["invoices"]
+                        existing_entry.customers = agg["customers"]
+                        existing_entry.discounts = agg["returned_amount"]
+                        existing_entry.avg_invoice = m["avg_invoice"]
+                        existing_entry.growth = m["growth"]
+                        existing_entry.branch_score = m["branch_score"]
+                        if existing_entry.expenses <= 0:
+                            existing_entry.profit = 0
+                            existing_entry.margin = 0
+                        s.add(existing_entry)
+                        updated_entries += 1
+                    else:
+                        entry = CompanyEntry(
+                            company_id=company.id, branch_id=branch.id, branch_name=branch.name, period=period,
+                            sales=agg["sales"], expenses=0,
+                            invoices=agg["invoices"], customers=agg["customers"],
+                            new_customers=0, repeat_customers=0,
+                            discounts=agg["returned_amount"], deposited=0, top_products="",
+                            profit=0, margin=0,
+                            avg_invoice=m["avg_invoice"], repeat_rate=0,
+                            growth=m["growth"], branch_score=m["branch_score"],
+                        )
+                        s.add(entry)
+                        created_entries += 1
+                    s.commit()
+
+            except Exception as e:
+                s.rollback()
+                raise HTTPException(500, f"خطأ أثناء حفظ الملخّصات: {type(e).__name__}: {str(e)[:180]}")
+            # وحدة المبيعات: مرتجعات آخر فترة لكل فرع (بمصدر pos)
+            module_entries = 0
+            for bid, (ret_amt, ret_cnt, period) in returns_by_branch.items():
+                if ret_amt > 0 or ret_cnt > 0:
+                    me = CompanyModuleEntry(
+                        company_id=company.id, branch_id=bid, module="sales", period=period,
+                        data=json.dumps({"المرتجعات (ريال)": round(ret_amt, 2), "__source": "pos"}, ensure_ascii=False),
+                    )
+                    s.add(me); module_entries += 1
+            s.commit()
+
+            log_activity(user.name, f"رفع ملف معاملات POS {file.filename}: {len(aggregated)} ملخّص شهري", user.email)
+            save_memory(company.id, "upload", f"رفع ملف POS: {file.filename}",
+                        f"تم استيراد {len(aggregated)} سجل شهري ({created_branches} فرع جديد، {created_entries} إدخال جديد، {updated_entries} محدَّث)")
+            return {
+                "ok": True,
+                "filename": file.filename,
+                "is_transactions": True,
+                "created_branches": created_branches,
+                "created_entries": created_entries,
+                "updated_entries": updated_entries,
+                "module_entries": module_entries,
+                "matched_columns": len(col_map),
+                "summary": (
+                    f"🧾 تم اكتشاف ملف معاملات POS وتلخيصه تلقائياً: {len(aggregated)} سجل شهري "
+                    f"({created_branches} فرع جديد، {created_entries} إدخال جديد، {updated_entries} إدخال محدَّث). "
+                    f"ملاحظة: ملفات POS لا تحوي المصروفات — أضفها من الوحدة المالية أو ارفع ملف مصروفات لتفعيل تحليل الربحية الكامل."
+                ),
+            }
 
     # حقول الفروع الأساسية (تذهب لـ CompanyEntry)
     BASE_FIELDS = {"sales","expenses","invoices","customers","new_customers","repeat_customers",
@@ -4660,6 +4976,8 @@ async def company_upload_import(file: UploadFile = File(...), user: User = Depen
         s.add(company)
         s.commit()
         log_activity(user.name, f"رفع ملف {file.filename}: {created_entries} سجل + {module_entries_count} وحدة", user.email)
+        save_memory(company.id, "upload", f"رفع ملف بيانات: {file.filename}",
+                    f"{created_branches} فرع جديد، {created_entries} إدخال، {module_entries_count} وحدة محدّثة")
 
         return {
             "ok": True,
@@ -4685,3 +5003,164 @@ def download_template():
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         filename="nabbah-data-template.xlsx",
     )
+
+
+# ============================================================
+# ===== ذاكرة الشركة: سجل التحليلات والقرارات =====
+# ============================================================
+
+@app.get("/company/memory")
+def company_memory_list(q: str = "", kind: str = "", user: User = Depends(get_current_user)):
+    """يجلب سجل ذاكرة الشركة مع بحث اختياري."""
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id)
+        if not company or company.owner_id != user.id:
+            raise HTTPException(403, "غير مصرّح")
+        if company.is_active != 1:
+            raise HTTPException(402, "شركتك قيد التفعيل")
+        query = select(CompanyMemory).where(CompanyMemory.company_id == company.id)
+        if kind:
+            query = query.where(CompanyMemory.kind == kind)
+        items = s.exec(query.order_by(CompanyMemory.created_at.desc()).limit(200)).all()
+        qn = q.strip().lower()
+        if qn:
+            items = [m for m in items if qn in (m.title or "").lower() or qn in (m.content or "").lower()]
+        KIND_META = {
+            "analysis": ("🧑‍💼", "تحليل"), "question": ("💬", "سؤال"),
+            "upload": ("📂", "رفع بيانات"), "goals": ("🎯", "أهداف"), "decision": ("⚡", "قرار"),
+        }
+        return {
+            "company": {"name": company.name},
+            "total": len(items),
+            "items": [
+                {
+                    "id": m.id, "kind": m.kind,
+                    "icon": KIND_META.get(m.kind, ("📌", m.kind))[0],
+                    "kind_label": KIND_META.get(m.kind, ("📌", m.kind))[1],
+                    "title": m.title,
+                    "content": m.content,
+                    "date": m.created_at.strftime("%Y-%m-%d %H:%M"),
+                }
+                for m in items[:100]
+            ],
+        }
+
+
+@app.get("/company-memory.html")
+def page_company_memory():
+    return FileResponse("company-memory.html")
+
+
+# ============================================================
+# ===== نسخة النظام: للتحقق أن آخر تحديث منشور فعلاً =====
+# ============================================================
+
+NABBAH_VERSION = "5.1-pos-memory"
+
+@app.get("/version")
+def version_check():
+    """افتح nabbah.up.railway.app/version — لو ما شفت هذي النسخة فالتحديث غير منشور."""
+    return {
+        "version": NABBAH_VERSION,
+        "features": {
+            "pos_transactions_import": True,
+            "company_memory": True,
+            "executive_framework": True,
+            "smart_column_inference": True,
+            "executive_brief": True,
+        },
+        "excel_support": _check_openpyxl(),
+        "time": datetime.now().isoformat(),
+    }
+
+
+def _check_openpyxl():
+    try:
+        import openpyxl  # noqa
+        return True
+    except ImportError:
+        return False
+
+
+# ============================================================
+# ===== حالة الإعداد: قائمة Onboarding ذكية =====
+# ============================================================
+
+@app.get("/company/setup-status")
+def company_setup_status(user: User = Depends(get_current_user)):
+    """يفحص مراحل إعداد الشركة ويرجع قائمة تقدّم — أساس تجربة الترحيب."""
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id)
+        if not company or company.owner_id != user.id:
+            raise HTTPException(403, "غير مصرّح")
+
+        # ١) الشركة مفعّلة؟
+        activated = company.is_active == 1
+
+        # ٢) بيانات فروع موجودة؟
+        entries_count = len(s.exec(
+            select(CompanyEntry).where(CompanyEntry.company_id == company.id)
+        ).all())
+        has_data = entries_count > 0
+
+        # ٣) مصروفات مدخلة؟ (ضرورية لتحليل الربحية)
+        has_expenses = False
+        if has_data:
+            exp_entries = s.exec(
+                select(CompanyEntry).where(
+                    CompanyEntry.company_id == company.id,
+                    CompanyEntry.expenses > 0,
+                )
+            ).first()
+            has_expenses = exp_entries is not None
+
+        # ٤) أهداف محدّدة؟
+        has_goals = s.exec(
+            select(CompanyModuleEntry).where(
+                CompanyModuleEntry.company_id == company.id,
+                CompanyModuleEntry.module == "goals",
+            )
+        ).first() is not None
+
+        # ٥) وحدة واحدة على الأقل معبّأة؟
+        has_module = s.exec(
+            select(CompanyModuleEntry).where(
+                CompanyModuleEntry.company_id == company.id,
+                CompanyModuleEntry.module != "goals",
+            )
+        ).first() is not None
+
+        steps = [
+            {"key": "activate", "done": activated, "icon": "🔓",
+             "title": "تفعيل الشركة",
+             "hint": "" if activated else "شركتك قيد التفعيل — تواصل مع نبّاه",
+             "link": ""},
+            {"key": "data", "done": has_data, "icon": "📂",
+             "title": "رفع أول بيانات (Excel/CSV/POS)",
+             "hint": f"{entries_count} إدخال محفوظ" if has_data else "ارفع ملفك وكل الخدمات تشتغل فوراً",
+             "link": "company-upload.html"},
+            {"key": "expenses", "done": has_expenses, "icon": "💰",
+             "title": "إدخال المصروفات",
+             "hint": "" if has_expenses else "ضرورية لتحليل الربحية والهامش والتدفق النقدي",
+             "link": "company-finance.html"},
+            {"key": "goals", "done": has_goals, "icon": "🎯",
+             "title": "تحديد الأهداف",
+             "hint": "" if has_goals else "حدّد هدف المبيعات والربح ليقيس نبّاه الإنجاز",
+             "link": "company-goals.html"},
+            {"key": "module", "done": has_module, "icon": "🧩",
+             "title": "تعبئة وحدة إضافية",
+             "hint": "" if has_module else "عملاء أو موارد بشرية أو مخزون — كل وحدة تزيد عمق التحليل",
+             "link": "company-customers.html"},
+        ]
+        done_count = sum(1 for st in steps if st["done"])
+        return {
+            "steps": steps,
+            "done": done_count,
+            "total": len(steps),
+            "pct": round(done_count / len(steps) * 100),
+            "complete": done_count == len(steps),
+        }
