@@ -85,6 +85,7 @@
   <div id="error" class="state" style="display:none;color:var(--red)"></div>
 
   <div id="content" style="display:none">
+    <div id="brief" style="display:none;background:linear-gradient(160deg,rgba(16,185,129,.12),transparent);border:1px solid rgba(16,185,129,.35);border-radius:16px;padding:18px 20px;margin-bottom:16px"></div>
     <div class="kpis" id="kpis"></div>
     <div class="data-coverage" id="coverage" style="display:none"></div>
     <div id="alertsBox"></div>
@@ -130,6 +131,13 @@ async function load(){
     document.getElementById("loading").style.display="none";
     document.getElementById("content").style.display="block";
     document.getElementById("stamp").textContent=`${d.company.name} · ${d.company.sector} · ${d.generated_at}`;
+    if(d.brief){
+      const b=document.getElementById("brief");
+      b.style.display="block";
+      b.innerHTML=`<div style="font-weight:900;font-size:17px;color:var(--mint);margin-bottom:4px">${d.brief.greeting}</div>
+        <div style="font-size:14px;color:var(--txt-soft);margin-bottom:${d.brief.top.length?'10px':'0'}">${d.brief.line}</div>
+        ${d.brief.top.map((t,i)=>`<div style="display:flex;gap:8px;align-items:center;padding:5px 0;font-size:13.5px"><b style="color:var(--mint)">${i+1}.</b> <span>${t.icon}</span> <span style="font-weight:700">${t.title}</span> <span style="font-size:11px;color:${t.priority==='عاجل'?'#fca5a5':'#fbbf24'}">(${t.priority})</span></div>`).join("")}`;
+    }
     renderKPIs(d.kpis);
     renderCoverage(d);
     renderAlerts(d.alerts);
