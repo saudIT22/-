@@ -5291,3 +5291,40 @@ def company_decision_close(data: dict, user: User = Depends(get_current_user)):
 @app.get("/company-decisions.html")
 def page_company_decisions():
     return FileResponse("company-decisions.html")
+
+
+# ============================================================
+# ===== الفحص الذاتي: أي ملف ناقص أو قديم على السيرفر؟ =====
+# ============================================================
+
+@app.get("/files-check")
+def files_check():
+    """افتح nabbah.com/files-check — يبيّن أي صفحة ناقصة على السيرفر فوراً."""
+    import os
+    REQUIRED_PAGES = [
+        "index.html", "login.html", "admin.html",
+        "company-register.html", "company-dashboard.html", "company-input.html",
+        "company-branches.html", "company-report.html", "company-team.html",
+        "company-cashflow.html", "company-leakage.html", "company-tax.html",
+        "company-finance.html", "company-sales.html", "company-customers.html",
+        "company-hr.html", "company-ops.html", "company-inventory.html",
+        "company-procurement.html", "company-events.html", "company-competitors.html",
+        "company-command-center.html", "company-health.html", "company-goals.html",
+        "company-data-quality.html", "company-predictions.html", "company-risks.html",
+        "company-board.html", "company-root-cause.html", "company-benchmarks.html",
+        "company-upload.html", "company-memory.html", "company-decisions.html",
+        "nabbah-data-template.xlsx",
+    ]
+    missing, present = [], []
+    for f in REQUIRED_PAGES:
+        if os.path.exists(f):
+            present.append({"file": f, "size_kb": round(os.path.getsize(f) / 1024, 1)})
+        else:
+            missing.append(f)
+    return {
+        "version": NABBAH_VERSION,
+        "status": "✅ كل الملفات موجودة" if not missing else f"❌ {len(missing)} ملف ناقص على السيرفر",
+        "missing_files": missing,
+        "present_count": len(present),
+        "present": present,
+    }
