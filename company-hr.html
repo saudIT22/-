@@ -244,7 +244,7 @@ async function save(){
   document.getElementById("err").style.display="none";
   document.getElementById("ok").style.display="none";
   const data={};
-  data.__source = document.getElementById("data_source").value;
+  const _ds=document.getElementById("data_source"); if(_ds) data.__source=_ds.value;
   KEYS.forEach(([id,label])=>{
     const v=document.getElementById(id).value.trim();
     if(v!=="") data[label]=Number(v.replace(/,/g,""))||v;
