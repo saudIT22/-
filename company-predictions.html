@@ -44,6 +44,16 @@
 </style>
 </head>
 <body>
+<script>
+window.addEventListener("error",function(e){
+  try{
+    var b=document.createElement("div");
+    b.style.cssText="position:fixed;bottom:0;left:0;right:0;background:#7f1d1d;color:#fff;padding:10px 14px;font:13px system-ui;z-index:99999;direction:rtl";
+    b.textContent="⚠️ خطأ في الصفحة: "+(e.message||e.error||"غير معروف")+" — صوّر هذا وأرسله";
+    document.body.appendChild(b);
+  }catch(_){}
+});
+</script>
 <header>
   <div class="head-in">
     <a class="brand" href="company-dashboard.html"><span class="bell">🔔</span>نبّاه</a>
