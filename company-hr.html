@@ -48,6 +48,16 @@
 </style>
 </head>
 <body>
+<script>
+window.addEventListener("error",function(e){
+  try{
+    var b=document.createElement("div");
+    b.style.cssText="position:fixed;bottom:0;left:0;right:0;background:#7f1d1d;color:#fff;padding:10px 14px;font:13px system-ui;z-index:99999;direction:rtl";
+    b.textContent="⚠️ خطأ في الصفحة: "+(e.message||e.error||"غير معروف")+" — صوّر هذا وأرسله";
+    document.body.appendChild(b);
+  }catch(_){}
+});
+</script>
 <header>
   <div class="head-in">
     <a class="brand" href="company-dashboard.html"><span class="bell">🔔</span>نبّاه</a>
@@ -192,6 +202,8 @@ async function load(){
     showLastSaved();
   }catch(e){
     document.getElementById("loading").style.display="none";
+    // نُظهر المحتوى دائماً حتى تعمل أزرار الحفظ حتى لو تعذّر جلب البيانات
+    var _c=document.getElementById("content"); if(_c) _c.style.display="block";
     if(e.status===402){
       const p=document.getElementById("pending"); p.style.display="block";
       p.innerHTML=`⏳ شركتك قيد التفعيل — بعد التفعيل تنفتح هذه الوحدة. <a href="company-dashboard.html" style="color:var(--mint)">رجوع</a>`;
@@ -246,7 +258,8 @@ async function save(){
   const data={};
   const _ds=document.getElementById("data_source"); if(_ds) data.__source=_ds.value;
   KEYS.forEach(([id,label])=>{
-    const v=document.getElementById(id).value.trim();
+    const el=document.getElementById(id); if(!el) return;
+    const v=el.value.trim();
     if(v!=="") data[label]=Number(v.replace(/,/g,""))||v;
   });
   const ve=validateData(data); if(ve){const er=document.getElementById("err"); er.textContent=ve; er.style.display="block"; return;}
