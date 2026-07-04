@@ -5328,3 +5328,44 @@ def files_check():
         "present_count": len(present),
         "present": present,
     }
+
+
+@app.get("/pages-check")
+def pages_check():
+    """يفحص إذا صفحات الوحدات محدّثة (فيها التحصينات) أو نسخ قديمة."""
+    import os
+    # علامات النسخة الجديدة في كل صفحة
+    MARKERS = {
+        "company-customers.html": "نُظهر المحتوى دائماً",
+        "company-finance.html": "نُظهر المحتوى دائماً",
+        "company-sales.html": "نُظهر المحتوى دائماً",
+        "company-hr.html": "نُظهر المحتوى دائماً",
+        "company-ops.html": "نُظهر المحتوى دائماً",
+        "company-inventory.html": "نُظهر المحتوى دائماً",
+        "company-procurement.html": "نُظهر المحتوى دائماً",
+        "company-events.html": "نُظهر المحتوى دائماً",
+        "company-competitors.html": "نُظهر المحتوى دائماً",
+        "company-predictions.html": "خطأ في الصفحة",
+        "company-data-quality.html": "خطأ في الصفحة",
+    }
+    results = []
+    old_pages = []
+    for fname, marker in MARKERS.items():
+        if not os.path.exists(fname):
+            results.append({"file": fname, "status": "❌ مفقود"})
+            old_pages.append(fname)
+            continue
+        try:
+            content = open(fname, encoding="utf-8").read()
+            if marker in content:
+                results.append({"file": fname, "status": "✅ محدّث"})
+            else:
+                results.append({"file": fname, "status": "⚠️ نسخة قديمة — أعد رفعها"})
+                old_pages.append(fname)
+        except Exception as e:
+            results.append({"file": fname, "status": f"خطأ: {str(e)[:40]}"})
+    return {
+        "summary": "✅ كل الصفحات محدّثة" if not old_pages else f"⚠️ {len(old_pages)} صفحة قديمة أو مفقودة تحتاج إعادة رفع",
+        "needs_reupload": old_pages,
+        "details": results,
+    }
