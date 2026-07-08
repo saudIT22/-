@@ -64,6 +64,7 @@
     <p>يرصد القفزات المشبوهة وفجوات البيع-الإيداع ويرتّب الفروع حسب المخاطرة</p>
   </div>
 
+  <div id="moneyMap" style="display:none;margin-bottom:16px"></div>
   <div id="loading" class="state"><div class="spin"></div>جارٍ الفحص…</div>
   <div id="content" style="display:none">
     <div id="summary"></div>
@@ -123,6 +124,50 @@ async function load(){
   }).join("");
 }
 load();
+
+// ═══ خريطة تسرّب الأموال (محمية — فشلها لا يؤثر على الصفحة) ═══
+(async function(){
+  try{
+    const d=await api("/company/money-map");
+    if(!d.cards || !d.cards.length) return;
+    const box=document.getElementById("moneyMap");
+    if(!box) return;
+    const fmt=n=>(Math.round(n)||0).toLocaleString("en-US");
+    const sevColor=s=>s==="high"?"#ef4444":"#f59e0b";
+    box.style.display="block";
+    box.innerHTML=`
+      <div style="background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px">
+        <div style="font-weight:900;font-size:18px;margin-bottom:4px">💰 وين تروح فلوسك؟</div>
+        <div style="font-size:13.5px;color:var(--txt-soft);margin-bottom:14px">${d.summary}</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px">
+          <div style="background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center">
+            <div style="font-size:11.5px;color:var(--txt-soft)">خسائر وتكاليف زائدة</div>
+            <div style="font-size:21px;font-weight:900;color:#ef4444">${fmt(d.direct_loss)} ر</div>
+          </div>
+          <div style="background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center">
+            <div style="font-size:11.5px;color:var(--txt-soft)">قابلة للاسترداد</div>
+            <div style="font-size:21px;font-weight:900;color:#f5b301">${fmt(d.recoverable)} ر</div>
+          </div>
+          <div style="background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center">
+            <div style="font-size:11.5px;color:var(--txt-soft)">أموال محتجزة</div>
+            <div style="font-size:21px;font-weight:900;color:#3b82f6">${fmt(d.held_cash)} ر</div>
+          </div>
+        </div>
+        ${d.cards.map(c=>`
+          <div style="background:var(--panel2);border:1px solid var(--line);border-right:4px solid ${sevColor(c.severity)};border-radius:12px;padding:13px 15px;margin-bottom:9px">
+            <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap">
+              <span style="font-size:18px">${c.icon}</span>
+              <b style="font-size:15px;flex:1">${c.label}</b>
+              <span style="font-size:18px;font-weight:900;color:${sevColor(c.severity)}">${fmt(c.amount)} ر</span>
+            </div>
+            <div style="font-size:12.5px;color:var(--txt-soft);margin-top:5px">${c.evidence} · <span style="opacity:.75">${c.kind}</span></div>
+            <div style="font-size:13px;color:#6ee7b7;margin-top:7px">💡 ${c.fix} <a href="${c.link}" style="color:var(--mint);font-weight:700">← افتح</a></div>
+          </div>`).join("")}
+        ${d.missing_data && d.missing_data.length ? `<div style="font-size:12px;color:var(--txt-mute);margin-top:8px">🔍 لفحص أعمق أدخل: ${d.missing_data.join("، ")}</div>` : ""}
+      </div>`;
+  }catch(e){ /* صامت */ }
+})();
+
 </script>
 </body>
 </html>
