@@ -62,6 +62,8 @@ window.addEventListener("error",function(e){
 </header>
 <div class="wrap">
   <div class="page-head"><h1>🔮 التنبؤ بالأداء</h1><p>توقعات المبيعات والأرباح للستة أشهر القادمة — بناءً على معدل النمو الفعلي لكل فرع</p></div>
+  <div id="outlook" style="display:none;margin-bottom:16px"></div>
+
 
   <div id="loading" class="state"><div class="spin"></div>جارٍ حساب التوقعات…</div>
   <div id="error" class="state" style="display:none;color:var(--red)"></div>
@@ -187,6 +189,31 @@ function renderBranches(arr){
   }).join("");
 }
 load();
+
+// ═══ النظرة المستقبلية: 4 إشارات (محمية) ═══
+(async function(){
+  try{
+    const d=await api("/company/outlook");
+    if(!d.signals || !d.signals.length) return;
+    const box=document.getElementById("outlook");
+    if(!box) return;
+    box.style.display="block";
+    box.innerHTML=`
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:11px">
+        ${d.signals.map(s=>`
+          <div style="background:var(--panel);border:1px solid var(--line);border-right:4px solid ${s.color};border-radius:14px;padding:14px 16px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:19px">${s.emoji}</span>
+              <b style="font-size:15px;flex:1">${s.label}</b>
+              <span style="font-weight:900;font-size:14px;color:${s.color}">${s.value}</span>
+            </div>
+            <div style="font-size:12.5px;color:var(--txt-soft);margin-top:6px">${s.reason}</div>
+            <div style="font-size:12.5px;color:#6ee7b7;margin-top:5px">💡 ${s.action}</div>
+          </div>`).join("")}
+      </div>`;
+  }catch(e){ /* صامت */ }
+})();
+
 </script>
 </body>
 </html>
