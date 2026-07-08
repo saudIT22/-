@@ -1374,18 +1374,28 @@ def compute_company_metrics(sales, invoices, customers, repeat_customers, expens
 
 EXEC_FRAMEWORK = """
 
-════════ قواعد صارمة للمستشار التنفيذي (إلزامية) ════════
-1) الأمانة الرقمية المطلقة: استخدم فقط الأرقام الواردة في المعطيات أعلاه. يُمنع منعاً باتاً اختلاق أي رقم أو نسبة أو اسم. أي تقدير يجب وسمه صراحة بكلمة "تقدير" مع إظهار منطق الحساب (مثال: تقدير = مبيعات الفرع 480,000 × 5% = 24,000 ريال).
-2) فجوات البيانات: إذا كانت بيانات ناقصة (مصروفات غير مدخلة، فترة واحدة فقط، لا يوجد NPS...) صرّح بذلك في بداية التحليل وأثره على دقة الاستنتاج، ولا تحسب أي مؤشر يعتمد على بيانات غير موجودة.
-3) غطِّ سلسلة القرار كاملة حيث تسمح البيانات:
-   • **ماذا حدث؟** قراءة رقمية دقيقة بالأرقام الفعلية.
-   • **لماذا حدث؟** أسباب مرتبة، لكل سبب: نسبة ثقة % + الدليل الرقمي المحدد من المعطيات.
-   • **ماذا سيحدث؟** الاتجاه المتوقع مبنياً على معدلات النمو الفعلية (وليس تمنيات).
-   • **ماذا يجب أن أفعل؟** قرارات مرتبة تنازلياً حسب الأثر المالي المتوقع بالريال، مع منطق حساب الأثر.
-   • **خطة التنفيذ:** لكل قرار: المسؤول المقترح (مدير الفرع/المالية/المشتريات...) + المدة الزمنية + مؤشر النجاح KPI + كيف نقيس النتيجة بعد ٣٠ يوماً.
-4) الأولوية دائماً للقرار ذي العائد الأعلى مقابل الجهد الأقل. اذكر التكلفة أو الجهد مقابل العائد.
-5) الأسلوب: مستشار تنفيذي محترف يخاطب رئيساً تنفيذياً سعودياً. عربي واضح ومباشر. ممنوع الحشو والعموميات ("حسّن التسويق" ❌ — "أوقف خصومات فرع جدة التي بلغت 18,000 ريال وتجاوزت 3.7% من مبيعاته" ✅).
-6) لو البيانات لا تكفي لاستنتاج قوي، قلها بوضوح واطلب البيانات المحددة الناقصة — هذا أفضل من تحليل ضعيف."""
+════════ إطار الرئيس التنفيذي AI في نبّاه (إلزامي) ════════
+مهمتك ليست وصف الأرقام — بل اكتشاف الأموال المهدرة والمخاطر والفرص، وإصدار قرارات تنفيذية قابلة للتنفيذ.
+
+قواعد صارمة:
+1) استخدم فقط الأرقام الواردة في المعطيات. لا تكرر أرقام الجداول إلا لإثبات قرار. أي تقدير يُوسم بكلمة "تقدير" مع منطق حسابه (مثال: 480,000 × 5% = 24,000 ريال).
+2) إذا كانت البيانات غير كافية لاستنتاج قوي — لا تخمّن أبداً. اذكر بدقة البيانات المطلوبة وأثر غيابها.
+3) ممنوع الكلام العام منعاً باتاً: "يجب تحسين الأداء" ❌ — الصيغة الصحيحة: "خفض الخصومات 15% يزيد الربح المتوقع بـ245,000 ريال" ✅.
+4) كل استنتاج يجب أن يجيب على السلسلة العشرية: ماذا يحدث؟ لماذا يحدث؟ (اسأل "لماذا" حتى 5 مرات وصولاً للجذر — لا تكتفِ بالأعراض) ما أثره المالي؟ ما أفضل قرار؟ كم سيحقق القرار بالريال؟ ما أولويته؟ ما سرعة تنفيذه؟ ما خطر عدم التنفيذ؟ كيف نقيس نجاحه بعد 30 يوماً؟
+5) رتّب القرارات دائماً حسب الأثر المالي الأكبر أولاً، ولكل قرار: درجة ثقة %، والوقت المطلوب للتنفيذ.
+
+هيكل التحليل الشامل (طبّقه عند طلب تحليل كامل للشركة أو الفرع):
+① الملخص التنفيذي: أهم 3 مشاكل + أكبر فرصة + أخطر مخاطرة — يُقرأ في أقل من دقيقة.
+② كشف تسرّب الأرباح: افحص (الهدر، الخصومات، المرتجعات، انخفاض الهامش، التكاليف المرتفعة، ضعف التحصيل، ضعف التسعير) واحسب أثر كل بند بالريال.
+③ تحليل السبب الجذري: أسلوب Why×5.
+④ الفرص السريعة (تنفيذ خلال أسبوع) ⑤ الفرص المتوسطة (30-90 يوم) ⑥ الفرص الاستراتيجية (6-24 شهر).
+⑦ التوقعات: ثلاثة سيناريوهات — لو استمر الوضع / لو تحسّن / لو ساء.
+⑧ القرارات التنفيذية مرتبة حسب: العائد المالي، سهولة التنفيذ، المخاطر، الأولوية.
+⑨ التقدير المالي الإجمالي: الوفر المتوقع + زيادة الربح + تحسن التدفق النقدي.
+⑩ مؤشرات المراقبة: أهم KPIs لمتابعة أثر القرارات.
+أما الأسئلة القصيرة والتحليلات الجزئية (وحدة أو سؤال محادثة): أجب مباشرة وباختصار بنفس المبادئ دون الهيكل الكامل.
+
+الاختبار النهائي قبل التسليم: لو كنت أنا مالك الشركة، هل سأدفع 5,000 ريال مقابل هذا التحليل؟ إذا كانت الإجابة لا — أعد كتابته."""
 
 
 def save_memory(company_id: int, kind: str, title: str, content: str = ""):
@@ -2340,6 +2350,29 @@ def company_ask(data: dict, user: User = Depends(get_current_user)):
         except Exception:
             pass
 
+        # ═══ ٦ب) سجل القرارات المقاسة: ماذا قررنا وهل نجح؟ ═══
+        decisions_txt = ""
+        try:
+            decs = s.exec(
+                select(CompanyDecision).where(CompanyDecision.company_id == company.id)
+                .order_by(CompanyDecision.created_at.desc()).limit(6)
+            ).all()
+            if decs:
+                lines = []
+                for dd in decs:
+                    if dd.status == "done" and dd.baseline_sales > 0 and dd.result_sales > 0:
+                        chg = round((dd.result_sales - dd.baseline_sales) / dd.baseline_sales * 100, 1)
+                        lines.append(f"- ✅ [{dd.created_at.strftime('%Y-%m')}] {dd.title} → نُفّذ، والمبيعات تغيّرت {chg:+}% بعده")
+                    elif dd.status == "cancelled":
+                        lines.append(f"- ✖ [{dd.created_at.strftime('%Y-%m')}] {dd.title} → أُلغي")
+                    else:
+                        lines.append(f"- ⏳ [{dd.created_at.strftime('%Y-%m')}] {dd.title} → قيد التنفيذ (مسؤول: {dd.owner or '—'})")
+                decisions_txt = "\n".join(lines)
+            if decisions_txt:
+                memory_txt = (memory_txt + "\n\n# سجل القرارات ونتائجها المقاسة:\n" + decisions_txt) if memory_txt else ("# سجل القرارات ونتائجها المقاسة:\n" + decisions_txt)
+        except Exception:
+            pass
+
         exp_note = ""
         if total_sales > 0 and total_expenses <= 0:
             exp_note = "\n⚠️ تنبيه: المصروفات غير مدخلة (بيانات POS مبيعات فقط) — لا تحسب هامش أو ربح، ونبّه المالك لإضافتها."
@@ -3161,7 +3194,7 @@ def company_command_center(user: User = Depends(get_current_user)):
             decisions.append({
                 "priority": "عاجل", "icon": "🚨",
                 "title": f"{len(weak)} فرع ضعيف الأداء يحتاج تدخّل فوري",
-                "detail": f"الفروع: {names}. مؤشّرها أقل من 40/100. رفع أدائها لمستوى المتوسط قد يضيف ~{impact:,} ريال شهرياً (تقدير: 15% من مبيعاتها البالغة {round(weak_sales):,} ر).",
+                "detail": f"الفروع: {names}. مؤشّرها أقل من 40/100. رفع أدائها لمستوى المتوسط قد يضيف ~{impact:,} ريال شهرياً (تقدير: 15% من مبيعاتها البالغة {round(weak_sales):,} ر). | ثقة 90% · تنفيذ 2-4 أسابيع",
                 "action": "افتح مقارنة الفروع لمعرفة السبب الجذري",
                 "link": "company-branches.html",
             })
@@ -3174,7 +3207,7 @@ def company_command_center(user: User = Depends(get_current_user)):
             decisions.append({
                 "priority": "عاجل", "icon": "💸",
                 "title": f"{len(thin)} فرع بهامش ربح منخفض جداً",
-                "detail": f"هامش الربح أقل من 10%. تحسين الهامش 5 نقاط مئوية فقط يضيف ~{impact:,} ريال شهرياً (تقدير: 5% × مبيعاتها {round(thin_sales):,} ر).",
+                "detail": f"هامش الربح أقل من 10%. تحسين الهامش 5 نقاط مئوية فقط يضيف ~{impact:,} ريال شهرياً (تقدير: 5% × مبيعاتها {round(thin_sales):,} ر). | ثقة 85% · تنفيذ 1-2 أسبوع",
                 "action": "حلّل الأسباب عبر التحليل التنفيذي",
                 "link": "company-dashboard.html",
             })
@@ -3188,7 +3221,7 @@ def company_command_center(user: User = Depends(get_current_user)):
             decisions.append({
                 "priority": "مهم", "icon": "📉",
                 "title": f"تراجع حاد في مبيعات {len(declining)} فرع",
-                "detail": f"{names} — تراجع المبيعات تجاوز 15%. استرداد نصف التراجع فقط يعيد ~{impact:,} ريال شهرياً (تقدير).",
+                "detail": f"{names} — تراجع المبيعات تجاوز 15%. استرداد نصف التراجع فقط يعيد ~{impact:,} ريال شهرياً (تقدير). | ثقة 80% · تنفيذ 2-6 أسابيع",
                 "action": "افحص أسباب التراجع",
                 "link": "company-branches.html",
             })
@@ -5369,3 +5402,293 @@ def pages_check():
         "needs_reupload": old_pages,
         "details": results,
     }
+
+
+# ============================================================
+# ===== خريطة تسرّب الأموال: "وين تروح فلوسك؟" بالريال =====
+# ============================================================
+
+def _latest_module_field(s, company_id, module, field_contains):
+    """يجمع قيمة حقل من آخر إدخال لكل فرع في وحدة معيّنة."""
+    total = 0.0
+    found = False
+    seen_branches = set()
+    entries = s.exec(
+        select(CompanyModuleEntry).where(
+            CompanyModuleEntry.company_id == company_id,
+            CompanyModuleEntry.module == module,
+        ).order_by(CompanyModuleEntry.created_at.desc())
+    ).all()
+    for me in entries:
+        key = me.branch_id or 0
+        if key in seen_branches:
+            continue
+        seen_branches.add(key)
+        try:
+            data = json.loads(me.data) if me.data else {}
+        except Exception:
+            continue
+        for k, v in data.items():
+            if field_contains in k:
+                n = _to_num(v)
+                if n is not None and n > 0:
+                    total += n
+                    found = True
+    return (round(total, 2), found)
+
+
+@app.get("/company/money-map")
+def company_money_map(user: User = Depends(get_current_user)):
+    """يبني خريطة التسرّب: كل بند يسرّب فلوس + قيمته بالريال + كيف تصلحه."""
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id)
+        if not company or company.owner_id != user.id:
+            raise HTTPException(403, "غير مصرّح")
+        if company.is_active != 1:
+            raise HTTPException(402, "شركتك قيد التفعيل")
+
+        branches = s.exec(select(CompanyBranch).where(
+            CompanyBranch.company_id == company.id, CompanyBranch.is_active == 1)).all()
+        rows = []
+        for b in branches:
+            e = s.exec(select(CompanyEntry).where(CompanyEntry.branch_id == b.id)
+                       .order_by(CompanyEntry.created_at.desc())).first()
+            if e:
+                rows.append(e)
+        if not rows:
+            raise HTTPException(400, "لا توجد بيانات — ارفع ملفك أو أدخل بيانات الفروع أولاً")
+
+        total_sales = sum(e.sales for e in rows)
+        total_expenses = sum(e.expenses for e in rows)
+        cards = []
+
+        # ١) الخصومات (من بيانات الفروع)
+        discounts = round(sum(e.discounts for e in rows), 2)
+        if discounts > 0:
+            pct = round(discounts / total_sales * 100, 1) if total_sales else 0
+            recover = round(discounts * 0.3)
+            cards.append({
+                "key": "discounts", "icon": "🏷️", "label": "الخصومات",
+                "amount": discounts, "kind": "خسارة قابلة للاسترداد جزئياً",
+                "evidence": f"إجمالي الخصومات {discounts:,.0f} ر = {pct}% من المبيعات",
+                "fix": f"راجع مبررات الخصم لكل فرع — تقليصها 30% يعيد ~{recover:,} ر (تقدير)",
+                "link": "company-sales.html", "severity": "high" if pct > 4 else "mid",
+            })
+
+        # ٢) المرتجعات (وحدة المبيعات)
+        returns_amt, has_returns = _latest_module_field(s, company.id, "sales", "المرتجعات")
+        if has_returns and returns_amt > 0:
+            pct = round(returns_amt / total_sales * 100, 1) if total_sales else 0
+            cards.append({
+                "key": "returns", "icon": "↩️", "label": "المرتجعات",
+                "amount": returns_amt, "kind": "خسارة مباشرة",
+                "evidence": f"قيمة المرتجعات {returns_amt:,.0f} ر = {pct}% من المبيعات",
+                "fix": "افحص أكثر المنتجات/الفروع استرجاعاً وعالج السبب (جودة؟ وصف؟ توصيل؟)",
+                "link": "company-sales.html", "severity": "high" if pct > 5 else "mid",
+            })
+
+        # ٣) الهدر (وحدة المخزون)
+        waste_amt, has_waste = _latest_module_field(s, company.id, "inventory", "الهدر")
+        if has_waste and waste_amt > 0:
+            cards.append({
+                "key": "waste", "icon": "🗑️", "label": "هدر المخزون",
+                "amount": waste_amt, "kind": "خسارة مباشرة",
+                "evidence": f"قيمة الهدر المسجّلة {waste_amt:,.0f} ر",
+                "fix": "راجع سلسلة التخزين والطلب — خفض الهدر 50% يوفّر ~" + f"{round(waste_amt*0.5):,} ر (تقدير)",
+                "link": "company-inventory.html", "severity": "high",
+            })
+
+        # ٤) المخزون الراكد (أموال محتجزة)
+        dead_amt, has_dead = _latest_module_field(s, company.id, "inventory", "الراكد")
+        if has_dead and dead_amt > 0:
+            cards.append({
+                "key": "dead_stock", "icon": "📦", "label": "المخزون الراكد",
+                "amount": dead_amt, "kind": "أموال محتجزة",
+                "evidence": f"{dead_amt:,.0f} ر بضاعة لا تتحرك",
+                "fix": "صفِّها بعروض خاصة — تحرير 50% منها يضخ ~" + f"{round(dead_amt*0.5):,} ر سيولة (تقدير)",
+                "link": "company-inventory.html", "severity": "mid",
+            })
+
+        # ٥) الذمم المدينة (تحصيل متأخر)
+        ar_amt, has_ar = _latest_module_field(s, company.id, "finance", "المدينة")
+        if has_ar and ar_amt > 0:
+            monthly_cost = round(ar_amt * 0.01)
+            cards.append({
+                "key": "receivables", "icon": "⏳", "label": "التحصيل المتأخر",
+                "amount": ar_amt, "kind": "أموال محتجزة عند العملاء",
+                "evidence": f"ذمم مدينة {ar_amt:,.0f} ر خارج حسابك",
+                "fix": f"شدّد التحصيل — كل شهر تأخير يكلّفك ~{monthly_cost:,} ر فرصة بديلة (تقدير 1%)",
+                "link": "company-finance.html", "severity": "high" if total_sales and ar_amt > total_sales * 0.5 else "mid",
+            })
+
+        # ٦) مصروفات أعلى من القطاع
+        if total_expenses > 0 and total_sales > 0:
+            sector = company.sector or "other"
+            bench = SECTOR_BENCHMARKS.get(sector, SECTOR_BENCHMARKS["other"])
+            bench_ratio = bench["expense_ratio"]["value"]
+            actual_ratio = total_expenses / total_sales * 100
+            if actual_ratio > bench_ratio + 3:
+                excess = round(total_sales * (actual_ratio - bench_ratio) / 100)
+                cards.append({
+                    "key": "excess_expenses", "icon": "💸", "label": "مصروفات فوق متوسط القطاع",
+                    "amount": excess, "kind": "تكلفة زائدة",
+                    "evidence": f"نسبتك {round(actual_ratio,1)}% مقابل {bench_ratio}% للقطاع — فائض ~{excess:,} ر",
+                    "fix": "افتح الوحدة المالية وحدد أكبر 3 بنود ترتفع عن المعتاد",
+                    "link": "company-finance.html", "severity": "high",
+                })
+
+        # الترتيب حسب المبلغ
+        cards.sort(key=lambda c: c["amount"], reverse=True)
+        direct_loss = sum(c["amount"] for c in cards if c["kind"] in ("خسارة مباشرة", "تكلفة زائدة"))
+        recoverable = sum(c["amount"] for c in cards if "قابلة" in c["kind"])
+        held = sum(c["amount"] for c in cards if "محتجزة" in c["kind"])
+
+        missing = []
+        if not has_waste and not has_dead:
+            missing.append("بيانات المخزون (الهدر والراكد)")
+        if not has_ar:
+            missing.append("الذمم المدينة (الوحدة المالية)")
+        if total_expenses <= 0:
+            missing.append("المصروفات")
+
+        return {
+            "company": {"name": company.name},
+            "total_sales": round(total_sales),
+            "cards": cards,
+            "direct_loss": round(direct_loss),
+            "recoverable": round(recoverable),
+            "held_cash": round(held),
+            "summary": (
+                f"رصد نبّاه {len(cards)} بنداً يسرّب أموالك — خسائر مباشرة وتكاليف زائدة ~{round(direct_loss):,} ر، "
+                f"وأموال محتجزة ~{round(held):,} ر."
+                if cards else "لا تسرّبات واضحة بالبيانات الحالية — أدخل بيانات أكثر لفحص أعمق."
+            ),
+            "missing_data": missing,
+        }
+
+
+# ============================================================
+# ===== النظرة المستقبلية: سيولة/ربح/نمو/مخاطر بإشارات =====
+# ============================================================
+
+@app.get("/company/outlook")
+def company_outlook(user: User = Depends(get_current_user)):
+    """يجيب: ماذا سيحدث؟ — أربع إشارات بأسباب وتوصيات، محسوبة من البيانات."""
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id)
+        if not company or company.owner_id != user.id:
+            raise HTTPException(403, "غير مصرّح")
+        if company.is_active != 1:
+            raise HTTPException(402, "شركتك قيد التفعيل")
+
+        branches = s.exec(select(CompanyBranch).where(
+            CompanyBranch.company_id == company.id, CompanyBranch.is_active == 1)).all()
+        rows = []
+        for b in branches:
+            ents = s.exec(select(CompanyEntry).where(CompanyEntry.branch_id == b.id)
+                          .order_by(CompanyEntry.created_at.desc()).limit(6)).all()
+            if ents:
+                rows.append(ents)
+        if not rows:
+            raise HTTPException(400, "لا توجد بيانات بعد")
+
+        total_sales = sum(r[0].sales for r in rows)
+        total_expenses = sum(r[0].expenses for r in rows)
+        avg_growth = sum(r[0].growth for r in rows) / len(rows)
+        signals = []
+
+        def sig(key, label, status, value, reason, action):
+            colors = {"green": ("🟢", "#10b981"), "amber": ("🟠", "#f59e0b"), "red": ("🔴", "#ef4444"), "gray": ("⚪", "#9ca3af")}
+            e, c = colors[status]
+            signals.append({"key": key, "label": label, "emoji": e, "color": c,
+                            "value": value, "reason": reason, "action": action})
+
+        # ═══ السيولة ═══
+        reserve = getattr(company, "cash_reserve", 0) or 0
+        obligations = getattr(company, "monthly_obligations", 0) or 0
+        burn = obligations if obligations > 0 else (total_expenses if total_expenses > 0 else 0)
+        if reserve > 0 and burn > 0:
+            runway = round(reserve / burn, 1)
+            days = round(runway * 30)
+            if runway >= 6:
+                sig("liquidity", "السيولة", "green", f"تكفي ~{runway} شهر",
+                    f"الاحتياطي {reserve:,.0f} ر ÷ التزامات {burn:,.0f} ر شهرياً",
+                    "وضع مريح — راجعها شهرياً")
+            elif runway >= 3:
+                sig("liquidity", "السيولة", "amber", f"تكفي ~{runway} شهر",
+                    f"بعد ~{days} يوم قد تحتاج ضخ سيولة إذا استمر الوضع",
+                    "سرّع التحصيل وأجّل المصروفات غير الحرجة")
+            else:
+                sig("liquidity", "السيولة", "red", f"تكفي ~{runway} شهر فقط",
+                    f"خطر عجز خلال ~{days} يوم",
+                    "إجراء فوري: حصّل الذمم، أوقف مصروفات غير أساسية، رتّب تمويلاً جسرياً")
+        else:
+            sig("liquidity", "السيولة", "gray", "غير محسوبة",
+                "الاحتياطي النقدي أو الالتزامات الشهرية غير مدخلة",
+                "أدخلها من إعدادات الشركة لتفعيل إنذار السيولة")
+
+        # ═══ الربح ═══
+        if total_expenses > 0 and total_sales > 0:
+            margin = (total_sales - total_expenses) / total_sales * 100
+            # اتجاه الهامش من التاريخ
+            old_margins = []
+            for ents in rows:
+                for e in ents[1:4]:
+                    if e.expenses > 0 and e.sales > 0:
+                        old_margins.append((e.sales - e.expenses) / e.sales * 100)
+            trend = margin - (sum(old_margins)/len(old_margins)) if old_margins else 0
+            if margin >= 15 and trend >= -2:
+                sig("profit", "الربح", "green", f"هامش {round(margin,1)}%",
+                    "فوق الحد الصحي ومستقر", "حافظ على انضباط التكاليف")
+            elif margin >= 8:
+                proj = round(total_sales * 0.03)
+                sig("profit", "الربح", "amber", f"هامش {round(margin,1)}%",
+                    f"الهامش رقيق{' ويتراجع' if trend < -2 else ''} — استمراره يهدد الربحية",
+                    f"تحسين 3 نقاط يضيف ~{proj:,} ر شهرياً (تقدير)")
+            else:
+                sig("profit", "الربح", "red", f"هامش {round(margin,1)}%",
+                    "تحت الحد الصحي — الشركة تعمل بهامش خطر",
+                    "افتح خريطة تسرّب الأموال وعالج أكبر بندين فوراً")
+        else:
+            sig("profit", "الربح", "gray", "غير محسوب",
+                "المصروفات غير مدخلة (بيانات مبيعات فقط)",
+                "أدخل المصروفات من الوحدة المالية لتفعيل تحليل الربحية")
+
+        # ═══ النمو ═══
+        if avg_growth >= 3:
+            sig("growth", "النمو", "green", f"+{round(avg_growth,1)}% شهرياً",
+                "المبيعات في اتجاه صاعد", "استثمر في أفضل قنواتك الحالية")
+        elif avg_growth >= -3:
+            sig("growth", "النمو", "amber", f"{round(avg_growth,1):+}% شهرياً",
+                "شبه مستقر — بلا نمو حقيقي",
+                "افحص الفروع الأضعف وقارنها بالأقوى")
+        else:
+            decline_3m = round(total_sales * abs(avg_growth) / 100 * 3)
+            sig("growth", "النمو", "red", f"{round(avg_growth,1)}% شهرياً",
+                f"استمرار التراجع 3 أشهر يفقدك ~{decline_3m:,} ر (تقدير)",
+                "حلّل الأسباب الجذرية فوراً وافحص المنافسين والأحداث")
+
+        # ═══ المخاطر (مركّب) ═══
+        risk_points = 0
+        risk_reasons = []
+        if reserve > 0 and burn > 0 and reserve / burn < 3:
+            risk_points += 2; risk_reasons.append("سيولة قصيرة")
+        if total_expenses > 0 and total_sales > 0 and (total_sales-total_expenses)/total_sales*100 < 8:
+            risk_points += 2; risk_reasons.append("هامش خطر")
+        if avg_growth < -5:
+            risk_points += 2; risk_reasons.append("تراجع مبيعات")
+        weak_branches = sum(1 for r in rows if r[0].branch_score < 40)
+        if weak_branches:
+            risk_points += 1; risk_reasons.append(f"{weak_branches} فرع ضعيف")
+        if risk_points == 0:
+            sig("risk", "المخاطر", "green", "منخفضة", "لا مؤشرات خطر حالية بالبيانات المتوفرة", "استمر بالمراقبة الشهرية")
+        elif risk_points <= 2:
+            sig("risk", "المخاطر", "amber", "متوسطة", "، ".join(risk_reasons), "عالج المؤشر الأصفر قبل ما يحمرّ")
+        else:
+            sig("risk", "المخاطر", "red", "مرتفعة", "، ".join(risk_reasons), "افتح محرك المخاطر وابدأ بالأعلى درجة")
+
+        return {"signals": signals, "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M")}
