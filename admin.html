@@ -251,8 +251,19 @@
     try {
       const res = await fetch("/admin/companies", { headers: { "X-Admin-Key": adminKey } });
       if (!res.ok) return;
-      const companies = await res.json();
+      const data = await res.json();
+      // يدعم الشكلين: مصفوفة (قديم) أو {companies:[...]} (جديد)
+      const companies = Array.isArray(data) ? data : (data.companies || []);
+      const newCount = Array.isArray(data) ? 0 : (data.new_this_week || 0);
       const body = document.getElementById("companies-body");
+      // عدّاد الجدد في عنوان القسم
+      try {
+        const hdr = document.querySelector("#companies-section h2, #companiesTitle");
+        if (hdr && newCount > 0 && !hdr.dataset.badged) {
+          hdr.dataset.badged = "1";
+          hdr.innerHTML += ` <span style="background:#fef3c7;color:#92400e;font-size:12px;font-weight:800;padding:3px 10px;border-radius:100px">🆕 ${newCount} جديدة هذا الأسبوع</span>`;
+        }
+      } catch(_) {}
       if (!companies || companies.length === 0) {
         body.innerHTML = '<tr><td colspan="8" class="empty">لا توجد شركات مسجّلة بعد</td></tr>';
         return;
@@ -260,15 +271,18 @@
       body.innerHTML = companies.map(c => {
         const status = c.is_active === 1
           ? '<span class="badge-pill b-active">مفعّلة</span>'
-          : '<span class="badge-pill b-pending">قيد التفعيل</span>';
+          : '<span class="badge-pill b-pending">موقوفة</span>';
         const btn = c.is_active === 1
           ? `<button class="act-btn act-off" onclick="deactivateCompany(${c.id},'${escape(c.name)}')">إيقاف</button>`
           : `<button class="act-btn act-on" onclick="activateCompany(${c.id},'${escape(c.name)}')">تفعيل</button>`;
+        const newBadge = c.is_new ? ' <span style="background:#fef3c7;color:#92400e;font-size:10px;font-weight:800;padding:2px 7px;border-radius:100px">🆕 جديدة</span>' : '';
+        const phone = c.owner_phone && c.owner_phone !== "—"
+          ? `<div style="font-size:11px;color:#64748b;direction:ltr;text-align:right">${escape(c.owner_phone)}</div>` : '';
         return `<tr>
-          <td><b style="color:#065f46">${escape(c.name)}</b></td>
+          <td><b style="color:#065f46">${escape(c.name)}</b>${newBadge}</td>
           <td>${escape(c.sector)}</td>
           <td>${escape(c.owner_name)}</td>
-          <td>${escape(c.owner_email)}</td>
+          <td>${escape(c.owner_email)}${phone}</td>
           <td style="text-align:center"><b>${c.branch_count}</b></td>
           <td style="text-align:center">${c.entries_count}</td>
           <td>${status}</td>
