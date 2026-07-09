@@ -108,6 +108,8 @@
         <code>NPS</code> <code>الشكاوى</code> <code>الأعطال</code>
         <br><br>
         <b>تنسيق الفترة:</b> <code>2026-03</code> أو <code>2026/03</code>
+        <br><br>
+        <b>🏦 جديد — كشف الحساب البنكي:</b> صدّر كشفك بصيغة CSV أو Excel من بنكك الإلكتروني وارفعه هنا — نبّاه يتعرّف عليه تلقائياً (تاريخ، دائن، مدين) ويقارن إيداعاتك الفعلية بمبيعاتك.
       </div>
     </div>
   </div>
@@ -221,7 +223,11 @@ function renderPreview(d){
   document.getElementById("matchedCols").textContent=d.matched_count;
   document.getElementById("unmatchedCols").textContent=d.unmatched_count;
 
-  if(d.tx_summary && d.tx_summary.is_transactions){
+  if(d.bank_summary && d.bank_summary.is_bank){
+    const b=d.bank_summary;
+    const ib=document.getElementById("infoBox"); ib.style.display="block";
+    ib.innerHTML=`🏦 <b>تم اكتشاف كشف حساب بنكي!</b> ${b.months_count} شهر (${b.from} → ${b.to}) · ${b.total_ops.toLocaleString("en-US")} عملية<br>⬇️ إيداعات: <b>${b.total_deposits.toLocaleString("en-US")}</b> ر · ⬆️ مسحوبات: ${b.total_withdrawals.toLocaleString("en-US")} ر<br><span style="opacity:.8">بعد الاستيراد يقارن نبّاه إيداعاتك الفعلية بمبيعاتك المسجّلة ويكشف أي فجوة في خريطة تسرّب الأموال.</span>`;
+  }else if(d.tx_summary && d.tx_summary.is_transactions){
     const t=d.tx_summary;
     const ib=document.getElementById("infoBox"); ib.style.display="block";
     ib.innerHTML=`🧾 <b>تم اكتشاف ملف معاملات POS!</b> سيُلخَّص تلقائياً إلى <b>${t.summary_rows}</b> سجل شهري لـ<b>${t.branches_count}</b> فرع (${t.branches.join("، ")}) عبر <b>${t.periods_count}</b> فترة.<br>💰 إجمالي المبيعات: <b>${(t.total_sales||0).toLocaleString("en-US")}</b> ر · ↩️ المرتجعات: ${(t.total_returns||0).toLocaleString("en-US")} ر<br><span style="opacity:.8">ملاحظة: ملفات POS لا تحوي المصروفات — أضفها لاحقاً من الوحدة المالية لتحليل الربحية.</span>`;
