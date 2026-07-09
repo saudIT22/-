@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نبّاه · التقرير الشهري</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+<style>
+  :root{--bg:#0a0f0c;--panel:#101a15;--panel2:#0e1712;--line:#1d2c24;--mint:#10b981;--mint-deep:#0c8f64;--gold:#f5b301;--red:#ef4444;--txt:#e8f1ec;--txt-soft:#9fb4aa;--txt-mute:#678075;--r:16px;}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--txt);line-height:1.7;min-height:100vh}
+  body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.5;background:radial-gradient(circle at 1px 1px,rgba(16,185,129,.05) 1px,transparent 0);background-size:26px 26px}
+  a{text-decoration:none;color:inherit}
+  .wrap{max-width:820px;margin:0 auto;padding:0 16px;position:relative;z-index:1}
+  header{position:sticky;top:0;z-index:40;background:rgba(10,15,12,.86);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+  .head-in{max-width:820px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:900;font-size:20px;color:#fff}
+  .brand .bell{width:36px;height:36px;border-radius:11px;background:var(--mint);display:grid;place-items:center;font-size:17px;transform:rotate(-5deg)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;font-family:inherit;font-weight:700;cursor:pointer;border:none;border-radius:11px;font-size:14px;text-decoration:none}
+  .btn-mint{background:var(--mint);color:#04130d;padding:11px 18px}
+  .btn-ghost{background:var(--panel);color:var(--txt-soft);padding:10px 15px;border:1px solid var(--line)}
+  .page-head{padding:24px 0 12px;display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  .page-head h1{font-size:25px;font-weight:900}.page-head p{color:var(--txt-soft);font-size:14.5px;margin-top:3px}
+  .state{padding:50px 20px;text-align:center;color:var(--txt-soft)}
+  .spin{width:32px;height:32px;border:3px solid var(--line);border-top-color:var(--mint);border-radius:50%;animation:sp 1s linear infinite;margin:0 auto 12px}@keyframes sp{to{transform:rotate(360deg)}}
+
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:13px;text-align:center}
+  .kpi .l{font-size:11.5px;color:var(--txt-soft)}
+  .kpi .v{font-size:20px;font-weight:900;margin-top:2px}
+  .kpi .s{font-size:11px;color:var(--txt-mute)}
+
+  .narrative{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px;margin-bottom:14px}
+  .narrative h1,.narrative h2,.narrative h3{color:var(--mint);margin:14px 0 8px;font-size:17px}
+  .narrative p{margin-bottom:10px;font-size:14.5px;color:var(--txt)}
+  .narrative ul,.narrative ol{padding-inline-start:20px;margin-bottom:10px}
+  .narrative li{margin-bottom:5px;font-size:14px}
+  .narrative strong{color:var(--gold)}
+
+  .meta{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--txt-mute);margin-bottom:14px}
+  .links{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 40px}
+
+  @media print{
+    body{background:#fff;color:#111}
+    body::before,header,.links,.page-head .btn{display:none}
+    .kpi,.narrative{background:#fff;border-color:#ddd}
+    .kpi .v,.narrative p{color:#111}
+    .narrative h1,.narrative h2,.narrative h3{color:#065f46}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="head-in">
+    <a class="brand" href="company-dashboard.html"><span class="bell">🔔</span>نبّاه</a>
+    <a class="btn btn-ghost" href="company-dashboard.html">اللوحة</a>
+  </div>
+</header>
+<div class="wrap">
+  <div class="page-head">
+    <div><h1>📊 التقرير الشهري</h1><p id="sub">وين راحت فلوسك هذا الشهر؟</p></div>
+    <button class="btn btn-mint" onclick="window.print()">🖨️ طباعة / PDF</button>
+  </div>
+
+  <div id="loading" class="state"><div class="spin"></div>جارٍ إعداد التقرير… (أول مرة قد تأخذ ثوانٍ)</div>
+  <div id="error" class="state" style="display:none;color:var(--red)"></div>
+
+  <div id="content" style="display:none">
+    <div class="meta" id="meta"></div>
+    <div class="kpis" id="kpis"></div>
+    <div class="narrative" id="narrative"></div>
+  </div>
+
+  <div class="links">
+    <a class="btn btn-ghost" href="company-dashboard.html">اللوحة</a>
+    <a class="btn btn-ghost" href="company-leakage.html">🛡️ خريطة تسرّب الأموال</a>
+    <a class="btn btn-ghost" href="company-memory.html">🧠 التقارير السابقة</a>
+  </div>
+</div>
+<script>
+const TOKEN=localStorage.getItem("nabbah_token")||"";
+if(!TOKEN){ window.location.href="login.html"; }
+async function api(p){
+  const r=await fetch(p,{headers:{"Authorization":"Bearer "+TOKEN}});
+  if(r.status===401){ localStorage.removeItem("nabbah_token"); window.location.href="login.html"; throw new Error("جلسة"); }
+  const d=await r.json().catch(()=>({}));
+  const er=new Error(d.detail||"خطأ"); er.status=r.status;
+  if(!r.ok) throw er;
+  return d;
+}
+const fmt=n=>(Math.round(n)||0).toLocaleString("en-US");
+async function load(){
+  try{
+    const params=new URLSearchParams(location.search);
+    const period=params.get("period")||"";
+    const d=await api("/company/monthly-report"+(period?`?period=${period}`:""));
+    document.getElementById("loading").style.display="none";
+    document.getElementById("content").style.display="block";
+    document.getElementById("sub").textContent=`${d.company.name} — شهر ${d.period}`;
+    document.getElementById("meta").innerHTML=`
+      <span>📅 الفترة: ${d.period}</span>
+      <span>⚡ قرارات: ${d.decisions.opened} اعتُمد · ${d.decisions.closed} أُنجز</span>
+      ${d.cached?'<span>💾 تقرير محفوظ</span>':'<span>✨ توليد جديد</span>'}`;
+    const k=d.kpis;
+    let kpisHtml=`
+      <div class="kpi"><div class="l">المبيعات</div><div class="v" style="color:var(--mint)">${fmt(k.sales)} ر</div>${k.change_pct!==null&&k.change_pct!==undefined?`<div class="s" style="color:${k.change_pct>=0?'var(--mint)':'var(--red)'}">${k.change_pct>=0?'+':''}${k.change_pct}% عن الشهر السابق</div>`:''}</div>`;
+    if(k.expenses!==null&&k.expenses!==undefined) kpisHtml+=`<div class="kpi"><div class="l">المصروفات</div><div class="v">${fmt(k.expenses)} ر</div></div>`;
+    if(k.profit!==null&&k.profit!==undefined) kpisHtml+=`<div class="kpi"><div class="l">الربح</div><div class="v" style="color:${k.profit>=0?'var(--mint)':'var(--red)'}">${fmt(k.profit)} ر</div></div>`;
+    kpisHtml+=`<div class="kpi"><div class="l">الخصومات</div><div class="v" style="color:var(--gold)">${fmt(k.discounts)} ر</div></div>`;
+    if(d.bank) kpisHtml+=`<div class="kpi"><div class="l">إيداعات البنك</div><div class="v">${fmt(d.bank.deposits)} ر</div>${d.bank.gap>0?`<div class="s" style="color:var(--red)">فجوة ${fmt(d.bank.gap)} ر</div>`:'<div class="s" style="color:var(--mint)">متطابقة ✓</div>'}</div>`;
+    if(d.best_branch) kpisHtml+=`<div class="kpi"><div class="l">أفضل فرع</div><div class="v" style="font-size:15px">${d.best_branch.name}</div><div class="s">${d.best_branch.score}/100</div></div>`;
+    document.getElementById("kpis").innerHTML=kpisHtml;
+    document.getElementById("narrative").innerHTML=marked.parse(d.narrative||"");
+  }catch(e){
+    document.getElementById("loading").style.display="none";
+    const er=document.getElementById("error"); er.style.display="block";
+    if(e.status===402) er.innerHTML=`⏳ شركتك موقوفة. <a href="company-dashboard.html" style="color:var(--mint)">رجوع</a>`;
+    else er.textContent=e.message;
+  }
+}
+load();
+</script>
+</body>
+</html>
