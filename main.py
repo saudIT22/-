@@ -5502,6 +5502,7 @@ def files_check():
         "company-data-quality.html", "company-predictions.html", "company-risks.html",
         "company-board.html", "company-root-cause.html", "company-benchmarks.html",
         "company-upload.html", "company-memory.html", "company-decisions.html",
+        "company-monthly-report.html",
         "nabbah-data-template.xlsx",
     ]
     missing, present = [], []
@@ -5899,3 +5900,143 @@ def company_outlook(user: User = Depends(get_current_user)):
             sig("risk", "المخاطر", "red", "مرتفعة", "، ".join(risk_reasons), "افتح محرك المخاطر وابدأ بالأعلى درجة")
 
         return {"signals": signals, "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M")}
+
+
+# ============================================================
+# ===== التقرير الشهري: "وين راحت فلوسك؟" (توليد كسول + كاش) =====
+# ============================================================
+
+def _last_complete_period():
+    """الشهر المكتمل الأخير: لو نحن في يوليو → يونيو."""
+    now = datetime.now()
+    y, m = now.year, now.month - 1
+    if m == 0:
+        y, m = y - 1, 12
+    return f"{y:04d}-{m:02d}"
+
+
+@app.get("/company/monthly-report")
+def company_monthly_report(period: str = "", user: User = Depends(get_current_user)):
+    """تقرير شهري تنفيذي: وين راحت الفلوس؟ — يتولّد مرة لكل شهر ويُحفظ."""
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    period = (period or "").strip()[:7] or _last_complete_period()
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id)
+        if not company or company.owner_id != user.id:
+            raise HTTPException(403, "غير مصرّح")
+        if company.is_active != 1:
+            raise HTTPException(402, "شركتك قيد التفعيل")
+
+        # ═══ أرقام الشهر (مجموع الفروع للفترة) ═══
+        entries = s.exec(select(CompanyEntry).where(
+            CompanyEntry.company_id == company.id, CompanyEntry.period == period)).all()
+        if not entries:
+            raise HTTPException(400, f"لا توجد بيانات لشهر {period} — ارفع بيانات هذا الشهر أولاً")
+        # آخر إدخال لكل فرع في الفترة
+        latest = {}
+        for e in sorted(entries, key=lambda x: x.created_at):
+            latest[e.branch_id] = e
+        rows = list(latest.values())
+        sales = round(sum(e.sales for e in rows))
+        expenses = round(sum(e.expenses for e in rows))
+        discounts = round(sum(e.discounts for e in rows))
+        profit = round(sales - expenses) if expenses > 0 else None
+
+        # الشهر السابق للمقارنة
+        y, m = int(period[:4]), int(period[5:7])
+        pm = f"{y-1:04d}-12" if m == 1 else f"{y:04d}-{m-1:02d}"
+        prev_entries = s.exec(select(CompanyEntry).where(
+            CompanyEntry.company_id == company.id, CompanyEntry.period == pm)).all()
+        prev_latest = {}
+        for e in sorted(prev_entries, key=lambda x: x.created_at):
+            prev_latest[e.branch_id] = e
+        prev_sales = round(sum(e.sales for e in prev_latest.values())) if prev_latest else 0
+        change_pct = round((sales - prev_sales) / prev_sales * 100, 1) if prev_sales else None
+
+        # أفضل وأضعف فرع
+        best = max(rows, key=lambda e: e.branch_score) if rows else None
+        worst = min(rows, key=lambda e: e.branch_score) if rows else None
+
+        # ═══ البنك (لو مرفوع) ═══
+        bank = None
+        be = s.exec(select(CompanyModuleEntry).where(
+            CompanyModuleEntry.company_id == company.id,
+            CompanyModuleEntry.module == "bank",
+            CompanyModuleEntry.period == period)).first()
+        if be:
+            try:
+                bd = json.loads(be.data)
+                deposits = _to_num(bd.get("الإيداعات (ريال)")) or 0
+                bank = {"deposits": round(deposits),
+                        "gap": round(sales - deposits) if sales > deposits else 0}
+            except Exception:
+                pass
+
+        # ═══ قرارات الشهر ═══
+        month_start = datetime(y, m, 1)
+        month_end = datetime(y + (1 if m == 12 else 0), 1 if m == 12 else m + 1, 1)
+        decs = s.exec(select(CompanyDecision).where(
+            CompanyDecision.company_id == company.id)).all()
+        opened = [d for d in decs if d.created_at and month_start <= d.created_at < month_end]
+        closed = [d for d in decs if d.closed_at and month_start <= d.closed_at < month_end and d.status == "done"]
+
+        # ═══ الكاش: هل التقرير متولّد سابقاً؟ ═══
+        cache_title = f"التقرير الشهري {period}"
+        cached = s.exec(select(CompanyMemory).where(
+            CompanyMemory.company_id == company.id,
+            CompanyMemory.kind == "report",
+            CompanyMemory.title == cache_title)).first()
+
+        if cached and cached.content:
+            narrative = cached.content
+        else:
+            branches_txt = "\n".join(
+                f"- {e.branch_name}: مبيعات {round(e.sales):,} ر" +
+                (f"، مصروفات {round(e.expenses):,} ر" if e.expenses > 0 else "") +
+                f"، خصومات {round(e.discounts):,} ر، مؤشر {e.branch_score}/100، نمو {e.growth}%"
+                for e in rows)
+            bank_txt = ""
+            if bank:
+                bank_txt = f"\n# المطابقة البنكية:\nإيداعات فعلية {bank['deposits']:,} ر مقابل مبيعات {sales:,} ر" + (f" — فجوة {bank['gap']:,} ر" if bank['gap'] > 0 else " — متطابقة تقريباً")
+            decs_txt = ""
+            if opened or closed:
+                decs_txt = "\n# قرارات الشهر:\n" + "\n".join(
+                    [f"- اعتُمد: {d.title}" for d in opened[:4]] +
+                    [f"- أُنجز: {d.title} ({d.result_note or 'بدون ملاحظة'})" for d in closed[:4]])
+            prompt = f"""اكتب "التقرير الشهري: وين راحت فلوسك؟" لشركة "{company.name}" عن شهر {period}.
+
+# أرقام الشهر:
+- المبيعات: {sales:,} ر{f" (الشهر السابق {prev_sales:,} ر، تغيّر {change_pct:+}%)" if change_pct is not None else ""}
+- المصروفات: {f"{expenses:,} ر" if expenses > 0 else "غير مدخلة"}
+- الربح: {f"{profit:,} ر" if profit is not None else "غير محسوب (المصروفات ناقصة)"}
+- الخصومات: {discounts:,} ر
+- أفضل فرع: {best.branch_name} ({best.branch_score}/100) | أضعف فرع: {worst.branch_name} ({worst.branch_score}/100)
+
+# تفاصيل الفروع:
+{branches_txt}{bank_txt}{decs_txt}
+
+اكتب تقريراً تنفيذياً موجزاً (300-450 كلمة) بأقسام: ① أين ذهبت الفلوس هذا الشهر (بالريال) ② أهم 3 ملاحظات ③ قرار الشهر القادم الواحد الأهم بأثره المالي. التزم بإطارك الصارم."""
+            narrative = company_gemini(prompt) or "تعذّر توليد السرد — الأرقام أدناه صحيحة."
+            save_memory(company.id, "report", cache_title, narrative)
+
+        return {
+            "period": period,
+            "company": {"name": company.name},
+            "kpis": {
+                "sales": sales, "prev_sales": prev_sales, "change_pct": change_pct,
+                "expenses": expenses if expenses > 0 else None,
+                "profit": profit, "discounts": discounts,
+            },
+            "best_branch": {"name": best.branch_name, "score": best.branch_score} if best else None,
+            "worst_branch": {"name": worst.branch_name, "score": worst.branch_score} if worst else None,
+            "bank": bank,
+            "decisions": {"opened": len(opened), "closed": len(closed)},
+            "narrative": narrative,
+            "cached": bool(cached),
+        }
+
+
+@app.get("/company-monthly-report.html")
+def page_company_monthly_report():
+    return FileResponse("company-monthly-report.html")
