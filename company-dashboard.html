@@ -236,6 +236,9 @@
     <!-- Onboarding checklist -->
     <div id="setupBox" style="display:none;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin-bottom:16px"></div>
 
+    <!-- نبض الشركة الأسبوعي -->
+    <div id="pulseBox" style="display:none;margin-bottom:16px"></div>
+
     <!-- KPIs -->
     <div class="kpis" id="kpis"></div>
 
@@ -374,6 +377,7 @@
     <a class="btn btn-ghost" href="company-data-quality.html">📊 جودة البيانات</a>
     <a class="btn btn-ghost" href="company-memory.html">🧠 ذاكرة الشركة</a>
     <a class="btn btn-ghost" href="company-decisions.html">⚡ متابعة القرارات</a>
+    <a class="btn btn-ghost" href="company-monthly-report.html">📊 التقرير الشهري</a>
     <a class="btn btn-ghost" href="company-cashflow.html">💧 التدفق النقدي</a>
     <a class="btn btn-ghost" href="company-leakage.html">🛡️ كشف التسرّب</a>
     <a class="btn btn-ghost" href="company-tax.html">🧾 الضريبة والزكاة</a>
@@ -696,6 +700,33 @@ async function loadSetup(){
         </a>`).join("")}`;
   }catch(e){ /* صامت — القائمة مساعدة مو أساسية */ }
 }
+async function loadPulse(){
+  try{
+    const d=await api("/company/outlook");
+    if(!d.signals||!d.signals.length) return;
+    const box=document.getElementById("pulseBox");
+    if(!box) return;
+    box.style.display="block";
+    box.innerHTML=`
+      <div style="background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px 16px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
+          <b style="font-size:14.5px">💓 نبض شركتك</b>
+          <span style="font-size:11.5px;color:var(--txt-mute);flex:1">راجعه أسبوعياً — محسوب من بياناتك الفعلية</span>
+          <a href="company-monthly-report.html" style="font-size:12.5px;color:var(--mint);font-weight:700">📊 التقرير الشهري ←</a>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px">
+          ${d.signals.map(s=>`
+            <a href="company-predictions.html" style="background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:9px 11px;display:block">
+              <div style="display:flex;align-items:center;gap:6px">
+                <span>${s.emoji}</span><b style="font-size:12.5px">${s.label}</b>
+              </div>
+              <div style="font-size:12px;font-weight:800;color:${s.color};margin-top:3px">${s.value}</div>
+            </a>`).join("")}
+        </div>
+      </div>`;
+  }catch(e){ /* صامت */ }
+}
+loadPulse();
 loadSetup();
 init();
 </script>
