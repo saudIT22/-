@@ -1717,7 +1717,7 @@ def company_create(data: dict, user: User = Depends(get_current_user)):
             if c.name.strip().lower() == name.lower():
                 raise HTTPException(400, f"لديك شركة بنفس الاسم '{name}'")
 
-        company = Company(name=name, owner_id=user.id, sector=sector, is_active=0)
+        company = Company(name=name, owner_id=user.id, sector=sector, is_active=1)  # تفعيل فوري — الأدمن يتابع فقط
         s.add(company)
         s.commit()
         s.refresh(company)
@@ -2963,6 +2963,7 @@ def admin_list_companies(_: bool = Depends(verify_admin)):
     with Session(engine) as s:
         companies = s.exec(select(Company)).all()
         result = []
+        week_ago = datetime.now() - timedelta(days=7)
         for c in companies:
             owner = s.get(User, c.owner_id)
             branch_count = len(s.exec(
@@ -2975,13 +2976,16 @@ def admin_list_companies(_: bool = Depends(verify_admin)):
                 "sector": SECTOR_NAMES.get(c.sector, c.sector),
                 "owner_name": owner.name if owner else "—",
                 "owner_email": owner.email if owner else "—",
+                "owner_phone": (owner.phone if owner else "") or "—",
                 "branch_count": branch_count,
                 "entries_count": entries_count,
                 "is_active": c.is_active,
+                "is_new": bool(c.created_at and c.created_at >= week_ago),
                 "created_at": c.created_at.isoformat() if c.created_at else None,
             })
         result.sort(key=lambda x: x["created_at"] or "", reverse=True)
-        return result
+        new_count = sum(1 for r in result if r["is_new"])
+        return {"companies": result, "total": len(result), "new_this_week": new_count}
 
 
 @app.post("/admin/company-activate")
