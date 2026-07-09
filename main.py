@@ -4397,6 +4397,12 @@ SMART_FIELD_MAP = {
     "tx_customer":      ["customerid","customer id","رقم العميل","customer","العميل","client","الزبون","customer_id","client_id","العميل رقم"],
     "tx_product":       ["productid","product id","المنتج","product","رقم المنتج","product name","اسم المنتج","item","الصنف","sku"],
 
+    # ===== أعمدة كشف الحساب البنكي (يكشفها نبّاه ويقارنها بالمبيعات) =====
+    "bank_credit":      ["credit","دائن","إيداع","الإيداع","إيداعات","deposit","deposits","credit amount","مبلغ دائن","وارد","له"],
+    "bank_debit":       ["debit","مدين","سحب","المسحوبات","withdrawal","debit amount","مبلغ مدين","صادر","عليه","خصم"],
+    "bank_balance":     ["balance","الرصيد","رصيد","running balance","الرصيد المتاح"],
+    "bank_desc":        ["description","الوصف","البيان","details","التفاصيل","narrative","تفاصيل العملية"],
+
     # ===== الفروع (ملخّصات) =====
     "branch_name":      ["branch","فرع","اسم الفرع","name","branch name","الفرع","store","المتجر","outlet","location"],
     "city":             ["city","مدينة","المدينة","town","المنطقة"],
@@ -4574,8 +4580,11 @@ def _to_num(v):
     except: return None
 
 
-def parse_date_to_period(val):
-    """يحوّل أي تاريخ شائع لـ YYYY-MM."""
+def parse_date_to_period(val, day_first=None):
+    """يحوّل أي تاريخ شائع لـ YYYY-MM.
+    day_first=True → DD/MM/YYYY (النمط السعودي/البنكي)
+    day_first=False → MM/DD/YYYY (النمط الأمريكي/POS)
+    day_first=None → يخمّن (القيمة الأولى ≤12 تُعامل كشهر)"""
     if val is None: return None
     s = str(val).strip()
     if not s: return None
@@ -4586,25 +4595,53 @@ def parse_date_to_period(val):
             if 1 <= m <= 12 and 2000 <= y <= 2100:
                 return f"{y:04d}-{m:02d}"
         except: pass
-    # MM/DD/YYYY or M/D/YYYY or DD/MM/YYYY
+    # MM/DD/YYYY أو DD/MM/YYYY أو M/D/YYYY
     parts = s.replace("-", "/").split("/")
     if len(parts) == 3:
         try:
             a, b, c = int(parts[0]), int(parts[1]), int(parts[2])
-            # YYYY في آخر خانة
-            if c > 1900:
-                # نفترض MM/DD/YYYY (الأكثر شيوعاً في POS الأمريكية)
-                m = a if 1 <= a <= 12 else b
+            if c > 1900:  # السنة في الآخر
+                if day_first is True:
+                    m = b if 1 <= b <= 12 else a
+                elif day_first is False:
+                    m = a if 1 <= a <= 12 else b
+                else:
+                    m = a if 1 <= a <= 12 else b
                 y = c
                 if 1 <= m <= 12 and 2000 <= y <= 2100:
                     return f"{y:04d}-{m:02d}"
-            # YYYY في أول خانة
-            elif a > 1900:
+            elif a > 1900:  # السنة في الأول
                 m = b
                 if 1 <= m <= 12:
                     return f"{a:04d}-{m:02d}"
         except: pass
     return None
+
+
+def detect_date_format(rows, date_idx):
+    """يفحص عيّنة تواريخ ويحدد: هل النمط DD/MM (سعودي) أم MM/DD (أمريكي)؟
+    المنطق: لو أي قيمة أولى >12 فهي يوم أكيد → DD/MM. ولو أي قيمة ثانية >12 → MM/DD."""
+    first_gt12 = second_gt12 = 0
+    checked = 0
+    for r in rows[:200]:
+        if date_idx >= len(r) or r[date_idx] is None:
+            continue
+        s = str(r[date_idx]).strip().replace("-", "/")
+        parts = s.split("/")
+        if len(parts) != 3:
+            continue
+        try:
+            a, b = int(parts[0]), int(parts[1])
+            checked += 1
+            if a > 12: first_gt12 += 1
+            if b > 12: second_gt12 += 1
+        except:
+            continue
+    if first_gt12 > 0 and second_gt12 == 0:
+        return True    # اليوم أولاً (سعودي/بنكي)
+    if second_gt12 > 0 and first_gt12 == 0:
+        return False   # الشهر أولاً (أمريكي/POS)
+    return None        # غامض — نستخدم الافتراضي
 
 
 def is_transactions_file(col_map):
@@ -4613,9 +4650,54 @@ def is_transactions_file(col_map):
     return "tx_date" in cols and "tx_branch" in cols and "tx_amount" in cols
 
 
+def is_bank_statement(col_map):
+    """يكشف لو الملف كشف حساب بنكي: تاريخ + (دائن أو مدين)، وبدون عمود فرع."""
+    cols = set(col_map.values())
+    has_date = "tx_date" in cols
+    has_bank_cols = "bank_credit" in cols or "bank_debit" in cols
+    return has_date and has_bank_cols and "tx_branch" not in cols
+
+
+def aggregate_bank_statement(rows, col_map):
+    """يلخّص كشف الحساب: إيداعات ومسحوبات شهرية.
+    يرجع {period: {"deposits": x, "withdrawals": y, "ops": n}}"""
+    field_to_idx = {std: idx for idx, std in col_map.items()}
+    # كشوف البنوك السعودية غالباً DD/MM — نكشف النمط من البيانات نفسها
+    day_first = detect_date_format(rows, field_to_idx.get("tx_date", -1))
+    if day_first is None:
+        day_first = True  # الافتراضي للكشوف البنكية: يوم/شهر
+    months = {}
+    for r in rows:
+        if not r or all(c is None or str(c).strip() == "" for c in r):
+            continue
+        def get(field):
+            idx = field_to_idx.get(field)
+            if idx is None or idx >= len(r): return None
+            return r[idx]
+        period = parse_date_to_period(get("tx_date"), day_first=day_first)
+        if not period:
+            continue
+        credit = _to_num(get("bank_credit")) or 0
+        debit = _to_num(get("bank_debit")) or 0
+        # بعض البنوك تضع المدين بإشارة سالبة في نفس العمود
+        if credit < 0:
+            debit += abs(credit); credit = 0
+        if debit < 0:
+            debit = abs(debit)
+        b = months.setdefault(period, {"deposits": 0.0, "withdrawals": 0.0, "ops": 0})
+        b["deposits"] += credit
+        b["withdrawals"] += debit
+        b["ops"] += 1
+    return {p: {"deposits": round(v["deposits"], 2), "withdrawals": round(v["withdrawals"], 2), "ops": v["ops"]}
+            for p, v in months.items()}
+
+
 def aggregate_transactions(rows, col_map, headers):
     """يلخّص معاملات POS الخام إلى صفوف شهرية بالفرع."""
     field_to_idx = {std: idx for idx, std in col_map.items()}
+    day_first = detect_date_format(rows, field_to_idx.get("tx_date", -1))
+    if day_first is None:
+        day_first = False  # الافتراضي لملفات POS: شهر/يوم
     aggregated = {}
     for r in rows:
         if not r or all(c is None or str(c).strip() == "" for c in r):
@@ -4626,7 +4708,7 @@ def aggregate_transactions(rows, col_map, headers):
             return r[idx]
 
         branch_name = str(get("tx_branch") or "").strip()
-        period = parse_date_to_period(get("tx_date"))
+        period = parse_date_to_period(get("tx_date"), day_first=day_first)
         amount = _to_num(get("tx_amount"))
         status = str(get("tx_status") or "").strip().lower()
         customer = get("tx_customer")
@@ -4712,8 +4794,21 @@ async def company_upload_preview(file: UploadFile = File(...), user: User = Depe
 
     # === كشف ملف معاملات POS الخام + معاينة الملخّص ===
     tx_summary = None
+    bank_summary = None
     _cmap = {m["index"]: m["matched"] for m in matched if m["matched"]}
-    if is_transactions_file(_cmap):
+    if is_bank_statement(_cmap):
+        bmonths = aggregate_bank_statement(rows, _cmap)
+        if bmonths:
+            periods_sorted = sorted(bmonths.keys())
+            bank_summary = {
+                "is_bank": True,
+                "months_count": len(bmonths),
+                "from": periods_sorted[0], "to": periods_sorted[-1],
+                "total_deposits": round(sum(v["deposits"] for v in bmonths.values())),
+                "total_withdrawals": round(sum(v["withdrawals"] for v in bmonths.values())),
+                "total_ops": sum(v["ops"] for v in bmonths.values()),
+            }
+    elif is_transactions_file(_cmap):
         agg = aggregate_transactions(rows, _cmap, headers)
         if agg:
             _branches = sorted(set(k[0] for k in agg.keys()))
@@ -4730,6 +4825,7 @@ async def company_upload_preview(file: UploadFile = File(...), user: User = Depe
 
     return {
         "tx_summary": tx_summary,
+        "bank_summary": bank_summary,
         "filename": file.filename,
         "total_rows": len(rows),
         "headers": headers,
@@ -4770,6 +4866,62 @@ async def company_upload_import(file: UploadFile = File(...), user: User = Depen
 
     if not col_map:
         raise HTTPException(400, "لم نتعرّف على أي عمود — تأكد من أسماء الأعمدة (مثل: الفرع، المبيعات، المصروفات…)")
+
+    # ============================================================
+    # === مسار كشف الحساب البنكي: حفظ الإيداعات الشهرية للمطابقة ===
+    # ============================================================
+    if is_bank_statement(col_map):
+        bmonths = aggregate_bank_statement(rows, col_map)
+        if not bmonths:
+            raise HTTPException(400, "لم نستطع قراءة كشف الحساب — تأكد من أعمدة التاريخ والدائن/المدين")
+        with Session(engine) as s:
+            company = s.get(Company, user.company_id)
+            if not company or company.owner_id != user.id:
+                raise HTTPException(403, "غير مصرّح")
+            if company.is_active != 1:
+                raise HTTPException(402, "شركتك قيد التفعيل")
+            created = updated = 0
+            for period, v in sorted(bmonths.items()):
+                data_json = json.dumps({
+                    "الإيداعات (ريال)": v["deposits"],
+                    "المسحوبات (ريال)": v["withdrawals"],
+                    "عدد العمليات": v["ops"],
+                    "__source": "bank",
+                }, ensure_ascii=False)
+                existing = s.exec(
+                    select(CompanyModuleEntry).where(
+                        CompanyModuleEntry.company_id == company.id,
+                        CompanyModuleEntry.module == "bank",
+                        CompanyModuleEntry.period == period,
+                    )
+                ).first()
+                if existing:
+                    existing.data = data_json
+                    s.add(existing); updated += 1
+                else:
+                    s.add(CompanyModuleEntry(
+                        company_id=company.id, branch_id=None,
+                        module="bank", period=period, data=data_json,
+                    )); created += 1
+            s.commit()
+            log_activity(user.name, f"رفع كشف حساب بنكي {file.filename}: {len(bmonths)} شهر", user.email)
+            save_memory(company.id, "upload", f"رفع كشف حساب بنكي: {file.filename}",
+                        f"{len(bmonths)} شهر — إيداعات {round(sum(x['deposits'] for x in bmonths.values())):,} ر")
+            return {
+                "ok": True,
+                "filename": file.filename,
+                "is_bank": True,
+                "created_entries": created,
+                "updated_entries": updated,
+                "module_entries": created + updated,
+                "created_branches": 0,
+                "matched_columns": len(col_map),
+                "summary": (
+                    f"🏦 تم اكتشاف كشف حساب بنكي وقراءته: {len(bmonths)} شهر "
+                    f"({created} جديد، {updated} محدَّث). "
+                    f"الآن يقارن نبّاه إيداعاتك الفعلية بمبيعاتك المسجّلة في خريطة تسرّب الأموال."
+                ),
+            }
 
     # ============================================================
     # === مسار ملفات معاملات POS الخام: تلخيص تلقائي ثم حفظ ===
@@ -5543,6 +5695,49 @@ def company_money_map(user: User = Depends(get_current_user)):
                     "link": "company-finance.html", "severity": "high",
                 })
 
+        # ٧) المطابقة البنكية: إيداعات فعلية مقابل مبيعات مسجّلة (الأقوى)
+        try:
+            bank_entries = s.exec(
+                select(CompanyModuleEntry).where(
+                    CompanyModuleEntry.company_id == company.id,
+                    CompanyModuleEntry.module == "bank",
+                ).order_by(CompanyModuleEntry.period.desc()).limit(6)
+            ).all()
+            if bank_entries:
+                # مبيعات كل فترة (مجموع الفروع)
+                sales_by_period = {}
+                all_entries = s.exec(
+                    select(CompanyEntry).where(CompanyEntry.company_id == company.id)
+                ).all()
+                for e in all_entries:
+                    sales_by_period[e.period] = sales_by_period.get(e.period, 0) + e.sales
+                gaps = []
+                total_gap = 0.0
+                for be in bank_entries:
+                    try:
+                        bd = json.loads(be.data) if be.data else {}
+                    except Exception:
+                        continue
+                    deposits = _to_num(bd.get("الإيداعات (ريال)")) or 0
+                    period_sales = sales_by_period.get(be.period, 0)
+                    if period_sales > 0 and deposits < period_sales * 0.95:
+                        gap = round(period_sales - deposits)
+                        gaps.append((be.period, gap, round(period_sales), round(deposits)))
+                        total_gap += gap
+                if gaps:
+                    gaps.sort(key=lambda g: g[1], reverse=True)
+                    top = gaps[:2]
+                    ev = " | ".join(f"{p}: مبيعات {ps:,} مقابل إيداعات {dp:,} (فجوة {g:,})" for p, g, ps, dp in top)
+                    cards.append({
+                        "key": "bank_gap", "icon": "🏦", "label": "فجوة بنكية (مبيعات لم تصل للبنك)",
+                        "amount": round(total_gap), "kind": "خسارة مباشرة",
+                        "evidence": f"مطابقة {len(bank_entries)} شهر من كشف حسابك: {ev}",
+                        "fix": "راجع مسار الكاش من الكاشير للبنك — قد تكون مدفوعات آجلة مشروعة أو تسرّباً يستحق تحقيقاً",
+                        "link": "company-leakage.html", "severity": "high",
+                    })
+        except Exception:
+            pass
+
         # الترتيب حسب المبلغ
         cards.sort(key=lambda c: c["amount"], reverse=True)
         direct_loss = sum(c["amount"] for c in cards if c["kind"] in ("خسارة مباشرة", "تكلفة زائدة"))
@@ -5556,6 +5751,14 @@ def company_money_map(user: User = Depends(get_current_user)):
             missing.append("الذمم المدينة (الوحدة المالية)")
         if total_expenses <= 0:
             missing.append("المصروفات")
+        try:
+            _has_bank = s.exec(select(CompanyModuleEntry).where(
+                CompanyModuleEntry.company_id == company.id,
+                CompanyModuleEntry.module == "bank")).first() is not None
+            if not _has_bank:
+                missing.append("كشف الحساب البنكي (للمطابقة الفعلية)")
+        except Exception:
+            pass
 
         return {
             "company": {"name": company.name},
