@@ -4390,18 +4390,32 @@ SMART_FIELD_MAP = {
     # ===== أعمدة معاملات POS الخام (يلخّصها نبّاه تلقائياً) =====
     "tx_date":          ["date","تاريخ","التاريخ","تاريخ المعاملة","trans date","transaction date","order date","تاريخ الطلب","تاريخ الفاتورة","invoice date","posting date","تاريخ الحركة","event_time","created_at","timestamp"],
     "tx_branch":        ["branch","الفرع","فرع","branch name","store","المتجر","location","الموقع","outlet","المنفذ","site","الفرع/المتجر","store name","store_name","location_name"],
-    "tx_amount":        ["totalamount","total","amount","الإجمالي","إجمالي","قيمة الفاتورة","total amount","grand total","المبلغ الإجمالي","net","صافي","net_total","subtotal","المبلغ","total_price","order_total","invoice_total","الإجمالي مع الضريبة","بعد الضريبة"],
+    "tx_amount":        ["totalamount","total","amount","الإجمالي","إجمالي","قيمة الفاتورة","total amount","grand total","المبلغ الإجمالي","net","صافي","net_total","subtotal","المبلغ","total_price","order_total","invoice_total","الإجمالي مع الضريبة","بعد الضريبة","الصافي","المبلغ النهائي","total incl vat","المبلغ بعد الضريبة"],
     "tx_qty":           ["qty","quantity","الكمية","كمية","العدد","عدد","units","الوحدات"],
     "tx_unit_price":    ["unitprice","unit price","السعر","price","سعر","unit_price","price per unit","سعر الوحدة"],
     "tx_status":        ["status","الحالة","حالة","order status","payment status","transaction status","حالة الطلب"],
-    "tx_customer":      ["customerid","customer id","رقم العميل","customer","العميل","client","الزبون","customer_id","client_id","العميل رقم"],
-    "tx_product":       ["productid","product id","المنتج","product","رقم المنتج","product name","اسم المنتج","item","الصنف","sku"],
+    "tx_customer":      ["customerid","customer id","رقم العميل","customer","العميل","client","الزبون","customer_id","client_id","العميل رقم","البريد الإلكتروني","email","الايميل","إيميل العميل","جوال العميل","رقم الجوال","phone"],
+    "tx_product":       ["productid","product id","المنتج","product","رقم المنتج","product name","اسم المنتج","item","الصنف","sku","الفئة","category","التصنيف"],
 
     # ===== أعمدة كشف الحساب البنكي (يكشفها نبّاه ويقارنها بالمبيعات) =====
-    "bank_credit":      ["credit","دائن","إيداع","الإيداع","إيداعات","deposit","deposits","credit amount","مبلغ دائن","وارد","له"],
-    "bank_debit":       ["debit","مدين","سحب","المسحوبات","withdrawal","debit amount","مبلغ مدين","صادر","عليه","خصم"],
+    "bank_credit":      ["إجمالي الإيداعات","اجمالي الايداعات","total deposits","credit","دائن","إيداع","الإيداع","إيداعات","deposit","deposits","credit amount","مبلغ دائن","وارد","له","إجمالي الإيداعات","اجمالي الايداعات","مجموع الإيداعات"],
+    "bank_debit":       ["إجمالي السحوبات","اجمالي السحوبات","total withdrawals","debit","مدين","سحب","المسحوبات","withdrawal","debit amount","مبلغ مدين","صادر","عليه","خصم","إجمالي السحوبات","اجمالي السحوبات","مجموع السحوبات","إجمالي المسحوبات"],
     "bank_balance":     ["balance","الرصيد","رصيد","running balance","الرصيد المتاح"],
     "bank_desc":        ["description","الوصف","البيان","details","التفاصيل","narrative","تفاصيل العملية"],
+    "bank_net":         ["صافي الحركة","net movement"],
+    "bank_ops":         ["عدد المعاملات","عدد العمليات","transactions count","no of transactions"],
+
+    # ===== أعمدة تقارير POS التفصيلية =====
+    "tx_pre_tax":       ["المبلغ قبل الضريبة","قبل الضريبة","subtotal","pre-tax","pretax","amount before tax"],
+    "tx_vat":           ["الضريبة","ضريبة القيمة المضافة","vat","tax amount","قيمة الضريبة"],
+    "tx_discount":      ["الخصم","discount","خصم","قيمة الخصم"],
+    "tx_payment_method":["طريقة الدفع","payment method","paymentmethod","وسيلة الدفع","نوع الدفع"],
+    "tx_receipt":       ["رقم الإيصال","receipt","receipt no","رقم الفاتورة","رقم العملية","reference"],
+    "tx_cashier":       ["كود الصراف","cashier","الكاشير","الموظف","اسم الموظف","كود الموظف"],
+    "tx_terminal":      ["رقم الطرفية","terminal","terminal id","pos id"],
+    "tx_time":          ["الوقت","time"],
+    "tx_day":           ["اليوم","day","يوم الأسبوع"],
+    "tx_notes":         ["ملاحظات","notes","ملاحظة","comment"],
 
     # ===== الفروع (ملخّصات) =====
     "branch_name":      ["branch","فرع","اسم الفرع","name","branch name","الفرع","store","المتجر","outlet","location"],
@@ -4473,6 +4487,8 @@ def _norm(s):
     """تطبيع للمقارنة: lowercase + إزالة فراغات وعلامات."""
     if s is None: return ""
     s = str(s).strip().lower()
+    for junk in ("(sar)", "ر.س", "sar"):
+        s = s.replace(junk, " ")
     s = s.replace("(ريال)", "").replace("(ر)", "").replace("ريال", "").replace("(يوم)", "")
     s = s.replace("%", "").replace("(", " ").replace(")", " ")
     return " ".join(s.split())
@@ -4536,6 +4552,36 @@ def infer_column_by_content(sample_values, header=""):
     return None
 
 
+def find_header_row(all_rows, max_scan=15):
+    """يبحث عن صف العناوين الحقيقي في أول ١٥ صف (الملفات الحقيقية فيها عناوين تقارير فوق).
+    يرجع (index الصف، سنة مكتشفة من صفوف العنوان إن وجدت)."""
+    import re as _re
+    best_idx, best_score = 0, -1
+    year_hint = None
+    for i, row in enumerate(all_rows[:max_scan]):
+        if not row:
+            continue
+        for c in row:
+            if c is None:
+                continue
+            m = _re.search(r"(20\d{2})", str(c))
+            if m and year_hint is None:
+                year_hint = int(m.group(1))
+        score = 0
+        non_empty = 0
+        for c in row:
+            if c is None or str(c).strip() == "":
+                continue
+            non_empty += 1
+            if match_column(str(c)):
+                score += 1
+        if score > best_score and score >= 2 and non_empty >= 3:
+            best_idx, best_score = i, score
+    if best_score < 2:
+        best_idx = 0
+    return best_idx, year_hint
+
+
 def parse_csv(data_bytes):
     """يقرأ CSV ويرجع (headers, rows)."""
     # نحاول UTF-8 ثم cp1256 ثم latin-1
@@ -4548,8 +4594,10 @@ def parse_csv(data_bytes):
         raise HTTPException(400, "تعذّر قراءة ترميز الملف — احفظه بصيغة UTF-8")
     reader = csv.reader(io.StringIO(text))
     rows = list(reader)
-    if not rows: return [], []
-    return [str(c).strip() for c in rows[0]], rows[1:]
+    if not rows: return [], [], {"year_hint": None}
+    hidx, year_hint = find_header_row(rows)
+    headers = [str(c).strip() for c in rows[hidx]]
+    return headers, rows[hidx+1:], {"year_hint": year_hint}
 
 
 def parse_excel(data_bytes):
@@ -4562,10 +4610,11 @@ def parse_excel(data_bytes):
         wb = openpyxl.load_workbook(io.BytesIO(data_bytes), data_only=True, read_only=True)
         ws = wb.active
         all_rows = list(ws.iter_rows(values_only=True))
-        if not all_rows: return [], []
-        headers = [str(c).strip() if c is not None else "" for c in all_rows[0]]
-        rows = [[c for c in r] for r in all_rows[1:] if any(c is not None for c in r)]
-        return headers, rows
+        if not all_rows: return [], [], {"year_hint": None}
+        hidx, year_hint = find_header_row(all_rows)
+        headers = [str(c).strip() if c is not None else "" for c in all_rows[hidx]]
+        rows = [[c for c in r] for r in all_rows[hidx+1:] if any(c is not None for c in r)]
+        return headers, rows, {"year_hint": year_hint}
     except Exception as e:
         raise HTTPException(400, f"تعذّر قراءة الملف: {str(e)[:120]}")
 
@@ -4580,7 +4629,18 @@ def _to_num(v):
     except: return None
 
 
-def parse_date_to_period(val, day_first=None):
+AR_MONTHS_MAP = {
+    "يناير": 1, "فبراير": 2, "مارس": 3, "أبريل": 4, "ابريل": 4, "مايو": 5,
+    "يونيو": 6, "يوليو": 7, "أغسطس": 8, "اغسطس": 8, "سبتمبر": 9,
+    "أكتوبر": 10, "اكتوبر": 10, "نوفمبر": 11, "ديسمبر": 12,
+    "january": 1, "february": 2, "march": 3, "april": 4, "may": 5, "june": 6,
+    "july": 7, "august": 8, "september": 9, "october": 10, "november": 11, "december": 12,
+    "jan": 1, "feb": 2, "mar": 3, "apr": 4, "jun": 6, "jul": 7, "aug": 8,
+    "sep": 9, "oct": 10, "nov": 11, "dec": 12,
+}
+
+
+def parse_date_to_period(val, day_first=None, year_hint=None):
     """يحوّل أي تاريخ شائع لـ YYYY-MM.
     day_first=True → DD/MM/YYYY (النمط السعودي/البنكي)
     day_first=False → MM/DD/YYYY (النمط الأمريكي/POS)
@@ -4588,6 +4648,14 @@ def parse_date_to_period(val, day_first=None):
     if val is None: return None
     s = str(val).strip()
     if not s: return None
+    # اسم شهر عربي/إنجليزي (مثل "يناير" أو "مارس 2024")
+    s_low = s.lower()
+    for mname, mnum in AR_MONTHS_MAP.items():
+        if mname in s_low:
+            import re as _re
+            ym = _re.search(r"(20\d{2})", s)
+            y = int(ym.group(1)) if ym else (year_hint or datetime.now().year)
+            return f"{y:04d}-{mnum:02d}"
     # YYYY-MM-DD or YYYY/MM/DD or YYYY-MM
     if len(s) >= 7 and (s[4] in "-/"):
         try:
@@ -4651,19 +4719,21 @@ def is_transactions_file(col_map):
 
 
 def is_bank_statement(col_map):
-    """يكشف لو الملف كشف حساب بنكي: تاريخ + (دائن أو مدين)، وبدون عمود فرع."""
+    """يكشف لو الملف كشف حساب بنكي: تاريخ/شهر + (دائن أو مدين)، وبدون عمود فرع."""
     cols = set(col_map.values())
-    has_date = "tx_date" in cols
+    has_date = "tx_date" in cols or "period" in cols
     has_bank_cols = "bank_credit" in cols or "bank_debit" in cols
     return has_date and has_bank_cols and "tx_branch" not in cols
 
 
-def aggregate_bank_statement(rows, col_map):
+def aggregate_bank_statement(rows, col_map, year_hint=None):
     """يلخّص كشف الحساب: إيداعات ومسحوبات شهرية.
+    يفهم الكشوف التفصيلية (تاريخ) والملخصات الشهرية (عمود الشهر بأسماء عربية).
     يرجع {period: {"deposits": x, "withdrawals": y, "ops": n}}"""
     field_to_idx = {std: idx for idx, std in col_map.items()}
+    date_idx = field_to_idx.get("tx_date", field_to_idx.get("period", -1))
     # كشوف البنوك السعودية غالباً DD/MM — نكشف النمط من البيانات نفسها
-    day_first = detect_date_format(rows, field_to_idx.get("tx_date", -1))
+    day_first = detect_date_format(rows, date_idx)
     if day_first is None:
         day_first = True  # الافتراضي للكشوف البنكية: يوم/شهر
     months = {}
@@ -4674,9 +4744,12 @@ def aggregate_bank_statement(rows, col_map):
             idx = field_to_idx.get(field)
             if idx is None or idx >= len(r): return None
             return r[idx]
-        period = parse_date_to_period(get("tx_date"), day_first=day_first)
+        date_val = get("tx_date")
+        if date_val is None or str(date_val).strip() == "":
+            date_val = get("period")
+        period = parse_date_to_period(date_val, day_first=day_first, year_hint=year_hint)
         if not period:
-            continue
+            continue  # صفوف العناوين/الإجمالي السنوي تفشل هنا وتُتجاهل تلقائياً
         credit = _to_num(get("bank_credit")) or 0
         debit = _to_num(get("bank_debit")) or 0
         # بعض البنوك تضع المدين بإشارة سالبة في نفس العمود
@@ -4687,18 +4760,22 @@ def aggregate_bank_statement(rows, col_map):
         b = months.setdefault(period, {"deposits": 0.0, "withdrawals": 0.0, "ops": 0})
         b["deposits"] += credit
         b["withdrawals"] += debit
-        b["ops"] += 1
+        ops_val = _to_num(get("bank_ops"))
+        b["ops"] += int(ops_val) if ops_val else 1
     return {p: {"deposits": round(v["deposits"], 2), "withdrawals": round(v["withdrawals"], 2), "ops": v["ops"]}
             for p, v in months.items()}
 
 
-def aggregate_transactions(rows, col_map, headers):
-    """يلخّص معاملات POS الخام إلى صفوف شهرية بالفرع."""
+def aggregate_transactions(rows, col_map, headers, year_hint=None):
+    """يلخّص معاملات POS الخام إلى صفوف شهرية بالفرع.
+    يفهم: الإجمالي أو (قبل الضريبة + الضريبة)، الخصومات، الإيصالات الفريدة، وحالات الرفض."""
     field_to_idx = {std: idx for idx, std in col_map.items()}
     day_first = detect_date_format(rows, field_to_idx.get("tx_date", -1))
     if day_first is None:
         day_first = False  # الافتراضي لملفات POS: شهر/يوم
     aggregated = {}
+    RETURNED = ("returned", "refunded", "مرتجع", "ملغي", "ملغية", "ملغاة", "cancelled", "canceled",
+                "مرفوضة", "مرفوض", "rejected", "declined", "فاشلة", "failed")
     for r in rows:
         if not r or all(c is None or str(c).strip() == "" for c in r):
             continue
@@ -4708,10 +4785,20 @@ def aggregate_transactions(rows, col_map, headers):
             return r[idx]
 
         branch_name = str(get("tx_branch") or "").strip()
-        period = parse_date_to_period(get("tx_date"), day_first=day_first)
+        period = parse_date_to_period(get("tx_date"), day_first=day_first, year_hint=year_hint)
+
+        # المبلغ: الإجمالي أولاً، وإلا (قبل الضريبة + الضريبة)، وإلا قبل الضريبة
         amount = _to_num(get("tx_amount"))
+        if amount is None:
+            pre = _to_num(get("tx_pre_tax"))
+            vat = _to_num(get("tx_vat"))
+            if pre is not None:
+                amount = pre + (vat or 0)
+
         status = str(get("tx_status") or "").strip().lower()
         customer = get("tx_customer")
+        discount = _to_num(get("tx_discount")) or 0
+        receipt = get("tx_receipt")
 
         if not branch_name or not period or amount is None:
             continue
@@ -4720,26 +4807,34 @@ def aggregate_transactions(rows, col_map, headers):
         bucket = aggregated.setdefault(key, {
             "sales": 0.0, "invoices": 0, "customers_set": set(),
             "returned_amount": 0.0, "returns_count": 0,
+            "discounts": 0.0, "receipts_set": set(),
         })
 
-        is_returned = status in ("returned", "refunded", "مرتجع", "ملغي", "cancelled", "canceled")
+        is_returned = status in RETURNED
         if is_returned:
             bucket["returned_amount"] += amount
             bucket["returns_count"] += 1
         else:
             bucket["sales"] += amount
-            bucket["invoices"] += 1
+            bucket["discounts"] += discount
+            if receipt is not None and str(receipt).strip():
+                bucket["receipts_set"].add(str(receipt).strip())
+            else:
+                bucket["invoices"] += 1
             if customer is not None and str(customer).strip():
                 bucket["customers_set"].add(str(customer).strip())
 
     result = {}
     for key, b in aggregated.items():
+        # لو فيه أرقام إيصالات: عدد الفواتير = الإيصالات الفريدة (أدق)
+        invoices = len(b["receipts_set"]) if b["receipts_set"] else b["invoices"]
         result[key] = {
             "sales": round(b["sales"], 2),
-            "invoices": b["invoices"],
+            "invoices": invoices,
             "customers": len(b["customers_set"]),
             "returned_amount": round(b["returned_amount"], 2),
             "returns_count": b["returns_count"],
+            "discounts": round(b["discounts"], 2),
         }
     return result
 
@@ -4762,9 +4857,9 @@ async def company_upload_preview(file: UploadFile = File(...), user: User = Depe
         raise HTTPException(400, f"الملف كبير جداً ({len(data)//(1024*1024)} MB). الحد الأقصى ٢٠ MB.")
     name = (file.filename or "").lower()
     if name.endswith(".csv"):
-        headers, rows = parse_csv(data)
+        headers, rows, fctx = parse_csv(data)
     elif name.endswith((".xlsx", ".xlsm")):
-        headers, rows = parse_excel(data)
+        headers, rows, fctx = parse_excel(data)
     else:
         raise HTTPException(400, "ادعم CSV أو Excel (.csv .xlsx) فقط")
 
@@ -4797,7 +4892,7 @@ async def company_upload_preview(file: UploadFile = File(...), user: User = Depe
     bank_summary = None
     _cmap = {m["index"]: m["matched"] for m in matched if m["matched"]}
     if is_bank_statement(_cmap):
-        bmonths = aggregate_bank_statement(rows, _cmap)
+        bmonths = aggregate_bank_statement(rows, _cmap, year_hint=fctx.get("year_hint"))
         if bmonths:
             periods_sorted = sorted(bmonths.keys())
             bank_summary = {
@@ -4809,7 +4904,7 @@ async def company_upload_preview(file: UploadFile = File(...), user: User = Depe
                 "total_ops": sum(v["ops"] for v in bmonths.values()),
             }
     elif is_transactions_file(_cmap):
-        agg = aggregate_transactions(rows, _cmap, headers)
+        agg = aggregate_transactions(rows, _cmap, headers, year_hint=fctx.get("year_hint"))
         if agg:
             _branches = sorted(set(k[0] for k in agg.keys()))
             _periods = sorted(set(k[1] for k in agg.keys()))
@@ -4847,9 +4942,9 @@ async def company_upload_import(file: UploadFile = File(...), user: User = Depen
         raise HTTPException(400, "الملف كبير جداً (أعلى من ٢٠ MB)")
     name = (file.filename or "").lower()
     if name.endswith(".csv"):
-        headers, rows = parse_csv(data)
+        headers, rows, fctx = parse_csv(data)
     elif name.endswith((".xlsx", ".xlsm")):
-        headers, rows = parse_excel(data)
+        headers, rows, fctx = parse_excel(data)
     else:
         raise HTTPException(400, "ادعم CSV أو Excel فقط")
     if len(rows) > 100000:
@@ -4871,7 +4966,7 @@ async def company_upload_import(file: UploadFile = File(...), user: User = Depen
     # === مسار كشف الحساب البنكي: حفظ الإيداعات الشهرية للمطابقة ===
     # ============================================================
     if is_bank_statement(col_map):
-        bmonths = aggregate_bank_statement(rows, col_map)
+        bmonths = aggregate_bank_statement(rows, col_map, year_hint=fctx.get("year_hint"))
         if not bmonths:
             raise HTTPException(400, "لم نستطع قراءة كشف الحساب — تأكد من أعمدة التاريخ والدائن/المدين")
         with Session(engine) as s:
@@ -4928,7 +5023,7 @@ async def company_upload_import(file: UploadFile = File(...), user: User = Depen
     # ============================================================
     if is_transactions_file(col_map):
         try:
-            aggregated = aggregate_transactions(rows, col_map, headers)
+            aggregated = aggregate_transactions(rows, col_map, headers, year_hint=fctx.get("year_hint"))
         except Exception as e:
             raise HTTPException(400, f"خطأ أثناء تلخيص المعاملات: {type(e).__name__}: {str(e)[:180]}")
         if not aggregated:
@@ -4979,7 +5074,7 @@ async def company_upload_import(file: UploadFile = File(...), user: User = Depen
                         existing_entry.sales = agg["sales"]
                         existing_entry.invoices = agg["invoices"]
                         existing_entry.customers = agg["customers"]
-                        existing_entry.discounts = agg["returned_amount"]
+                        existing_entry.discounts = agg.get("discounts", 0.0)
                         existing_entry.avg_invoice = m["avg_invoice"]
                         existing_entry.growth = m["growth"]
                         existing_entry.branch_score = m["branch_score"]
@@ -4994,7 +5089,7 @@ async def company_upload_import(file: UploadFile = File(...), user: User = Depen
                             sales=agg["sales"], expenses=0,
                             invoices=agg["invoices"], customers=agg["customers"],
                             new_customers=0, repeat_customers=0,
-                            discounts=agg["returned_amount"], deposited=0, top_products="",
+                            discounts=agg.get("discounts", 0.0), deposited=0, top_products="",
                             profit=0, margin=0,
                             avg_invoice=m["avg_invoice"], repeat_rate=0,
                             growth=m["growth"], branch_score=m["branch_score"],
