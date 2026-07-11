@@ -5358,7 +5358,7 @@ def page_company_memory():
 # ===== نسخة النظام: للتحقق أن آخر تحديث منشور فعلاً =====
 # ============================================================
 
-NABBAH_VERSION = "5.1-pos-memory"
+NABBAH_VERSION = "5.2-smart-recognition"
 
 @app.get("/version")
 def version_check():
@@ -5370,6 +5370,9 @@ def version_check():
             "company_memory": True,
             "executive_framework": True,
             "smart_column_inference": True,
+            "header_row_detection": True,
+            "arabic_months": True,
+            "bank_statement_import": True,
             "executive_brief": True,
         },
         "excel_support": _check_openpyxl(),
