@@ -547,6 +547,11 @@ def get_sections(plan):
 def home():
     return FileResponse("index.html")
 
+@app.get("/i18n.js")
+def serve_i18n():
+    # ملف نظام اللغتين — يُخدَم بنوع MIME الصحيح ليعمل زر تبديل اللغة
+    return FileResponse("i18n.js", media_type="application/javascript")
+
 @app.get("/index.html")
 def page_index():
     return FileResponse("index.html")
