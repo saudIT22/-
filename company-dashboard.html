@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -180,8 +181,8 @@
     </a>
     <div class="head-actions">
       <span class="pill" id="userPill">👤 <b id="userName">…</b></span>
-      <a class="btn btn-ghost" href="company-input.html">＋ إدخال بيانات</a>
-      <button class="btn btn-ghost" onclick="logout()">خروج</button>
+      <a class="btn btn-ghost" href="company-input.html">＋ <span data-i18n="nav.input">إدخال بيانات</span></a>
+      <button class="btn btn-ghost" onclick="logout()" data-i18n="nav.logout">خروج</button>
     </div>
   </div>
 </header>
@@ -189,7 +190,7 @@
 <div class="wrap">
 
   <div class="page-head">
-    <h1 id="title">لوحة المدير التنفيذي</h1>
+    <h1 id="title" data-i18n="dash.title">لوحة المدير التنفيذي</h1>
     <p id="subtitle">تحليل شامل لأداء الفروع ومقارنتها بالمؤشرات الرئيسية</p>
   </div>
 
@@ -376,13 +377,13 @@
     <a class="btn btn-ghost" href="company-competitors.html">🥊 المنافسون</a>
     <a class="btn btn-ghost" href="company-data-quality.html">📊 جودة البيانات</a>
     <a class="btn btn-ghost" href="company-memory.html">🧠 ذاكرة الشركة</a>
-    <a class="btn btn-ghost" href="company-decisions.html">⚡ متابعة القرارات</a>
+    <a class="btn btn-ghost" href="company-decisions.html">⚡ <span data-i18n="nav.decisions">متابعة القرارات</span></a>
     <a class="btn btn-ghost" href="company-monthly-report.html">📊 التقرير الشهري</a>
     <a class="btn btn-ghost" href="company-cashflow.html">💧 التدفق النقدي</a>
     <a class="btn btn-ghost" href="company-leakage.html">🛡️ كشف التسرّب</a>
     <a class="btn btn-ghost" href="company-tax.html">🧾 الضريبة والزكاة</a>
     <a class="btn btn-ghost" href="company-team.html">👥 صلاحيات الفريق</a>
-    <a class="btn btn-ghost" href="company-report.html">التقرير التنفيذي</a>
+    <a class="btn btn-ghost" href="company-report.html" data-i18n="nav.report">التقرير التنفيذي</a>
     <a class="btn btn-ghost" href="dashboard.html">قسم الأفراد / المطاعم</a>
   </div>
 
@@ -710,7 +711,7 @@ async function loadPulse(){
     box.innerHTML=`
       <div style="background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px 16px">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
-          <b style="font-size:14.5px">💓 نبض شركتك</b>
+          <b style="font-size:14.5px">💓 <span data-i18n="dash.pulse">نبض شركتك</span></b>
           <span style="font-size:11.5px;color:var(--txt-mute);flex:1">راجعه أسبوعياً — محسوب من بياناتك الفعلية</span>
           <a href="company-monthly-report.html" style="font-size:12.5px;color:var(--mint);font-weight:700">📊 التقرير الشهري ←</a>
         </div>
@@ -730,5 +731,6 @@ loadPulse();
 loadSetup();
 init();
 </script>
+  <script src="i18n.js"></script>
 </body>
 </html>
