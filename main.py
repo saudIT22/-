@@ -550,7 +550,12 @@ def home():
 @app.get("/i18n.js")
 def serve_i18n():
     # ملف نظام اللغتين — يُخدَم بنوع MIME الصحيح ليعمل زر تبديل اللغة
-    return FileResponse("i18n.js", media_type="application/javascript")
+    import os as _os
+    if _os.path.exists("i18n.js"):
+        return FileResponse("i18n.js", media_type="application/javascript")
+    # لو الملف غير مرفوع بعد: نرد سكربت فارغ آمن بدل كسر السيرفر
+    from fastapi.responses import Response as _Resp
+    return _Resp(content="/* i18n.js not uploaded yet */", media_type="application/javascript")
 
 @app.get("/index.html")
 def page_index():
