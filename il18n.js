@@ -77,6 +77,39 @@
 
     // ---- التوقعات ----
     "outlook.title": { ar: "النظرة المستقبلية", en: "Forecast Outlook" },
+
+    // ---- اللوحة: بطاقات ومقاطع كاملة ----
+    "dash.loading": { ar: "جارٍ تحميل بيانات الشركة…", en: "Loading company data…" },
+    "dash.start.title": { ar: "ابدأ بإنشاء شركتك", en: "Start by creating your company" },
+    "dash.start.body": { ar: "سجّل شركتك وفروعها، أدخل بيانات كل فرع، ويبدأ نبّاه يحلل الأداء ويقارن الفروع ويعطيك قرارات تنفيذية فوراً.", en: "Register your company and branches, enter each branch's data, and Nabbah starts analyzing performance, comparing branches, and giving you executive decisions right away." },
+    "dash.start.btn": { ar: "إنشاء شركة جديدة", en: "Create a new company" },
+    "dash.pending.title": { ar: "شركتك قيد التفعيل", en: "Your company is being activated" },
+    "dash.pending.body": { ar: "تم تسجيل شركتك بنجاح وهي الآن بانتظار تفعيل الاشتراك. بمجرد التفعيل تنفتح لك كل خدمات قسم الشركات.", en: "Your company was registered successfully and is awaiting subscription activation. Once active, all company services unlock." },
+    "dash.pending.contact": { ar: "تواصل لإتمام التفعيل", en: "Contact us to activate" },
+    "dash.pending.plans": { ar: "عرض الباقات والأسعار", en: "View plans & pricing" },
+    "dash.ready.title": { ar: "الشركة جاهزة — أدخل بيانات الفروع", en: "Company ready — add your branch data" },
+    "dash.ready.upload": { ar: "رفع ملف — الأسرع والأذكى", en: "Upload a file — fastest and smartest" },
+    "dash.ready.manual": { ar: "أو إدخال يدوي فرع بفرع", en: "Or enter manually, branch by branch" },
+    "dash.cmp.sales": { ar: "مقارنة الفروع — المبيعات", en: "Branch Comparison — Sales" },
+    "dash.cmp.sales.sub": { ar: "المبيعات الفعلية لكل فرع (آخر فترة)", en: "Actual sales per branch (latest period)" },
+    "dash.rank": { ar: "ترتيب الفروع (مؤشر الأداء)", en: "Branch Ranking (Performance Score)" },
+    "dash.rank.sub": { ar: "من 100 — مع اتجاه المؤشر عن الفترة السابقة", en: "Out of 100 — with trend vs previous period" },
+    "dash.map": { ar: "توزيع الفروع على الخريطة", en: "Branches on the Map" },
+    "dash.map.sub": { ar: "كل فرع بلونه حسب أدائه", en: "Each branch colored by performance" },
+    "rate.excellent": { ar: "ممتاز", en: "Excellent" },
+    "rate.good": { ar: "جيد", en: "Good" },
+    "rate.mid": { ar: "متوسط", en: "Average" },
+    "rate.weak": { ar: "ضعيف", en: "Weak" },
+    "dash.rootcause": { ar: "تحليل الأسباب", en: "Root-Cause Analysis" },
+    "dash.rootcause.sub": { ar: "الفرع الأقل أداءً مقابل متوسط الشركة", en: "Lowest branch vs company average" },
+    "dash.bestpractice": { ar: "أفضل الممارسات", en: "Best Practices" },
+    "dash.bestpractice.sub": { ar: "من الفرع الأعلى أداءً", en: "From the top-performing branch" },
+    "dash.similar": { ar: "مقارنة الفروع المتشابهة", en: "Compare Similar Branches" },
+    "dash.similar.sub": { ar: "حسب نوع الفرع", en: "By branch type" },
+    "dash.forecast": { ar: "التنبؤ بالأداء (الفترة القادمة)", en: "Performance Forecast (next period)" },
+    "dash.forecast.sub": { ar: "مبني على اتجاه مبيعات كل فرع عبر الفترات السابقة", en: "Based on each branch's sales trend across prior periods" },
+    "dash.simulator": { ar: "محاكي القرارات", en: "Decision Simulator" },
+    "dash.simulator.sub": { ar: "شوف أثر قراراتك على المبيعات والربح قبل ما تنفّذها", en: "See the impact of your decisions on sales and profit before you act" },
   };
 
   const STORAGE_KEY = "nabbah_lang";
