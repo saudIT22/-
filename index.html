@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
   :root{
     --mint:#10b981;
@@ -170,14 +171,15 @@
 <nav><div class="wrap nav-in">
   <a class="logo" href="index.html"><span class="bell">🔔</span> نبّاه</a>
   <div class="nav-links">
-    <a href="#how">كيف يعمل</a>
-    <a href="#why">لماذا نبّاه</a>
-    <a href="#features">المميزات</a>
-    <a href="#pricing">الباقات</a>
-    <a href="trial.html" style="color:#10b981;font-weight:700">🎁 كود التجربة</a>
-    <a href="company-dashboard.html" id="nav-company" style="color:#065f46;font-weight:700">🏢 الشركات</a>
-    <a href="login.html" id="nav-login">تسجيل الدخول</a>
-    <a href="input.html" class="btn btn-primary">ابدأ تحليل منشأتك</a>
+    <a href="#how" data-i18n="landing.how">كيف يعمل</a>
+    <a href="#why" data-i18n="landing.why">لماذا نبّاه</a>
+    <a href="#features" data-i18n="landing.features">المميزات</a>
+    <a href="#pricing" data-i18n="landing.pricing">الباقات</a>
+    <a href="trial.html" style="color:#10b981;font-weight:700">🎁 <span data-i18n="landing.trial">كود التجربة</span></a>
+    <a href="company-dashboard.html" id="nav-company" style="color:#065f46;font-weight:700">🏢 <span data-i18n="landing.companies">الشركات</span></a>
+    <a href="login.html" id="nav-login" data-i18n="landing.login">تسجيل الدخول</a>
+    <button id="navLangToggle" type="button" style="background:transparent;border:1.5px solid #10b981;color:#0b8457;font-weight:800;font-size:14px;padding:7px 14px;border-radius:9px;cursor:pointer;font-family:inherit;transition:.2s" onmouseover="this.style.background='#10b981';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='#0b8457'">EN</button>
+    <a href="input.html" class="btn btn-primary" data-i18n="landing.cta">ابدأ تحليل منشأتك</a>
   </div>
 </div></nav>
 
@@ -531,5 +533,6 @@
   </svg>
 </a>
 
+  <script src="i18n.js"></script>
 </body>
 </html>
