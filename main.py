@@ -6,7 +6,7 @@ import jwt
 import bcrypt
 from dotenv import load_dotenv
 from google import genai
-from fastapi import FastAPI, HTTPException, Header, Depends, UploadFile, File, Form
+from fastapi import FastAPI, HTTPException, Header, Depends, UploadFile, File, Form, Request
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 import csv
@@ -20,16 +20,35 @@ load_dotenv()
 ai_client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 # مفتاح سري لتوقيع رموز الدخول (يُضبط في Railway Variables)
-SECRET_KEY = os.getenv("SECRET_KEY", "nabbah-dev-secret-change-me")
+_secret_env = os.getenv("SECRET_KEY", "").strip()
+if not _secret_env:
+    # لا نستخدم قيمة افتراضية معروفة أبداً — نولّد مفتاحاً عشوائياً لكل إقلاع.
+    # (سيُخرج المستخدمين عند إعادة التشغيل، وهذا مقصود: ينبّهك أن SECRET_KEY غير مضبوط)
+    import secrets as _secrets
+    _secret_env = _secrets.token_urlsafe(48)
+    print("⚠️  تحذير أمني: SECRET_KEY غير مضبوط في متغيرات البيئة — تم توليد مفتاح مؤقت.")
+    print("⚠️  اضبط SECRET_KEY في Railway Variables وإلا ستنتهي جلسات المستخدمين عند كل نشر.")
+SECRET_KEY = _secret_env
 TOKEN_DAYS = 30  # مدة صلاحية الدخول
 
 app = FastAPI()
 
+# CORS: مقيّد على نطاقات نبّاه فقط (يمنع أي موقع خارجي من استدعاء الـAPI)
+_allowed_origins = [
+    "https://nabbah.com",
+    "https://www.nabbah.com",
+    "https://nabbah.up.railway.app",
+]
+_extra_origin = os.getenv("EXTRA_ORIGIN", "").strip()
+if _extra_origin:
+    _allowed_origins.append(_extra_origin)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=_allowed_origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Admin-Key"],
 )
 
 class SalesData(BaseModel):
@@ -284,6 +303,46 @@ run_migrations()
 
 
 # ===== أدوات الأمان: كلمات المرور والرموز =====
+# ===== حماية من تخمين كلمات المرور (Brute Force) =====
+_login_attempts = {}   # {ip_or_email: [timestamps]}
+_LOGIN_WINDOW = 900    # 15 دقيقة
+_LOGIN_MAX = 8         # 8 محاولات فاشلة كحد أقصى
+
+
+def _throttle_key(request, email: str) -> str:
+    ip = ""
+    try:
+        ip = request.client.host if request and request.client else ""
+    except Exception:
+        pass
+    return f"{ip}|{(email or '').lower()}"
+
+
+def check_login_throttle(request, email: str):
+    """يمنع أكثر من 8 محاولات فاشلة خلال 15 دقيقة لنفس (IP + بريد)."""
+    key = _throttle_key(request, email)
+    now = datetime.now().timestamp()
+    hits = [t for t in _login_attempts.get(key, []) if now - t < _LOGIN_WINDOW]
+    _login_attempts[key] = hits
+    if len(hits) >= _LOGIN_MAX:
+        wait = int((_LOGIN_WINDOW - (now - hits[0])) / 60) + 1
+        raise HTTPException(429, f"محاولات كثيرة. حاول بعد {wait} دقيقة.")
+    # تنظيف دوري بسيط لمنع تضخّم الذاكرة
+    if len(_login_attempts) > 5000:
+        for k in list(_login_attempts.keys()):
+            if not [t for t in _login_attempts[k] if now - t < _LOGIN_WINDOW]:
+                _login_attempts.pop(k, None)
+
+
+def record_failed_login(request, email: str):
+    key = _throttle_key(request, email)
+    _login_attempts.setdefault(key, []).append(datetime.now().timestamp())
+
+
+def clear_login_attempts(request, email: str):
+    _login_attempts.pop(_throttle_key(request, email), None)
+
+
 def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
@@ -589,12 +648,15 @@ def register(data: RegisterData):
         return {"token": token, "name": user.name, "is_active": user.is_active, "plan": user.plan}
 
 @app.post("/login")
-def login(data: LoginData):
+def login(data: LoginData, request: Request):
     email = data.email.strip().lower()
+    check_login_throttle(request, email)
     with Session(engine) as s:
         user = s.exec(select(User).where(User.email == email)).first()
         if not user or not verify_password(data.password, user.password_hash):
+            record_failed_login(request, email)
             raise HTTPException(status_code=401, detail="البريد أو كلمة المرور غير صحيحة")
+        clear_login_attempts(request, email)
         token = create_token(user.id)
         return {"token": token, "name": user.name, "is_active": user.is_active, "plan": user.plan}
 
@@ -5363,8 +5425,10 @@ NABBAH_VERSION = "5.2-smart-recognition"
 @app.get("/version")
 def version_check():
     """افتح nabbah.up.railway.app/version — لو ما شفت هذي النسخة فالتحديث غير منشور."""
+    # النسخة العامة مختصرة عمداً — التفاصيل الكاملة عبر /files-check للأدمن
     return {
         "version": NABBAH_VERSION,
+        "status": "ok",
         "features": {
             "pos_transactions_import": True,
             "company_memory": True,
@@ -5585,7 +5649,7 @@ def page_company_decisions():
 # ============================================================
 
 @app.get("/files-check")
-def files_check():
+def files_check(_: bool = Depends(verify_admin)):
     """افتح nabbah.com/files-check — يبيّن أي صفحة ناقصة على السيرفر فوراً."""
     import os
     REQUIRED_PAGES = [
@@ -5619,7 +5683,7 @@ def files_check():
 
 
 @app.get("/pages-check")
-def pages_check():
+def pages_check(_: bool = Depends(verify_admin)):
     """يفحص إذا صفحات الوحدات محدّثة (فيها التحصينات) أو نسخ قديمة."""
     import os
     # علامات النسخة الجديدة في كل صفحة
