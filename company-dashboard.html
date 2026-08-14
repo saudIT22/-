@@ -201,9 +201,9 @@
   <div id="noCompany" style="display:none">
     <div class="empty-cta">
       <div class="big">🏢</div>
-      <h3>ابدأ بإنشاء شركتك</h3>
-      <p>سجّل شركتك وفروعها، أدخل بيانات كل فرع، ويبدأ نبّاه يحلل الأداء ويقارن الفروع ويعطيك قرارات تنفيذية فوراً.</p>
-      <a class="btn btn-mint" href="company-register.html">إنشاء شركة جديدة</a>
+      <h3 data-i18n="dash.start.title">ابدأ بإنشاء شركتك</h3>
+      <p data-i18n="dash.start.body">سجّل شركتك وفروعها، أدخل بيانات كل فرع، ويبدأ نبّاه يحلل الأداء ويقارن الفروع ويعطيك قرارات تنفيذية فوراً.</p>
+      <a data-i18n="dash.start.btn" class="btn btn-mint" href="company-register.html">إنشاء شركة جديدة</a>
     </div>
   </div>
 
@@ -211,10 +211,10 @@
   <div id="pending" style="display:none">
     <div class="empty-cta">
       <div class="big">⏳</div>
-      <h3 id="pendingTitle">شركتك قيد التفعيل</h3>
+      <h3 data-i18n="dash.pending.title" id="pendingTitle">شركتك قيد التفعيل</h3>
       <p>تم تسجيل شركتك بنجاح ✅ وهي الآن بانتظار تفعيل الاشتراك. بمجرد التفعيل تنفتح لك كل خدمات قسم الشركات (اللوحة، مقارنة الفروع، التدفق النقدي، كشف التسرّب، وغيرها).</p>
-      <a class="btn btn-mint" href="https://wa.me/" id="pendingContact" target="_blank">تواصل لإتمام التفعيل</a>
-      <div style="margin-top:14px"><a href="index.html#enterprise-pricing" style="color:var(--mint);font-size:13.5px">عرض الباقات والأسعار</a></div>
+      <a data-i18n="dash.pending.contact" class="btn btn-mint" href="https://wa.me/" id="pendingContact" target="_blank">تواصل لإتمام التفعيل</a>
+      <div style="margin-top:14px"><a data-i18n="dash.pending.plans" href="index.html#enterprise-pricing" style="color:var(--mint);font-size:13.5px">عرض الباقات والأسعار</a></div>
     </div>
   </div>
 
@@ -222,11 +222,11 @@
   <div id="noData" style="display:none">
     <div class="empty-cta">
       <div class="big">📊</div>
-      <h3>الشركة جاهزة — أدخل بيانات الفروع</h3>
+      <h3 data-i18n="dash.ready.title">الشركة جاهزة — أدخل بيانات الفروع</h3>
       <p>ابدأ فوراً — <b style="color:var(--mint)">ارفع ملف Excel أو CSV واحد</b> من نظامك (نظام كاشير POS، نظام محاسبة، ERP، أو ملف يدوي)، ويشغّل نبّاه كل الخدمات تلقائياً: تحليل، تسرّب، تدفق نقدي، صحة، تنبؤ، مخاطر، Benchmarks، Root Cause، والباقي.</p>
       <div style="display:flex;gap:10px;flex-direction:column;max-width:340px;margin:20px auto 0">
         <a class="btn btn-mint" href="company-upload.html" style="background:linear-gradient(135deg,#10b981,#34d399);padding:16px;font-weight:900;font-size:16px">📂 رفع ملف — الأسرع والأذكى</a>
-        <a class="btn btn-ghost" href="company-input.html" style="padding:12px">أو إدخال يدوي فرع بفرع</a>
+        <a data-i18n="dash.ready.manual" class="btn btn-ghost" href="company-input.html" style="padding:12px">أو إدخال يدوي فرع بفرع</a>
       </div>
     </div>
   </div>
@@ -247,12 +247,12 @@
     <div class="two">
       <div class="panel">
         <h2>📊 مقارنة الفروع — المبيعات</h2>
-        <div class="sub">المبيعات الفعلية لكل فرع (آخر فترة)</div>
+        <div data-i18n="dash.cmp.sales.sub" class="sub">المبيعات الفعلية لكل فرع (آخر فترة)</div>
         <div style="height:260px"><canvas id="cmpChart"></canvas></div>
       </div>
       <div class="panel">
         <h2>🏆 ترتيب الفروع (مؤشر الأداء)</h2>
-        <div class="sub">من 100 — مع اتجاه المؤشر عن الفترة السابقة</div>
+        <div data-i18n="dash.rank.sub" class="sub">من 100 — مع اتجاه المؤشر عن الفترة السابقة</div>
         <div id="ranking"></div>
       </div>
     </div>
@@ -261,7 +261,7 @@
     <div class="two">
       <div class="panel">
         <h2>🗺️ توزيع الفروع على الخريطة</h2>
-        <div class="sub">كل فرع بلونه حسب أدائه</div>
+        <div data-i18n="dash.map.sub" class="sub">كل فرع بلونه حسب أدائه</div>
         <div id="map"></div>
         <div class="legend">
           <span><i class="dot" style="background:#10b981"></i> ممتاز</span>
@@ -272,7 +272,7 @@
       </div>
       <div class="panel" id="rootPanel">
         <h2>🔍 تحليل الأسباب</h2>
-        <div class="sub" id="rootSub">الفرع الأقل أداءً مقابل متوسط الشركة</div>
+        <div data-i18n="dash.rootcause.sub" class="sub" id="rootSub">الفرع الأقل أداءً مقابل متوسط الشركة</div>
         <div id="rootCause"></div>
       </div>
     </div>
@@ -281,12 +281,12 @@
     <div class="two">
       <div class="panel" id="bpPanel">
         <h2>✅ أفضل الممارسات</h2>
-        <div class="sub">من الفرع الأعلى أداءً</div>
+        <div data-i18n="dash.bestpractice.sub" class="sub">من الفرع الأعلى أداءً</div>
         <div id="bestPractice"></div>
       </div>
       <div class="panel" id="similarPanel">
         <h2>🔗 مقارنة الفروع المتشابهة</h2>
-        <div class="sub">حسب نوع الفرع</div>
+        <div data-i18n="dash.similar.sub" class="sub">حسب نوع الفرع</div>
         <div style="height:240px"><canvas id="simChart"></canvas></div>
       </div>
     </div>
@@ -294,7 +294,7 @@
     <!-- forecast -->
     <div class="panel" id="fcPanel">
       <h2>📈 التنبؤ بالأداء (الفترة القادمة)</h2>
-      <div class="sub">مبني على اتجاه مبيعات كل فرع عبر الفترات السابقة</div>
+      <div data-i18n="dash.forecast.sub" class="sub">مبني على اتجاه مبيعات كل فرع عبر الفترات السابقة</div>
       <div class="fc-grid" id="forecast"></div>
     </div>
 
@@ -731,6 +731,15 @@ loadPulse();
 loadSetup();
 init();
 </script>
-  <script src="i18n.js"></script>
+  <script src="i18n.js">
+// ═══ إعادة تطبيق الترجمة على المحتوى الديناميكي عند تبديل اللغة ═══
+window.addEventListener("nabbah:langchange", function(){
+  // نعيد تحميل الأقسام الديناميكية بعد تغيير اللغة (لو الدوال موجودة)
+  try { if(typeof loadPulse==="function") loadPulse(); } catch(e){}
+  // نعيد ترجمة أي عناصر data-i18n ظهرت حديثاً
+  try { if(window.NabbahI18n) window.NabbahI18n.apply(); } catch(e){}
+});
+
+</script>
 </body>
 </html>
