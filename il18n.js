@@ -23,6 +23,16 @@
     "nav.logout": { ar: "تسجيل الخروج", en: "Log out" },
     "nav.home": { ar: "الرئيسية", en: "Home" },
 
+    // ---- القائمة العلوية (الصفحة الرئيسية) ----
+    "landing.how": { ar: "كيف يعمل", en: "How it works" },
+    "landing.why": { ar: "لماذا نبّاه", en: "Why Nabbah" },
+    "landing.features": { ar: "المميزات", en: "Features" },
+    "landing.pricing": { ar: "الباقات", en: "Pricing" },
+    "landing.trial": { ar: "كود التجربة", en: "Trial Code" },
+    "landing.companies": { ar: "الشركات", en: "Companies" },
+    "landing.login": { ar: "تسجيل الدخول", en: "Log in" },
+    "landing.cta": { ar: "ابدأ تحليل منشأتك", en: "Start Your Analysis" },
+
     // ---- أزرار ومشتركات ----
     "btn.save": { ar: "حفظ", en: "Save" },
     "btn.analyze": { ar: "تحليل", en: "Analyze" },
@@ -157,9 +167,11 @@
       if (val && val !== key) el.setAttribute("title", val);
     });
 
-    // تحديث زر التبديل نفسه
+    // تحديث زر التبديل نفسه (عائم أو في القائمة)
     const btn = document.getElementById("langToggle");
     if (btn) btn.textContent = lang === "ar" ? "EN" : "ع";
+    const navBtn = document.getElementById("navLangToggle");
+    if (navBtn) navBtn.textContent = lang === "ar" ? "EN" : "عربي";
 
     // حدث مخصّص للصفحات اللي تبي تتفاعل (مثل إعادة رسم الشارت بلغة ثانية)
     window.dispatchEvent(new CustomEvent("nabbah:langchange", { detail: { lang: lang } }));
@@ -171,6 +183,13 @@
 
   // ينشئ زر التبديل تلقائياً لو ما كان موجوداً في الصفحة
   function ensureToggle() {
+    // لو فيه زر في القائمة (navLangToggle) نستخدمه ولا ننشئ العائم
+    var navBtn = document.getElementById("navLangToggle");
+    if (navBtn) {
+      navBtn.textContent = getLang() === "ar" ? "EN" : "عربي";
+      navBtn.onclick = toggle;
+      return;
+    }
     if (document.getElementById("langToggle")) return;
     const btn = document.createElement("button");
     btn.id = "langToggle";
