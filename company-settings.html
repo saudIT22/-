@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نبّاه · إعدادات الشركة</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0a0f0c;--panel:#101a15;--panel2:#0e1712;--line:#1d2c24;--mint:#10b981;--mint-deep:#0c8f64;--gold:#f5b301;--red:#ef4444;--txt:#e8f1ec;--txt-soft:#9fb4aa;--txt-mute:#678075;--r:16px;}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--txt);line-height:1.7;min-height:100vh}
+  a{text-decoration:none;color:inherit}
+  .wrap{max-width:900px;margin:0 auto;padding:0 16px;position:relative;z-index:1}
+  header{position:sticky;top:0;z-index:40;background:rgba(10,15,12,.86);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+  .head-in{max-width:900px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:900;font-size:20px;color:#fff}
+  .brand .bell{width:36px;height:36px;border-radius:11px;background:var(--mint);display:grid;place-items:center;font-size:17px;transform:rotate(-5deg)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;font-family:inherit;font-weight:700;cursor:pointer;border:none;border-radius:11px;font-size:14px}
+  .btn-mint{background:var(--mint);color:#04130d;padding:12px 22px}
+  .btn-ghost{background:var(--panel);color:var(--txt-soft);padding:10px 15px;border:1px solid var(--line)}
+  .page-head{padding:26px 0 14px}
+  .page-head h1{font-size:26px;font-weight:900}
+  .page-head p{color:var(--txt-soft);font-size:14.5px;margin-top:4px}
+  .section{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;margin-bottom:16px}
+  .section-h{display:flex;align-items:center;gap:11px;margin-bottom:16px}
+  .section-h .ico{width:38px;height:38px;border-radius:10px;background:var(--panel2);display:grid;place-items:center;font-size:18px;border:1px solid var(--line)}
+  .section-h .t{font-size:17px;font-weight:800}
+  .section-h .s{font-size:12.5px;color:var(--txt-mute)}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:620px){.grid{grid-template-columns:1fr}}
+  .field label{display:block;font-size:13px;color:var(--txt-soft);margin-bottom:6px;font-weight:600}
+  .field input,.field select{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:11px 13px;color:var(--txt);font-family:inherit;font-size:14px}
+  .field input:focus,.field select:focus{outline:none;border-color:var(--mint)}
+  .chips{display:flex;gap:9px;flex-wrap:wrap}
+  .chip{background:var(--panel2);border:1.5px solid var(--line);border-radius:11px;padding:10px 16px;cursor:pointer;font-size:13.5px;font-weight:600;transition:.15s}
+  .chip.active{border-color:var(--mint);background:rgba(16,185,129,.12);color:var(--mint)}
+  .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--line)}
+  .toggle-row:last-child{border-bottom:none}
+  .toggle-row .lbl{font-size:14px}
+  .sw{position:relative;width:46px;height:26px;background:var(--line);border-radius:100px;cursor:pointer;transition:.2s;flex-shrink:0}
+  .sw.on{background:var(--mint)}
+  .sw::after{content:"";position:absolute;top:3px;right:3px;width:20px;height:20px;background:#fff;border-radius:50%;transition:.2s}
+  .sw.on::after{right:23px}
+  .save-bar{position:sticky;bottom:0;background:rgba(10,15,12,.92);backdrop-filter:blur(14px);border-top:1px solid var(--line);padding:14px 16px;margin-top:10px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .save-bar .msg{font-size:13px;color:var(--mint)}
+  .spin{width:30px;height:30px;border:3px solid var(--line);border-top-color:var(--mint);border-radius:50%;animation:sp 1s linear infinite;margin:40px auto}@keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<header>
+  <div class="head-in">
+    <a class="brand" href="company-dashboard.html"><span class="bell">🔔</span>نبّاه</a>
+    <a class="btn btn-ghost" href="company-dashboard.html" data-i18n="nav.dashboard">اللوحة</a>
+  </div>
+</header>
+<div class="wrap">
+  <div class="page-head">
+    <h1 data-i18n="set.title">إعداد الشركة</h1>
+    <p data-i18n="set.sub">كل ما يعرفه نبّاه عن شركتك — ليكيّف تحليله وأولوياته حسب واقعك.</p>
+  </div>
+
+  <div id="loading"><div class="spin"></div></div>
+  <div id="content" style="display:none">
+
+    <!-- ① معلومات الشركة -->
+    <div class="section">
+      <div class="section-h"><div class="ico">🏢</div><div><div class="t" data-i18n="set.s1">معلومات الشركة</div><div class="s" data-i18n="set.s1.sub">الاسم، القطاع، الدولة، العملة، السنة المالية</div></div></div>
+      <div class="grid">
+        <div class="field"><label data-i18n="set.name">اسم الشركة</label><input id="name" type="text"></div>
+        <div class="field"><label data-i18n="set.sector">القطاع / النشاط</label><select id="sector"></select></div>
+        <div class="field"><label data-i18n="set.country">الدولة</label><input id="country" type="text" value="SA"></div>
+        <div class="field"><label data-i18n="set.currency">العملة</label><input id="currency" type="text" value="SAR"></div>
+        <div class="field"><label data-i18n="set.fiscal">بداية السنة المالية (شهر)</label><select id="fiscal_year_start"></select></div>
+      </div>
+    </div>
+
+    <!-- ② الهيكل والحجم -->
+    <div class="section">
+      <div class="section-h"><div class="ico">📊</div><div><div class="t" data-i18n="set.s2">الهيكل والحجم</div><div class="s" data-i18n="set.s2.sub">عدد الموظفين، الإيرادات، هامش الربح المستهدف</div></div></div>
+      <div class="grid">
+        <div class="field"><label data-i18n="set.employees">عدد الموظفين</label><input id="employees" type="number" min="0"></div>
+        <div class="field"><label data-i18n="set.revenue">الإيرادات السنوية التقريبية</label><input id="annual_revenue" type="number" min="0"></div>
+        <div class="field"><label data-i18n="set.margin">هامش الربح المستهدف (%)</label><input id="target_margin" type="number" min="0" max="100"></div>
+      </div>
+    </div>
+
+    <!-- ③ مصادر البيانات -->
+    <div class="section">
+      <div class="section-h"><div class="ico">🔌</div><div><div class="t" data-i18n="set.s3">مصادر البيانات</div><div class="s" data-i18n="set.s3.sub">من أين يقرأ نبّاه بياناتك</div></div></div>
+      <div class="chips" id="sources">
+        <div class="chip active">Excel / CSV</div>
+        <div class="chip active" data-i18n="set.src.pos">نقاط البيع (POS)</div>
+        <div class="chip active" data-i18n="set.src.bank">كشف الحساب البنكي</div>
+        <div class="chip">ERP</div>
+        <div class="chip" data-i18n="set.src.acc">المحاسبة</div>
+        <div class="chip" data-i18n="set.src.inv">المخزون</div>
+        <div class="chip">CRM</div>
+      </div>
+      <p style="font-size:12px;color:var(--txt-mute);margin-top:10px" data-i18n="set.src.note">الأخضر = مفعّل حالياً. الربط المباشر مع الأنظمة قادم قريباً — حالياً الرفع اليدوي للملفات.</p>
+    </div>
+
+    <!-- ④ الصلاحيات -->
+    <div class="section">
+      <div class="section-h"><div class="ico">👥</div><div><div class="t" data-i18n="set.s4">الصلاحيات</div><div class="s" data-i18n="set.s4.sub">من يرى ماذا في المنصة</div></div></div>
+      <div class="chips">
+        <div class="chip active" data-i18n="role.owner">المالك</div>
+        <div class="chip" data-i18n="role.ceo">المدير التنفيذي</div>
+        <div class="chip" data-i18n="role.cfo">المدير المالي</div>
+        <div class="chip" data-i18n="role.branch">مدير الفرع</div>
+        <div class="chip" data-i18n="role.analyst">محلل</div>
+      </div>
+      <p style="font-size:12px;color:var(--txt-mute);margin-top:10px" data-i18n="set.role.note">إدارة أعضاء الفريق وصلاحياتهم من صفحة الفريق.</p>
+    </div>
+
+    <!-- ⑤ الأهداف والأولوية -->
+    <div class="section">
+      <div class="section-h"><div class="ico">🎯</div><div><div class="t" data-i18n="set.s5">الأهداف والأولوية</div><div class="s" data-i18n="set.s5.sub">أهم شيء لإدارتك — يوجّه نبّاه توصياته حسبه</div></div></div>
+      <label style="display:block;font-size:13px;color:var(--txt-soft);margin-bottom:9px;font-weight:600" data-i18n="set.priority">الأولوية القصوى</label>
+      <div class="chips" id="priorities"></div>
+      <div class="grid" style="margin-top:16px">
+        <div class="field"><label data-i18n="set.goal.sales">هدف المبيعات الشهري</label><input id="goal_sales" type="number" min="0"></div>
+        <div class="field"><label data-i18n="set.goal.profit">هدف الربح الشهري</label><input id="goal_profit" type="number" min="0"></div>
+        <div class="field"><label data-i18n="set.goal.customers">هدف عدد العملاء</label><input id="goal_customers" type="number" min="0"></div>
+        <div class="field"><label data-i18n="set.goal.retention">هدف الاحتفاظ بالعملاء (%)</label><input id="goal_retention" type="number" min="0" max="100"></div>
+      </div>
+    </div>
+
+    <!-- ⑥ التنبيهات -->
+    <div class="section">
+      <div class="section-h"><div class="ico">🔔</div><div><div class="t" data-i18n="set.s6">التنبيهات</div><div class="s" data-i18n="set.s6.sub">متى ينبّهك نبّاه</div></div></div>
+      <div id="alerts">
+        <div class="toggle-row"><span class="lbl" data-i18n="alert.sales">انخفاض المبيعات</span><div class="sw on" data-key="sales_drop"></div></div>
+        <div class="toggle-row"><span class="lbl" data-i18n="alert.expenses">ارتفاع المصروفات</span><div class="sw on" data-key="expense_rise"></div></div>
+        <div class="toggle-row"><span class="lbl" data-i18n="alert.liquidity">انخفاض السيولة</span><div class="sw on" data-key="liquidity_low"></div></div>
+        <div class="toggle-row"><span class="lbl" data-i18n="alert.inventory">مشكلة في المخزون</span><div class="sw" data-key="inventory_issue"></div></div>
+        <div class="toggle-row"><span class="lbl" data-i18n="alert.performance">انخفاض الأداء</span><div class="sw on" data-key="performance_drop"></div></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="save-bar">
+    <span class="msg" id="saveMsg"></span>
+    <button class="btn btn-mint" onclick="saveProfile()" data-i18n="btn.save">حفظ التغييرات</button>
+  </div>
+</div>
+<script>
+const TOKEN=localStorage.getItem("nabbah_token")||"";
+if(!TOKEN){ window.location.href="login.html"; }
+async function api(p,opts){
+  opts=opts||{};
+  opts.headers=Object.assign({"Authorization":"Bearer "+TOKEN,"Content-Type":"application/json"},opts.headers||{});
+  const r=await fetch(p,opts);
+  if(r.status===401){ localStorage.removeItem("nabbah_token"); window.location.href="login.html"; throw new Error("جلسة"); }
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(d.detail||"خطأ");
+  return d;
+}
+const MONTHS=["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
+let PROFILE={};
+
+async function load(){
+  try{
+    const d=await api("/company/profile");
+    PROFILE=d;
+    // القطاعات
+    const sectorSel=document.getElementById("sector");
+    for(const [k,v] of Object.entries(d.sectors_available||{})){
+      const o=document.createElement("option"); o.value=k; o.textContent=v;
+      if(k===d.sector) o.selected=true; sectorSel.appendChild(o);
+    }
+    // الشهور
+    const fSel=document.getElementById("fiscal_year_start");
+    MONTHS.forEach((m,i)=>{const o=document.createElement("option");o.value=i+1;o.textContent=m;if(i+1===d.fiscal_year_start)o.selected=true;fSel.appendChild(o);});
+    // الأولويات
+    const pBox=document.getElementById("priorities");
+    for(const [k,v] of Object.entries(d.priorities_available||{})){
+      const c=document.createElement("div"); c.className="chip"+(k===d.top_priority?" active":""); c.textContent=v; c.dataset.val=k;
+      c.onclick=()=>{pBox.querySelectorAll(".chip").forEach(x=>x.classList.remove("active"));c.classList.add("active");};
+      pBox.appendChild(c);
+    }
+    // الحقول
+    document.getElementById("name").value=d.name||"";
+    document.getElementById("country").value=d.country||"SA";
+    document.getElementById("currency").value=d.currency||"SAR";
+    document.getElementById("employees").value=d.employees||"";
+    document.getElementById("annual_revenue").value=d.annual_revenue||"";
+    document.getElementById("target_margin").value=d.target_margin||"";
+    // الأهداف
+    const g=d.goals||{};
+    document.getElementById("goal_sales").value=g.sales||"";
+    document.getElementById("goal_profit").value=g.profit||"";
+    document.getElementById("goal_customers").value=g.customers||"";
+    document.getElementById("goal_retention").value=g.retention||"";
+    // التنبيهات
+    const a=d.alerts||{};
+    document.querySelectorAll("#alerts .sw").forEach(sw=>{
+      const k=sw.dataset.key;
+      if(a[k]!==undefined) sw.classList.toggle("on",!!a[k]);
+      sw.onclick=()=>sw.classList.toggle("on");
+    });
+    // مصادر البيانات والصلاحيات: تفعيل النقر
+    document.querySelectorAll("#sources .chip").forEach(c=>c.onclick=()=>c.classList.toggle("active"));
+    document.getElementById("loading").style.display="none";
+    document.getElementById("content").style.display="block";
+    if(window.NabbahI18n) window.NabbahI18n.apply();
+  }catch(e){
+    document.getElementById("loading").innerHTML='<p style="text-align:center;color:var(--red)">'+e.message+'</p>';
+  }
+}
+
+async function saveProfile(){
+  const msg=document.getElementById("saveMsg");
+  msg.textContent="جارٍ الحفظ…"; msg.style.color="var(--txt-soft)";
+  const prio=document.querySelector("#priorities .chip.active");
+  const alerts={};
+  document.querySelectorAll("#alerts .sw").forEach(sw=>alerts[sw.dataset.key]=sw.classList.contains("on"));
+  const payload={
+    name:document.getElementById("name").value,
+    sector:document.getElementById("sector").value,
+    country:document.getElementById("country").value,
+    currency:document.getElementById("currency").value,
+    fiscal_year_start:document.getElementById("fiscal_year_start").value,
+    employees:document.getElementById("employees").value||0,
+    annual_revenue:document.getElementById("annual_revenue").value||0,
+    target_margin:document.getElementById("target_margin").value||0,
+    top_priority:prio?prio.dataset.val:"profit",
+    goals:{
+      sales:document.getElementById("goal_sales").value||0,
+      profit:document.getElementById("goal_profit").value||0,
+      customers:document.getElementById("goal_customers").value||0,
+      retention:document.getElementById("goal_retention").value||0,
+    },
+    alerts:alerts,
+  };
+  try{
+    const d=await api("/company/profile",{method:"POST",body:JSON.stringify(payload)});
+    msg.textContent="✅ "+(d.message||"تم الحفظ"); msg.style.color="var(--mint)";
+    setTimeout(()=>msg.textContent="",3000);
+  }catch(e){ msg.textContent="⚠️ "+e.message; msg.style.color="var(--red)"; }
+}
+load();
+</script>
+<script src="i18n.js"></script>
+</body>
+</html>
