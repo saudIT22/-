@@ -129,10 +129,20 @@ class Company(SQLModel, table=True):
     name: str                                    # اسم الشركة
     owner_id: int = Field(index=True)            # المالك (user_id)
     plan: str = "enterprise"
-    sector: str = "retail"                       # retail/fnb/services/other — نشاط الشركة
+    sector: str = "retail"                       # نشاط الشركة (القطاع)
     cash_reserve: float = 0                       # الاحتياطي النقدي الحالي (للتدفق النقدي)
     monthly_obligations: float = 0                # الالتزامات الشهرية الثابتة (رواتب/إيجار/أقساط)
     is_active: int = 1
+    # ===== ملف الشركة: نبّاه يعرف الشركة نفسها ويكيّف التحليل =====
+    employees: int = 0                            # عدد الموظفين
+    annual_revenue: float = 0                     # الإيرادات السنوية التقريبية
+    target_margin: float = 0                      # هامش الربح المستهدف (%)
+    fiscal_year_start: int = 1                    # شهر بداية السنة المالية (1-12)
+    currency: str = "SAR"                         # العملة
+    country: str = "SA"                           # الدولة
+    top_priority: str = "profit"                  # الأولوية القصوى: growth/profit/liquidity/efficiency
+    goals_json: str = "{}"                        # أهداف مخصّصة (مبيعات/ربح/عملاء/احتفاظ...) JSON
+    alerts_json: str = "{}"                        # تفضيلات التنبيهات JSON
     created_at: datetime = Field(default_factory=datetime.now)
 
 class CompanyBranch(SQLModel, table=True):
@@ -260,6 +270,15 @@ def run_migrations():
             'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS company_role VARCHAR DEFAULT \'\'',
             'ALTER TABLE company ADD COLUMN IF NOT EXISTS cash_reserve DOUBLE PRECISION DEFAULT 0',
             'ALTER TABLE company ADD COLUMN IF NOT EXISTS monthly_obligations DOUBLE PRECISION DEFAULT 0',
+            'ALTER TABLE company ADD COLUMN IF NOT EXISTS employees INTEGER DEFAULT 0',
+            'ALTER TABLE company ADD COLUMN IF NOT EXISTS annual_revenue DOUBLE PRECISION DEFAULT 0',
+            'ALTER TABLE company ADD COLUMN IF NOT EXISTS target_margin DOUBLE PRECISION DEFAULT 0',
+            'ALTER TABLE company ADD COLUMN IF NOT EXISTS fiscal_year_start INTEGER DEFAULT 1',
+            'ALTER TABLE company ADD COLUMN IF NOT EXISTS currency VARCHAR DEFAULT \'SAR\'',
+            'ALTER TABLE company ADD COLUMN IF NOT EXISTS country VARCHAR DEFAULT \'SA\'',
+            'ALTER TABLE company ADD COLUMN IF NOT EXISTS top_priority VARCHAR DEFAULT \'profit\'',
+            'ALTER TABLE company ADD COLUMN IF NOT EXISTS goals_json VARCHAR DEFAULT \'{}\'',
+            'ALTER TABLE company ADD COLUMN IF NOT EXISTS alerts_json VARCHAR DEFAULT \'{}\'',
             'ALTER TABLE companyentry ADD COLUMN IF NOT EXISTS deposited DOUBLE PRECISION DEFAULT 0',
             'ALTER TABLE companyentry ADD COLUMN IF NOT EXISTS extra_data VARCHAR DEFAULT \'\'',
         ]
@@ -1502,8 +1521,13 @@ def save_memory(company_id: int, kind: str, title: str, content: str = ""):
         pass
 
 
-def company_gemini(prompt: str) -> str:
-    """يستدعي Gemini بنفس سلسلة الـ fallback المستخدمة في تحليل المطاعم."""
+def company_gemini(prompt: str, company=None) -> str:
+    """يستدعي Gemini. لو مُرّرت الشركة، يُحقن ملفها ليكيّف التحليل حسب قطاعها وأولوياتها."""
+    if company is not None:
+        try:
+            prompt = prompt + build_company_profile_context(company)
+        except Exception:
+            pass
     prompt = prompt + EXEC_FRAMEWORK
     models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-flash-latest"]
     response = None
@@ -2275,7 +2299,7 @@ def company_analyze(data: dict, user: User = Depends(get_current_user)):
 4. **القرارات الموصى بها** — ٣ قرارات تنفيذية مرتبة بحسب الأولوية ضمن نطاق هذه الوحدة فقط.
 
 اكتب بصيغة Markdown، عناوين ## واضحة، نقاط مرتّبة، أرقام محددة كلما أمكن. لا تخرج عن نطاق وحدة {mlabel}."""
-            txt = company_gemini(prompt)
+            txt = company_gemini(prompt, company)
             if txt:
                 clean, _a, _d, _o = extract_exec(txt)
                 txt = clean
@@ -2300,7 +2324,7 @@ def company_analyze(data: dict, user: User = Depends(get_current_user)):
             ).all()
             hist_txt = " ← ".join(f"{h.period}: {round(h.sales)}ر ({h.branch_score}/100)" for h in hist[-6:]) or "فترة واحدة"
             prompt = build_branch_prompt(company, sector_name, b, e, avg_margin, avg_inv, avg_score, hist_txt)
-            txt = company_gemini(prompt)
+            txt = company_gemini(prompt, company)
             if txt:
                 clean, _a, _d, _o = extract_exec(txt)
                 txt = clean
@@ -2313,7 +2337,7 @@ def company_analyze(data: dict, user: User = Depends(get_current_user)):
                     "analysis": txt or "تعذّر توليد التحليل، حاول بعد قليل."}
 
         prompt = build_company_prompt(company, sector_name, rows)
-        txt = company_gemini(prompt)
+        txt = company_gemini(prompt, company)
         if txt:
             clean, _a, _d, _o = extract_exec(txt)
             txt = clean
@@ -2491,7 +2515,7 @@ def company_ask(data: dict, user: User = Depends(get_current_user)):
 {q}
 
 أجب مباشرة وباختصار مناسب لحجم السؤال. اذكر الأرقام الداعمة من البيانات أعلاه، وقارن بالقطاع متى ما كان مفيداً، واختم بخطوة عملية واحدة محددة إن ناسب."""
-        txt = company_gemini(prompt)
+        txt = company_gemini(prompt, company)
         log_activity(user.name, f"سأل نبّاه: {q[:60]}", user.email)
         if txt:
             save_memory(company.id, "question", q[:200], f"السؤال: {q}\n\nإجابة نبّاه: {txt}")
@@ -6208,7 +6232,7 @@ def company_monthly_report(period: str = "", user: User = Depends(get_current_us
 {branches_txt}{bank_txt}{decs_txt}
 
 اكتب تقريراً تنفيذياً موجزاً (300-450 كلمة) بأقسام: ① أين ذهبت الفلوس هذا الشهر (بالريال) ② أهم 3 ملاحظات ③ قرار الشهر القادم الواحد الأهم بأثره المالي. التزم بإطارك الصارم."""
-            narrative = company_gemini(prompt) or "تعذّر توليد السرد — الأرقام أدناه صحيحة."
+            narrative = company_gemini(prompt, company) or "تعذّر توليد السرد — الأرقام أدناه صحيحة."
             save_memory(company.id, "report", cache_title, narrative)
 
         return {
@@ -6231,3 +6255,142 @@ def company_monthly_report(period: str = "", user: User = Depends(get_current_us
 @app.get("/company-monthly-report.html")
 def page_company_monthly_report():
     return FileResponse("company-monthly-report.html")
+
+
+# ============================================================
+# ===== ملف الشركة: نبّاه يعرف الشركة نفسها ويكيّف التحليل =====
+# ============================================================
+
+PRIORITY_NAMES = {
+    "growth": "النمو والتوسّع",
+    "profit": "الربحية",
+    "liquidity": "السيولة والتدفق النقدي",
+    "efficiency": "الكفاءة التشغيلية",
+}
+
+
+def build_company_profile_context(company) -> str:
+    """يبني وصفاً نصياً لملف الشركة يُحقن في تحليل Gemini ليكيّف التوصيات."""
+    parts = []
+    parts.append(f"اسم الشركة: {company.name}")
+    parts.append(f"النشاط/القطاع: {SECTOR_NAMES.get(company.sector, 'غير محدد')}")
+    if getattr(company, "employees", 0):
+        parts.append(f"عدد الموظفين: {company.employees}")
+    if getattr(company, "annual_revenue", 0):
+        parts.append(f"الإيرادات السنوية التقريبية: {company.annual_revenue:,.0f} {company.currency}")
+    if getattr(company, "target_margin", 0):
+        parts.append(f"هامش الربح المستهدف: {company.target_margin}%")
+    prio = getattr(company, "top_priority", "profit")
+    parts.append(f"الأولوية القصوى للإدارة: {PRIORITY_NAMES.get(prio, prio)}")
+    # أهداف مخصّصة
+    try:
+        goals = json.loads(getattr(company, "goals_json", "{}") or "{}")
+        if goals:
+            gtxt = "، ".join(f"{k}: {v}" for k, v in goals.items() if v)
+            if gtxt:
+                parts.append(f"أهداف محددة: {gtxt}")
+    except Exception:
+        pass
+    profile = "\n".join("- " + p for p in parts)
+    return (
+        "\n\n# ملف الشركة (استخدمه لتكييف تحليلك وأولوياتك):\n" + profile +
+        f"\n\nملاحظة مهمة: وجّه توصياتك بما يخدم أولوية الإدارة القصوى ({PRIORITY_NAMES.get(prio, prio)}) أولاً، "
+        "وراعِ حجم الشركة وقطاعها عند اقتراح الحلول."
+    )
+
+
+@app.get("/company/profile")
+def get_company_profile(user: User = Depends(get_current_user)):
+    """يجلب ملف الشركة الكامل."""
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id)
+        if not company or company.owner_id != user.id:
+            raise HTTPException(403, "غير مصرّح")
+        try:
+            goals = json.loads(company.goals_json or "{}")
+        except Exception:
+            goals = {}
+        try:
+            alerts = json.loads(company.alerts_json or "{}")
+        except Exception:
+            alerts = {}
+        return {
+            "name": company.name,
+            "sector": company.sector,
+            "sector_name": SECTOR_NAMES.get(company.sector, ""),
+            "employees": getattr(company, "employees", 0),
+            "annual_revenue": getattr(company, "annual_revenue", 0),
+            "target_margin": getattr(company, "target_margin", 0),
+            "fiscal_year_start": getattr(company, "fiscal_year_start", 1),
+            "currency": getattr(company, "currency", "SAR"),
+            "country": getattr(company, "country", "SA"),
+            "cash_reserve": company.cash_reserve,
+            "monthly_obligations": company.monthly_obligations,
+            "top_priority": getattr(company, "top_priority", "profit"),
+            "goals": goals,
+            "alerts": alerts,
+            "sectors_available": SECTOR_NAMES,
+            "priorities_available": PRIORITY_NAMES,
+        }
+
+
+@app.post("/company/profile")
+async def save_company_profile(request: Request, user: User = Depends(get_current_user)):
+    """يحفظ ملف الشركة (كل الأقسام الستة)."""
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    data = await request.json()
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id)
+        if not company or company.owner_id != user.id:
+            raise HTTPException(403, "غير مصرّح")
+
+        # ① معلومات الشركة
+        if "name" in data and str(data["name"]).strip():
+            company.name = str(data["name"]).strip()[:100]
+        if "sector" in data and data["sector"] in SECTOR_NAMES:
+            company.sector = data["sector"]
+        if "currency" in data:
+            company.currency = str(data["currency"]).strip()[:8] or "SAR"
+        if "country" in data:
+            company.country = str(data["country"]).strip()[:8] or "SA"
+        if "fiscal_year_start" in data:
+            try:
+                m = int(data["fiscal_year_start"])
+                if 1 <= m <= 12:
+                    company.fiscal_year_start = m
+            except Exception:
+                pass
+        # معلومات الحجم
+        for fld, attr in [("employees", "employees")]:
+            if fld in data:
+                try:
+                    company.__setattr__(attr, int(data[fld]))
+                except Exception:
+                    pass
+        for fld in ["annual_revenue", "target_margin", "cash_reserve", "monthly_obligations"]:
+            if fld in data:
+                v = _to_num(data[fld])
+                if v is not None:
+                    company.__setattr__(fld, v)
+        # ⑤ الأهداف والأولوية
+        if "top_priority" in data and data["top_priority"] in PRIORITY_NAMES:
+            company.top_priority = data["top_priority"]
+        if "goals" in data and isinstance(data["goals"], dict):
+            company.goals_json = json.dumps(data["goals"], ensure_ascii=False)[:2000]
+        # ⑥ التنبيهات
+        if "alerts" in data and isinstance(data["alerts"], dict):
+            company.alerts_json = json.dumps(data["alerts"], ensure_ascii=False)[:2000]
+
+        s.add(company)
+        s.commit()
+        save_memory(company.id, "goals", "تحديث ملف الشركة",
+                    f"الأولوية: {PRIORITY_NAMES.get(company.top_priority, '')} · القطاع: {SECTOR_NAMES.get(company.sector, '')}")
+        return {"ok": True, "message": "تم حفظ ملف الشركة بنجاح"}
+
+
+@app.get("/company-settings.html")
+def page_company_settings():
+    return FileResponse("company-settings.html")
