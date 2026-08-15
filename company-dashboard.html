@@ -384,6 +384,7 @@
     <a class="btn btn-ghost" href="company-tax.html">🧾 الضريبة والزكاة</a>
     <a class="btn btn-ghost" href="company-team.html">👥 صلاحيات الفريق</a>
     <a class="btn btn-ghost" href="company-report.html" data-i18n="nav.report">التقرير التنفيذي</a>
+    <a class="btn btn-ghost" href="company-settings.html">⚙️ <span data-i18n="nav.settings">إعدادات الشركة</span></a>
     <a class="btn btn-ghost" href="dashboard.html">قسم الأفراد / المطاعم</a>
   </div>
 
@@ -731,15 +732,13 @@ loadPulse();
 loadSetup();
 init();
 </script>
-  <script src="i18n.js">
+  <script>
 // ═══ إعادة تطبيق الترجمة على المحتوى الديناميكي عند تبديل اللغة ═══
 window.addEventListener("nabbah:langchange", function(){
-  // نعيد تحميل الأقسام الديناميكية بعد تغيير اللغة (لو الدوال موجودة)
   try { if(typeof loadPulse==="function") loadPulse(); } catch(e){}
-  // نعيد ترجمة أي عناصر data-i18n ظهرت حديثاً
   try { if(window.NabbahI18n) window.NabbahI18n.apply(); } catch(e){}
 });
-
 </script>
+  <script src="i18n.js"></script>
 </body>
 </html>
