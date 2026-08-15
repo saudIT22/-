@@ -163,7 +163,7 @@ load();
             <div style="font-size:12.5px;color:var(--txt-soft);margin-top:5px">${c.evidence} · <span style="opacity:.75">${c.kind}</span></div>
             <div style="font-size:13px;color:#6ee7b7;margin-top:7px">💡 ${c.fix} <a href="${c.link}" style="color:var(--mint);font-weight:700">← افتح</a></div>
           </div>`).join("")}
-        ${d.missing_data && d.missing_data.length ? `<div style="font-size:12px;color:var(--txt-mute);margin-top:8px">🔍 لفحص أعمق أدخل: ${d.missing_data.join("، ")}</div>` : ""}
+        ${d.missing_data && d.missing_data.length ? `<div style="background:rgba(245,179,1,.08);border:1px solid rgba(245,179,1,.25);border-radius:10px;padding:10px 13px;margin-top:10px"><div style="font-size:12.5px;color:#f5b301;font-weight:700;margin-bottom:3px">💡 نتيجة تحتاج إلى تحقق</div><div style="font-size:11.5px;color:var(--txt-soft)">هذه ليست مشكلة في شركتك — بعض البيانات غير مكتملة فقط. لتحليل أدقّ أكمل: ${d.missing_data.join("، ")}</div></div>` : ""}
       </div>`;
   }catch(e){ /* صامت */ }
 })();
