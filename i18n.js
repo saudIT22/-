@@ -120,6 +120,41 @@
     "alert.inventory": { ar: "مشكلة في المخزون", en: "Inventory issue" },
     "alert.performance": { ar: "انخفاض الأداء", en: "Performance drop" },
     "set.sector.smart": { ar: "نبّاه يتكيّف مع قطاعك", en: "Nabbah adapts to your sector" },
+
+    // ---- صفحات المنصة الأساسية ----
+    "page.input.title": { ar: "إدخال بيانات الفروع", en: "Enter Branch Data" },
+    "page.input.sub": { ar: "أدخل بيانات فرع واحد شهرياً — نبّاه يحلّل ويقارن تلقائياً.", en: "Enter one branch's data per month — Nabbah analyzes and compares automatically." },
+    "page.decisions.title": { ar: "مركز القرارات", en: "Decision Center" },
+    "page.decisions.sub": { ar: "قرارات مرتّبة بأثرها المالي — مع متابعة النتيجة.", en: "Decisions ranked by financial impact — with result tracking." },
+    "page.leakage.title": { ar: "خريطة تسرّب الأرباح", en: "Profit Leak Map" },
+    "page.leakage.sub": { ar: "وين تروح فلوسك — بالريال والبند.", en: "Where your money goes — in SAR, by item." },
+    "page.report.title": { ar: "التقرير التنفيذي", en: "Executive Report" },
+    "page.report.sub": { ar: "تقرير شامل جاهز للطباعة أو العرض على المجلس.", en: "A comprehensive report ready to print or present to the board." },
+    "page.branches.title": { ar: "الفروع", en: "Branches" },
+    "page.branches.sub": { ar: "إدارة فروع شركتك والمقارنة بينها.", en: "Manage and compare your company's branches." },
+    "page.cashflow.title": { ar: "التدفق النقدي", en: "Cash Flow" },
+    "page.cashflow.sub": { ar: "كم شهر تكفي سيولتك، ومتى أول ضغط متوقع.", en: "How many months your liquidity lasts, and when the first pressure is expected." },
+    "page.monthly.title": { ar: "التقرير الشهري", en: "Monthly Report" },
+    "page.monthly.sub": { ar: "ملخّص شهري تلقائي — «وين راحت فلوسك».", en: "Automatic monthly summary — 'where did your money go'." },
+    // أزرار مشتركة عبر الصفحات
+    "btn.refresh": { ar: "تحديث التحليل", en: "Refresh Analysis" },
+    "btn.new": { ar: "إضافة جديد", en: "Add New" },
+    "btn.edit": { ar: "تعديل", en: "Edit" },
+    "btn.delete": { ar: "حذف", en: "Delete" },
+    "btn.view": { ar: "عرض", en: "View" },
+    "btn.export": { ar: "تصدير", en: "Export" },
+    // حالات القرار
+    "dec.state.pending": { ar: "قيد التنفيذ", en: "In Progress" },
+    "dec.state.approved": { ar: "معتمد", en: "Approved" },
+    "dec.state.done": { ar: "منجز", en: "Completed" },
+    "dec.state.rejected": { ar: "مرفوض", en: "Rejected" },
+    // عناوين حقيقية للصفحات
+    "page.input.h": { ar: "إدخال بيانات فرع", en: "Enter Branch Data" },
+    "page.decisions.h": { ar: "متابعة القرارات", en: "Decision Tracking" },
+    "page.leakage.h": { ar: "كشف التسرّب والاحتيال", en: "Leak & Fraud Detection" },
+    "page.branches.h": { ar: "مقارنة الفروع", en: "Branch Comparison" },
+    "page.cashflow.h": { ar: "التدفق النقدي التنبؤي", en: "Predictive Cash Flow" },
+    "page.monthly.h": { ar: "التقرير الشهري", en: "Monthly Report" },
     "btn.save": { ar: "حفظ التغييرات", en: "Save Changes" },
     "home.hero.1": { ar: "أرقام منشأتك تستحق", en: "Your numbers deserve" },
     "home.hero.2": { ar: "قراراً أوضح", en: "a clearer decision" },
@@ -310,6 +345,21 @@
     btn.onclick = toggle;
     document.body.appendChild(btn);
   }
+
+  // ═══ اعتراض fetch: يرسل هيدر X-Lang تلقائياً مع كل طلب للسيرفر ═══
+  // بهذا، التحليلات والتقارير من الباك-إند ترجع بلغة المستخدم دون تعديل كل صفحة.
+  (function () {
+    if (window.__nabbahFetchPatched) return;
+    window.__nabbahFetchPatched = true;
+    const orig = window.fetch;
+    window.fetch = function (input, init) {
+      init = init || {};
+      const headers = new Headers(init.headers || {});
+      if (!headers.has("X-Lang")) headers.set("X-Lang", getLang());
+      init.headers = headers;
+      return orig.call(this, input, init);
+    };
+  })();
 
   // واجهة عامة
   window.NabbahI18n = { apply: apply, toggle: toggle, t: t, getLang: getLang, dict: DICT };
