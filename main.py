@@ -1508,6 +1508,165 @@ EXEC_FRAMEWORK = """
 الاختبار النهائي: لو كنت أنا مالك الشركة، هل سأدفع 5,000 ريال مقابل هذا التحليل؟ هل وصلت للقرار في أول 10 ثوانٍ؟ إذا لا — أعد كتابته."""
 
 
+EXEC_FRAMEWORK_EN = """
+
+════════ Nabbah Executive AI Framework (MANDATORY) ════════
+Your mission isn't to describe numbers — it's to detect wasted money, risks, and opportunities, and issue executable decisions.
+
+★★★ THE GOLDEN RULE: Decision First, Then Evidence ★★★
+Always start with the decision and its financial impact at the top — so the manager reads it in seconds and can act. Then place supporting evidence and data below for those who want to dig deeper. Don't drown the manager in numbers first; numbers serve the decision, not the other way around.
+
+★★★ UNIFIED FINANCIAL IMPACT FORMAT (mandatory for every decision) ★★★
+Write the impact in this clear format always:
+  • Decision: [clear action verb]
+  • Expected impact: +XX,XXX SAR [monthly/annually]  (or: Savings of XX,XXX SAR)
+  • Priority: High / Medium / Low
+  • Confidence: XX%
+  • Time to execute: [immediate / one week / one month]
+Never write an impact without a SAR figure. If unable to estimate, state clearly: "Impact not estimable — we're missing [item]."
+
+Strict rules:
+1) Use only the numbers provided in the data. Don't repeat table numbers except to prove a decision. Any estimate is tagged "estimate" with its calculation logic (e.g., 480,000 × 5% = 24,000 SAR).
+
+2) ★ On missing data — reassure, don't scare ★
+   If data is incomplete, never say or imply that there's a "problem" or "fault" in the company. The mandatory phrasing:
+   "Result needs verification — this isn't a problem with your company; some data is simply incomplete, so accuracy is limited. For deeper analysis, please add: [list the missing items precisely]."
+   Always separate: incomplete data ≠ poor performance. Never conflate them.
+
+3) Vague statements are strictly forbidden: "Performance must improve" ❌ — Correct: "Reducing discounts by 15% is expected to increase profit by SAR 245,000" ✅.
+
+4) Every conclusion must answer the full chain: What is happening? Why is it happening? (ask "why" up to 5 times to reach the root cause — don't stop at symptoms) What is its financial impact? What is the best decision? How much will the decision yield in SAR? What is its priority? How fast to execute? What is the risk of inaction? How do we measure success after 30 days?
+
+5) Always rank decisions by largest financial impact first, and each decision follows the unified format above.
+
+Full analysis structure (apply for a full company or branch analysis):
+① Executive decisions first: top 3 decisions in the unified format — read in under a minute and acted on.
+② Profit leak detection: examine (waste, discounts, returns, margin drop, high costs, weak collections, weak pricing) and calculate each in SAR.
+③ Root-cause analysis: Why×5 method (as supporting evidence for decisions above).
+④ Quick wins (within a week) ⑤ Medium wins (30-90 days) ⑥ Strategic opportunities (6-24 months).
+⑦ Forecasts: three scenarios — if current continues / if improved / if worsened.
+⑧ Overall financial estimate: expected savings + profit increase + cash flow improvement.
+⑨ Monitoring metrics: top KPIs to track decision impact.
+⑩ Missing data (if any): use the reassuring phrasing from rule 2 — list what's missing and its impact on accuracy, with no implication of any fault.
+For short questions and partial analyses: answer directly and briefly — but start with the decision always.
+
+Final check before delivery: If I were the business owner, would I pay SAR 5,000 for this analysis? Did I reach the decision in the first 10 seconds? If no — rewrite it."""
+
+
+# ==================== NAMES IN ENGLISH ====================
+SECTOR_NAMES_EN = {
+    "fnb": "Restaurants & Cafés",
+    "retail": "Retail",
+    "ecommerce": "E-commerce",
+    "manufacturing": "Manufacturing",
+    "contracting": "Contracting",
+    "distribution": "Distribution",
+    "services": "Services",
+    "clinics": "Clinics",
+    "hospitals": "Hospitals",
+    "logistics": "Logistics",
+    "other": "Other",
+}
+
+PRIORITY_NAMES_EN = {
+    "growth": "Growth & Expansion",
+    "profit": "Profitability",
+    "liquidity": "Liquidity & Cash Flow",
+    "efficiency": "Operational Efficiency",
+}
+
+# Sector intelligence in English (matches SECTOR_INTELLIGENCE structure)
+SECTOR_INTELLIGENCE_EN = {
+    "fnb": {"kpis": ["Average order value", "Ingredient cost %", "Visit frequency", "Kitchen waste", "Peak-hour orders"],
+        "terms": "order, table, ingredients, waste, peak, delivery, meal",
+        "watch": "ingredient cost above 35%, kitchen waste above 5%, over-reliance on delivery apps and their commissions",
+        "advice": "Focus on average order value (upselling), control ingredient cost, and reduce waste. Watch delivery commissions that may eat the margin."},
+    "retail": {"kpis": ["Inventory turnover", "Dead stock", "Sales per m²", "Average basket", "Conversion rate"],
+        "terms": "inventory, SKU, turnover, basket, dead stock, discounts, season",
+        "watch": "dead stock tying up capital, discounts eroding margin, slow-moving SKUs",
+        "advice": "Move dead stock via targeted offers, focus on high-turnover SKUs, and improve average basket."},
+    "ecommerce": {"kpis": ["Customer acquisition cost", "Cart abandonment", "Customer lifetime value", "Return rate", "Conversion rate"],
+        "terms": "visit, cart, conversion, shipping, return, acquisition, campaign",
+        "watch": "acquisition cost above lifetime value, high cart abandonment, high returns",
+        "advice": "Reduce acquisition cost vs LTV, address cart abandonment, and cut returns with more accurate descriptions."},
+    "manufacturing": {"kpis": ["Production efficiency", "Unit cost", "Waste rate", "Capacity utilization", "Cycle time"],
+        "terms": "production, unit, line, capacity, waste, raw materials, cycle",
+        "watch": "unused production capacity, raw material waste, rising unit cost",
+        "advice": "Raise capacity utilization, cut material waste, and analyze unit cost per line."},
+    "contracting": {"kpis": ["Project margin", "Completion rate", "Project cash flow", "Outstanding payments", "Cost overrun"],
+        "terms": "project, payment, invoice, completion, contractor, cost, receivables",
+        "watch": "project cost overruns, delayed payments pressuring liquidity, low project margin",
+        "advice": "Monitor cash flow per project, collect payments on time, and control cost overruns early."},
+    "distribution": {"kpis": ["Distribution cost", "Inventory turnover", "Fleet efficiency", "Fulfilled orders", "Delivery time"],
+        "terms": "distribution, fleet, order, warehouse, delivery, agent, inventory",
+        "watch": "high distribution cost, underused fleet, delayed delivery",
+        "advice": "Improve fleet and routing efficiency, control delivery cost, and cut lead times."},
+    "services": {"kpis": ["Revenue per employee", "Team utilization", "Customer satisfaction", "Retention rate", "Contract value"],
+        "terms": "service, contract, employee, hour, utilization, customer, retention",
+        "watch": "low team utilization, over-reliance on few customers, customer churn",
+        "advice": "Raise team utilization, diversify the customer base, and focus on retention and lifetime value."},
+    "clinics": {"kpis": ["Appointment fill rate", "Revenue per patient", "Patient return rate", "Insurance collection", "No-shows"],
+        "terms": "appointment, patient, occupancy, insurance, visit, follow-up, clinic",
+        "watch": "empty appointments, delayed insurance collection, high no-show rate",
+        "advice": "Increase appointment fill rate, speed up insurance collection, and reduce no-shows with reminders."},
+    "hospitals": {"kpis": ["Bed occupancy rate", "Revenue per bed", "Average length of stay", "Insurance collection", "Occupancy rate"],
+        "terms": "bed, patient, stay, insurance, department, occupancy, emergency",
+        "watch": "empty beds, delayed insurance collection, longer-than-usual stay",
+        "advice": "Improve bed occupancy, control length of stay, and speed up the insurance collection cycle."},
+    "logistics": {"kpis": ["Shipment cost", "Fleet efficiency", "Delivery time", "On-time shipments", "Capacity utilization"],
+        "terms": "shipment, fleet, delivery, route, capacity, warehouse, tracking",
+        "watch": "high shipping cost, delayed delivery, underused capacity",
+        "advice": "Improve route and fleet efficiency, control shipment cost, and increase on-time delivery rate."},
+    "other": {"kpis": ["Profit margin", "Monthly growth", "Expense ratio", "Cash flow", "Revenue"],
+        "terms": "revenue, expense, profit, growth, liquidity",
+        "watch": "declining margin, rising expenses, cash flow pressure",
+        "advice": "Monitor margin, expenses, and cash flow, and focus on the largest impact item."},
+}
+
+
+def build_company_profile_context_en(company) -> str:
+    """English version of the company profile injection."""
+    parts = [f"Company name: {company.name}",
+             f"Activity/Sector: {SECTOR_NAMES_EN.get(company.sector, 'Not specified')}"]
+    if getattr(company, "employees", 0):
+        parts.append(f"Employees: {company.employees}")
+    if getattr(company, "annual_revenue", 0):
+        parts.append(f"Approximate annual revenue: {company.annual_revenue:,.0f} {company.currency}")
+    if getattr(company, "target_margin", 0):
+        parts.append(f"Target profit margin: {company.target_margin}%")
+    prio = getattr(company, "top_priority", "profit")
+    parts.append(f"Management's top priority: {PRIORITY_NAMES_EN.get(prio, prio)}")
+    try:
+        goals = json.loads(getattr(company, "goals_json", "{}") or "{}")
+        if goals:
+            gtxt = ", ".join(f"{k}: {v}" for k, v in goals.items() if v)
+            if gtxt:
+                parts.append(f"Specific goals: {gtxt}")
+    except Exception:
+        pass
+    profile = "\n".join("- " + p for p in parts)
+    return (
+        "\n\n# Company profile (use it to tailor your analysis and priorities):\n" + profile +
+        f"\n\nImportant: guide your recommendations to serve the top priority ({PRIORITY_NAMES_EN.get(prio, prio)}) first, "
+        "and consider the company size and sector when suggesting solutions."
+    )
+
+
+def build_sector_context_en(sector: str) -> str:
+    """English version of the sector intelligence injection."""
+    si = SECTOR_INTELLIGENCE_EN.get(sector, SECTOR_INTELLIGENCE_EN["other"])
+    name = SECTOR_NAMES_EN.get(sector, "the business")
+    return (
+        f"\n\n# Sector intelligence ({name}) — tailor your analysis to this business type:\n"
+        f"- Key KPIs for this sector: {', '.join(si['kpis'])}\n"
+        f"- Sector terminology (use it in your language): {si['terms']}\n"
+        f"- What to watch specifically in this sector: {si['watch']}\n"
+        f"- Recommendation guidance: {si['advice']}\n"
+        "Use this sector's KPIs and terminology specifically — don't give generic analysis that fits any business."
+    )
+
+
+
 def save_memory(company_id: int, kind: str, title: str, content: str = ""):
     """يسجّل حدثاً في ذاكرة الشركة المؤسسية — لا يفشل أبداً حتى لا يكسر المسار الرئيسي."""
     try:
@@ -1521,15 +1680,31 @@ def save_memory(company_id: int, kind: str, title: str, content: str = ""):
         pass
 
 
-def company_gemini(prompt: str, company=None) -> str:
-    """يستدعي Gemini. لو مُرّرت الشركة، يُحقن ملفها ليكيّف التحليل حسب قطاعها وأولوياتها."""
+def get_lang(request=None) -> str:
+    """يقرأ لغة الطلب من هيدر X-Lang. الافتراضي عربي."""
+    if request is None:
+        return "ar"
+    try:
+        lang = (request.headers.get("X-Lang") or request.headers.get("x-lang") or "ar").strip().lower()
+        return "en" if lang == "en" else "ar"
+    except Exception:
+        return "ar"
+
+
+def company_gemini(prompt: str, company=None, lang: str = "ar") -> str:
+    """يستدعي Gemini بالإطار المناسب حسب اللغة (ar/en). يحقن ملف الشركة وذكاء القطاع بالإنجليزي أو العربي."""
     if company is not None:
         try:
-            prompt = prompt + build_company_profile_context(company)
-            prompt = prompt + build_sector_context(company.sector)
+            if lang == "en":
+                prompt = prompt + build_company_profile_context_en(company)
+                prompt = prompt + build_sector_context_en(company.sector)
+            else:
+                prompt = prompt + build_company_profile_context(company)
+                prompt = prompt + build_sector_context(company.sector)
         except Exception:
             pass
-    prompt = prompt + EXEC_FRAMEWORK
+    # اختيار الإطار حسب اللغة
+    prompt = prompt + (EXEC_FRAMEWORK_EN if lang == "en" else EXEC_FRAMEWORK)
     models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-flash-latest"]
     response = None
     for model_name in models:
@@ -2218,7 +2393,7 @@ def company_branch_detail(branch_id: int, user: User = Depends(get_current_user)
 
 # ===== تحليل Gemini (للشركة كاملة أو لفرع) =====
 @app.post("/company/analyze")
-def company_analyze(data: dict, user: User = Depends(get_current_user)):
+def company_analyze(data: dict, request: Request, user: User = Depends(get_current_user)):
     if not user.company_id:
         raise HTTPException(403, "لا توجد شركة نشطة")
     scope = (data.get("scope") or "company").strip()
@@ -2300,7 +2475,7 @@ def company_analyze(data: dict, user: User = Depends(get_current_user)):
 4. **القرارات الموصى بها** — ٣ قرارات تنفيذية مرتبة بحسب الأولوية ضمن نطاق هذه الوحدة فقط.
 
 اكتب بصيغة Markdown، عناوين ## واضحة، نقاط مرتّبة، أرقام محددة كلما أمكن. لا تخرج عن نطاق وحدة {mlabel}."""
-            txt = company_gemini(prompt, company)
+            txt = company_gemini(prompt, company, lang=get_lang(request))
             if txt:
                 clean, _a, _d, _o = extract_exec(txt)
                 txt = clean
@@ -2325,7 +2500,7 @@ def company_analyze(data: dict, user: User = Depends(get_current_user)):
             ).all()
             hist_txt = " ← ".join(f"{h.period}: {round(h.sales)}ر ({h.branch_score}/100)" for h in hist[-6:]) or "فترة واحدة"
             prompt = build_branch_prompt(company, sector_name, b, e, avg_margin, avg_inv, avg_score, hist_txt)
-            txt = company_gemini(prompt, company)
+            txt = company_gemini(prompt, company, lang=get_lang(request))
             if txt:
                 clean, _a, _d, _o = extract_exec(txt)
                 txt = clean
@@ -2338,7 +2513,7 @@ def company_analyze(data: dict, user: User = Depends(get_current_user)):
                     "analysis": txt or "تعذّر توليد التحليل، حاول بعد قليل."}
 
         prompt = build_company_prompt(company, sector_name, rows)
-        txt = company_gemini(prompt, company)
+        txt = company_gemini(prompt, company, lang=get_lang(request))
         if txt:
             clean, _a, _d, _o = extract_exec(txt)
             txt = clean
@@ -2351,7 +2526,7 @@ def company_analyze(data: dict, user: User = Depends(get_current_user)):
 
 # ===== اسأل نبّاه الذكي (صندوق المحادثة) =====
 @app.post("/company/ask")
-def company_ask(data: dict, user: User = Depends(get_current_user)):
+def company_ask(request: Request, data: dict, user: User = Depends(get_current_user)):
     if not user.company_id:
         raise HTTPException(403, "لا توجد شركة نشطة")
     q = (data.get("question") or "").strip()
@@ -2516,7 +2691,7 @@ def company_ask(data: dict, user: User = Depends(get_current_user)):
 {q}
 
 أجب مباشرة وباختصار مناسب لحجم السؤال. اذكر الأرقام الداعمة من البيانات أعلاه، وقارن بالقطاع متى ما كان مفيداً، واختم بخطوة عملية واحدة محددة إن ناسب."""
-        txt = company_gemini(prompt, company)
+        txt = company_gemini(prompt, company, lang=get_lang(request))
         log_activity(user.name, f"سأل نبّاه: {q[:60]}", user.email)
         if txt:
             save_memory(company.id, "question", q[:200], f"السؤال: {q}\n\nإجابة نبّاه: {txt}")
@@ -6220,7 +6395,7 @@ def _last_complete_period():
 
 
 @app.get("/company/monthly-report")
-def company_monthly_report(period: str = "", user: User = Depends(get_current_user)):
+def company_monthly_report(period: str = "", request: Request = None, user: User = Depends(get_current_user)):
     """تقرير شهري تنفيذي: وين راحت الفلوس؟ — يتولّد مرة لكل شهر ويُحفظ."""
     if not user.company_id:
         raise HTTPException(403, "لا توجد شركة نشطة")
@@ -6321,7 +6496,7 @@ def company_monthly_report(period: str = "", user: User = Depends(get_current_us
 {branches_txt}{bank_txt}{decs_txt}
 
 اكتب تقريراً تنفيذياً موجزاً (300-450 كلمة) بأقسام: ① أين ذهبت الفلوس هذا الشهر (بالريال) ② أهم 3 ملاحظات ③ قرار الشهر القادم الواحد الأهم بأثره المالي. التزم بإطارك الصارم."""
-            narrative = company_gemini(prompt, company) or "تعذّر توليد السرد — الأرقام أدناه صحيحة."
+            narrative = company_gemini(prompt, company, lang=get_lang(request)) or "تعذّر توليد السرد — الأرقام أدناه صحيحة."
             save_memory(company.id, "report", cache_title, narrative)
 
         return {
