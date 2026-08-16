@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>نبّاه · التقرير الشهري</title>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
 <style>
   :root{--bg:#0a0f0c;--panel:#101a15;--panel2:#0e1712;--line:#1d2c24;--mint:#10b981;--mint-deep:#0c8f64;--gold:#f5b301;--red:#ef4444;--txt:#e8f1ec;--txt-soft:#9fb4aa;--txt-mute:#678075;--r:16px;}
@@ -59,7 +60,7 @@
 </header>
 <div class="wrap">
   <div class="page-head">
-    <div><h1>📊 التقرير الشهري</h1><p id="sub">وين راحت فلوسك هذا الشهر؟</p></div>
+    <div><h1>📊 <span data-i18n="page.monthly.h">التقرير الشهري</span></h1><p id="sub">وين راحت فلوسك هذا الشهر؟</p></div>
     <button class="btn btn-mint" onclick="window.print()">🖨️ طباعة / PDF</button>
   </div>
 
@@ -121,5 +122,6 @@ async function load(){
 }
 load();
 </script>
+  <script src="i18n.js"></script>
 </body>
 </html>
