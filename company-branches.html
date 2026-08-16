@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <style>
@@ -59,7 +60,7 @@
   </div>
 </header>
 <div class="wrap">
-  <div class="page-head"><h1>🔀 مقارنة الفروع</h1><p>قارن أداء كل فرع، شوف تفاصيله وتاريخه، واطلب تحليلاً ذكياً</p></div>
+  <div class="page-head"><h1>🔀 <span data-i18n="page.branches.h">مقارنة الفروع</span></h1><p>قارن أداء كل فرع، شوف تفاصيله وتاريخه، واطلب تحليلاً ذكياً</p></div>
 
   <div id="loading" class="state"><div class="spin"></div>جارٍ التحميل…</div>
   <div id="empty" style="display:none"></div>
@@ -67,14 +68,14 @@
   <div id="content" style="display:none">
     <!-- جدول المقارنة -->
     <div class="panel">
-      <h2>📊 جدول مقارنة الفروع</h2>
+      <h2>📊 <span data-i18n="br.table">جدول مقارنة الفروع</span></h2>
       <div class="sub">اضغط على عنوان أي عمود للترتيب</div>
       <div class="tbl-wrap"><table id="cmpTable"></table></div>
     </div>
 
     <!-- تفاصيل فرع -->
     <div class="panel">
-      <h2>🔎 تفاصيل فرع</h2>
+      <h2>🔎 <span data-i18n="br.detail">تفاصيل فرع</span></h2>
       <div class="sub">اختر فرعاً لعرض مؤشراته وتاريخه</div>
       <select id="branchSel" onchange="renderBranch()" style="width:100%;margin-bottom:16px"></select>
       <div id="branchDetail"></div>
@@ -198,5 +199,6 @@ async function analyzeBranch(id){
 }
 load();
 </script>
+  <script src="i18n.js"></script>
 </body>
 </html>
