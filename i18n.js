@@ -119,6 +119,7 @@
     "alert.liquidity": { ar: "انخفاض السيولة", en: "Low liquidity" },
     "alert.inventory": { ar: "مشكلة في المخزون", en: "Inventory issue" },
     "alert.performance": { ar: "انخفاض الأداء", en: "Performance drop" },
+    "set.sector.smart": { ar: "نبّاه يتكيّف مع قطاعك", en: "Nabbah adapts to your sector" },
     "btn.save": { ar: "حفظ التغييرات", en: "Save Changes" },
     "home.hero.1": { ar: "أرقام منشأتك تستحق", en: "Your numbers deserve" },
     "home.hero.2": { ar: "قراراً أوضح", en: "a clearer decision" },
