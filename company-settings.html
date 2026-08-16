@@ -75,6 +75,13 @@
       </div>
     </div>
 
+    <!-- بطاقة: نبّاه يتكيّف مع قطاعك -->
+    <div class="section" id="sectorCard" style="background:linear-gradient(135deg,#0e1712,#0c1f17);border-color:#10b98133">
+      <div class="section-h"><div class="ico" style="background:#10b98122">🧠</div><div><div class="t" style="color:#6ee7b7" data-i18n="set.sector.smart">نبّاه يتكيّف مع قطاعك</div><div class="s" id="sectorCardName">—</div></div></div>
+      <div id="sectorKpis" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"></div>
+      <div style="font-size:12.5px;color:var(--txt-soft)" id="sectorAdvice"></div>
+    </div>
+
     <!-- ② الهيكل والحجم -->
     <div class="section">
       <div class="section-h"><div class="ico">📊</div><div><div class="t" data-i18n="set.s2">الهيكل والحجم</div><div class="s" data-i18n="set.s2.sub">عدد الموظفين، الإيرادات، هامش الربح المستهدف</div></div></div>
@@ -160,6 +167,17 @@ async function api(p,opts){
 const MONTHS=["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
 let PROFILE={};
 
+
+async function loadSectorIntel(){
+  try{
+    const d=await api("/company/sector-intelligence");
+    document.getElementById("sectorCardName").textContent=d.sector_name;
+    const box=document.getElementById("sectorKpis"); box.innerHTML="";
+    (d.kpis||[]).forEach(k=>{const c=document.createElement("span");c.className="chip active";c.style.cursor="default";c.textContent=k;box.appendChild(c);});
+    document.getElementById("sectorAdvice").textContent="💡 "+(d.advice||"");
+  }catch(e){}
+}
+
 async function load(){
   try{
     const d=await api("/company/profile");
@@ -240,7 +258,8 @@ async function saveProfile(){
     setTimeout(()=>msg.textContent="",3000);
   }catch(e){ msg.textContent="⚠️ "+e.message; msg.style.color="var(--red)"; }
 }
-load();
+load().then(loadSectorIntel);
+document.addEventListener('change',e=>{if(e.target.id==='sector')loadSectorIntel();});
 </script>
 <script src="i18n.js"></script>
 </body>
