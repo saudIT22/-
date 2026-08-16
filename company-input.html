@@ -76,13 +76,13 @@
 
   <div class="card" id="formCard">
     <div class="field">
-      <label>الفرع</label>
+      <label data-i18n="in.branch">الفرع</label>
       <input id="branch" list="branchList" placeholder="اكتب اسم الفرع أو اختر من القائمة" autocomplete="off">
       <datalist id="branchList"></datalist>
       <div class="hint">اكتب اسم فرع موجود، أو اكتب اسماً جديداً ويُضاف تلقائياً</div>
     </div>
     <div class="field">
-      <label>الفترة (الشهر والسنة)</label>
+      <label data-i18n="in.period">الفترة (الشهر والسنة)</label>
       <div class="row2" style="margin-bottom:0">
         <select id="periodMonth"></select>
         <select id="periodYear"></select>
@@ -100,12 +100,12 @@
 
     <div class="sec-title">الأساسيات</div>
     <div class="row2">
-      <div class="field"><label>إجمالي المبيعات (ريال)</label><input type="number" id="sales" placeholder="0" inputmode="decimal"></div>
-      <div class="field"><label>المصروفات (ريال)</label><input type="number" id="expenses" placeholder="0" inputmode="decimal"></div>
+      <div class="field"><label data-i18n="in.sales">إجمالي المبيعات (ريال)</label><input type="number" id="sales" placeholder="0" inputmode="decimal"></div>
+      <div class="field"><label data-i18n="in.expenses">المصروفات (ريال)</label><input type="number" id="expenses" placeholder="0" inputmode="decimal"></div>
     </div>
     <div class="row2">
-      <div class="field"><label>عدد الفواتير / الطلبات</label><input type="number" id="invoices" placeholder="0" inputmode="numeric"></div>
-      <div class="field"><label>عدد العملاء</label><input type="number" id="customers" placeholder="0" inputmode="numeric"></div>
+      <div class="field"><label data-i18n="in.invoices">عدد الفواتير / الطلبات</label><input type="number" id="invoices" placeholder="0" inputmode="numeric"></div>
+      <div class="field"><label data-i18n="in.customers">عدد العملاء</label><input type="number" id="customers" placeholder="0" inputmode="numeric"></div>
     </div>
 
     <div id="extraWrap" style="display:none">
@@ -113,9 +113,9 @@
       <div id="extraFields"></div>
     </div>
 
-    <div class="field" style="margin-top:14px"><label>ملاحظات</label><textarea id="notes" rows="2" placeholder="أي سياق يساعد التحليل…"></textarea></div>
+    <div class="field" style="margin-top:14px"><label data-i18n="in.notes">ملاحظات</label><textarea id="notes" rows="2" placeholder="أي سياق يساعد التحليل…"></textarea></div>
 
-    <button class="btn btn-mint" id="save" style="width:100%;padding:14px" onclick="saveEntry()">حفظ وحساب المؤشرات</button>
+    <button data-i18n="in.save" class="btn btn-mint" id="save" style="width:100%;padding:14px" onclick="saveEntry()">حفظ وحساب المؤشرات</button>
   </div>
 
   <!-- Result -->
@@ -128,10 +128,10 @@
       </div>
     </div>
     <div class="metrics" id="metrics"></div>
-    <button class="btn btn-mint" id="anBtn" style="width:100%;padding:13px" onclick="analyzeBranch()">التحليل التنفيذي للفرع</button>
+    <button data-i18n="in.analyze" class="btn btn-mint" id="anBtn" style="width:100%;padding:13px" onclick="analyzeBranch()">التحليل التنفيذي للفرع</button>
     <div class="ai-out" id="aiOut"></div>
     <div style="display:flex;gap:9px;margin-top:14px">
-      <button class="btn btn-ghost" style="flex:1" onclick="resetForm()">إدخال فرع آخر</button>
+      <button data-i18n="in.add.other" class="btn btn-ghost" style="flex:1" onclick="resetForm()">إدخال فرع آخر</button>
       <a class="btn btn-ghost" style="flex:1" href="company-dashboard.html">عرض اللوحة</a>
     </div>
   </div>
