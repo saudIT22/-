@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>نبّاه · متابعة القرارات</title>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
   :root{--bg:#0a0f0c;--panel:#101a15;--panel2:#0e1712;--line:#1d2c24;--mint:#10b981;--mint-deep:#0c8f64;--gold:#f5b301;--red:#ef4444;--txt:#e8f1ec;--txt-soft:#9fb4aa;--txt-mute:#678075;--r:16px;}
   *{margin:0;padding:0;box-sizing:border-box}
@@ -56,43 +57,43 @@
 <header>
   <div class="head-in">
     <a class="brand" href="company-dashboard.html"><span class="bell">🔔</span>نبّاه</a>
-    <a class="btn btn-ghost" href="company-command-center.html">مركز القيادة</a>
+    <a data-i18n="dec.command" class="btn btn-ghost" href="company-command-center.html">مركز القيادة</a>
   </div>
 </header>
 <div class="wrap">
-  <div class="page-head"><h1>⚡ متابعة القرارات</h1><p>اعتمد القرار → حدّد المسؤول والموعد والـKPI → أغلقه ويقيس نبّاه النتيجة (المبيعات قبل/بعد) تلقائياً</p></div>
+  <div class="page-head"><h1>⚡ <span data-i18n="page.decisions.h">متابعة القرارات</span></h1><p>اعتمد القرار → حدّد المسؤول والموعد والـKPI → أغلقه ويقيس نبّاه النتيجة (المبيعات قبل/بعد) تلقائياً</p></div>
 
   <div id="loading" class="state"><div class="spin"></div>جارٍ التحميل…</div>
   <div id="error" class="state" style="display:none;color:var(--red)"></div>
 
   <div id="content" style="display:none">
     <div class="stats">
-      <div class="stat"><div class="v" style="color:var(--mint)" id="stOpen">0</div><div class="l">قيد التنفيذ</div></div>
-      <div class="stat"><div class="v" style="color:var(--red)" id="stOverdue">0</div><div class="l">متأخر</div></div>
-      <div class="stat"><div class="v" id="stDone">0</div><div class="l">منجَز</div></div>
+      <div class="stat"><div class="v" style="color:var(--mint)" id="stOpen">0</div><div data-i18n="dec.state.pending" class="l">قيد التنفيذ</div></div>
+      <div class="stat"><div class="v" style="color:var(--red)" id="stOverdue">0</div><div data-i18n="dec.state.late" class="l">متأخر</div></div>
+      <div class="stat"><div class="v" id="stDone">0</div><div data-i18n="dec.state.done" class="l">منجَز</div></div>
     </div>
 
     <div class="panel">
-      <h2>➕ اعتماد قرار جديد</h2>
-      <div class="sub">يُسجَّل خط الأساس (مبيعاتك الحالية) تلقائياً لقياس الأثر لاحقاً</div>
-      <div class="field"><label>القرار</label><input id="nTitle" placeholder="مثال: إيقاف خصومات فرع جدة"></div>
-      <div class="field"><label>التفاصيل (اختياري)</label><textarea id="nDetail" rows="2" placeholder="السياق أو الخطوات"></textarea></div>
+      <h2>➕ <span data-i18n="dec.new.title">اعتماد قرار جديد</span></h2>
+      <div data-i18n="dec.new.baseline" class="sub">يُسجَّل خط الأساس (مبيعاتك الحالية) تلقائياً لقياس الأثر لاحقاً</div>
+      <div class="field"><label data-i18n="dec.field.decision">القرار</label><input id="nTitle" placeholder="مثال: إيقاف خصومات فرع جدة"></div>
+      <div class="field"><label data-i18n="dec.field.details">التفاصيل (اختياري)</label><textarea id="nDetail" rows="2" placeholder="السياق أو الخطوات"></textarea></div>
       <div class="grid2">
-        <div class="field"><label>المسؤول</label><input id="nOwner" placeholder="مثال: مدير فرع جدة"></div>
-        <div class="field"><label>موعد الإنجاز</label><input id="nDue" type="date"></div>
+        <div class="field"><label data-i18n="dec.field.owner">المسؤول</label><input id="nOwner" placeholder="مثال: مدير فرع جدة"></div>
+        <div class="field"><label data-i18n="dec.field.due">موعد الإنجاز</label><input id="nDue" type="date"></div>
       </div>
-      <div class="field"><label>مؤشر النجاح KPI</label><input id="nKpi" placeholder="مثال: هامش الفرع يرتفع فوق 15%"></div>
+      <div class="field"><label data-i18n="dec.field.kpi">مؤشر النجاح KPI</label><input id="nKpi" placeholder="مثال: هامش الفرع يرتفع فوق 15%"></div>
       <div id="nErr" style="color:var(--red);font-size:13px;display:none;margin-bottom:8px"></div>
-      <button class="btn btn-mint" id="nBtn" style="width:100%;padding:12px" onclick="saveDecision()">اعتماد القرار</button>
+      <button data-i18n="dec.approve.btn" class="btn btn-mint" id="nBtn" style="width:100%;padding:12px" onclick="saveDecision()">اعتماد القرار</button>
     </div>
 
     <div id="list"></div>
   </div>
 
   <div class="links">
-    <a class="btn btn-ghost" href="company-dashboard.html">اللوحة</a>
+    <a data-i18n="nav.dashboard" class="btn btn-ghost" href="company-dashboard.html">اللوحة</a>
     <a class="btn btn-ghost" href="company-command-center.html">🎛️ مركز القيادة</a>
-    <a class="btn btn-ghost" href="company-memory.html">🧠 ذاكرة الشركة</a>
+    <a class="btn btn-ghost" href="company-memory.html">🧠 <span data-i18n="dec.memory">ذاكرة الشركة</span></a>
   </div>
 </div>
 <script>
@@ -205,5 +206,6 @@ async function cancelDecision(id){
 }
 load();
 </script>
+  <script src="i18n.js"></script>
 </body>
 </html>
