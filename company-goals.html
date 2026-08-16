@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>نبّاه · الأهداف والنتائج</title>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
   :root{--bg:#0a0f0c;--panel:#101a15;--panel2:#0e1712;--line:#1d2c24;--mint:#10b981;--mint-deep:#0c8f64;--gold:#f5b301;--orange:#f59e0b;--red:#ef4444;--txt:#e8f1ec;--txt-soft:#9fb4aa;--txt-mute:#678075;--r:16px;}
   *{margin:0;padding:0;box-sizing:border-box}
@@ -50,7 +51,7 @@
   </div>
 </header>
 <div class="wrap">
-  <div class="page-head"><h1>🎯 الأهداف والنتائج</h1><p>حدّد أهدافك الاستراتيجية، ونبّاه يقيس الإنجاز مقابل الفعلي تلقائياً</p></div>
+  <div class="page-head"><h1>🎯 <span data-i18n="goals.title">الأهداف والنتائج</span></h1><p>حدّد أهدافك الاستراتيجية، ونبّاه يقيس الإنجاز مقابل الفعلي تلقائياً</p></div>
 
   <div id="loading" class="state"><div class="spin"></div>جارٍ التحميل…</div>
   <div id="error" class="state" style="display:none;color:var(--red)"></div>
@@ -61,10 +62,10 @@
 
     <!-- إدخال الأهداف -->
     <div class="panel">
-      <h2>📝 تحديث الأهداف</h2>
+      <h2>📝 <span data-i18n="goals.update">تحديث الأهداف</span></h2>
       <div class="sub">حدّد الأهداف السنوية (أو الفترة المختارة) — نبّاه يحسب الإنجاز تلقائياً من البيانات الفعلية</div>
       <div class="grid2">
-        <div><label>الفترة (السنة)</label><input id="period" placeholder="2026" value="2026"></div>
+        <div><label data-i18n="goals.period">الفترة (السنة)</label><input id="period" placeholder="2026" value="2026"></div>
         <div><label>هدف المبيعات (ريال)<span style="color:#f5b301;margin-inline-start:6px;font-size:11px">⭐⭐⭐⭐⭐</span></label><input id="g_sales" type="number" inputmode="decimal" placeholder="0"></div>
       </div>
       <div class="grid2">
@@ -77,7 +78,7 @@
       </div>
       <div class="err" id="err"></div>
       <div class="ok" id="ok"></div>
-      <button class="btn btn-mint" id="saveBtn" style="width:100%;padding:13px;margin-top:8px" onclick="save()">حفظ الأهداف</button>
+      <button data-i18n="goals.save" class="btn btn-mint" id="saveBtn" style="width:100%;padding:13px;margin-top:8px" onclick="save()">حفظ الأهداف</button>
     </div>
   </div>
 
@@ -188,5 +189,6 @@ async function save(){
 }
 load();
 </script>
+  <script src="i18n.js"></script>
 </body>
 </html>
