@@ -148,6 +148,73 @@
     "dec.state.approved": { ar: "معتمد", en: "Approved" },
     "dec.state.done": { ar: "منجز", en: "Completed" },
     "dec.state.rejected": { ar: "مرفوض", en: "Rejected" },
+
+    // ---- صفحة القرارات (كاملة) ----
+    "dec.page.title": { ar: "نبّاه · متابعة القرارات", en: "Nabbah · Decision Tracking" },
+    "dec.command": { ar: "مركز القيادة", en: "Command Center" },
+    "dec.head.desc": { ar: "اعتمد القرار → حدّد المسؤول والموعد والـKPI → أغلقه ويقيس نبّاه النتيجة تلقائياً (المبيعات قبل/بعد)", en: "Approve decision → set owner, due date, KPI → close it and Nabbah measures the result automatically (sales before/after)" },
+    "common.loading2": { ar: "جارٍ التحميل…", en: "Loading…" },
+    "dec.state.late": { ar: "متأخر", en: "Overdue" },
+    "dec.new.title": { ar: "اعتماد قرار جديد", en: "Approve New Decision" },
+    "dec.new.baseline": { ar: "يُسجَّل خط الأساس (مبيعاتك الحالية) تلقائياً لقياس الأثر لاحقاً", en: "The baseline (your current sales) is recorded automatically to measure impact later" },
+    "dec.field.decision": { ar: "القرار", en: "Decision" },
+    "dec.field.details": { ar: "التفاصيل (اختياري)", en: "Details (optional)" },
+    "dec.field.owner": { ar: "المسؤول", en: "Owner" },
+    "dec.field.due": { ar: "موعد الإنجاز", en: "Due Date" },
+    "dec.field.kpi": { ar: "مؤشر النجاح KPI", en: "Success KPI" },
+    "dec.approve.btn": { ar: "اعتماد القرار", en: "Approve Decision" },
+    "dec.memory": { ar: "ذاكرة الشركة", en: "Company Memory" },
+
+    // ---- صفحة اللوحة (كاملة) ----
+    "dash.page.title": { ar: "نبّاه · لوحة الشركة", en: "Nabbah · Company Dashboard" },
+    "dash.companies": { ar: "قسم الشركات", en: "Companies" },
+    "dash.pending.msg": { ar: "تم تسجيل شركتك بنجاح ✅ وهي الآن بانتظار تفعيل الاشتراك. بمجرد التفعيل تنفتح لك كل خدمات قسم الشركات (اللوحة، مقارنة الفروع، التدفق النقدي، كشف التسرّب، وغيرها).", en: "Your company was registered successfully ✅ and is now awaiting subscription activation. Once active, all Companies services unlock (dashboard, branch comparison, cash flow, leak detection, and more)." },
+    "dash.start.fast": { ar: "ابدأ فوراً —", en: "Start instantly —" },
+    "dash.upload.line": { ar: "ارفع ملف Excel أو CSV واحد", en: "Upload one Excel or CSV file" },
+    "dash.upload.desc": { ar: "من نظامك (نظام كاشير POS، نظام محاسبة، ERP، أو ملف يدوي)، ويشغّل نبّاه التحليل الكامل تلقائياً — بدون أي إدخال يدوي فرع بفرع.", en: "from your system (POS, accounting, ERP, or a manual file), and Nabbah runs the full analysis automatically — with no manual branch-by-branch entry." },
+    "dash.cmp.title": { ar: "مقارنة الفروع — المبيعات", en: "Branch Comparison — Sales" },
+    "dash.map.title": { ar: "توزيع الفروع على الخريطة", en: "Branches on the Map" },
+    "dash.rootcause.title": { ar: "تحليل الأسباب", en: "Root-Cause Analysis" },
+    "dash.bestprac.title": { ar: "أفضل الممارسات", en: "Best Practices" },
+    "dash.similar.title": { ar: "مقارنة الفروع المتشابهة", en: "Similar Branches Comparison" },
+    "dash.forecast.title": { ar: "التنبؤ بالأداء (الفترة القادمة)", en: "Performance Forecast (Next Period)" },
+    "dash.sim.title": { ar: "محاكي القرارات", en: "Decision Simulator" },
+    "dash.rate.exc": { ar: "ممتاز", en: "Excellent" },
+    "dash.rate.good": { ar: "جيد", en: "Good" },
+    "dash.rate.avg": { ar: "متوسط", en: "Average" },
+    "dash.rate.weak": { ar: "ضعيف", en: "Weak" },
+
+    // ---- التدفق النقدي ----
+    "cash.trail": { ar: "مسار السيولة (12 شهر)", en: "Liquidity Trail (12 months)" },
+    "cash.data": { ar: "بيانات السيولة", en: "Liquidity Data" },
+    "cash.reserve": { ar: "الاحتياطي النقدي الحالي (ريال)", en: "Current Cash Reserve (SAR)" },
+    "cash.obligations": { ar: "الالتزامات الشهرية الثابتة (ريال)", en: "Monthly Fixed Obligations (SAR)" },
+    "cash.save": { ar: "حفظ وإعادة الحساب", en: "Save & Recalculate" },
+    // ---- الفروع ----
+    "br.table": { ar: "جدول مقارنة الفروع", en: "Branch Comparison Table" },
+    "br.detail": { ar: "تفاصيل فرع", en: "Branch Details" },
+    // ---- التقارير ----
+    "rep.print": { ar: "طباعة / PDF", en: "Print / PDF" },
+    // ---- الإدخال ----
+    "in.branch": { ar: "الفرع", en: "Branch" },
+    "in.period": { ar: "الفترة (الشهر والسنة)", en: "Period (Month & Year)" },
+    "in.sales": { ar: "إجمالي المبيعات (ريال)", en: "Total Sales (SAR)" },
+    "in.expenses": { ar: "المصروفات (ريال)", en: "Expenses (SAR)" },
+    "in.invoices": { ar: "عدد الفواتير / الطلبات", en: "Number of Invoices / Orders" },
+    "in.customers": { ar: "عدد العملاء", en: "Number of Customers" },
+    "in.notes": { ar: "ملاحظات", en: "Notes" },
+    "in.save": { ar: "حفظ وحساب المؤشرات", en: "Save & Compute Metrics" },
+    "in.analyze": { ar: "التحليل التنفيذي للفرع", en: "Branch Executive Analysis" },
+    "in.add.other": { ar: "إدخال فرع آخر", en: "Enter Another Branch" },
+    // ---- الصحة ----
+    "health.title": { ar: "صحة الشركة", en: "Company Health" },
+    // ---- الأهداف ----
+    "goals.title": { ar: "الأهداف والنتائج", en: "Goals & Results" },
+    "goals.update": { ar: "تحديث الأهداف", en: "Update Goals" },
+    "goals.period": { ar: "الفترة (السنة)", en: "Period (Year)" },
+    "goals.save": { ar: "حفظ الأهداف", en: "Save Goals" },
+    // ---- Benchmarks ----
+    "bench.title": { ar: "مقارنة مع القطاع", en: "Sector Benchmarks" },
     // عناوين حقيقية للصفحات
     "page.input.h": { ar: "إدخال بيانات فرع", en: "Enter Branch Data" },
     "page.decisions.h": { ar: "متابعة القرارات", en: "Decision Tracking" },
