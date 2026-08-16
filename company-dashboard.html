@@ -177,7 +177,7 @@
   <div class="head-in">
     <a class="brand" href="company-dashboard.html">
       <span class="bell">🔔</span>
-      <span>نبّاه<small id="coName">قسم الشركات</small></span>
+      <span>نبّاه<small data-i18n="dash.companies" id="coName">قسم الشركات</small></span>
     </a>
     <div class="head-actions">
       <span class="pill" id="userPill">👤 <b id="userName">…</b></span>
@@ -191,7 +191,7 @@
 
   <div class="page-head">
     <h1 id="title" data-i18n="dash.title">لوحة المدير التنفيذي</h1>
-    <p id="subtitle">تحليل شامل لأداء الفروع ومقارنتها بالمؤشرات الرئيسية</p>
+    <p data-i18n="dash.subtitle" id="subtitle">تحليل شامل لأداء الفروع ومقارنتها بالمؤشرات الرئيسية</p>
   </div>
 
   <!-- Loading -->
@@ -223,7 +223,7 @@
     <div class="empty-cta">
       <div class="big">📊</div>
       <h3 data-i18n="dash.ready.title">الشركة جاهزة — أدخل بيانات الفروع</h3>
-      <p>ابدأ فوراً — <b style="color:var(--mint)">ارفع ملف Excel أو CSV واحد</b> من نظامك (نظام كاشير POS، نظام محاسبة، ERP، أو ملف يدوي)، ويشغّل نبّاه كل الخدمات تلقائياً: تحليل، تسرّب، تدفق نقدي، صحة، تنبؤ، مخاطر، Benchmarks، Root Cause، والباقي.</p>
+      <p>ابدأ فوراً — <b data-i18n="dash.upload.line" style="color:var(--mint)">ارفع ملف Excel أو CSV واحد</b> من نظامك (نظام كاشير POS، نظام محاسبة، ERP، أو ملف يدوي)، ويشغّل نبّاه كل الخدمات تلقائياً: تحليل، تسرّب، تدفق نقدي، صحة، تنبؤ، مخاطر، Benchmarks، Root Cause، والباقي.</p>
       <div style="display:flex;gap:10px;flex-direction:column;max-width:340px;margin:20px auto 0">
         <a class="btn btn-mint" href="company-upload.html" style="background:linear-gradient(135deg,#10b981,#34d399);padding:16px;font-weight:900;font-size:16px">📂 رفع ملف — الأسرع والأذكى</a>
         <a data-i18n="dash.ready.manual" class="btn btn-ghost" href="company-input.html" style="padding:12px">أو إدخال يدوي فرع بفرع</a>
@@ -246,12 +246,12 @@
     <!-- comparison + ranking -->
     <div class="two">
       <div class="panel">
-        <h2>📊 مقارنة الفروع — المبيعات</h2>
+        <h2>📊 <span data-i18n="dash.cmp.title">مقارنة الفروع — المبيعات</span></h2>
         <div data-i18n="dash.cmp.sales.sub" class="sub">المبيعات الفعلية لكل فرع (آخر فترة)</div>
         <div style="height:260px"><canvas id="cmpChart"></canvas></div>
       </div>
       <div class="panel">
-        <h2>🏆 ترتيب الفروع (مؤشر الأداء)</h2>
+        <h2>🏆 <span data-i18n="dash.rank">ترتيب الفروع (مؤشر الأداء)</span></h2>
         <div data-i18n="dash.rank.sub" class="sub">من 100 — مع اتجاه المؤشر عن الفترة السابقة</div>
         <div id="ranking"></div>
       </div>
@@ -271,7 +271,7 @@
         </div>
       </div>
       <div class="panel" id="rootPanel">
-        <h2>🔍 تحليل الأسباب</h2>
+        <h2>🔍 <span data-i18n="dash.rootcause.title">تحليل الأسباب</span></h2>
         <div data-i18n="dash.rootcause.sub" class="sub" id="rootSub">الفرع الأقل أداءً مقابل متوسط الشركة</div>
         <div id="rootCause"></div>
       </div>
@@ -280,12 +280,12 @@
     <!-- best practice + similar -->
     <div class="two">
       <div class="panel" id="bpPanel">
-        <h2>✅ أفضل الممارسات</h2>
+        <h2>✅ <span data-i18n="dash.bestprac.title">أفضل الممارسات</span></h2>
         <div data-i18n="dash.bestpractice.sub" class="sub">من الفرع الأعلى أداءً</div>
         <div id="bestPractice"></div>
       </div>
       <div class="panel" id="similarPanel">
-        <h2>🔗 مقارنة الفروع المتشابهة</h2>
+        <h2>🔗 <span data-i18n="dash.similar.title">مقارنة الفروع المتشابهة</span></h2>
         <div data-i18n="dash.similar.sub" class="sub">حسب نوع الفرع</div>
         <div style="height:240px"><canvas id="simChart"></canvas></div>
       </div>
@@ -293,7 +293,7 @@
 
     <!-- forecast -->
     <div class="panel" id="fcPanel">
-      <h2>📈 التنبؤ بالأداء (الفترة القادمة)</h2>
+      <h2>📈 <span data-i18n="dash.forecast.title">التنبؤ بالأداء (الفترة القادمة)</span></h2>
       <div data-i18n="dash.forecast.sub" class="sub">مبني على اتجاه مبيعات كل فرع عبر الفترات السابقة</div>
       <div class="fc-grid" id="forecast"></div>
     </div>
