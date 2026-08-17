@@ -215,6 +215,70 @@
     "goals.save": { ar: "حفظ الأهداف", en: "Save Goals" },
     // ---- Benchmarks ----
     "bench.title": { ar: "مقارنة مع القطاع", en: "Sector Benchmarks" },
+
+    // ---- عناصر مشتركة عبر كل وحدات التحليل ----
+    "unit.input.settings": { ar: "إعدادات الإدخال", en: "Input Settings" },
+    "unit.scope": { ar: "النطاق", en: "Scope" },
+    "unit.period": { ar: "الفترة", en: "Period" },
+    "unit.fields": { ar: "الحقول", en: "Fields" },
+    "unit.source": { ar: "من أين أتت هذه البيانات؟", en: "Where did this data come from?" },
+    "unit.exec": { ar: "التحليل التنفيذي للوحدة", en: "Unit Executive Analysis" },
+    "unit.request": { ar: "اطلب التحليل التنفيذي", en: "Request Executive Analysis" },
+    // ---- عناوين الوحدات ----
+    "unit.finance": { ar: "الوحدة المالية الموسّعة", en: "Extended Finance Unit" },
+    "unit.finance.save": { ar: "حفظ بيانات الوحدة المالية الموسّعة", en: "Save Finance Unit Data" },
+    "unit.sales": { ar: "وحدة المبيعات التفصيلية", en: "Detailed Sales Unit" },
+    "unit.sales.save": { ar: "حفظ بيانات وحدة المبيعات التفصيلية", en: "Save Sales Unit Data" },
+    "unit.customers": { ar: "وحدة العملاء", en: "Customers Unit" },
+    "unit.customers.save": { ar: "حفظ بيانات وحدة العملاء", en: "Save Customers Unit Data" },
+    "unit.inventory": { ar: "وحدة المخزون", en: "Inventory Unit" },
+    "unit.inventory.save": { ar: "حفظ بيانات وحدة المخزون", en: "Save Inventory Unit Data" },
+    "unit.ops": { ar: "الوحدة التشغيلية", en: "Operations Unit" },
+    "unit.ops.save": { ar: "حفظ بيانات الوحدة التشغيلية", en: "Save Operations Unit Data" },
+    "unit.hr": { ar: "وحدة الموارد البشرية", en: "HR Unit" },
+    "unit.hr.save": { ar: "حفظ بيانات وحدة الموارد البشرية", en: "Save HR Unit Data" },
+    "unit.procurement": { ar: "وحدة المشتريات", en: "Procurement Unit" },
+    "unit.tax": { ar: "وحدة الضريبة والزكاة", en: "Tax & Zakat Unit" },
+    "unit.events": { ar: "وحدة الأحداث والمواسم", en: "Events & Seasons Unit" },
+    "unit.competitors": { ar: "وحدة المنافسين", en: "Competitors Unit" },
+
+    // ---- تسجيل شركة ----
+    "reg.title": { ar: "إنشاء شركة جديدة", en: "Create New Company" },
+    "reg.name": { ar: "اسم الشركة", en: "Company Name" },
+    "reg.activity": { ar: "نشاط الشركة", en: "Company Activity" },
+    "reg.branches": { ar: "الفروع", en: "Branches" },
+    "reg.add.branch": { ar: "إضافة فرع", en: "Add Branch" },
+    "reg.create": { ar: "إنشاء الشركة والبدء", en: "Create Company & Start" },
+    // ---- مركز القيادة ----
+    "cmd.title": { ar: "مركز القيادة التنفيذي", en: "Executive Command Center" },
+    "cmd.refresh": { ar: "تحديث", en: "Refresh" },
+    // ---- التنبؤات ----
+    "pred.title": { ar: "التنبؤ بالأداء", en: "Performance Forecast" },
+    "pred.company": { ar: "توقع الشركة (٦ أشهر)", en: "Company Forecast (6 months)" },
+    "pred.branch": { ar: "توقع كل فرع", en: "Per-Branch Forecast" },
+    "pred.how": { ar: "كيف يحسب نبّاه التنبؤ؟", en: "How does Nabbah compute the forecast?" },
+    // ---- المخاطر ----
+    "risks.title": { ar: "محرّك المخاطر", en: "Risk Engine" },
+    // ---- الذاكرة ----
+    "mem.title": { ar: "ذاكرة الشركة", en: "Company Memory" },
+    // ---- الفريق ----
+    "team.title": { ar: "صلاحيات الفريق", en: "Team Permissions" },
+    "team.members": { ar: "أعضاء الفريق", en: "Team Members" },
+    "team.add": { ar: "إضافة عضو", en: "Add Member" },
+    "team.name": { ar: "الاسم", en: "Name" },
+    "team.email": { ar: "الإيميل (اختياري)", en: "Email (optional)" },
+    "team.role": { ar: "الصلاحية", en: "Role" },
+    "team.branch": { ar: "الفرع (لمدير الفرع)", en: "Branch (for branch manager)" },
+    "team.add.btn": { ar: "إضافة العضو", en: "Add Member" },
+    "team.guide": { ar: "دليل الصلاحيات", en: "Permissions Guide" },
+    // ---- عناوين متنوعة ----
+    "rootcause.title": { ar: "تحليل الأسباب الجذرية", en: "Root-Cause Analysis" },
+    "board.title": { ar: "تقرير مجلس الإدارة", en: "Board Report" },
+    "dq.title": { ar: "جودة البيانات", en: "Data Quality" },
+    "upload.title": { ar: "رفع الملفات", en: "File Upload" },
+    "tax.title": { ar: "الضريبة والزكاة", en: "Tax & Zakat" },
+    "rootcause.alt": { ar: "الأسباب الجذرية", en: "Root Causes" },
+    "upload.smart": { ar: "رفع البيانات الذكي", en: "Smart Data Upload" },
     // عناوين حقيقية للصفحات
     "page.input.h": { ar: "إدخال بيانات فرع", en: "Enter Branch Data" },
     "page.decisions.h": { ar: "متابعة القرارات", en: "Decision Tracking" },
