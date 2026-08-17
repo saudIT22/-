@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
   :root{--bg:#0a0f0c;--panel:#101a15;--panel2:#0e1712;--line:#1d2c24;--mint:#10b981;--mint-deep:#0c8f64;--gold:#f5b301;--blue:#3b82f6;--purple:#a855f7;--red:#ef4444;--txt:#e8f1ec;--txt-soft:#9fb4aa;--txt-mute:#678075;--r:16px;}
   *{margin:0;padding:0;box-sizing:border-box}
@@ -52,30 +53,30 @@
   </div>
 </header>
 <div class="wrap">
-  <div class="page-head"><h1>👥 صلاحيات الفريق</h1><p>أضف أعضاء فريقك وحدّد صلاحية كل واحد</p></div>
+  <div class="page-head"><h1>👥 <span data-i18n="team.title">صلاحيات الفريق</span></h1><p>أضف أعضاء فريقك وحدّد صلاحية كل واحد</p></div>
   <div id="loading" class="state"><div class="spin"></div>جارٍ التحميل…</div>
   <div id="content" style="display:none">
     <div class="panel">
-      <h2>أعضاء الفريق</h2>
+      <h2 data-i18n="team.members">أعضاء الفريق</h2>
       <div class="sub" id="teamSub"></div>
       <div id="team"></div>
     </div>
     <div class="panel">
-      <h2>＋ إضافة عضو</h2>
+      <h2>＋ <span data-i18n="team.add">إضافة عضو</span></h2>
       <div class="sub">العضو يُضاف للروستر بصلاحيته — الربط بحساب فعلي يجي لاحقاً</div>
       <div class="err" id="err"></div>
       <div class="row2">
-        <div><label>الاسم</label><input id="mname" placeholder="اسم العضو"></div>
-        <div><label>الإيميل (اختياري)</label><input id="memail" placeholder="email@example.com"></div>
+        <div><label data-i18n="team.name">الاسم</label><input id="mname" placeholder="اسم العضو"></div>
+        <div><label data-i18n="team.email">الإيميل (اختياري)</label><input id="memail" placeholder="email@example.com"></div>
       </div>
       <div class="row2">
-        <div><label>الصلاحية</label><select id="mrole"></select></div>
-        <div><label>الفرع (لمدير الفرع)</label><select id="mbranch"><option value="">— غير محدد —</option></select></div>
+        <div><label data-i18n="team.role">الصلاحية</label><select id="mrole"></select></div>
+        <div><label data-i18n="team.branch">الفرع (لمدير الفرع)</label><select id="mbranch"><option value="">— غير محدد —</option></select></div>
       </div>
-      <button class="btn btn-mint" id="addBtn" onclick="addMember()">إضافة العضو</button>
+      <button data-i18n="team.add.btn" class="btn btn-mint" id="addBtn" onclick="addMember()">إضافة العضو</button>
     </div>
     <div class="panel">
-      <h2>دليل الصلاحيات</h2>
+      <h2 data-i18n="team.guide">دليل الصلاحيات</h2>
       <div id="rolesGuide"></div>
     </div>
   </div>
@@ -145,5 +146,6 @@ async function removeMember(id){
 function showErr(m){ const e=document.getElementById("err"); e.textContent=m; e.style.display="block"; }
 load();
 </script>
+  <script src="i18n.js"></script>
 </body>
 </html>
