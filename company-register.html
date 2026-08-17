@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
   :root{
     --bg:#0a0f0c;--panel:#101a15;--panel2:#0e1712;--line:#1d2c24;
@@ -59,7 +60,7 @@
 
 <div class="wrap">
   <div class="page-head">
-    <h1>إنشاء شركة جديدة</h1>
+    <h1 data-i18n="reg.title">إنشاء شركة جديدة</h1>
     <p>سجّل شركتك وفروعها — وبعدها أدخل بيانات كل فرع ويبدأ التحليل فوراً.</p>
   </div>
 
@@ -67,11 +68,11 @@
 
   <div class="card">
     <div class="field">
-      <label>اسم الشركة</label>
+      <label data-i18n="reg.name">اسم الشركة</label>
       <input id="cname" placeholder="مثال: مجموعة الذواقة">
     </div>
     <div class="field">
-      <label>نشاط الشركة</label>
+      <label data-i18n="reg.activity">نشاط الشركة</label>
       <div class="sectors" id="sectors">
         <div class="sec active" data-s="fnb">🍽️ مطاعم وكافيهات</div>
         <div class="sec" data-s="retail">🛍️ تجارة تجزئة</div>
@@ -89,13 +90,13 @@
   </div>
 
   <div class="card">
-    <label style="margin-bottom:12px">الفروع</label>
+    <label data-i18n="reg.branches" style="margin-bottom:12px">الفروع</label>
     <div id="branches"></div>
-    <button class="add-branch" onclick="addBranch()">＋ إضافة فرع</button>
+    <button class="add-branch" onclick="addBranch()">＋ <span data-i18n="reg.add.branch">إضافة فرع</span></button>
     <div class="hint">المدينة تُستخدم لعرض الفرع على الخريطة. تقدر تعدّل/تضيف فروع لاحقاً.</div>
   </div>
 
-  <button class="btn btn-mint" id="submit" style="width:100%;padding:14px" onclick="createCompany()">إنشاء الشركة والبدء</button>
+  <button data-i18n="reg.create" class="btn btn-mint" id="submit" style="width:100%;padding:14px" onclick="createCompany()">إنشاء الشركة والبدء</button>
   <div style="height:40px"></div>
 </div>
 
@@ -172,5 +173,6 @@ async function createCompany(){
 }
 function showErr(m){ const err=document.getElementById("err"); err.textContent=m; err.style.display="block"; window.scrollTo({top:0,behavior:"smooth"}); }
 </script>
+  <script src="i18n.js"></script>
 </body>
 </html>
