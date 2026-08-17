@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>نبّاه · الضريبة والزكاة</title>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
   :root{--bg:#0a0f0c;--panel:#101a15;--panel2:#0e1712;--line:#1d2c24;--mint:#10b981;--mint-deep:#0c8f64;--gold:#f5b301;--blue:#3b82f6;--red:#ef4444;--txt:#e8f1ec;--txt-soft:#9fb4aa;--txt-mute:#678075;--r:16px;}
   *{margin:0;padding:0;box-sizing:border-box}
@@ -50,7 +51,7 @@
   </div>
 </header>
 <div class="wrap">
-  <div class="page-head"><h1>🧾 الضريبة والزكاة</h1><p>حساب دقيق لضريبة القيمة المضافة (15%) والزكاة (2.5%)</p></div>
+  <div class="page-head"><h1>🧾 <span data-i18n="tax.title">الضريبة والزكاة</span></h1><p>حساب دقيق لضريبة القيمة المضافة (15%) والزكاة (2.5%)</p></div>
 
   <div id="loading" class="state"><div class="spin"></div>جارٍ التحميل…</div>
   <div id="pending" class="state" style="display:none"></div>
@@ -174,5 +175,6 @@ function calcTotal(){
 }
 load();
 </script>
+  <script src="i18n.js"></script>
 </body>
 </html>
