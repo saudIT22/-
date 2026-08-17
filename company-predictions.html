@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>نبّاه · التنبؤ بالأداء</title>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
   :root{--bg:#0a0f0c;--panel:#101a15;--panel2:#0e1712;--line:#1d2c24;--mint:#10b981;--mint-deep:#0c8f64;--gold:#f5b301;--red:#ef4444;--blue:#3b82f6;--txt:#e8f1ec;--txt-soft:#9fb4aa;--txt-mute:#678075;--r:16px;}
@@ -61,7 +62,7 @@ window.addEventListener("error",function(e){
   </div>
 </header>
 <div class="wrap">
-  <div class="page-head"><h1>🔮 التنبؤ بالأداء</h1><p>توقعات المبيعات والأرباح للستة أشهر القادمة — بناءً على معدل النمو الفعلي لكل فرع</p></div>
+  <div class="page-head"><h1>🔮 <span data-i18n="pred.title">التنبؤ بالأداء</span></h1><p>توقعات المبيعات والأرباح للستة أشهر القادمة — بناءً على معدل النمو الفعلي لكل فرع</p></div>
   <div id="outlook" style="display:none;margin-bottom:16px"></div>
 
 
@@ -83,13 +84,13 @@ window.addEventListener("error",function(e){
     </div>
 
     <div class="panel">
-      <h2>📈 توقع الشركة (٦ أشهر)</h2>
+      <h2>📈 <span data-i18n="pred.company">توقع الشركة (٦ أشهر)</span></h2>
       <div class="sub">المبيعات والأرباح المتوقعة شهرياً</div>
       <div style="height:280px"><canvas id="companyChart"></canvas></div>
     </div>
 
     <div class="panel">
-      <h2>🏬 توقع كل فرع</h2>
+      <h2>🏬 <span data-i18n="pred.branch">توقع كل فرع</span></h2>
       <div class="sub">معدل النمو + الإجمالي المتوقع + درجة الثقة لكل فرع</div>
       <div id="branchList"></div>
     </div>
@@ -215,5 +216,6 @@ load();
 })();
 
 </script>
+  <script src="i18n.js"></script>
 </body>
 </html>
