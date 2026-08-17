@@ -355,37 +355,100 @@
   </div>
 
   <div class="foot-links" id="footLinks" style="display:none">
-    <a class="btn btn-mint" href="company-upload.html" style="background:linear-gradient(135deg,#10b981,#34d399);font-weight:900">📂 رفع ملف Excel/CSV (الأسرع)</a>
-    <a class="btn btn-mint" href="company-command-center.html">🎛️ مركز القيادة التنفيذي</a>
-    <a class="btn btn-mint" href="company-health.html">❤️ صحة الشركة</a>
-    <a class="btn btn-mint" href="company-goals.html">🎯 الأهداف والنتائج</a>
-    <a class="btn btn-mint" href="company-predictions.html">🔮 التنبؤ بالأداء</a>
-    <a class="btn btn-mint" href="company-root-cause.html">🔍 الأسباب الجذرية</a>
-    <a class="btn btn-mint" href="company-benchmarks.html">📐 مقارنة بالقطاع</a>
-    <a class="btn btn-mint" href="company-risks.html">⚠️ محرّك المخاطر</a>
-    <a class="btn btn-mint" href="company-board.html">📋 عرض مجلس الإدارة</a>
-    <a class="btn btn-ghost" href="company-branches.html">🔀 مقارنة الفروع</a>
-    <a class="btn btn-ghost" href="company-input.html">إدخال بيانات الفروع</a>
-    <a class="btn btn-ghost" href="company-finance.html">💰 الوحدة المالية</a>
-    <a class="btn btn-ghost" href="company-sales.html">🛒 المبيعات التفصيلية</a>
-    <a class="btn btn-ghost" href="company-customers.html">👥 وحدة العملاء</a>
-    <a class="btn btn-ghost" href="company-hr.html">👨‍💼 الموارد البشرية</a>
-    <a class="btn btn-ghost" href="company-ops.html">⚙️ التشغيل</a>
-    <a class="btn btn-ghost" href="company-inventory.html">📦 المخزون</a>
-    <a class="btn btn-ghost" href="company-procurement.html">🛍️ المشتريات</a>
-    <a class="btn btn-ghost" href="company-events.html">📅 الأحداث المؤثرة</a>
-    <a class="btn btn-ghost" href="company-competitors.html">🥊 المنافسون</a>
-    <a class="btn btn-ghost" href="company-data-quality.html">📊 جودة البيانات</a>
-    <a class="btn btn-ghost" href="company-memory.html">🧠 ذاكرة الشركة</a>
-    <a class="btn btn-ghost" href="company-decisions.html">⚡ <span data-i18n="nav.decisions">متابعة القرارات</span></a>
-    <a class="btn btn-ghost" href="company-monthly-report.html">📊 التقرير الشهري</a>
-    <a class="btn btn-ghost" href="company-cashflow.html">💧 التدفق النقدي</a>
-    <a class="btn btn-ghost" href="company-leakage.html">🛡️ كشف التسرّب</a>
-    <a class="btn btn-ghost" href="company-tax.html">🧾 الضريبة والزكاة</a>
-    <a class="btn btn-ghost" href="company-team.html">👥 صلاحيات الفريق</a>
-    <a class="btn btn-ghost" href="company-report.html" data-i18n="nav.report">التقرير التنفيذي</a>
-    <a class="btn btn-ghost" href="company-settings.html">⚙️ <span data-i18n="nav.settings">إعدادات الشركة</span></a>
-    <a class="btn btn-ghost" href="dashboard.html">قسم الأفراد / المطاعم</a>
+    <style>
+      .nav-groups{display:flex;flex-direction:column;gap:22px;width:100%}
+      .nav-group{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:16px;padding:16px 18px}
+      .nav-group-h{display:flex;align-items:center;gap:9px;margin-bottom:13px;padding-bottom:11px;border-bottom:1px solid var(--line,#1d2c24)}
+      .nav-group-h .gi{width:32px;height:32px;border-radius:9px;background:var(--panel2,#0e1712);display:grid;place-items:center;font-size:16px}
+      .nav-group-h .gt{font-size:15px;font-weight:800;color:var(--txt,#e8f1ec)}
+      .nav-group-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:9px}
+      .nav-item{display:flex;align-items:center;gap:9px;background:var(--panel2,#0e1712);border:1px solid var(--line,#1d2c24);border-radius:11px;padding:11px 13px;font-size:13.5px;font-weight:600;color:var(--txt-soft,#9fb4aa);transition:.15s;text-decoration:none}
+      .nav-item:hover{border-color:var(--mint,#10b981);color:var(--mint,#10b981);transform:translateY(-1px)}
+      .nav-item.primary{background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.3);color:var(--mint,#10b981)}
+      .nav-item .ni{font-size:15px}
+    </style>
+    <div class="nav-groups">
+
+      <!-- ① نظرة تنفيذية -->
+      <div class="nav-group">
+        <div class="nav-group-h"><div class="gi">🎯</div><div class="gt" data-i18n="navg.executive">نظرة تنفيذية</div></div>
+        <div class="nav-group-grid">
+          <a class="nav-item primary" href="company-command-center.html"><span class="ni">🎛️</span><span data-i18n="nav.command">مركز القيادة التنفيذي</span></a>
+          <a class="nav-item primary" href="company-health.html"><span class="ni">❤️</span><span data-i18n="nav.health">صحة الشركة</span></a>
+          <a class="nav-item" href="company-goals.html"><span class="ni">🎯</span><span data-i18n="nav.goals">الأهداف والنتائج</span></a>
+          <a class="nav-item" href="company-board.html"><span class="ni">📋</span><span data-i18n="nav.board">عرض مجلس الإدارة</span></a>
+        </div>
+      </div>
+
+      <!-- ② الأداء المالي -->
+      <div class="nav-group">
+        <div class="nav-group-h"><div class="gi">💰</div><div class="gt" data-i18n="navg.financial">الأداء المالي</div></div>
+        <div class="nav-group-grid">
+          <a class="nav-item" href="company-finance.html"><span class="ni">💰</span><span data-i18n="nav.finance">الوحدة المالية</span></a>
+          <a class="nav-item" href="company-cashflow.html"><span class="ni">💧</span><span data-i18n="nav.cashflow">التدفق النقدي</span></a>
+          <a class="nav-item" href="company-leakage.html"><span class="ni">📉</span><span data-i18n="nav.leakage">تحليل هدر الإيرادات</span></a>
+          <a class="nav-item" href="company-tax.html"><span class="ni">🧾</span><span data-i18n="nav.tax">الضريبة والزكاة</span></a>
+        </div>
+      </div>
+
+      <!-- ③ الأداء التشغيلي -->
+      <div class="nav-group">
+        <div class="nav-group-h"><div class="gi">⚙️</div><div class="gt" data-i18n="navg.operational">الأداء التشغيلي</div></div>
+        <div class="nav-group-grid">
+          <a class="nav-item" href="company-sales.html"><span class="ni">🛒</span><span data-i18n="nav.sales">المبيعات التفصيلية</span></a>
+          <a class="nav-item" href="company-ops.html"><span class="ni">⚙️</span><span data-i18n="nav.ops">التشغيل</span></a>
+          <a class="nav-item" href="company-inventory.html"><span class="ni">📦</span><span data-i18n="nav.inventory">المخزون</span></a>
+          <a class="nav-item" href="company-procurement.html"><span class="ni">🛍️</span><span data-i18n="nav.procurement">المشتريات</span></a>
+          <a class="nav-item" href="company-hr.html"><span class="ni">👨‍💼</span><span data-i18n="nav.hr">الموارد البشرية</span></a>
+        </div>
+      </div>
+
+      <!-- ④ الفروع والعملاء -->
+      <div class="nav-group">
+        <div class="nav-group-h"><div class="gi">🔀</div><div class="gt" data-i18n="navg.branches">الفروع والعملاء</div></div>
+        <div class="nav-group-grid">
+          <a class="nav-item" href="company-branches.html"><span class="ni">🔀</span><span data-i18n="nav.branches">مقارنة الفروع</span></a>
+          <a class="nav-item" href="company-customers.html"><span class="ni">👥</span><span data-i18n="nav.customers">وحدة العملاء</span></a>
+          <a class="nav-item" href="company-competitors.html"><span class="ni">🥊</span><span data-i18n="nav.competitors">المنافسون</span></a>
+          <a class="nav-item" href="company-events.html"><span class="ni">📅</span><span data-i18n="nav.events">الأحداث المؤثرة</span></a>
+        </div>
+      </div>
+
+      <!-- ⑤ التحليل والتوقعات -->
+      <div class="nav-group">
+        <div class="nav-group-h"><div class="gi">🔮</div><div class="gt" data-i18n="navg.analysis">التحليل والتوقعات</div></div>
+        <div class="nav-group-grid">
+          <a class="nav-item" href="company-predictions.html"><span class="ni">🔮</span><span data-i18n="nav.predictions">التنبؤ بالأداء</span></a>
+          <a class="nav-item" href="company-root-cause.html"><span class="ni">🔍</span><span data-i18n="nav.rootcause">الأسباب الجذرية</span></a>
+          <a class="nav-item" href="company-benchmarks.html"><span class="ni">📐</span><span data-i18n="nav.benchmarks">مقارنة بالقطاع</span></a>
+          <a class="nav-item" href="company-risks.html"><span class="ni">⚠️</span><span data-i18n="nav.risks">محرّك المخاطر</span></a>
+        </div>
+      </div>
+
+      <!-- ⑥ القرارات والتقارير -->
+      <div class="nav-group">
+        <div class="nav-group-h"><div class="gi">📊</div><div class="gt" data-i18n="navg.reports">القرارات والتقارير</div></div>
+        <div class="nav-group-grid">
+          <a class="nav-item" href="company-decisions.html"><span class="ni">⚡</span><span data-i18n="nav.decisions">متابعة القرارات</span></a>
+          <a class="nav-item" href="company-report.html"><span class="ni">📄</span><span data-i18n="nav.report">التقرير التنفيذي</span></a>
+          <a class="nav-item" href="company-monthly-report.html"><span class="ni">📊</span><span data-i18n="nav.monthly">التقرير الشهري</span></a>
+          <a class="nav-item" href="company-memory.html"><span class="ni">🧠</span><span data-i18n="nav.memory">ذاكرة الشركة</span></a>
+        </div>
+      </div>
+
+      <!-- ⑦ البيانات والإعدادات -->
+      <div class="nav-group">
+        <div class="nav-group-h"><div class="gi">🗂️</div><div class="gt" data-i18n="navg.data">البيانات والإعدادات</div></div>
+        <div class="nav-group-grid">
+          <a class="nav-item primary" href="company-upload.html"><span class="ni">📂</span><span data-i18n="nav.upload">رفع ملف Excel/CSV</span></a>
+          <a class="nav-item" href="company-input.html"><span class="ni">✏️</span><span data-i18n="nav.input">إدخال بيانات الفروع</span></a>
+          <a class="nav-item" href="company-data-quality.html"><span class="ni">📊</span><span data-i18n="nav.dataquality">جودة البيانات</span></a>
+          <a class="nav-item" href="company-team.html"><span class="ni">👥</span><span data-i18n="nav.team">صلاحيات الفريق</span></a>
+          <a class="nav-item" href="company-settings.html"><span class="ni">⚙️</span><span data-i18n="nav.settings">إعدادات الشركة</span></a>
+        </div>
+      </div>
+
+    </div>
   </div>
 
 </div>
