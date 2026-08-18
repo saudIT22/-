@@ -3658,6 +3658,35 @@ def company_command_center(user: User = Depends(get_current_user)):
         decisions = decisions[:4]
         opportunities = opportunities[:4]
 
+        # ===== ملخّص المخاطر (مدمج في الملخص التنفيذي — بدل تبويب منفصل) =====
+        risk_summary = []
+        _margins = [bd["entry"].margin for bd in branch_data if bd["entry"].sales > 0 and bd["entry"].expenses > 0]
+        _avg_margin = sum(_margins) / len(_margins) if _margins else 0
+        _repeats = [bd["entry"].repeat_rate for bd in branch_data if bd["entry"].repeat_rate > 0]
+        _avg_repeat = sum(_repeats) / len(_repeats) if _repeats else 0
+        _net = total_sales - total_expenses
+        # سيولة
+        _cash = company.cash_reserve or 0
+        _oblig = company.monthly_obligations or 0
+        if _net < 0:
+            risk_summary.append({"icon": "💧", "title": "مخاطر السيولة", "level": "high",
+                                 "reason": "صافي التشغيل سالب هذا الشهر", "link": "company-cashflow.html"})
+        elif _oblig > 0 and _cash > 0 and (_cash / max(_oblig, 1)) < 3:
+            risk_summary.append({"icon": "💧", "title": "مخاطر السيولة", "level": "medium",
+                                 "reason": f"السيولة تكفي {round(_cash/max(_oblig,1),1)} شهر", "link": "company-cashflow.html"})
+        # ربحية
+        if _margins and _avg_margin < 10:
+            risk_summary.append({"icon": "📉", "title": "انخفاض الأرباح", "level": "high",
+                                 "reason": f"هامش الربح {round(_avg_margin)}% — منخفض جداً", "link": "company-finance.html"})
+        elif _margins and _avg_margin < 20:
+            risk_summary.append({"icon": "📉", "title": "انخفاض الأرباح", "level": "medium",
+                                 "reason": f"هامش الربح {round(_avg_margin)}% — دون المعدل الصحّي", "link": "company-finance.html"})
+        # فقد العملاء
+        if _repeats and _avg_repeat < 20:
+            risk_summary.append({"icon": "👋", "title": "فقد العملاء", "level": "high",
+                                 "reason": f"معدل تكرار العملاء منخفض ({round(_avg_repeat)}%)", "link": "company-customers.html"})
+        risk_summary.sort(key=lambda r: 0 if r["level"] == "high" else 1)
+
         return {
             "company": {"name": company.name, "sector": SECTOR_NAMES.get(company.sector, company.sector)},
             "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
@@ -3677,6 +3706,7 @@ def company_command_center(user: User = Depends(get_current_user)):
             "decisions": decisions,
             "opportunities": opportunities,
             "alerts": alerts,
+            "risks": risk_summary,
             "modules_filled": modules_with_data,
             "modules_total": len(ALLOWED_MODULES),
         }
