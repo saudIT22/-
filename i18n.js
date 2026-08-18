@@ -235,6 +235,8 @@
     "cmd.how.s4": { ar: "توليد القرارات: كل قرار مرتبط بالرقم الذي أنتجه، ومرتّب حسب أثره المالي المقدّر بالريال.", en: "Decision generation: each decision is tied to the number that produced it, ranked by its estimated financial impact in SAR." },
     "cmd.how.s5": { ar: "الذكاء الاصطناعي: يُستخدم فقط لصياغة التوصيات بلغة تنفيذية واضحة — لا لاختراع أرقام. كل رقم مصدره بياناتك.", en: "AI: used only to phrase recommendations in clear executive language — never to invent numbers. Every figure comes from your data." },
     "cmd.how.note": { ar: "عند نقص أي بيانات، يوضّح نبّاه ذلك صراحةً بدل التخمين — النتائج الناقصة تُوسم «تحتاج إلى تحقق».", en: "When any data is missing, Nabbah states it explicitly instead of guessing — incomplete results are marked 'needs verification'." },
+    "cmd.risks.title": { ar: "مؤشرات المخاطر", en: "Risk Indicators" },
+    "cmd.risks.note": { ar: "المخاطر مدمجة في ملخّصك التنفيذي — اضغط أي مؤشر للتفاصيل الكاملة.", en: "Risks are integrated into your executive summary — click any indicator for full details." },
 
     // ---- عناصر مشتركة عبر كل وحدات التحليل ----
     "unit.input.settings": { ar: "إعدادات الإدخال", en: "Input Settings" },
