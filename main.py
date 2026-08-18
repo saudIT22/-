@@ -242,6 +242,19 @@ class CompanyMemory(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.now)
 
 
+class AuditLog(SQLModel, table=True):
+    """سجل التدقيق: مَن فعل ماذا ومتى — لبناء الثقة والمساءلة (لطلبات المدققين والمستثمرين)."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    user_id: int = Field(index=True)          # مَن نفّذ الإجراء
+    user_name: str = ""                        # اسم المستخدم وقت الإجراء
+    action: str = Field(index=True)            # نوع الإجراء: login/create/update/delete/upload/analyze/decision/export
+    target: str = ""                           # ما تأثّر: "بيانات فرع الرياض" / "قرار #12" / ...
+    details: str = ""                          # تفاصيل موجزة
+    ip: str = ""                               # عنوان IP (للأمان)
+    created_at: datetime = Field(default_factory=datetime.now, index=True)
+
+
 class CompanyModuleEntry(SQLModel, table=True):
     """إدخالات الوحدات الموسّعة (مالية/مبيعات/عملاء/...). تُحفظ مرنة كـ JSON."""
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -1681,6 +1694,21 @@ def save_memory(company_id: int, kind: str, title: str, content: str = ""):
         pass
 
 
+def log_audit(company_id: int, user_id: int, user_name: str, action: str,
+              target: str = "", details: str = "", ip: str = ""):
+    """يسجّل إجراءً في سجل التدقيق — لا يفشل أبداً حتى لا يكسر المسار الرئيسي."""
+    try:
+        with Session(engine) as ms:
+            ms.add(AuditLog(
+                company_id=company_id, user_id=user_id,
+                user_name=str(user_name)[:100], action=str(action)[:40],
+                target=str(target)[:200], details=str(details)[:500], ip=str(ip)[:60],
+            ))
+            ms.commit()
+    except Exception:
+        pass
+
+
 def get_lang(request=None) -> str:
     """يقرأ لغة الطلب من هيدر X-Lang. الافتراضي عربي."""
     if request is None:
@@ -2521,6 +2549,7 @@ def company_analyze(data: dict, request: Request, user: User = Depends(get_curre
         log_activity(user.name, f"ولّد تحليل شركة: {company.name}", user.email)
         if txt:
             save_memory(company.id, "analysis", "التحليل التنفيذي الشامل", txt)
+            log_audit(company.id, user.id, user.name, "analyze", "التحليل التنفيذي الشامل", ip=(request.client.host if request and request.client else ""))
         return {"ok": True, "scope": "company", "company": company.name,
                 "analysis": txt or "تعذّر توليد التحليل، حاول بعد قليل."}
 
@@ -5380,6 +5409,7 @@ async def company_upload_import(file: UploadFile = File(...), user: User = Depen
                     )); created += 1
             s.commit()
             log_activity(user.name, f"رفع كشف حساب بنكي {file.filename}: {len(bmonths)} شهر", user.email)
+            log_audit(company.id, user.id, getattr(user,"name",""), "upload", f"كشف بنكي: {file.filename}")
             save_memory(company.id, "upload", f"رفع كشف حساب بنكي: {file.filename}",
                         f"{len(bmonths)} شهر — إيداعات {round(sum(x['deposits'] for x in bmonths.values())):,} ر")
             return {
@@ -5493,6 +5523,7 @@ async def company_upload_import(file: UploadFile = File(...), user: User = Depen
             s.commit()
 
             log_activity(user.name, f"رفع ملف معاملات POS {file.filename}: {len(aggregated)} ملخّص شهري", user.email)
+            log_audit(company.id, user.id, getattr(user,"name",""), "upload", f"ملف POS: {file.filename}")
             save_memory(company.id, "upload", f"رفع ملف POS: {file.filename}",
                         f"تم استيراد {len(aggregated)} سجل شهري ({created_branches} فرع جديد، {created_entries} إدخال جديد، {updated_entries} محدَّث)")
             return {
@@ -5657,6 +5688,7 @@ async def company_upload_import(file: UploadFile = File(...), user: User = Depen
         s.add(company)
         s.commit()
         log_activity(user.name, f"رفع ملف {file.filename}: {created_entries} سجل + {module_entries_count} وحدة", user.email)
+        log_audit(company.id, user.id, getattr(user,"name",""), "upload", f"ملف بيانات: {file.filename}")
         save_memory(company.id, "upload", f"رفع ملف بيانات: {file.filename}",
                     f"{created_branches} فرع جديد، {created_entries} إدخال، {module_entries_count} وحدة محدّثة")
 
@@ -6678,3 +6710,39 @@ def get_sector_intelligence(user: User = Depends(get_current_user)):
             "watch": si["watch"],
             "advice": si["advice"],
         }
+
+
+@app.get("/company/audit-log")
+def get_audit_log(request: Request, user: User = Depends(get_current_user)):
+    """سجل التدقيق: آخر ١٠٠ إجراء على الشركة (للمالك فقط — للمساءلة والثقة)."""
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id)
+        if not company or company.owner_id != user.id:
+            raise HTTPException(403, "غير مصرّح — سجل التدقيق للمالك فقط")
+        logs = s.exec(
+            select(AuditLog).where(AuditLog.company_id == company.id)
+            .order_by(AuditLog.created_at.desc()).limit(100)
+        ).all()
+        ACTION_LABELS = {
+            "login": "تسجيل دخول", "create": "إنشاء", "update": "تعديل",
+            "delete": "حذف", "upload": "رفع بيانات", "analyze": "طلب تحليل",
+            "decision": "قرار", "export": "تصدير", "settings": "تغيير إعدادات",
+        }
+        return {
+            "count": len(logs),
+            "logs": [{
+                "user_name": l.user_name or "—",
+                "action": l.action,
+                "action_label": ACTION_LABELS.get(l.action, l.action),
+                "target": l.target,
+                "details": l.details,
+                "created_at": l.created_at.isoformat() if l.created_at else "",
+            } for l in logs],
+        }
+
+
+@app.get("/company-audit.html")
+def page_company_audit():
+    return FileResponse("company-audit.html")
