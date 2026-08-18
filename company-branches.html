@@ -121,20 +121,29 @@ async function load(){
 
 function renderTable(){
   const cols=[["name","الفرع"],["sales","المبيعات"],["customers","العملاء"],["avg_invoice","م.الفاتورة"],
-    ["margin","الهامش%"],["repeat_rate","التكرار%"],["growth","النمو%"],["score","المؤشر"]];
+    ["margin","الهامش%"],["repeat_rate","التكرار%"],["growth","النمو%"],["employees","الموظفون"],["productivity","إنتاجية/موظف"],["score","المؤشر"]];
   const sorted=[...BRANCHES].sort((a,b)=>{
     let x=a[sortKey],y=b[sortKey];
+    // مؤشرات HR مخزّنة داخل b.hr
+    if(sortKey==="employees"||sortKey==="productivity"){
+      x=(a.hr&&a.hr.has_data)?(a.hr[sortKey]||0):0;
+      y=(b.hr&&b.hr.has_data)?(b.hr[sortKey]||0):0;
+    }
     if(typeof x==="string") return sortDir*x.localeCompare(y,"ar");
     return sortDir*((x||0)-(y||0));
   });
   let html=`<thead><tr>${cols.map(c=>`<th onclick="setSort('${c[0]}')">${c[1]}${sortKey===c[0]?(sortDir<0?" ▼":" ▲"):""}</th>`).join("")}</tr></thead><tbody>`;
   html+=sorted.map(b=>{
     const[lv,col]=lvl(b.score);
+    const hr=b.hr||{};
+    const empCell=hr.has_data&&hr.employees?fmt(hr.employees):'<span style="color:var(--txt-mute)">—</span>';
+    const prodCell=hr.has_data&&hr.productivity?fmt(hr.productivity):'<span style="color:var(--txt-mute)">—</span>';
     return `<tr>
       <td style="font-weight:700">${b.name}<div style="font-size:11px;color:var(--txt-mute)">${b.city||"—"}</div></td>
       <td>${fmt(b.sales)}</td><td>${fmt(b.customers)}</td><td>${fmt(b.avg_invoice)}</td>
       <td>${b.margin}%</td><td>${b.repeat_rate}%</td>
       <td style="color:${b.growth>=0?'var(--mint)':'var(--red)'}">${b.growth}%</td>
+      <td>${empCell}</td><td>${prodCell}</td>
       <td><span class="lvl" style="background:${col}22;color:${col}">${b.score} · ${lv}</span></td>
     </tr>`;
   }).join("");
