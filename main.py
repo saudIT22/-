@@ -2253,6 +2253,46 @@ def company_entry(data: dict, user: User = Depends(get_current_user)):
 
 
 # ===== لوحة المدير التنفيذي — كل المؤشرات في استجابة واحدة =====
+def _branch_hr_metrics(s, company_id: int, branch_id: int, branch_sales: float) -> dict:
+    """يحسب مؤشرات الموارد البشرية لفرع: عدد الموظفين، الإنتاجية (KPI)، دوران الموظفين.
+    يعتمد على بيانات وحدة HR المُدخلة للفرع. يرجع has_data=False لو لا بيانات (بدون اختراع)."""
+    try:
+        he = s.exec(
+            select(CompanyModuleEntry).where(
+                CompanyModuleEntry.company_id == company_id,
+                CompanyModuleEntry.module == "hr",
+                (CompanyModuleEntry.branch_id == branch_id) | (CompanyModuleEntry.branch_id == None),
+            ).order_by(CompanyModuleEntry.created_at.desc())
+        ).first()
+        if not he or not he.data:
+            return {"has_data": False}
+        d = json.loads(he.data)
+        emp = turnover = salary_cost = None
+        for k, v in d.items():
+            kl = str(k).lower()
+            try:
+                fv = float(str(v).replace(",", "").replace("%", "").strip())
+            except Exception:
+                continue
+            if emp is None and ("موظف" in k or "عدد" in kl or "employee" in kl or "headcount" in kl or "staff" in kl):
+                emp = fv
+            if turnover is None and ("دوران" in k or "turnover" in kl or "استقالة" in k):
+                turnover = fv
+            if salary_cost is None and ("رواتب" in k or "salary" in kl or "أجور" in k or "payroll" in kl):
+                salary_cost = fv
+        result = {"has_data": True}
+        if emp and emp > 0:
+            result["employees"] = int(emp)
+            result["productivity"] = round(branch_sales / emp) if branch_sales > 0 else 0
+            if salary_cost and branch_sales > 0:
+                result["salary_ratio"] = round(salary_cost / branch_sales * 100, 1)
+        if turnover is not None:
+            result["turnover"] = round(turnover, 1)
+        return result
+    except Exception:
+        return {"has_data": False}
+
+
 @app.get("/company/dashboard")
 def company_dashboard(user: User = Depends(get_current_user)):
     if not user.company_id:
@@ -2299,6 +2339,7 @@ def company_dashboard(user: User = Depends(get_current_user)):
                 "top_products": latest.top_products, "period": latest.period,
                 "target_sales": round(b.target_sales),
                 "target_pct": round((latest.sales / b.target_sales) * 100, 1) if b.target_sales > 0 else 0,
+                "hr": _branch_hr_metrics(s, company.id, b.id, latest.sales),
                 "history": [{"period": e.period, "sales": round(e.sales), "score": e.branch_score,
                              "margin": e.margin, "customers": e.customers} for e in reversed(entries)],
             })
@@ -2502,6 +2543,7 @@ def company_analyze(data: dict, request: Request, user: User = Depends(get_curre
 2. **أبرز ٢-٣ مؤشرات قوية** أو إيجابية في الوحدة.
 3. **أبرز ٢-٣ مخاطر أو ثغرات** يجب الانتباه لها.
 4. **القرارات الموصى بها** — ٣ قرارات تنفيذية مرتبة بحسب الأولوية ضمن نطاق هذه الوحدة فقط.
+{"5. **قياس أداء الموظفين (KPI/KRA)** — لكل مؤشر أداء رئيسي: الهدف (Target) مقابل الفعلي (Actual) ونسبة الإنجاز (Achievement %) والحالة (ممتاز/جيد/يحتاج تحسين). استخدم مؤشرات مثل: الإنتاجية لكل موظف (المبيعات ÷ عدد الموظفين)، نسبة تكلفة الرواتب من الإيرادات، معدل دوران الموظفين. لا تعطِ درجة عامة غامضة — اربط كل تقييم بمؤشر محدد وهدفه." if module == "hr" else ""}
 
 اكتب بصيغة Markdown، عناوين ## واضحة، نقاط مرتّبة، أرقام محددة كلما أمكن. لا تخرج عن نطاق وحدة {mlabel}."""
             txt = company_gemini(prompt, company, lang=get_lang(request))
