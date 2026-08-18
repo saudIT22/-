@@ -226,6 +226,15 @@
     "audit.col.user": { ar: "المستخدم", en: "User" },
     "audit.col.time": { ar: "التاريخ والوقت", en: "Date & Time" },
     "nav.audit": { ar: "سجل التدقيق", en: "Audit Log" },
+    // ---- شفافية منهجية مركز القيادة ----
+    "cmd.how.title": { ar: "ℹ️ كيف يبني نبّاه هذه الرؤى؟ (شفافية المنهجية)", en: "ℹ️ How does Nabbah build these insights? (Methodology transparency)" },
+    "cmd.how.intro": { ar: "مركز القيادة ليس «صندوقاً أسود» — كل رؤية مبنية على بياناتك الفعلية عبر خطوات واضحة:", en: "The Command Center is not a 'black box' — every insight is built on your actual data through clear steps:" },
+    "cmd.how.s1": { ar: "جمع البيانات: يقرأ آخر إدخال لكل فرع (مبيعات، مصروفات، عملاء، مخزون...) من بياناتك المُدخلة.", en: "Data collection: reads the latest entry for each branch (sales, expenses, customers, inventory...) from your entered data." },
+    "cmd.how.s2": { ar: "حساب المؤشرات: يحسب الهامش والنمو ونِسب الأداء بمعادلات مالية معيارية — لا تقدير عشوائي.", en: "Metric calculation: computes margin, growth, and performance ratios using standard financial formulas — no random guessing." },
+    "cmd.how.s3": { ar: "كشف الأنماط: يقارن الفروع والفترات ويرصد الانحرافات (هامش منخفض، تكلفة مرتفعة، هدر).", en: "Pattern detection: compares branches and periods and flags deviations (low margin, high cost, leakage)." },
+    "cmd.how.s4": { ar: "توليد القرارات: كل قرار مرتبط بالرقم الذي أنتجه، ومرتّب حسب أثره المالي المقدّر بالريال.", en: "Decision generation: each decision is tied to the number that produced it, ranked by its estimated financial impact in SAR." },
+    "cmd.how.s5": { ar: "الذكاء الاصطناعي: يُستخدم فقط لصياغة التوصيات بلغة تنفيذية واضحة — لا لاختراع أرقام. كل رقم مصدره بياناتك.", en: "AI: used only to phrase recommendations in clear executive language — never to invent numbers. Every figure comes from your data." },
+    "cmd.how.note": { ar: "عند نقص أي بيانات، يوضّح نبّاه ذلك صراحةً بدل التخمين — النتائج الناقصة تُوسم «تحتاج إلى تحقق».", en: "When any data is missing, Nabbah states it explicitly instead of guessing — incomplete results are marked 'needs verification'." },
 
     // ---- عناصر مشتركة عبر كل وحدات التحليل ----
     "unit.input.settings": { ar: "إعدادات الإدخال", en: "Input Settings" },
