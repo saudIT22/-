@@ -948,7 +948,8 @@ def get_benchmark_analysis(data: SalesData, margin: float, avg_ticket: float, ex
     """مقارنة أرقام المنشأة بمعايير قطاعها."""
     sector = data.sector or "restaurant"
     bm = BENCHMARKS.get(sector, BENCHMARKS["restaurant"])
-    lines = [f"\n📊 **مقارنة بمعايير قطاع {bm['name']}:**"]
+    lines = [f"\n📊 **مقارنة بمعايير قطاع {bm['name']}:**",
+             "_(هذه المعايير تقديرية إرشادية مبنية على متوسطات القطاع العامة — وليست أرقاماً رسمية. ستصبح مقارنات فعلية عند توفّر بيانات كافية.)_"]
 
     # هامش الربح
     if margin >= bm["margin_good"]:
@@ -1496,7 +1497,7 @@ EXEC_FRAMEWORK = """
 
 هيكل التحليل الشامل (طبّقه عند طلب تحليل كامل للشركة أو الفرع):
 ① القرارات التنفيذية أولاً: أهم 3 قرارات بصيغة الأثر الموحّدة — يقرأها المدير في أقل من دقيقة ويتصرّف.
-② كشف تسرّب الأرباح: افحص (الهدر، الخصومات، المرتجعات، انخفاض الهامش، التكاليف المرتفعة، ضعف التحصيل، ضعف التسعير) واحسب أثر كل بند بالريال.
+② كشف هدر الإيرادات: افحص (الهدر، الخصومات، المرتجعات، انخفاض الهامش، التكاليف المرتفعة، ضعف التحصيل، ضعف التسعير) واحسب أثر كل بند بالريال.
 ③ تحليل السبب الجذري: أسلوب Why×5 (كأدلة داعمة للقرارات أعلاه).
 ④ الفرص السريعة (خلال أسبوع) ⑤ الفرص المتوسطة (30-90 يوم) ⑥ الفرص الاستراتيجية (6-24 شهر).
 ⑦ التوقعات: ثلاثة سيناريوهات — لو استمر الوضع / لو تحسّن / لو ساء.
@@ -1541,7 +1542,7 @@ Strict rules:
 
 Full analysis structure (apply for a full company or branch analysis):
 ① Executive decisions first: top 3 decisions in the unified format — read in under a minute and acted on.
-② Profit leak detection: examine (waste, discounts, returns, margin drop, high costs, weak collections, weak pricing) and calculate each in SAR.
+② Revenue leakage detection: examine (waste, discounts, returns, margin drop, high costs, weak collections, weak pricing) and calculate each in SAR.
 ③ Root-cause analysis: Why×5 method (as supporting evidence for decisions above).
 ④ Quick wins (within a week) ⑤ Medium wins (30-90 days) ⑥ Strategic opportunities (6-24 months).
 ⑦ Forecasts: three scenarios — if current continues / if improved / if worsened.
@@ -2911,7 +2912,7 @@ def company_cashflow(user: User = Depends(get_current_user)):
 
 
 # ============================================================
-# ===== الخدمة 6: كشف التسرّب والاحتيال (Leakage Detection) =====
+# ===== الخدمة 6: تحليل هدر الإيرادات والاحتيال (Leakage Detection) =====
 # ============================================================
 
 def detect_leakage(entries, company_expense_ratio):
@@ -3055,7 +3056,7 @@ def page_company_leakage():
 ROLE_INFO = {
     "owner":      {"label": "مالك", "perms": "كل الصلاحيات: إدارة الشركة والفروع والفريق وكل التحليلات."},
     "manager":    {"label": "مدير فرع", "perms": "إدخال بيانات فرعه ومتابعة أدائه وتحليلاته."},
-    "accountant": {"label": "محاسب", "perms": "الاطّلاع على التقارير المالية والتدفق النقدي وكشف التسرّب."},
+    "accountant": {"label": "محاسب", "perms": "الاطّلاع على التقارير المالية والتدفق النقدي وتحليل هدر الإيرادات."},
     "staff":      {"label": "موظف", "perms": "إدخال البيانات التشغيلية فقط."},
 }
 
@@ -3521,7 +3522,7 @@ def company_command_center(user: User = Depends(get_current_user)):
                 "link": "company-branches.html",
             })
 
-        # 4) كشف التسرّب
+        # 4) تحليل هدر الإيرادات
         try:
             company_exp_ratio = (total_expenses / total_sales * 100) if total_sales > 0 else 0
             high_risk = 0
@@ -3538,7 +3539,7 @@ def company_command_center(user: User = Depends(get_current_user)):
                     "priority": "عاجل", "icon": "🛡️",
                     "title": f"اشتباه تسرّب/احتيال في {high_risk} فرع",
                     "detail": "تم كشف مؤشرات قوية على تسرّب — راجعها فوراً.",
-                    "action": "افتح كشف التسرّب",
+                    "action": "افتح تحليل هدر الإيرادات",
                     "link": "company-leakage.html",
                 })
         except Exception:
@@ -4125,7 +4126,7 @@ def company_health_score(user: User = Depends(get_current_user)):
             "liquidity": "السيولة تحت ضغط — راجع الالتزامات الشهرية وأدخل بيانات التدفق النقدي.",
             "growth": "النمو متباطئ — راجع استراتيجية التسويق والاحتفاظ بالعملاء.",
             "customers": "رضا العملاء يحتاج تحسين — راجع وحدة العملاء والـ NPS.",
-            "risks": "مؤشرات تسرّب في بعض الفروع — افتح صفحة كشف التسرّب.",
+            "risks": "مؤشرات تسرّب في بعض الفروع — افتح صفحة تحليل هدر الإيرادات.",
         }
         main_cause = explanations.get(weakest["key"], "راجع البيانات لمعرفة السبب.")
 
@@ -4732,7 +4733,7 @@ def company_root_cause(user: User = Depends(get_current_user)):
                     "contribution": min(len(risky)*10, 20),
                     "confidence": 80,
                     "evidence": [f"فرع {n} — درجة مخاطرة {s}/100" for n, s in risky[:3]],
-                    "recommendation": "افتح صفحة كشف التسرّب وراجع التفاصيل.",
+                    "recommendation": "افتح صفحة تحليل هدر الإيرادات وراجع التفاصيل.",
                 })
         except Exception: pass
 
