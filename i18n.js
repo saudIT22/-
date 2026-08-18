@@ -215,6 +215,17 @@
     "goals.save": { ar: "حفظ الأهداف", en: "Save Goals" },
     // ---- Benchmarks ----
     "bench.title": { ar: "مقارنة مع القطاع", en: "Sector Benchmarks" },
+    "bench.estimate": { ar: "معايير تقديرية إرشادية — ليست أرقاماً رسمية", en: "Indicative estimates — not official figures" },
+    // ---- سجل التدقيق ----
+    "audit.title": { ar: "سجل التدقيق", en: "Audit Log" },
+    "audit.sub": { ar: "سجل زمني لكل إجراء مهم على المنصة — للمساءلة والشفافية.", en: "A chronological log of every important action — for accountability and transparency." },
+    "audit.info": { ar: "🔒 هذا السجل مرئي للمالك فقط. يوثّق مَن قام بأي إجراء ومتى — يعزّز ثقة المدققين والمستثمرين ويدعم حوكمة الشركة.", en: "🔒 Visible to the owner only. It records who did what and when — building auditor and investor trust and supporting governance." },
+    "audit.empty": { ar: "لا توجد سجلات بعد. ستظهر هنا كل الإجراءات المهمة تلقائياً.", en: "No records yet. All important actions will appear here automatically." },
+    "audit.col.action": { ar: "الإجراء", en: "Action" },
+    "audit.col.target": { ar: "المستهدف", en: "Target" },
+    "audit.col.user": { ar: "المستخدم", en: "User" },
+    "audit.col.time": { ar: "التاريخ والوقت", en: "Date & Time" },
+    "nav.audit": { ar: "سجل التدقيق", en: "Audit Log" },
 
     // ---- عناصر مشتركة عبر كل وحدات التحليل ----
     "unit.input.settings": { ar: "إعدادات الإدخال", en: "Input Settings" },
