@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نبّاه · سجل التدقيق</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0a0f0c;--panel:#101a15;--panel2:#0e1712;--line:#1d2c24;--mint:#10b981;--gold:#f5b301;--red:#ef4444;--txt:#e8f1ec;--txt-soft:#9fb4aa;--txt-mute:#678075;}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--txt);line-height:1.7;min-height:100vh}
+  a{text-decoration:none;color:inherit}
+  header{position:sticky;top:0;z-index:40;background:rgba(10,15,12,.86);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+  .head-in{max-width:1000px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:900;font-size:20px;color:#fff}
+  .brand .bell{width:36px;height:36px;border-radius:11px;background:var(--mint);display:grid;place-items:center;font-size:17px;transform:rotate(-5deg)}
+  .btn{display:inline-flex;align-items:center;gap:7px;font-family:inherit;font-weight:700;cursor:pointer;border-radius:11px;font-size:14px;padding:10px 15px;background:var(--panel);color:var(--txt-soft);border:1px solid var(--line)}
+  .wrap{max-width:1000px;margin:0 auto;padding:0 16px}
+  .page-head{padding:26px 0 14px}
+  .page-head h1{font-size:26px;font-weight:900}
+  .page-head p{color:var(--txt-soft);font-size:14.5px;margin-top:4px}
+  .info{background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.2);border-radius:12px;padding:13px 16px;margin-bottom:18px;font-size:13px;color:var(--txt-soft)}
+  table{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  th{background:var(--panel2);color:var(--txt-soft);font-size:12.5px;font-weight:700;text-align:right;padding:13px 15px;border-bottom:1px solid var(--line)}
+  td{padding:12px 15px;font-size:13px;border-bottom:1px solid var(--line)}
+  tr:last-child td{border-bottom:none}
+  tr:hover td{background:rgba(255,255,255,.02)}
+  .badge{display:inline-block;padding:3px 10px;border-radius:8px;font-size:11.5px;font-weight:700}
+  .b-analyze{background:rgba(16,185,129,.14);color:var(--mint)}
+  .b-upload{background:rgba(59,130,246,.14);color:#60a5fa}
+  .b-decision{background:rgba(245,179,1,.14);color:var(--gold)}
+  .b-login{background:rgba(148,163,184,.14);color:#94a3b8}
+  .b-default{background:var(--panel2);color:var(--txt-soft)}
+  .time{color:var(--txt-mute);font-size:12px;white-space:nowrap}
+  .spin{width:30px;height:30px;border:3px solid var(--line);border-top-color:var(--mint);border-radius:50%;animation:sp 1s linear infinite;margin:50px auto}@keyframes sp{to{transform:rotate(360deg)}}
+  .empty{text-align:center;padding:50px 20px;color:var(--txt-mute)}
+  @media(max-width:640px){.hide-m{display:none}}
+</style>
+</head>
+<body>
+<header>
+  <div class="head-in">
+    <a class="brand" href="company-dashboard.html"><span class="bell">🔔</span>نبّاه</a>
+    <a class="btn" href="company-dashboard.html" data-i18n="nav.dashboard">اللوحة</a>
+  </div>
+</header>
+<div class="wrap">
+  <div class="page-head">
+    <h1 data-i18n="audit.title">سجل التدقيق</h1>
+    <p data-i18n="audit.sub">سجل زمني لكل إجراء مهم على المنصة — للمساءلة والشفافية.</p>
+  </div>
+  <div class="info" data-i18n="audit.info">🔒 هذا السجل مرئي للمالك فقط. يوثّق مَن قام بأي إجراء ومتى — يعزّز ثقة المدققين والمستثمرين ويدعم حوكمة الشركة.</div>
+  <div id="loading"><div class="spin"></div></div>
+  <div id="content" style="display:none"></div>
+</div>
+<script>
+const TOKEN=localStorage.getItem("nabbah_token")||"";
+if(!TOKEN) window.location.href="login.html";
+async function api(p){
+  const r=await fetch(p,{headers:{"Authorization":"Bearer "+TOKEN}});
+  if(r.status===401){ localStorage.removeItem("nabbah_token"); window.location.href="login.html"; throw new Error("جلسة"); }
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(d.detail||"خطأ");
+  return d;
+}
+function badgeClass(a){
+  return {analyze:"b-analyze",upload:"b-upload",decision:"b-decision",login:"b-login"}[a]||"b-default";
+}
+function fmtTime(iso){
+  if(!iso) return "—";
+  try{
+    const d=new Date(iso);
+    return d.toLocaleDateString("ar-SA")+" · "+d.toLocaleTimeString("ar-SA",{hour:"2-digit",minute:"2-digit"});
+  }catch(e){ return iso; }
+}
+async function load(){
+  try{
+    const d=await api("/company/audit-log");
+    document.getElementById("loading").style.display="none";
+    const box=document.getElementById("content");
+    box.style.display="block";
+    if(!d.logs || !d.logs.length){
+      box.innerHTML='<div class="empty" data-i18n="audit.empty">لا توجد سجلات بعد. ستظهر هنا كل الإجراءات المهمة تلقائياً.</div>';
+      if(window.NabbahI18n) window.NabbahI18n.apply();
+      return;
+    }
+    let rows=d.logs.map(l=>`
+      <tr>
+        <td><span class="badge ${badgeClass(l.action)}">${l.action_label}</span></td>
+        <td>${l.target||"—"}</td>
+        <td class="hide-m">${l.user_name}</td>
+        <td class="time">${fmtTime(l.created_at)}</td>
+      </tr>`).join("");
+    box.innerHTML=`
+      <table>
+        <thead><tr>
+          <th data-i18n="audit.col.action">الإجراء</th>
+          <th data-i18n="audit.col.target">المستهدف</th>
+          <th class="hide-m" data-i18n="audit.col.user">المستخدم</th>
+          <th data-i18n="audit.col.time">التاريخ والوقت</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+    if(window.NabbahI18n) window.NabbahI18n.apply();
+  }catch(e){
+    document.getElementById("loading").innerHTML='<p style="text-align:center;color:var(--red)">'+e.message+'</p>';
+  }
+}
+load();
+</script>
+<script src="i18n.js"></script>
+</body>
+</html>
