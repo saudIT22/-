@@ -125,7 +125,8 @@ async function api(p){
   if(!r.ok) throw er;
   return d;
 }
-const fmt=n=>(Math.round(n)||0).toLocaleString("en-US");
+const fmtNum=n=>(Math.round(n)||0).toLocaleString("en-US");
+const fmt=n=>fmtNum(n)+" ريال";   // عرض موحّد للعملة عبر كل الأرقام المالية
 
 async function load(){
   try{
@@ -142,8 +143,8 @@ async function load(){
       return;
     }
 
-    document.getElementById("totalSales").textContent=fmt(d.company_projection.total_sales_6m)+" ر";
-    document.getElementById("totalProfit").textContent=fmt(d.company_projection.total_profit_6m)+" ر";
+    document.getElementById("totalSales").textContent=fmt(d.company_projection.total_sales_6m);
+    document.getElementById("totalProfit").textContent=fmt(d.company_projection.total_profit_6m);
     renderCompanyChart(d.labels, d.company_projection);
     renderBranches(d.branch_forecasts);
   }catch(e){
@@ -163,9 +164,9 @@ function renderCompanyChart(labels, proj){
     ]},
     options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{labels:{color:"#9fb4aa",font:{family:"Tajawal"}}},
-        tooltip:{callbacks:{label:c=>c.dataset.label+": "+fmt(c.raw)+" ر"}}},
+        tooltip:{callbacks:{label:c=>c.dataset.label+": "+fmt(c.raw)}}},
       scales:{x:{ticks:{color:"#678075"},grid:{display:false}},
-        y:{ticks:{color:"#678075",callback:v=>fmt(v)},grid:{color:"#16221c"}}}}
+        y:{ticks:{color:"#678075",callback:v=>fmtNum(v)},grid:{color:"#16221c"}}}}
   });
 }
 
