@@ -107,6 +107,7 @@
     <div id="brief" style="display:none;background:linear-gradient(160deg,rgba(16,185,129,.12),transparent);border:1px solid rgba(16,185,129,.35);border-radius:16px;padding:18px 20px;margin-bottom:16px"></div>
     <div class="kpis" id="kpis"></div>
     <div class="data-coverage" id="coverage" style="display:none"></div>
+    <div id="pillarsBox"></div>
     <div id="alertsBox"></div>
     <div id="risksBox"></div>
 
@@ -160,6 +161,7 @@ async function load(){
     }
     renderKPIs(d.kpis);
     renderCoverage(d);
+    renderPillars(d.five_pillars);
     renderAlerts(d.alerts);
     renderRisks(d.risks);
     renderDecisions(d.decisions);
@@ -189,6 +191,76 @@ function renderCoverage(d){
     box.style.display="flex";
     box.innerHTML=`<span class="ico">🧩</span><div>تغطية البيانات: <b>${pct}%</b> (${d.modules_filled}/${d.modules_total} وحدة). كل وحدة إضافية تزيد دقة التحليل والتنبؤات. <a href="company-dashboard.html" style="color:var(--mint)">اذهب للوحات</a></div>`;
   }else box.style.display="none";
+}
+
+function renderPillars(fp){
+  const box=document.getElementById("pillarsBox");
+  if(!fp || !fp.pillars){ box.innerHTML=""; return; }
+  const P=fp.pillars;
+  const order=["profitability","liquidity","growth","customers","risk"];
+  const scoreColor=s=>s>=75?"#10b981":(s>=50?"#f5b301":"#ef4444");
+  const lvl=v=>v>=75?"قوي":(v>=50?"متوسط":"يحتاج انتباه");
+
+  // ===== رادار SVG (خماسي) =====
+  const cx=140,cy=135,R=100;
+  const pts=order.map((k,i)=>{
+    const ang=(-90+i*72)*Math.PI/180;
+    const val=(P[k].has_data?P[k].score:0)/100;
+    return [cx+Math.cos(ang)*R*val, cy+Math.sin(ang)*R*val];
+  });
+  const axisPts=order.map((k,i)=>{
+    const ang=(-90+i*72)*Math.PI/180;
+    return [cx+Math.cos(ang)*R, cy+Math.sin(ang)*R];
+  });
+  // حلقات الخلفية
+  let rings="";
+  [0.25,0.5,0.75,1].forEach(f=>{
+    const rp=order.map((k,i)=>{const ang=(-90+i*72)*Math.PI/180;return (cx+Math.cos(ang)*R*f)+","+(cy+Math.sin(ang)*R*f);}).join(" ");
+    rings+=`<polygon points="${rp}" fill="none" stroke="#1d2c24" stroke-width="1"/>`;
+  });
+  let axes="";
+  axisPts.forEach(p=>{axes+=`<line x1="${cx}" y1="${cy}" x2="${p[0]}" y2="${p[1]}" stroke="#1d2c24" stroke-width="1"/>`;});
+  const shape=pts.map(p=>p[0]+","+p[1]).join(" ");
+  let labels="";
+  order.forEach((k,i)=>{
+    const ang=(-90+i*72)*Math.PI/180;
+    const lx=cx+Math.cos(ang)*(R+22), ly=cy+Math.sin(ang)*(R+22);
+    labels+=`<text x="${lx}" y="${ly}" fill="#9fb4aa" font-size="11" text-anchor="middle" dominant-baseline="middle">${P[k].icon}</text>`;
+  });
+  const radar=`<svg viewBox="0 0 280 270" style="width:100%;max-width:280px">
+    ${rings}${axes}
+    <polygon points="${shape}" fill="rgba(16,185,129,.18)" stroke="#10b981" stroke-width="2"/>
+    ${pts.map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="3" fill="#10b981"/>`).join("")}
+    ${labels}
+    <text x="${cx}" y="${cy+4}" fill="#e8f1ec" font-size="20" font-weight="800" text-anchor="middle">${fp.overall}</text>
+  </svg>`;
+
+  // ===== بطاقات الركائز =====
+  const cards=order.map(k=>{
+    const p=P[k];
+    const col=p.has_data?scoreColor(p.score):"#678075";
+    const val=p.has_data?p.score:"—";
+    return `<div style="background:var(--panel2,#0e1712);border:1px solid var(--line,#1d2c24);border-right:3px solid ${col};border-radius:11px;padding:12px 14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <span style="font-size:14px;font-weight:700">${p.icon} ${p.name}</span>
+        <span style="font-size:19px;font-weight:800;color:${col}">${val}</span>
+      </div>
+      <div style="height:6px;background:#1d2c24;border-radius:100px;overflow:hidden;margin-bottom:5px">
+        <div style="height:100%;width:${p.has_data?p.score:0}%;background:${col};border-radius:100px"></div>
+      </div>
+      <div style="font-size:11.5px;color:var(--txt-soft,#9fb4aa)">${p.detail}${p.has_data?" · "+lvl(p.score):""}</div>
+    </div>`;
+  }).join("");
+
+  box.innerHTML=`<div class="section" style="margin-bottom:16px">
+    <div class="section-h"><div class="t">🎯 <span data-i18n="cmd.pillars.title">الركائز الخمس لصحة الشركة</span></div><div class="c" style="color:${scoreColor(fp.overall)}">${fp.overall}/100</div></div>
+    <div style="display:grid;grid-template-columns:280px 1fr;gap:18px;align-items:center">
+      <div style="display:flex;justify-content:center">${radar}</div>
+      <div style="display:grid;gap:9px">${cards}</div>
+    </div>
+    <div style="font-size:11.5px;color:var(--txt-mute,#678075);margin-top:12px" data-i18n="cmd.pillars.note">كل ركيزة محسوبة بمعادلة معيارية من بياناتك. «—» يعني بيانات غير مكتملة لتلك الركيزة (ليست ضعفاً في الأداء).</div>
+  </div>`;
+  if(window.NabbahI18n) window.NabbahI18n.apply();
 }
 
 function renderAlerts(arr){
