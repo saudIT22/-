@@ -81,6 +81,8 @@
     </div>
 
     <div class="axes" id="axes"></div>
+    <div id="radarBox" style="margin-top:20px"></div>
+    <div id="branchHealthBox" style="margin-top:20px"></div>
   </div>
 
   <div class="links">
@@ -132,6 +134,44 @@ async function load(){
         <div class="bar"><div class="bar-fill" style="width:${a.score}%;background:${a.color}"></div></div>
         <div class="score" style="color:${a.color}">${a.score}</div>
       </div>`).join("");
+
+    // ===== رادار المحاور الخمسة =====
+    (function(){
+      const axes=d.axes; if(!axes||axes.length<3){return;}
+      const cx=150,cy=145,R=105;
+      const n=axes.length;
+      const pt=(i,f)=>{const ang=(-90+i*(360/n))*Math.PI/180;return [cx+Math.cos(ang)*R*f, cy+Math.sin(ang)*R*f];};
+      let rings="";
+      [0.25,0.5,0.75,1].forEach(f=>{
+        const p=axes.map((a,i)=>pt(i,f).join(",")).join(" ");
+        rings+=`<polygon points="${p}" fill="none" stroke="#1d2c24" stroke-width="1"/>`;
+      });
+      let ax="";
+      axes.forEach((a,i)=>{const p=pt(i,1);ax+=`<line x1="${cx}" y1="${cy}" x2="${p[0]}" y2="${p[1]}" stroke="#1d2c24" stroke-width="1"/>`;});
+      const shape=axes.map((a,i)=>pt(i,(a.score||0)/100).join(",")).join(" ");
+      let labels="";
+      axes.forEach((a,i)=>{const p=pt(i,1.18);labels+=`<text x="${p[0]}" y="${p[1]}" fill="#9fb4aa" font-size="12" text-anchor="middle" dominant-baseline="middle">${a.icon}</text>`;});
+      document.getElementById("radarBox").innerHTML=`<div style="text-align:center;font-size:14px;font-weight:700;color:var(--txt-soft);margin-bottom:8px" data-i18n="health.radar">🕸️ رادار المحاور الخمسة</div>
+        <div style="display:flex;justify-content:center"><svg viewBox="0 0 300 300" style="width:100%;max-width:300px">
+        ${rings}${ax}<polygon points="${shape}" fill="${d.color}33" stroke="${d.color}" stroke-width="2"/>
+        ${axes.map((a,i)=>{const p=pt(i,(a.score||0)/100);return `<circle cx="${p[0]}" cy="${p[1]}" r="3" fill="${d.color}"/>`;}).join("")}
+        ${labels}<text x="${cx}" y="${cy+5}" fill="#e8f1ec" font-size="22" font-weight="800" text-anchor="middle">${d.overall}</text>
+      </svg></div>`;
+    })();
+
+    // ===== صحة كل فرع =====
+    if(d.branch_health && d.branch_health.length){
+      document.getElementById("branchHealthBox").innerHTML=`
+        <div style="font-size:14px;font-weight:700;color:var(--txt-soft);margin-bottom:10px" data-i18n="health.byBranch">🏬 صحة كل فرع</div>
+        <div style="display:grid;gap:8px">
+        ${d.branch_health.map(b=>`
+          <div style="display:flex;align-items:center;gap:12px;background:var(--panel2,#0e1712);border:1px solid var(--line,#1d2c24);border-right:3px solid ${b.color};border-radius:10px;padding:11px 14px">
+            <div style="flex:1"><span style="font-weight:700;font-size:13.5px">${b.name}</span>${b.city?` <span style="font-size:11px;color:var(--txt-mute)">${b.city}</span>`:""}</div>
+            ${b.has_data?`<div style="font-size:12px;color:var(--txt-soft)">هامش ${b.margin}%</div><div style="width:90px;height:6px;background:#1d2c24;border-radius:100px;overflow:hidden"><div style="height:100%;width:${b.score}%;background:${b.color};border-radius:100px"></div></div><div style="font-size:16px;font-weight:800;color:${b.color};width:32px;text-align:left">${b.score}</div>`:`<div style="font-size:12px;color:var(--txt-mute)" data-i18n="health.noBranchData">لا توجد بيانات</div>`}
+          </div>`).join("")}
+        </div>`;
+    }
+    if(window.NabbahI18n) window.NabbahI18n.apply();
   }catch(e){
     document.getElementById("loading").style.display="none";
     const er=document.getElementById("error"); er.style.display="block";
