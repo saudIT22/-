@@ -2253,6 +2253,81 @@ def company_entry(data: dict, user: User = Depends(get_current_user)):
 
 
 # ===== لوحة المدير التنفيذي — كل المؤشرات في استجابة واحدة =====
+def _five_pillars(total_sales, total_expenses, branch_data):
+    """يحسب الركائز الخمس لصحة الشركة (الربحية، السيولة، النمو، العملاء، المخاطر).
+    كل ركيزة 0-100 بمعادلة معيارية شفافة — لا اختراع. has_data=False عند نقص البيانات."""
+    pillars = {}
+    margin = ((total_sales - total_expenses) / total_sales * 100) if (total_sales > 0 and total_expenses > 0) else 0
+    expense_ratio = (total_expenses / total_sales * 100) if total_sales > 0 else 0
+    net = total_sales - total_expenses
+    growths = [bd["entry"].growth for bd in branch_data if bd["entry"].growth is not None]
+    avg_growth = sum(growths) / len(growths) if growths else 0
+    repeats = [bd["entry"].repeat_rate for bd in branch_data if bd["entry"].repeat_rate > 0]
+    avg_repeat = sum(repeats) / len(repeats) if repeats else 0
+
+    # ① الربحية — من الهامش
+    if margin >= 25: p = 95
+    elif margin >= 20: p = 85
+    elif margin >= 15: p = 72
+    elif margin >= 10: p = 58
+    elif margin >= 5: p = 42
+    elif margin > 0: p = 28
+    else: p = 10
+    pillars["profitability"] = {"name": "الربحية", "name_en": "Profitability", "score": p, "icon": "💰",
+        "detail": f"هامش الربح {round(margin,1)}%" if margin else "لا توجد بيانات ربح كافية",
+        "has_data": total_sales > 0 and total_expenses > 0}
+
+    # ② السيولة — من صافي التشغيل ونسبة المصروفات
+    if net > 0 and expense_ratio < 70: l = 90
+    elif net > 0 and expense_ratio < 85: l = 72
+    elif net > 0: l = 55
+    elif net == 0: l = 40
+    else: l = 20
+    pillars["liquidity"] = {"name": "السيولة", "name_en": "Liquidity", "score": l, "icon": "💧",
+        "detail": f"نسبة المصروفات {round(expense_ratio,1)}%" if total_sales > 0 else "لا توجد بيانات كافية",
+        "has_data": total_sales > 0}
+
+    # ③ النمو — من متوسط نمو الفروع
+    if avg_growth >= 15: g = 92
+    elif avg_growth >= 8: g = 78
+    elif avg_growth >= 3: g = 62
+    elif avg_growth >= 0: g = 48
+    elif avg_growth >= -10: g = 30
+    else: g = 15
+    pillars["growth"] = {"name": "النمو", "name_en": "Growth", "score": g, "icon": "📈",
+        "detail": f"متوسط النمو {round(avg_growth,1)}%" if growths else "يحتاج فترتين على الأقل",
+        "has_data": len(growths) > 0}
+
+    # ④ العملاء — من معدل التكرار
+    if avg_repeat >= 40: c = 90
+    elif avg_repeat >= 30: c = 76
+    elif avg_repeat >= 20: c = 60
+    elif avg_repeat >= 10: c = 42
+    elif avg_repeat > 0: c = 28
+    else: c = 0
+    pillars["customers"] = {"name": "العملاء", "name_en": "Customers", "score": c, "icon": "👥",
+        "detail": f"معدل تكرار العملاء {round(avg_repeat,1)}%" if repeats else "لا توجد بيانات عملاء",
+        "has_data": len(repeats) > 0}
+
+    # ⑤ المخاطر — معكوس (درجة عالية = مخاطر منخفضة)
+    risk_pts = 0
+    if net < 0: risk_pts += 40
+    elif margin < 5: risk_pts += 22
+    if expense_ratio >= 90: risk_pts += 30
+    elif expense_ratio >= 80: risk_pts += 15
+    if avg_growth < -10: risk_pts += 20
+    elif avg_growth < 0: risk_pts += 10
+    if avg_repeat and avg_repeat < 20: risk_pts += 12
+    r = max(100 - risk_pts, 0)
+    pillars["risk"] = {"name": "المخاطر", "name_en": "Risk", "score": r, "icon": "🛡️",
+        "detail": ("مخاطر منخفضة" if r >= 70 else ("مخاطر متوسطة" if r >= 45 else "مخاطر مرتفعة")),
+        "has_data": total_sales > 0}
+
+    valid = [pl["score"] for pl in pillars.values() if pl["has_data"]]
+    overall = round(sum(valid) / len(valid)) if valid else 0
+    return {"pillars": pillars, "overall": overall}
+
+
 def _branch_hr_metrics(s, company_id: int, branch_id: int, branch_sales: float) -> dict:
     """يحسب مؤشرات الموارد البشرية لفرع: عدد الموظفين، الإنتاجية (KPI)، دوران الموظفين.
     يعتمد على بيانات وحدة HR المُدخلة للفرع. يرجع has_data=False لو لا بيانات (بدون اختراع)."""
@@ -3749,6 +3824,7 @@ def company_command_center(user: User = Depends(get_current_user)):
             "opportunities": opportunities,
             "alerts": alerts,
             "risks": risk_summary,
+            "five_pillars": _five_pillars(total_sales, total_expenses, branch_data),
             "modules_filled": modules_with_data,
             "modules_total": len(ALLOWED_MODULES),
         }
