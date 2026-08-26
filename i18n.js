@@ -237,6 +237,8 @@
     "cmd.how.note": { ar: "عند نقص أي بيانات، يوضّح نبّاه ذلك صراحةً بدل التخمين — النتائج الناقصة تُوسم «تحتاج إلى تحقق».", en: "When any data is missing, Nabbah states it explicitly instead of guessing — incomplete results are marked 'needs verification'." },
     "cmd.risks.title": { ar: "مؤشرات المخاطر", en: "Risk Indicators" },
     "cmd.risks.note": { ar: "المخاطر مدمجة في ملخّصك التنفيذي — اضغط أي مؤشر للتفاصيل الكاملة.", en: "Risks are integrated into your executive summary — click any indicator for full details." },
+    "cmd.pillars.title": { ar: "الركائز الخمس لصحة الشركة", en: "Five Pillars of Company Health" },
+    "cmd.pillars.note": { ar: "كل ركيزة محسوبة بمعادلة معيارية من بياناتك. «—» يعني بيانات غير مكتملة لتلك الركيزة (ليست ضعفاً في الأداء).", en: "Each pillar is computed by a standard formula from your data. «—» means incomplete data for that pillar (not poor performance)." },
     "br.employees": { ar: "الموظفون", en: "Employees" },
     "br.productivity": { ar: "إنتاجية/موظف", en: "Productivity/Emp" },
 
