@@ -4307,6 +4307,21 @@ def company_health_score(user: User = Depends(get_current_user)):
         }
         main_cause = explanations.get(weakest["key"], "راجع البيانات لمعرفة السبب.")
 
+        # ===== صحة كل فرع (Health by Branch decomposition — من ملف المرحلة ١) =====
+        branch_health = []
+        for b, e in rows:
+            bh = e.branch_score if e.branch_score else 0
+            if bh >= 75: bcolor = "#10b981"
+            elif bh >= 55: bcolor = "#f5b301"
+            elif bh >= 35: bcolor = "#f59e0b"
+            else: bcolor = "#ef4444"
+            branch_health.append({
+                "name": b.name, "city": b.city or "", "score": bh, "color": bcolor,
+                "margin": round(e.margin, 1) if e.margin else 0,
+                "has_data": e.sales > 0,
+            })
+        branch_health.sort(key=lambda x: x["score"], reverse=True)
+
         return {
             "company": {"name": company.name},
             "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
@@ -4316,6 +4331,7 @@ def company_health_score(user: User = Depends(get_current_user)):
             "axes": axes,
             "weakest_axis": weakest["label"],
             "main_cause": main_cause,
+            "branch_health": branch_health,
         }
 
 
