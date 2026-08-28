@@ -14,7 +14,7 @@
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <style>
   :root{
-    --bg:#0a0f0c; --bg2:#0d1410; --panel:#101a15; --panel2:#0e1712;
+    --bg:#070b09; --bg2:#0d1410; --panel:#101a15; --panel2:#0e1712;
     --line:#1d2c24; --line-soft:#16221c;
     --mint:#10b981; --mint-deep:#0c8f64; --mint-glow:rgba(16,185,129,.18);
     --gold:#f5b301; --orange:#f59e0b; --red:#ef4444; --blue:#3b82f6; --purple:#a855f7;
@@ -26,8 +26,7 @@
   html{scroll-behavior:smooth}
   body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--txt);
     line-height:1.7;-webkit-font-smoothing:antialiased;min-height:100vh}
-  body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.5;
-    background:radial-gradient(circle at 1px 1px,rgba(16,185,129,.05) 1px,transparent 0);background-size:26px 26px}
+  body{background-image:radial-gradient(ellipse 800px 400px at 15% -5%,rgba(16,185,129,.06),transparent),radial-gradient(ellipse 600px 300px at 90% 5%,rgba(11,132,87,.05),transparent)}
   a{text-decoration:none;color:inherit}
   .wrap{max-width:1180px;margin:0 auto;padding:0 16px;position:relative;z-index:1}
 
@@ -36,7 +35,7 @@
     backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
   .head-in{max-width:1180px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
   .brand{display:flex;align-items:center;gap:10px;font-weight:900;font-size:20px;color:#fff}
-  .brand .bell{width:36px;height:36px;border-radius:11px;background:var(--mint);
+  .brand .bell{width:36px;height:36px;border-radius:11px;background:linear-gradient(135deg,var(--mint),var(--mint-deep,#0b8457));
     display:grid;place-items:center;font-size:17px;transform:rotate(-5deg);box-shadow:0 4px 14px var(--mint-glow)}
   .brand small{display:block;font-size:11.5px;font-weight:500;color:var(--mint);margin-top:-3px}
   .head-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
