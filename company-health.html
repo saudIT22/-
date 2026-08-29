@@ -93,6 +93,7 @@
         <div class="gstate" id="gState">—</div>
         <div class="gdelta" id="gDelta"></div>
         <div class="gsub" data-i18n="health.composite">مؤشر مركّب من ٥ محاور موزونة</div>
+        <div id="confBadge" style="display:none;margin-top:10px;font-size:11px;padding:5px 12px;border-radius:8px;background:rgba(245,179,1,.12);color:#f5b301;font-weight:700"></div>
       </div>
       <div class="card">
         <div class="card-t">🕸️ <span data-i18n="health.radar">رادار المحاور الخمسة</span></div>
@@ -197,6 +198,12 @@ async function load(){
         if(!b.has_data) return `<div class="br"><div class="dot" style="background:#5c6f66"></div><div class="nm">${b.name}${b.city?` <span>${b.city}</span>`:""}</div><div class="nd" data-i18n="health.noBranchData">لا توجد بيانات</div></div>`;
         return `<div class="br"><div class="dot" style="background:${b.color}"></div><div class="nm">${b.name}${b.city?` <span>${b.city}</span>`:""}</div><div class="mg">هامش ${b.margin}%</div><div class="track"><div class="fl" style="width:${b.score}%;background:${b.color}"></div></div><div class="sc" style="color:${b.color}">${b.score}</div></div>`;
       }).join("");
+    }
+    // شارة الثقة (confidence_flag)
+    if(d.confidence && d.confidence.flag){
+      const cb=document.getElementById("confBadge");
+      cb.style.display="inline-block";
+      cb.textContent="⚠️ "+(d.confidence.label||"تحتاج إلى تحقق")+" · جودة البيانات "+(d.confidence.quality||0)+"%";
     }
     if(window.NabbahI18n) window.NabbahI18n.apply();
   }catch(e){
