@@ -2852,8 +2852,8 @@ def company_report(user: User = Depends(get_current_user)):
         raise HTTPException(403, "لا توجد شركة نشطة")
     with Session(engine) as s:
         company = s.get(Company, user.company_id)
-        if not company or company.owner_id != user.id:
-            raise HTTPException(403, "غير مصرّح")
+        if not company or not check_permission(get_user_role(s, user), "reports", "view"):
+            raise HTTPException(403, "غير مصرّح — التقرير المالي للمالك والمحاسب فقط")
         if company.is_active != 1:
             raise HTTPException(402, "شركتك قيد التفعيل — فعّلها من لوحة الإدارة")
         branches = s.exec(
@@ -2977,13 +2977,18 @@ def company_financials(data: dict, user: User = Depends(get_current_user)):
 
 @app.get("/company/cashflow")
 def company_cashflow(user: User = Depends(get_current_user)):
-    """التدفق النقدي التنبؤي: كم شهر تكفي السيولة + نقطة العجز المتوقّعة."""
+    """التدفق النقدي التنبؤي: كم شهر تكفي السيولة + نقطة العجز المتوقّعة.
+    صلاحية: المالك والمحاسب فقط (مورد مالي حساس)."""
     if not user.company_id:
         raise HTTPException(403, "لا توجد شركة نشطة")
     with Session(engine) as s:
         company = s.get(Company, user.company_id)
-        if not company or company.owner_id != user.id:
+        if not company:
             raise HTTPException(403, "غير مصرّح")
+        # فحص الصلاحية عبر RBAC (بدل حصرها على المالك فقط)
+        role = get_user_role(s, user)
+        if not check_permission(role, "cashflow", "view"):
+            raise HTTPException(403, "غير مصرّح — التدفق النقدي متاح للمالك والمحاسب فقط")
         if company.is_active != 1:
             raise HTTPException(402, "شركتك قيد التفعيل — فعّلها من لوحة الإدارة")
 
@@ -3131,8 +3136,8 @@ def company_leakage(user: User = Depends(get_current_user)):
         raise HTTPException(403, "لا توجد شركة نشطة")
     with Session(engine) as s:
         company = s.get(Company, user.company_id)
-        if not company or company.owner_id != user.id:
-            raise HTTPException(403, "غير مصرّح")
+        if not company or not check_permission(get_user_role(s, user), "leakage", "view"):
+            raise HTTPException(403, "غير مصرّح — تحليل هدر الإيرادات للمالك والمحاسب فقط")
         if company.is_active != 1:
             raise HTTPException(402, "شركتك قيد التفعيل — فعّلها من لوحة الإدارة")
         branches = s.exec(
@@ -3205,6 +3210,107 @@ ROLE_INFO = {
     "accountant": {"label": "محاسب", "perms": "الاطّلاع على التقارير المالية والتدفق النقدي وتحليل هدر الإيرادات."},
     "staff":      {"label": "موظف", "perms": "إدخال البيانات التشغيلية فقط."},
 }
+
+# ═══════════════════════════════════════════════════════════
+#  نظام الصلاحيات المركزي (RBAC) — خدمة ١ من المرحلة ١
+#  مصفوفة صلاحيات صريحة: كل دور وما يُسمح له من موارد وإجراءات.
+#  تُطبّق على مستوى الخادم (server-side) — لا يمكن تجاوزها من الواجهة.
+# ═══════════════════════════════════════════════════════════
+# الموارد (resources): وحدات المنصة التي تُحمى
+# الإجراءات (actions): view (اطّلاع) / edit (تعديل) / manage (إدارة كاملة)
+ROLE_PERMISSIONS = {
+    "owner": {
+        # المالك: كل شيء
+        "_all": {"view", "edit", "manage"},
+    },
+    "manager": {
+        # مدير الفرع: يرى ويدير فرعه فقط (يُقيّد بـ branch_id لاحقاً)
+        "dashboard":   {"view"},
+        "health":      {"view"},
+        "branches":    {"view"},          # فرعه فقط
+        "sales":       {"view", "edit"},
+        "ops":         {"view", "edit"},
+        "inventory":   {"view", "edit"},
+        "customers":   {"view", "edit"},
+        "hr":          {"view"},
+        "input":       {"view", "edit"},
+        "decisions":   {"view"},
+        "predictions": {"view"},
+    },
+    "accountant": {
+        # المحاسب: المالية فقط (لا تشغيل، لا HR تفصيلي)
+        "dashboard":   {"view"},
+        "finance":     {"view", "edit"},
+        "cashflow":    {"view"},
+        "leakage":     {"view"},
+        "tax":         {"view", "edit"},
+        "reports":     {"view"},
+        "health":      {"view"},
+    },
+    "staff": {
+        # الموظف: إدخال تشغيلي فقط
+        "input":       {"view", "edit"},
+        "sales":       {"edit"},
+        "ops":         {"edit"},
+    },
+}
+
+# الحقول المالية الحساسة التي تُخفى عن الأدوار غير المصرّح لها (أمان مستوى العمود)
+SENSITIVE_FINANCIAL_FIELDS = {"salary", "salaries", "رواتب", "أجور", "payroll",
+                               "margin", "هامش", "profit_margin", "net_profit", "صافي الربح"}
+# الأدوار المصرّح لها برؤية الحقول المالية الحساسة
+ROLES_SEE_SENSITIVE = {"owner", "accountant"}
+
+
+def check_permission(user_role: str, resource: str, action: str = "view") -> bool:
+    """يتحقق: هل هذا الدور مصرّح له بهذا الإجراء على هذا المورد؟
+    تُطبّق على مستوى الخادم — الأساس الذي تعتمد عليه كل الخدمات اللاحقة."""
+    role = (user_role or "staff").lower()
+    if role == "owner":
+        return True
+    perms = ROLE_PERMISSIONS.get(role, {})
+    # صلاحية شاملة
+    if "_all" in perms and action in perms["_all"]:
+        return True
+    allowed = perms.get(resource, set())
+    return action in allowed
+
+
+def can_see_sensitive_financials(user_role: str) -> bool:
+    """هل يُسمح لهذا الدور برؤية الحقول المالية الحساسة (رواتب، هوامش)؟"""
+    return (user_role or "").lower() in ROLES_SEE_SENSITIVE
+
+
+def get_user_role(s, user: User) -> str:
+    """يحدّد دور المستخدم في شركته الحالية: owner إن كان المالك، وإلا دوره في CompanyMember."""
+    if not user.company_id:
+        return ""
+    company = s.get(Company, user.company_id)
+    if company and company.owner_id == user.id:
+        return "owner"
+    m = s.exec(
+        select(CompanyMember).where(
+            CompanyMember.company_id == user.company_id,
+            CompanyMember.email == user.email,
+        )
+    ).first()
+    return m.role if m else "staff"
+
+
+def filter_sensitive_fields(data: dict, user_role: str) -> dict:
+    """يزيل الحقول المالية الحساسة من قاموس البيانات إن لم يكن الدور مصرّحاً له.
+    أمان مستوى العمود على مستوى الاستعلام — لا مجرد إخفاء في الواجهة."""
+    if can_see_sensitive_financials(user_role):
+        return data
+    if not isinstance(data, dict):
+        return data
+    cleaned = {}
+    for k, v in data.items():
+        kl = str(k).lower()
+        if any(sf in kl for sf in SENSITIVE_FINANCIAL_FIELDS):
+            continue  # نحذف الحقل الحساس تماماً
+        cleaned[k] = v
+    return cleaned
 
 
 @app.get("/company/team")
