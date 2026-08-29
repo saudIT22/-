@@ -2484,9 +2484,29 @@ def company_dashboard(user: User = Depends(get_current_user)):
         mid = len([b for b in active if 40 <= b["score"] < 55])
         weak = len([b for b in active if b["score"] < 40])
 
+        # ===== تنبيهات نسبية (%) لأعلى اللوحة — خدمة ٨ =====
+        pct_alarms = []
+        if total_sales > 0:
+            _exp_ratio = round(total_expenses / total_sales * 100) if total_expenses > 0 else 0
+            if _exp_ratio >= 85:
+                pct_alarms.append({"icon": "🔴", "label": "المصروفات", "value": f"{_exp_ratio}%",
+                                   "msg": "المصروفات تلتهم معظم المبيعات", "level": "high"})
+            elif _exp_ratio >= 75:
+                pct_alarms.append({"icon": "🟡", "label": "المصروفات", "value": f"{_exp_ratio}%",
+                                   "msg": "نسبة المصروفات مرتفعة", "level": "medium"})
+        if branch_data:
+            _weak_pct = round(weak / len(branch_data) * 100) if len(branch_data) else 0
+            if _weak_pct >= 40:
+                pct_alarms.append({"icon": "🔴", "label": "فروع ضعيفة", "value": f"{_weak_pct}%",
+                                   "msg": f"{weak} من {len(branch_data)} فروع أداؤها ضعيف", "level": "high"})
+        if avg_margin and avg_margin < 10:
+            pct_alarms.append({"icon": "🟡", "label": "هامش الربح", "value": f"{round(avg_margin)}%",
+                               "msg": "هامش الربح منخفض", "level": "medium"})
+
         return {
             "company": {"id": company.id, "name": company.name, "sector": company.sector},
             "has_data": len(active) > 0,
+            "pct_alarms": pct_alarms,
             "summary": {
                 "total_sales": round(total_sales), "total_customers": total_customers,
                 "total_invoices": total_invoices, "total_profit": round(total_profit),
@@ -3675,6 +3695,11 @@ def page_company_customers():
 def page_company_hr():
     return FileResponse("company-hr.html")
 
+
+@app.get("/company-hr-analytics.html")
+def page_company_hr_analytics():
+    return FileResponse("company-hr-analytics.html")
+
 @app.get("/company-ops.html")
 def page_company_ops():
     return FileResponse("company-ops.html")
@@ -4537,6 +4562,131 @@ def compute_confidence_flag(quality_score):
         "note": ("" if quality_score >= QUALITY_THRESHOLD else
                  "هذه النتيجة مبنية على بيانات غير مكتملة — تعامل معها بحذر حتى تكتمل البيانات."),
     }
+
+
+@app.get("/company/hr-analytics")
+def company_hr_analytics(user: User = Depends(get_current_user)):
+    """وحدة الموارد البشرية الشاملة (المرحلة ٢): ١٠ مؤشرات HR.
+    كل مؤشر يحمل has_data — يميّز نقص البيانات عن ضعف الأداء (بلا اختراع)."""
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id)
+        if not company:
+            raise HTTPException(403, "غير مصرّح")
+        role = get_user_role(s, user)
+        if not check_permission(role, "hr", "view") and role != "owner":
+            raise HTTPException(403, "غير مصرّح — وحدة الموارد البشرية")
+        if company.is_active != 1:
+            raise HTTPException(402, "شركتك قيد التفعيل")
+
+        # نجمع كل بيانات HR (شركة + فروع)
+        hr_entries = s.exec(
+            select(CompanyModuleEntry).where(
+                CompanyModuleEntry.company_id == company.id,
+                CompanyModuleEntry.module == "hr",
+            ).order_by(CompanyModuleEntry.created_at.desc())
+        ).all()
+
+        # نستخرج القيم بمرونة من كل الإدخالات
+        def _pick(d, *keywords):
+            for k, v in d.items():
+                kl = str(k).lower()
+                if any(kw in k or kw in kl for kw in keywords):
+                    try:
+                        return float(str(v).replace(",", "").replace("%", "").strip())
+                    except Exception:
+                        continue
+            return None
+
+        merged = {}
+        for he in hr_entries:
+            try:
+                merged.update(json.loads(he.data) if he.data else {})
+            except Exception:
+                pass
+
+        # إجمالي مبيعات الشركة (لحساب الإيراد/موظف)
+        total_sales = 0.0
+        total_profit = 0.0
+        for b in s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company.id, CompanyBranch.is_active == 1)).all():
+            e = s.exec(select(CompanyEntry).where(CompanyEntry.branch_id == b.id).order_by(CompanyEntry.created_at.desc())).first()
+            if e:
+                total_sales += e.sales or 0
+                total_profit += e.profit or 0
+
+        has_any = len(merged) > 0
+        employees = _pick(merged, "موظف", "عدد", "employee", "headcount", "staff")
+        turnover = _pick(merged, "دوران", "turnover", "استقالة")
+        new_hires = _pick(merged, "توظيف", "تعيين", "hire", "recruit")
+        salary_cost = _pick(merged, "رواتب", "salary", "أجور", "payroll")
+        engagement = _pick(merged, "رضا", "engagement", "ارتباط", "معنويات")
+        training_hrs = _pick(merged, "تدريب", "training", "تطوير", "development")
+        high_perf = _pick(merged, "متميز", "high", "ممتاز")
+        avg_perf = _pick(merged, "متوسط", "average", "avg")
+        low_perf = _pick(merged, "ضعيف", "low", "منخفض")
+        time_to_hire = _pick(merged, "وقت التوظيف", "time to hire", "مدة التعيين")
+        flight_risk = _pick(merged, "مخاطر ترك", "flight risk", "خطر مغادرة")
+
+        metrics = []
+        # ① ملخص القوى العاملة
+        metrics.append({"key": "workforce", "icon": "👥", "label": "إجمالي القوى العاملة",
+            "value": int(employees) if employees else None, "unit": "موظف",
+            "has_data": employees is not None})
+        # ② الإيراد لكل موظف (KPI رئيسي)
+        rev_per_emp = round(total_sales / employees) if (employees and employees > 0 and total_sales > 0) else None
+        metrics.append({"key": "rev_per_emp", "icon": "💰", "label": "الإيراد لكل موظف",
+            "value": rev_per_emp, "unit": "ريال",
+            "has_data": rev_per_emp is not None})
+        # ③ الربح لكل موظف
+        profit_per_emp = round(total_profit / employees) if (employees and employees > 0 and total_profit) else None
+        metrics.append({"key": "profit_per_emp", "icon": "📈", "label": "الربح لكل موظف",
+            "value": profit_per_emp, "unit": "ريال",
+            "has_data": profit_per_emp is not None})
+        # ④ معدل الدوران
+        metrics.append({"key": "turnover", "icon": "🔄", "label": "معدل دوران الموظفين",
+            "value": round(turnover, 1) if turnover is not None else None, "unit": "%",
+            "has_data": turnover is not None,
+            "status": ("good" if (turnover is not None and turnover < 10) else ("warn" if (turnover is not None and turnover < 20) else "bad")) if turnover is not None else None})
+        # ⑤ نسبة تكلفة الرواتب
+        salary_ratio = round(salary_cost / total_sales * 100, 1) if (salary_cost and total_sales > 0) else None
+        metrics.append({"key": "salary_ratio", "icon": "💵", "label": "نسبة تكلفة الرواتب من الإيرادات",
+            "value": salary_ratio, "unit": "%",
+            "has_data": salary_ratio is not None})
+        # ⑥ درجة الرضا الوظيفي (engagement)
+        metrics.append({"key": "engagement", "icon": "❤️", "label": "درجة الرضا الوظيفي",
+            "value": round(engagement, 1) if engagement is not None else None, "unit": "/5" if (engagement and engagement <= 5) else "%",
+            "has_data": engagement is not None})
+        # ⑦ ساعات التدريب والتطوير
+        metrics.append({"key": "training", "icon": "🎓", "label": "ساعات التدريب والتطوير",
+            "value": round(training_hrs) if training_hrs is not None else None, "unit": "ساعة",
+            "has_data": training_hrs is not None})
+        # ⑧ التوظيف (تعيينات جديدة + وقت التوظيف)
+        metrics.append({"key": "hiring", "icon": "🆕", "label": "التعيينات الجديدة",
+            "value": int(new_hires) if new_hires is not None else None, "unit": "موظف",
+            "has_data": new_hires is not None,
+            "extra": (f"وقت التوظيف {round(time_to_hire)} يوم" if time_to_hire is not None else None)})
+        # ⑨ توزيع الأداء (متميز/متوسط/ضعيف)
+        perf_data = high_perf is not None or avg_perf is not None or low_perf is not None
+        metrics.append({"key": "performance", "icon": "⭐", "label": "توزيع الأداء",
+            "value": None, "has_data": perf_data,
+            "distribution": {"high": int(high_perf) if high_perf else 0,
+                             "avg": int(avg_perf) if avg_perf else 0,
+                             "low": int(low_perf) if low_perf else 0} if perf_data else None})
+        # ⑩ مخاطر ترك العمل (flight risk / succession)
+        metrics.append({"key": "flight_risk", "icon": "⚠️", "label": "مخاطر ترك العمل",
+            "value": int(flight_risk) if flight_risk is not None else None, "unit": "موظف",
+            "has_data": flight_risk is not None})
+
+        filled = sum(1 for m in metrics if m["has_data"])
+        return {
+            "company": {"name": company.name},
+            "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "has_any_data": has_any,
+            "metrics": metrics,
+            "filled_count": filled,
+            "total_count": len(metrics),
+        }
 
 
 @app.get("/company/data-quality")
