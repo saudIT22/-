@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نبّاه · وحدة الموارد البشرية</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#070b09;--panel:#101a15;--panel2:#0e1712;--line:#1d2c24;--mint:#10b981;--mint-deep:#0b8457;--gold:#f5b301;--red:#ef4444;--orange:#f97316;--txt:#e8f1ec;--txt-soft:#8ba396;--txt-mute:#5c6f66;}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--txt);line-height:1.6;min-height:100vh;
+    background-image:radial-gradient(ellipse 800px 400px at 15% -5%,rgba(16,185,129,.06),transparent),radial-gradient(ellipse 600px 300px at 90% 5%,rgba(11,132,87,.05),transparent)}
+  a{text-decoration:none;color:inherit}
+  header{position:sticky;top:0;z-index:40;background:rgba(7,11,9,.85);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+  .head-in{max-width:1080px;margin:0 auto;padding:12px 18px;display:flex;align-items:center;justify-content:space-between}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:900;font-size:19px;color:#fff}
+  .brand .bell{width:36px;height:36px;border-radius:11px;background:linear-gradient(135deg,var(--mint),var(--mint-deep));display:grid;place-items:center;font-size:17px;transform:rotate(-6deg)}
+  .btn{display:inline-flex;align-items:center;gap:7px;font-family:inherit;font-weight:700;cursor:pointer;border-radius:11px;font-size:13.5px;padding:9px 15px;background:var(--panel);color:var(--txt-soft);border:1px solid var(--line)}
+  .wrap{max-width:1080px;margin:0 auto;padding:24px 18px 60px}
+  .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+  .top h1{font-size:22px;font-weight:900;display:flex;align-items:center;gap:9px}
+  .sub{font-size:13px;color:var(--txt-soft);margin-bottom:22px}
+  .stamp{font-size:12px;color:var(--txt-mute);text-align:left}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  @media(max-width:820px){.grid{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:520px){.grid{grid-template-columns:1fr}}
+  .mc{background:linear-gradient(180deg,rgba(255,255,255,.028),rgba(255,255,255,.008));border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:18px;min-height:120px}
+  .mc .mh{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+  .mc .mi{width:34px;height:34px;border-radius:9px;background:rgba(16,185,129,.1);display:grid;place-items:center;font-size:16px}
+  .mc .ml{font-size:12.5px;color:var(--txt-soft);font-weight:600;line-height:1.4}
+  .mc .mv{font-size:30px;font-weight:900;letter-spacing:-1px;font-family:'Inter',sans-serif}
+  .mc .mu{font-size:13px;color:var(--txt-soft);font-weight:600;margin-right:4px}
+  .mc .mextra{font-size:11.5px;color:var(--txt-mute);margin-top:6px}
+  .mc.nodata{opacity:.6}
+  .mc.nodata .mv{color:var(--txt-mute);font-size:20px}
+  .nd-badge{font-size:11px;color:var(--txt-mute);background:var(--panel2);padding:3px 10px;border-radius:6px;display:inline-block;margin-top:8px}
+  .badge{font-size:10.5px;padding:2px 9px;border-radius:6px;font-weight:800;margin-right:auto}
+  .b-good{background:rgba(16,185,129,.14);color:var(--mint)}
+  .b-warn{background:rgba(245,179,1,.14);color:var(--gold)}
+  .b-bad{background:rgba(239,68,68,.14);color:var(--red)}
+  .perf-bars{display:flex;gap:5px;margin-top:10px;height:8px}
+  .perf-bars i{border-radius:3px}
+  .perf-leg{display:flex;gap:10px;margin-top:8px;font-size:10.5px;color:var(--txt-soft);flex-wrap:wrap}
+  .perf-leg span{display:flex;align-items:center;gap:4px}
+  .perf-leg .dot{width:7px;height:7px;border-radius:2px}
+  .empty{text-align:center;padding:60px 20px;color:var(--txt-mute)}
+  .empty .big{font-size:42px;margin-bottom:12px}
+  .empty a{color:var(--mint);font-weight:700}
+  .spin{width:32px;height:32px;border:3px solid var(--line);border-top-color:var(--mint);border-radius:50%;animation:sp 1s linear infinite;margin:60px auto}@keyframes sp{to{transform:rotate(360deg)}}
+  .info{background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.18);border-radius:12px;padding:12px 16px;margin-bottom:18px;font-size:12.5px;color:var(--txt-soft)}
+  .foot{display:flex;gap:9px;justify-content:center;margin-top:24px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<header>
+  <div class="head-in">
+    <a class="brand" href="company-dashboard.html"><span class="bell">🔔</span>نبّاه</a>
+    <div style="display:flex;gap:8px">
+      <a class="btn" href="company-hr.html" data-i18n="hr.entry">إدخال بيانات HR</a>
+      <a class="btn" href="company-dashboard.html" data-i18n="nav.dashboard">اللوحة</a>
+    </div>
+  </div>
+</header>
+<div class="wrap">
+  <div id="loading"><div class="spin"></div></div>
+  <div id="content" style="display:none">
+    <div class="top">
+      <h1>👨‍💼 <span data-i18n="hr.title">وحدة الموارد البشرية</span></h1>
+      <div class="stamp" id="stamp"></div>
+    </div>
+    <div class="sub" data-i18n="hr.sub">تحليل شامل للقوى العاملة: الإنتاجية، الأداء، الدوران، والرضا الوظيفي.</div>
+
+    <div class="info" data-i18n="hr.info">💡 كل مؤشر يُحسب من بياناتك الفعلية. المؤشرات بدون بيانات تظهر "بحاجة لإدخال" — وليست صفراً.</div>
+
+    <div id="emptyBox" style="display:none"></div>
+    <div class="grid" id="metrics"></div>
+
+    <div class="foot">
+      <a class="btn" href="company-hr.html">✏️ <span data-i18n="hr.entry">إدخال بيانات HR</span></a>
+      <a class="btn" href="company-branches.html">🔀 <span data-i18n="nav.branches">مقارنة الفروع</span></a>
+      <a class="btn" href="company-command-center.html">🎛️ <span data-i18n="nav.command">مركز القيادة</span></a>
+    </div>
+  </div>
+</div>
+<script>
+const TOKEN=localStorage.getItem("nabbah_token")||"";
+if(!TOKEN) window.location.href="login.html";
+async function api(p){
+  const r=await fetch(p,{headers:{"Authorization":"Bearer "+TOKEN}});
+  if(r.status===401){ localStorage.removeItem("nabbah_token"); window.location.href="login.html"; throw new Error("جلسة"); }
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(d.detail||"خطأ");
+  return d;
+}
+const fmt=n=>(Math.round(n)||0).toLocaleString("en-US");
+function statusBadge(st){
+  if(st==="good") return '<span class="badge b-good">جيد</span>';
+  if(st==="warn") return '<span class="badge b-warn">متوسط</span>';
+  if(st==="bad") return '<span class="badge b-bad">مرتفع</span>';
+  return "";
+}
+async function load(){
+  try{
+    const d=await api("/company/hr-analytics");
+    document.getElementById("loading").style.display="none";
+    document.getElementById("content").style.display="block";
+    document.getElementById("stamp").innerHTML=((d.company&&d.company.name)||"")+"<br>"+(d.generated_at||"");
+
+    if(!d.has_any_data){
+      document.getElementById("metrics").style.display="none";
+      const eb=document.getElementById("emptyBox");
+      eb.style.display="block";
+      eb.innerHTML=`<div class="empty"><div class="big">👨‍💼</div>
+        <div style="font-size:16px;font-weight:700;color:var(--txt);margin-bottom:8px">لا توجد بيانات موارد بشرية بعد</div>
+        <div style="margin-bottom:16px">أدخِل بيانات موظفيك (العدد، الرواتب، الدوران، الأداء...) ليحسب نبّاه كل المؤشرات.</div>
+        <a href="company-hr.html">✏️ ابدأ بإدخال بيانات HR ←</a></div>`;
+      return;
+    }
+
+    document.getElementById("metrics").innerHTML=d.metrics.map(m=>{
+      if(!m.has_data){
+        return `<div class="mc nodata"><div class="mh"><div class="mi">${m.icon}</div><div class="ml">${m.label}</div></div>
+          <div class="mv">—</div><div class="nd-badge">بحاجة لإدخال</div></div>`;
+      }
+      // توزيع الأداء (خاص)
+      if(m.key==="performance" && m.distribution){
+        const t=m.distribution.high+m.distribution.avg+m.distribution.low||1;
+        return `<div class="mc"><div class="mh"><div class="mi">${m.icon}</div><div class="ml">${m.label}</div></div>
+          <div class="perf-bars">
+            <i style="flex:${m.distribution.high||0.01};background:#10b981"></i>
+            <i style="flex:${m.distribution.avg||0.01};background:#f5b301"></i>
+            <i style="flex:${m.distribution.low||0.01};background:#ef4444"></i>
+          </div>
+          <div class="perf-leg">
+            <span><span class="dot" style="background:#10b981"></span>متميز ${m.distribution.high}</span>
+            <span><span class="dot" style="background:#f5b301"></span>متوسط ${m.distribution.avg}</span>
+            <span><span class="dot" style="background:#ef4444"></span>ضعيف ${m.distribution.low}</span>
+          </div></div>`;
+      }
+      return `<div class="mc"><div class="mh"><div class="mi">${m.icon}</div><div class="ml">${m.label}</div>${statusBadge(m.status)}</div>
+        <div><span class="mv">${fmt(m.value)}</span>${m.unit?`<span class="mu">${m.unit}</span>`:""}</div>
+        ${m.extra?`<div class="mextra">${m.extra}</div>`:""}</div>`;
+    }).join("");
+    if(window.NabbahI18n) window.NabbahI18n.apply();
+  }catch(e){
+    document.getElementById("loading").innerHTML='<p style="text-align:center;color:var(--red)">'+e.message+'</p>';
+  }
+}
+load();
+</script>
+<script src="i18n.js"></script>
+</body>
+</html>
