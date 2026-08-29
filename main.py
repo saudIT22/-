@@ -4428,6 +4428,13 @@ def company_health_score(user: User = Depends(get_current_user)):
             })
         branch_health.sort(key=lambda x: x["score"], reverse=True)
 
+        # ===== confidence_flag: صحة الشركة تحمل مؤشر جودة بياناتها =====
+        _all_e = []
+        for _b, _e in rows:
+            _all_e.append(_e)
+        _qscore, _ = check_data_quality_rules(_all_e)
+        _confidence = compute_confidence_flag(_qscore)
+
         return {
             "company": {"name": company.name},
             "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
@@ -4438,6 +4445,7 @@ def company_health_score(user: User = Depends(get_current_user)):
             "weakest_axis": weakest["label"],
             "main_cause": main_cause,
             "branch_health": branch_health,
+            "confidence": _confidence,
         }
 
 
@@ -4457,9 +4465,83 @@ MODULE_KEY_FIELDS = {
     "procurement": 10, "events":      8,  "competitors": 12,
 }
 
+# ═══════════════════════════════════════════════════════════
+#  محرك قواعد جودة البيانات (خدمة ٣ من المرحلة ١)
+#  قواعد منطقية قابلة للتوسّع — تفحص كل دفعة بيانات وتعطي درجة 0-100.
+#  القاعدة الذهبية: أي بيانات جودتها < 60% تحمل confidence_flag
+#  حقل مستمر تستخدمه كل الخدمات اللاحقة (صحة، مركز قيادة، تنبؤ...).
+# ═══════════════════════════════════════════════════════════
+QUALITY_THRESHOLD = 60  # عتبة الثقة: أقل منها = confidence_flag
+
+
+def check_data_quality_rules(entries):
+    """يفحص قائمة إدخالات بقواعد منطقية ويرجع (score, flags).
+    قابل للتوسّع: أضف قاعدة جديدة في RULES دون تغيير المنطق."""
+    if not entries:
+        return 0, [{"rule": "no_data", "msg": "لا توجد بيانات", "severity": "high"}]
+
+    flags = []
+    total_checks = 0
+    passed_checks = 0
+
+    for e in entries:
+        # ① المبيعات غير سالبة
+        total_checks += 1
+        if getattr(e, "sales", 0) is not None and getattr(e, "sales", 0) >= 0:
+            passed_checks += 1
+        else:
+            flags.append({"rule": "negative_sales", "msg": f"مبيعات سالبة في {getattr(e,'period','?')}", "severity": "high"})
+
+        # ② المصروفات غير سالبة
+        total_checks += 1
+        if getattr(e, "expenses", 0) is not None and getattr(e, "expenses", 0) >= 0:
+            passed_checks += 1
+        else:
+            flags.append({"rule": "negative_expenses", "msg": f"مصروفات سالبة في {getattr(e,'period','?')}", "severity": "high"})
+
+        # ③ المصروفات لا تتجاوز المبيعات بشكل غير منطقي (>300%)
+        total_checks += 1
+        sales = getattr(e, "sales", 0) or 0
+        exp = getattr(e, "expenses", 0) or 0
+        if sales == 0 or exp <= sales * 3:
+            passed_checks += 1
+        else:
+            flags.append({"rule": "expenses_exceed", "msg": f"مصروفات مرتفعة جداً مقابل المبيعات في {getattr(e,'period','?')}", "severity": "medium"})
+
+        # ④ وجود فترة (تاريخ) صحيحة
+        total_checks += 1
+        if getattr(e, "period", None):
+            passed_checks += 1
+        else:
+            flags.append({"rule": "missing_period", "msg": "فترة زمنية مفقودة", "severity": "medium"})
+
+        # ⑤ عدد العملاء غير سالب
+        total_checks += 1
+        if getattr(e, "customers", 0) is None or getattr(e, "customers", 0) >= 0:
+            passed_checks += 1
+        else:
+            flags.append({"rule": "negative_customers", "msg": "عدد عملاء سالب", "severity": "medium"})
+
+    score = round((passed_checks / total_checks) * 100) if total_checks else 0
+    return score, flags
+
+
+def compute_confidence_flag(quality_score):
+    """القاعدة الذهبية: جودة < 60% → confidence_flag مرفوع.
+    ترجع dict يُخزّن مع أي مؤشر مبني على هذه البيانات."""
+    return {
+        "flag": quality_score < QUALITY_THRESHOLD,
+        "quality": quality_score,
+        "label": ("موثوقية عالية" if quality_score >= 75 else
+                  ("موثوقية متوسطة" if quality_score >= QUALITY_THRESHOLD else "تحتاج إلى تحقق")),
+        "note": ("" if quality_score >= QUALITY_THRESHOLD else
+                 "هذه النتيجة مبنية على بيانات غير مكتملة — تعامل معها بحذر حتى تكتمل البيانات."),
+    }
+
+
 @app.get("/company/data-quality")
 def company_data_quality(user: User = Depends(get_current_user)):
-    """يحسب جودة بيانات كل وحدة + جودة شاملة."""
+    """يحسب جودة بيانات كل وحدة + جودة شاملة + فحص القواعد المنطقية."""
     with Session(engine) as s:
         if not user.company_id:
             raise HTTPException(403, "لا توجد شركة نشطة")
@@ -4512,13 +4594,25 @@ def company_data_quality(user: User = Depends(get_current_user)):
         elif overall >= 45: overall_status = "🟡"; overall_level = "موثوقية متوسطة"
         else: overall_status = "🟠"; overall_level = "موثوقية محدودة"
 
+        # ===== فحص القواعد المنطقية على بيانات الفروع =====
+        all_entries = []
+        for b in s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company.id, CompanyBranch.is_active == 1)).all():
+            all_entries.extend(s.exec(select(CompanyEntry).where(CompanyEntry.branch_id == b.id)).all())
+        rules_score, rules_flags = check_data_quality_rules(all_entries)
+
+        # الجودة النهائية تدمج الاكتمال والقواعد المنطقية
+        combined_quality = round(overall * 0.6 + rules_score * 0.4) if all_entries else overall
+        confidence = compute_confidence_flag(combined_quality)
+
         return {
             "company": {"name": company.name},
-            "overall_quality": overall,
+            "overall_quality": combined_quality,
             "overall_status": overall_status,
             "overall_level": overall_level,
             "basics": {"quality": basics_quality, "branches_with_data": branches_with_data, "branches_total": branches_total},
             "modules": modules,
+            "rules": {"score": rules_score, "flags": rules_flags[:12], "flags_count": len(rules_flags)},
+            "confidence": confidence,
             "note": "كل ما زادت جودة البيانات، زادت دقة التحليل والتنبؤ والمخاطر.",
         }
 
@@ -5992,9 +6086,57 @@ def download_template():
 # ===== ذاكرة الشركة: سجل التحليلات والقرارات =====
 # ============================================================
 
+# ═══════════════════════════════════════════════════════════
+#  بحث دلالي خفيف لذاكرة الشركة (خدمة ٧ من المرحلة ١)
+#  بديل عملي عن pgvector (قد لا يتوفّر على Railway):
+#  توسيع المرادفات + ترجيح الصلة + ترتيب بالأهمية — بلا مكتبات خارجية.
+#  يمكن الترقية لـ pgvector لاحقاً دون تغيير الواجهة.
+# ═══════════════════════════════════════════════════════════
+SEMANTIC_SYNONYMS = {
+    "ربح": ["ربحية", "أرباح", "هامش", "مكسب", "عائد"],
+    "خسارة": ["خسائر", "عجز", "تراجع", "هبوط"],
+    "مبيعات": ["بيع", "إيرادات", "دخل", "مبيع"],
+    "مصروف": ["مصروفات", "تكلفة", "تكاليف", "نفقات", "صرف"],
+    "عميل": ["عملاء", "زبون", "زبائن", "مستهلك"],
+    "موظف": ["موظفين", "فريق", "عمالة", "كادر"],
+    "فرع": ["فروع", "موقع", "مواقع"],
+    "مخاطر": ["خطر", "تهديد", "مشكلة", "تحذير"],
+    "قرار": ["قرارات", "توصية", "توصيات", "إجراء"],
+    "نمو": ["توسّع", "زيادة", "ارتفاع", "تطوّر"],
+    "سيولة": ["نقد", "نقدية", "تدفق", "كاش"],
+    "مخزون": ["بضاعة", "مستودع", "أصناف"],
+}
+
+
+def expand_query_terms(q):
+    """يوسّع كلمات البحث بمرادفاتها الدلالية (بحث بالمعنى لا الحرف)."""
+    q = (q or "").strip().lower()
+    if not q:
+        return []
+    words = q.split()
+    expanded = set(words)
+    for w in words:
+        for key, syns in SEMANTIC_SYNONYMS.items():
+            if w == key or w in syns:
+                expanded.add(key)
+                expanded.update(syns)
+    return list(expanded)
+
+
+def semantic_score(item_text, terms):
+    """يحسب درجة صلة بين نص وعبارات البحث الموسّعة (0-100)."""
+    if not terms:
+        return 0
+    text = (item_text or "").lower()
+    hits = sum(1 for t in terms if t in text)
+    # ترجيح: نسبة التطابق + مكافأة للتطابقات المتعددة
+    base = (hits / len(terms)) * 100 if terms else 0
+    return round(min(base * 1.5, 100))
+
+
 @app.get("/company/memory")
 def company_memory_list(q: str = "", kind: str = "", user: User = Depends(get_current_user)):
-    """يجلب سجل ذاكرة الشركة مع بحث اختياري."""
+    """يجلب سجل ذاكرة الشركة مع بحث دلالي (يفهم المعنى والمرادفات)."""
     if not user.company_id:
         raise HTTPException(403, "لا توجد شركة نشطة")
     with Session(engine) as s:
@@ -6009,7 +6151,16 @@ def company_memory_list(q: str = "", kind: str = "", user: User = Depends(get_cu
         items = s.exec(query.order_by(CompanyMemory.created_at.desc()).limit(200)).all()
         qn = q.strip().lower()
         if qn:
-            items = [m for m in items if qn in (m.title or "").lower() or qn in (m.content or "").lower()]
+            # بحث دلالي: توسيع المرادفات + ترتيب بالصلة
+            terms = expand_query_terms(qn)
+            scored = []
+            for m in items:
+                full = (m.title or "") + " " + (m.content or "")
+                sc = semantic_score(full, terms)
+                if sc > 0:
+                    scored.append((sc, m))
+            scored.sort(key=lambda x: x[0], reverse=True)
+            items = [m for sc, m in scored]
         KIND_META = {
             "analysis": ("🧑‍💼", "تحليل"), "question": ("💬", "سؤال"),
             "upload": ("📂", "رفع بيانات"), "goals": ("🎯", "أهداف"), "decision": ("⚡", "قرار"),
