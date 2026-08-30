@@ -1,0 +1,93 @@
+/* ═══════════════════════════════════════════════════════════
+   نبّاه — نظام التصميم الموحّد (Nabbah Design System)
+   مصدر واحد للحقيقة: الألوان، الحالات، المسافات، الظلال.
+   كل صفحة تستورد هذا الملف → اتساق كامل عبر المنصة.
+
+   القاعدة الذهبية (رؤية الاستشاري، البند ٢٥):
+   الألوان تحمل معنى الحالة — ليست للزينة.
+   🟢 سليم · 🟡 مراقبة · 🟠 انتباه · 🔴 حرج · 🔵 معلومة
+   ═══════════════════════════════════════════════════════════ */
+
+:root {
+  /* ─── الخلفيات والأسطح ─── */
+  --bg:        #070b09;   /* الخلفية الأساسية (داكن عميق) */
+  --panel:     #101a15;   /* البطاقات الأساسية */
+  --panel2:    #0e1712;   /* بطاقات داخلية / ثانوية */
+  --line:      #1d2c24;   /* الحدود والفواصل */
+
+  /* ─── هوية نبّاه (الأخضر) ─── */
+  --mint:      #10b981;   /* الأخضر الأساسي — الهوية */
+  --mint-deep: #0b8457;   /* الأخضر العميق — للتدرّجات */
+  --mint-soft: rgba(16,185,129,.12);  /* خلفية خضراء خفيفة */
+
+  /* ─── ألوان الحالة (بمعنى واضح — لا للزينة) ─── */
+  --state-healthy:   #10b981;   /* 🟢 سليم — الأداء جيد */
+  --state-watch:     #f5b301;   /* 🟡 مراقبة — يحتاج متابعة */
+  --state-attention: #f97316;   /* 🟠 انتباه — مشكلة تتطوّر */
+  --state-critical:  #ef4444;   /* 🔴 حرج — تدخّل عاجل */
+  --state-info:      #3b82f6;   /* 🔵 معلومة — سياق محايد */
+
+  /* خلفيات الحالات (شفافة) */
+  --healthy-bg:   rgba(16,185,129,.13);
+  --watch-bg:     rgba(245,179,1,.13);
+  --attention-bg: rgba(249,115,22,.13);
+  --critical-bg:  rgba(239,68,68,.13);
+  --info-bg:      rgba(59,130,246,.13);
+
+  /* ─── ألوان مساعدة ─── */
+  --gold:   #f5b301;      /* تنبيه / مميّز */
+  --orange: #f97316;
+  --red:    #ef4444;
+  --blue:   #3b82f6;
+  --purple: #a855f7;
+
+  /* ─── النصوص ─── */
+  --txt:      #e8f1ec;    /* النص الأساسي */
+  --txt-soft: #8ba396;    /* نص ثانوي */
+  --txt-mute: #5c6f66;    /* نص خافت / تلميحات */
+
+  /* ─── الأشكال والمسافات ─── */
+  --r-sm: 10px;           /* زوايا صغيرة */
+  --r:    16px;           /* الزوايا الأساسية */
+  --r-lg: 20px;           /* زوايا كبيرة (بطاقات رئيسية) */
+
+  /* ─── التدرّجات الجاهزة ─── */
+  --grad-panel: linear-gradient(180deg, rgba(255,255,255,.028), rgba(255,255,255,.008));
+  --grad-mint:  linear-gradient(135deg, var(--mint), var(--mint-deep));
+  --grad-glow:  radial-gradient(ellipse 800px 400px at 15% -5%, rgba(16,185,129,.06), transparent),
+                radial-gradient(ellipse 600px 300px at 90% 5%, rgba(11,132,87,.05), transparent);
+
+  /* ─── حدود البطاقات ─── */
+  --border-card: 1px solid rgba(255,255,255,.06);
+
+  /* ─── الظلال ─── */
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.2);
+  --shadow:    0 4px 16px rgba(0,0,0,.25);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   فئات مساعدة موحّدة (Utility Classes)
+   تُستخدم في كل الصفحات لضمان الاتساق.
+   ═══════════════════════════════════════════════════════════ */
+
+/* شارات الحالة الموحّدة */
+.nb-badge { font-size:11px; padding:3px 10px; border-radius:6px; font-weight:800; display:inline-flex; align-items:center; gap:4px; }
+.nb-badge.healthy   { background:var(--healthy-bg);   color:var(--state-healthy); }
+.nb-badge.watch     { background:var(--watch-bg);     color:var(--state-watch); }
+.nb-badge.attention { background:var(--attention-bg); color:var(--state-attention); }
+.nb-badge.critical  { background:var(--critical-bg);  color:var(--state-critical); }
+.nb-badge.info      { background:var(--info-bg);      color:var(--state-info); }
+
+/* بطاقة موحّدة */
+.nb-card { background:var(--grad-panel); border:var(--border-card); border-radius:var(--r); padding:20px; }
+
+/* نقطة حالة ملوّنة */
+.nb-dot { width:8px; height:8px; border-radius:50%; display:inline-block; flex-shrink:0; }
+.nb-dot.healthy   { background:var(--state-healthy); }
+.nb-dot.watch     { background:var(--state-watch); }
+.nb-dot.attention { background:var(--state-attention); }
+.nb-dot.critical  { background:var(--state-critical); }
+.nb-dot.info      { background:var(--state-info); }
+
+/* دالة لون الحالة حسب الدرجة (0-100) — تُستخدم في JS:
+   ≥75 سليم · ≥55 مراقبة · ≥35 انتباه · <35 حرج */
