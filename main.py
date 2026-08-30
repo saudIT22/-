@@ -600,6 +600,16 @@ def serve_sidebar():
     return _Resp(content="/* nabbah-sidebar.js not uploaded yet */", media_type="application/javascript")
 
 
+@app.get("/nabbah-filters.js")
+def serve_filters():
+    # شريط الفلاتر الموحّد — يُخدَم بنوع MIME الصحيح
+    import os as _os
+    if _os.path.exists("nabbah-filters.js"):
+        return FileResponse("nabbah-filters.js", media_type="application/javascript")
+    from fastapi.responses import Response as _Resp
+    return _Resp(content="/* nabbah-filters.js not uploaded yet */", media_type="application/javascript")
+
+
 @app.get("/nabbah-design.css")
 def serve_design():
     # نظام التصميم الموحّد (الألوان والحالات) — يُخدَم بنوع MIME الصحيح
