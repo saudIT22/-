@@ -106,9 +106,8 @@
     #nbOverlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999;opacity:0;pointer-events:none;transition:.25s}
     #nbOverlay.show{opacity:1;pointer-events:auto}
     @media(min-width:1100px){
-      #nbSidebar{transform:translateX(0)}
-      #nbToggle,#nbOverlay{display:none}
-      body{padding-right:250px}
+      /* الشريط مخفي دائماً — يظهر بزر ☰ فقط (المحتوى يأخذ كل الشاشة) */
+      #nbToggle{display:grid}
     }
   `;
 
@@ -141,7 +140,7 @@
   const sb = document.createElement("nav");
   sb.id = "nbSidebar";
   sb.innerHTML = `
-    <div id="nbSbHead"><span class="bell">🔔</span><span class="nm">نبّاه</span></div>
+    <div id="nbSbHead"><span class="bell">🔔</span><span class="nm">نبّاه</span><span id="nbClose" style="margin-right:auto;cursor:pointer;font-size:20px;color:#5c6f66">×</span></div>
     <div id="nbSbBody">${NAV.map(buildGroup).join("")}</div>
     <div id="nbSbFoot">${BOTTOM.map(b => {
       const active = b.href.toLowerCase() === here ? " active" : "";
@@ -159,4 +158,10 @@
   function closeSb() { sb.classList.remove("open"); overlay.classList.remove("show"); }
   toggle.addEventListener("click", openSb);
   overlay.addEventListener("click", closeSb);
+  const closeBtn = document.getElementById("nbClose");
+  if (closeBtn) closeBtn.addEventListener("click", closeSb);
+  // إغلاق تلقائي عند اختيار خدمة (تجربة أنظف)
+  sb.querySelectorAll(".nbItem").forEach(a => {
+    a.addEventListener("click", () => setTimeout(closeSb, 100));
+  });
 })();
