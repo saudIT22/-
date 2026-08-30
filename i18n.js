@@ -574,3 +574,38 @@
     apply();
   }
 })();
+
+/* ═══════════════════════════════════════════════════════════
+   نظام الحالة الموحّد (Nabbah Design System — JS)
+   دالة واحدة لكل المنصة: درجة 0-100 → لون + تسمية حالة.
+   يضمن أن "٧٢" تعني نفس اللون في كل صفحة.
+   ═══════════════════════════════════════════════════════════ */
+window.NabbahState = {
+  // ألوان الحالة (تطابق nabbah-design.css)
+  colors: {
+    healthy:   "#10b981",  // 🟢 ≥75
+    watch:     "#f5b301",  // 🟡 ≥55
+    attention: "#f97316",  // 🟠 ≥35
+    critical:  "#ef4444",  // 🔴 <35
+    info:      "#3b82f6",
+  },
+  // درجة → مفتاح الحالة
+  key: function (score) {
+    if (score >= 75) return "healthy";
+    if (score >= 55) return "watch";
+    if (score >= 35) return "attention";
+    return "critical";
+  },
+  // درجة → لون
+  color: function (score) {
+    return this.colors[this.key(score)];
+  },
+  // درجة → تسمية عربية
+  label: function (score) {
+    return { healthy: "قوي", watch: "متوسط", attention: "ضعيف", critical: "حرج" }[this.key(score)];
+  },
+  // درجة → تسمية إنجليزية
+  labelEn: function (score) {
+    return { healthy: "Strong", watch: "Moderate", attention: "Weak", critical: "Critical" }[this.key(score)];
+  },
+};
