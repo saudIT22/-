@@ -6,6 +6,7 @@
 <title>نبّاه · صحة الشركة</title>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="nabbah-design.css" rel="stylesheet">
 <style>
   :root{--bg:#070b09;--panel:#101a15;--panel2:#0e1712;--line:#1d2c24;--mint:#10b981;--mint-deep:#0b8457;--gold:#f5b301;--red:#ef4444;--orange:#f97316;--txt:#e8f1ec;--txt-soft:#8ba396;--txt-mute:#5c6f66;}
   *{margin:0;padding:0;box-sizing:border-box}
@@ -133,8 +134,9 @@ async function api(p){
   if(!r.ok) throw new Error(d.detail||"خطأ");
   return d;
 }
-const scoreColor=s=>s>=75?"#10b981":(s>=55?"#f5b301":(s>=35?"#f97316":"#ef4444"));
-const lvlWord=s=>s>=75?"قوي":(s>=55?"متوسط":(s>=35?"ضعيف":"حرج"));
+// نظام الحالة الموحّد (من nabbah-design) — مع fallback آمن لو ما تحمّل
+const scoreColor=s=>(window.NabbahState?window.NabbahState.color(s):(s>=75?"#10b981":(s>=55?"#f5b301":(s>=35?"#f97316":"#ef4444"))));
+const lvlWord=s=>(window.NabbahState?window.NabbahState.label(s):(s>=75?"قوي":(s>=55?"متوسط":(s>=35?"ضعيف":"حرج"))));
 
 function drawGauge(score,color){
   const R=90,cx=110,cy=120;
