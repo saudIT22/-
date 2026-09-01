@@ -109,6 +109,7 @@
     <div class="kpis" id="kpis"></div>
     <div class="data-coverage" id="coverage" style="display:none"></div>
     <div id="pillarsBox"></div>
+    <div id="consolidatedBox"></div>
     <div id="alertsBox"></div>
     <div id="risksBox"></div>
 
@@ -163,6 +164,7 @@ async function load(){
     renderKPIs(d.kpis);
     renderCoverage(d);
     renderPillars(d.five_pillars);
+    loadConsolidated();
     renderAlerts(d.alerts);
     renderRisks(d.risks);
     renderDecisions(d.decisions);
@@ -192,6 +194,33 @@ function renderCoverage(d){
     box.style.display="flex";
     box.innerHTML=`<span class="ico">🧩</span><div>تغطية البيانات: <b>${pct}%</b> (${d.modules_filled}/${d.modules_total} وحدة). كل وحدة إضافية تزيد دقة التحليل والتنبؤات. <a href="company-dashboard.html" style="color:var(--mint)">اذهب للوحات</a></div>`;
   }else box.style.display="none";
+}
+
+
+async function loadConsolidated(){
+  try{
+    const d=await api("/company/consolidated");
+    if(!d.is_multi_unit) return;  // تظهر فقط للشركات متعددة الأنشطة
+    const c=d.consolidated;
+    const scoreColor=s=>(window.NabbahState?window.NabbahState.color(s):"#10b981");
+    const fmt=n=>(Math.round(n)||0).toLocaleString("en-US");
+    document.getElementById("consolidatedBox").innerHTML=`
+      <div class="section" style="margin-bottom:16px">
+        <div class="section-h"><div class="t">🏢 النظرة المجمّعة (${c.units_count} أنشطة)</div><div class="c">${fmt(c.total_sales)} ر</div></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:14px">
+          <div style="background:var(--panel2,#0e1712);border:1px solid var(--line,#1d2c24);border-radius:11px;padding:12px"><div style="font-size:11px;color:var(--txt-soft,#8ba396)">إجمالي المبيعات</div><div style="font-size:20px;font-weight:800;font-family:Inter">${fmt(c.total_sales)}</div></div>
+          <div style="background:var(--panel2,#0e1712);border:1px solid var(--line,#1d2c24);border-radius:11px;padding:12px"><div style="font-size:11px;color:var(--txt-soft,#8ba396)">صافي الربح</div><div style="font-size:20px;font-weight:800;font-family:Inter">${fmt(c.total_profit)}</div></div>
+          <div style="background:var(--panel2,#0e1712);border:1px solid var(--line,#1d2c24);border-radius:11px;padding:12px"><div style="font-size:11px;color:var(--txt-soft,#8ba396)">الهامش المجمّع</div><div style="font-size:20px;font-weight:800;font-family:Inter;color:${scoreColor(c.margin*3)}">${c.margin}%</div></div>
+        </div>
+        <div style="display:grid;gap:8px">
+          ${d.units.map(u=>`<div style="display:flex;align-items:center;gap:12px;background:var(--panel2,#0e1712);border:1px solid var(--line,#1d2c24);border-radius:10px;padding:12px 14px">
+            <div style="flex:1"><div style="font-weight:700;font-size:13.5px">${u.name}</div><div style="font-size:11px;color:var(--txt-mute,#5c6f66)">${u.branches} فرع · هامش ${u.margin}%</div></div>
+            <div style="text-align:left"><div style="font-size:16px;font-weight:800;font-family:Inter">${fmt(u.sales)}</div><div style="font-size:10.5px;color:var(--txt-soft,#8ba396)">ريال</div></div>
+          </div>`).join("")}
+        </div>
+        <div style="font-size:11px;color:var(--txt-mute,#5c6f66);margin-top:10px">النِسب محسوبة صحيحاً (إجمالي الربح ÷ إجمالي المبيعات) — لا متوسط النِسب.</div>
+      </div>`;
+  }catch(e){}
 }
 
 function renderPillars(fp){
