@@ -308,7 +308,12 @@ function mdToHtml(md){
 }
 
 load();
+window.nabbahReload = function(){ load(); };
+window.addEventListener("nabbahFilterChange", function(){ load(); });
 </script>
   <script src="i18n.js"></script>
+<script src="nabbah-sidebar.js"></script>
+<script src="nabbah-filters.js"></script>
+<script src="nabbah-ask.js"></script>
 </body>
 </html>
