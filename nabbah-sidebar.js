@@ -62,6 +62,7 @@
       { label: "ذاكرة الشركة", href: "company-memory.html" },
     ]},
     { icon: "📊", label: "التقارير", items: [
+      { label: "التقرير التنفيذي الذكي", href: "company-executive-report.html" },
       { label: "التقرير التنفيذي", href: "company-report.html" },
       { label: "التقرير الشهري", href: "company-monthly-report.html" },
       { label: "متابعة القرارات", href: "company-decisions.html" },
