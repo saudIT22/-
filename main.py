@@ -612,6 +612,11 @@ def page_exec_report():
     return FileResponse("company-executive-report.html")
 
 
+@app.get("/company-financial-overview.html")
+def page_fin_overview():
+    return FileResponse("company-financial-overview.html")
+
+
 @app.get("/company-check.html")
 def page_check():
     return FileResponse("company-check.html")
@@ -2933,6 +2938,112 @@ def company_ask(request: Request, data: dict, user: User = Depends(get_current_u
 
 
 # ===== بيانات التقرير التنفيذي (للطباعة) =====
+@app.get("/company/financial-overview")
+def company_financial_overview(user: User = Depends(get_current_user)):
+    """الوحدة المالية الشاملة (P3 — رؤية أحمد): P&L + النِسب المالية.
+    محمي للمالك والمحاسب. كل رقم من البيانات الفعلية، مع has_data."""
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id)
+        if not company or not check_permission(get_user_role(s, user), "finance", "view"):
+            raise HTTPException(403, "غير مصرّح — الوحدة المالية للمالك والمحاسب فقط")
+        if company.is_active != 1:
+            raise HTTPException(402, "شركتك قيد التفعيل")
+
+        branches = s.exec(
+            select(CompanyBranch).where(CompanyBranch.company_id == company.id, CompanyBranch.is_active == 1)
+        ).all()
+        total_sales = total_expenses = total_profit = 0.0
+        # نجمع بيانات مالية موسّعة إن وُجدت (من وحدة المالية)
+        cogs = payroll = marketing = rent = other_exp = 0.0
+        has_breakdown = False
+        for b in branches:
+            e = s.exec(select(CompanyEntry).where(CompanyEntry.branch_id == b.id).order_by(CompanyEntry.created_at.desc())).first()
+            if e:
+                total_sales += e.sales or 0
+                total_expenses += e.expenses or 0
+                total_profit += e.profit or 0
+
+        # نحاول جلب تفصيل المصروفات من وحدة المالية
+        fin_entry = s.exec(
+            select(CompanyModuleEntry).where(
+                CompanyModuleEntry.company_id == company.id,
+                CompanyModuleEntry.module == "finance",
+            ).order_by(CompanyModuleEntry.created_at.desc())
+        ).first()
+        if fin_entry and fin_entry.data:
+            try:
+                fd = json.loads(fin_entry.data)
+                def pick(*kw):
+                    for k, v in fd.items():
+                        if any(w in str(k).lower() or w in str(k) for w in kw):
+                            try: return float(str(v).replace(",", "").replace("%", "").strip())
+                            except: pass
+                    return 0
+                cogs = pick("تكلفة البضاعة", "cogs", "تكلفة المبيعات")
+                payroll = pick("رواتب", "salary", "payroll", "أجور")
+                marketing = pick("تسويق", "marketing", "إعلان")
+                rent = pick("إيجار", "rent")
+                if cogs or payroll or marketing or rent:
+                    has_breakdown = True
+                    other_exp = max(total_expenses - cogs - payroll - marketing - rent, 0)
+            except Exception:
+                pass
+
+        # P&L
+        gross_profit = (total_sales - cogs) if has_breakdown else None
+        gross_margin = round(gross_profit / total_sales * 100, 1) if (gross_profit is not None and total_sales > 0) else None
+        net_margin = round(total_profit / total_sales * 100, 1) if total_sales > 0 else 0
+        # EBITDA تقريبي (صافي + استهلاك مقدّر — نعرضه فقط لو فيه تفصيل)
+        ebitda = round(total_profit + (rent * 0.1)) if has_breakdown else None
+
+        # النِسب المالية (نعرض فقط المتوفّرة)
+        ratios = []
+        ratios.append({"name": "هامش صافي الربح", "value": net_margin, "unit": "%",
+                       "formula": "صافي الربح ÷ الإيرادات", "has_data": total_sales > 0,
+                       "status": "good" if net_margin >= 15 else ("warn" if net_margin >= 8 else "bad")})
+        if gross_margin is not None:
+            ratios.append({"name": "هامش الربح الإجمالي", "value": gross_margin, "unit": "%",
+                           "formula": "(الإيرادات − تكلفة البضاعة) ÷ الإيرادات", "has_data": True,
+                           "status": "good" if gross_margin >= 40 else ("warn" if gross_margin >= 25 else "bad")})
+        exp_ratio = round(total_expenses / total_sales * 100, 1) if total_sales > 0 else 0
+        ratios.append({"name": "نسبة المصروفات التشغيلية", "value": exp_ratio, "unit": "%",
+                       "formula": "المصروفات ÷ الإيرادات", "has_data": total_sales > 0,
+                       "status": "good" if exp_ratio < 70 else ("warn" if exp_ratio < 85 else "bad")})
+        if has_breakdown and total_sales > 0:
+            ratios.append({"name": "نسبة تكلفة البضاعة (COGS)", "value": round(cogs / total_sales * 100, 1),
+                           "unit": "%", "formula": "تكلفة البضاعة ÷ الإيرادات", "has_data": True, "status": None})
+            ratios.append({"name": "نسبة الرواتب", "value": round(payroll / total_sales * 100, 1),
+                           "unit": "%", "formula": "الرواتب ÷ الإيرادات", "has_data": True, "status": None})
+
+        # جودة البيانات
+        _q, _ = check_data_quality_rules([s.exec(select(CompanyEntry).where(CompanyEntry.branch_id == b.id).order_by(CompanyEntry.created_at.desc())).first() for b in branches if s.exec(select(CompanyEntry).where(CompanyEntry.branch_id == b.id)).first()])
+        confidence = compute_confidence_flag(_q)
+
+        return {
+            "company": {"name": company.name},
+            "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "currency": company.currency or "SAR",
+            "pnl": {
+                "revenue": round(total_sales),
+                "cogs": round(cogs) if has_breakdown else None,
+                "gross_profit": round(gross_profit) if gross_profit is not None else None,
+                "gross_margin": gross_margin,
+                "operating_expenses": round(total_expenses),
+                "net_profit": round(total_profit),
+                "net_margin": net_margin,
+                "ebitda": ebitda,
+                "has_breakdown": has_breakdown,
+                "expense_breakdown": ({"cogs": round(cogs), "payroll": round(payroll),
+                                       "marketing": round(marketing), "rent": round(rent),
+                                       "other": round(other_exp)} if has_breakdown else None),
+            },
+            "ratios": ratios,
+            "confidence": confidence,
+        }
+
+
 @app.get("/company/consolidated")
 def company_consolidated(user: User = Depends(get_current_user)):
     """النظرة المجمّعة (Consolidated — رؤية أحمد): تجمّع الأداء حسب وحدة الأعمال.
