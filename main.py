@@ -152,6 +152,11 @@ class CompanyBranch(SQLModel, table=True):
     city: str = ""                               # المدينة (تُستخدم للخريطة)
     area: str = ""                               # الحي/المنطقة (اختياري)
     branch_type: str = "standalone"              # mall/strip/standalone/online/kiosk
+    # ===== الهيكل التنظيمي المرن (P0 — رؤية أحمد) =====
+    # Company → Business Unit (اختياري) → Department (اختياري) → Branch
+    # كلها اختيارية: شركة بلا فروع/وحدات تعمل بشكل كامل.
+    business_unit: str = ""                       # وحدة الأعمال (مثال: مطاعم / تجزئة) — اختياري
+    department: str = ""                          # القسم (مثال: العمليات / المبيعات) — اختياري
     lat: float = 0.0                             # إحداثيات الفرع (تُملأ من المدينة)
     lng: float = 0.0
     target_sales: float = 0                      # هدف المبيعات الشهري (اختياري)
@@ -294,6 +299,8 @@ def run_migrations():
             'ALTER TABLE company ADD COLUMN IF NOT EXISTS alerts_json VARCHAR DEFAULT \'{}\'',
             'ALTER TABLE companyentry ADD COLUMN IF NOT EXISTS deposited DOUBLE PRECISION DEFAULT 0',
             'ALTER TABLE companyentry ADD COLUMN IF NOT EXISTS extra_data VARCHAR DEFAULT \'\'',
+            'ALTER TABLE companybranch ADD COLUMN IF NOT EXISTS business_unit VARCHAR DEFAULT \'\'',
+            'ALTER TABLE companybranch ADD COLUMN IF NOT EXISTS department VARCHAR DEFAULT \'\'',
         ]
     else:
         # SQLite - أبسط، لكن ما يدعم IF NOT EXISTS بنفس الطريقة
@@ -603,6 +610,11 @@ def serve_sidebar():
 @app.get("/company-executive-report.html")
 def page_exec_report():
     return FileResponse("company-executive-report.html")
+
+
+@app.get("/company-check.html")
+def page_check():
+    return FileResponse("company-check.html")
 
 
 @app.get("/nabbah-decision.js")
@@ -2921,6 +2933,75 @@ def company_ask(request: Request, data: dict, user: User = Depends(get_current_u
 
 
 # ===== بيانات التقرير التنفيذي (للطباعة) =====
+@app.get("/company/consolidated")
+def company_consolidated(user: User = Depends(get_current_user)):
+    """النظرة المجمّعة (Consolidated — رؤية أحمد): تجمّع الأداء حسب وحدة الأعمال.
+    للشركات متعددة الأنشطة. النِسب تُحسب صحيحاً (إجمالي/إجمالي، لا متوسط نِسب)."""
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id)
+        if not company or not check_permission(get_user_role(s, user), "dashboard", "view"):
+            raise HTTPException(403, "غير مصرّح")
+        if company.is_active != 1:
+            raise HTTPException(402, "شركتك قيد التفعيل")
+
+        branches = s.exec(
+            select(CompanyBranch).where(CompanyBranch.company_id == company.id, CompanyBranch.is_active == 1)
+        ).all()
+
+        # نجمّع حسب وحدة الأعمال (business_unit). الفروع بلا وحدة → "عام"
+        units = {}
+        grand_sales = grand_expenses = grand_profit = 0.0
+        for b in branches:
+            e = s.exec(
+                select(CompanyEntry).where(CompanyEntry.branch_id == b.id).order_by(CompanyEntry.created_at.desc())
+            ).first()
+            if not e:
+                continue
+            unit = b.business_unit.strip() or "النشاط الرئيسي"
+            if unit not in units:
+                units[unit] = {"name": unit, "sales": 0.0, "expenses": 0.0, "profit": 0.0,
+                               "branches": 0, "scores": []}
+            u = units[unit]
+            u["sales"] += e.sales or 0
+            u["expenses"] += e.expenses or 0
+            u["profit"] += e.profit or 0
+            u["branches"] += 1
+            if e.branch_score:
+                u["scores"].append(e.branch_score)
+            grand_sales += e.sales or 0
+            grand_expenses += e.expenses or 0
+            grand_profit += e.profit or 0
+
+        # نحسب النِسب صحيحاً لكل وحدة (إجمالي الربح ÷ إجمالي المبيعات)
+        unit_list = []
+        for u in units.values():
+            margin = round((u["profit"] / u["sales"]) * 100, 1) if u["sales"] > 0 else 0
+            score = round(sum(u["scores"]) / len(u["scores"])) if u["scores"] else 0
+            unit_list.append({
+                "name": u["name"], "sales": round(u["sales"]), "expenses": round(u["expenses"]),
+                "profit": round(u["profit"]), "margin": margin, "branches": u["branches"], "score": score,
+            })
+        unit_list.sort(key=lambda x: x["sales"], reverse=True)
+
+        # النِسبة المجمّعة الصحيحة (إجمالي/إجمالي — لا متوسط النِسب)
+        consolidated_margin = round((grand_profit / grand_sales) * 100, 1) if grand_sales > 0 else 0
+        is_multi_unit = len(units) > 1
+
+        return {
+            "company": {"name": company.name},
+            "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "is_multi_unit": is_multi_unit,
+            "consolidated": {
+                "total_sales": round(grand_sales), "total_expenses": round(grand_expenses),
+                "total_profit": round(grand_profit), "margin": consolidated_margin,
+                "units_count": len(units), "branches_count": len(branches),
+            },
+            "units": unit_list,
+        }
+
+
 @app.get("/company/executive-report")
 def company_executive_report(user: User = Depends(get_current_user)):
     """التقرير التنفيذي الذكي (رؤية V2): يجمّع كل التحليلات في تقرير واحد
