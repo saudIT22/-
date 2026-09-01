@@ -600,6 +600,16 @@ def serve_sidebar():
     return _Resp(content="/* nabbah-sidebar.js not uploaded yet */", media_type="application/javascript")
 
 
+@app.get("/nabbah-decision.js")
+def serve_decision():
+    # رحلة القرار (حوّل لقرار) — يُخدَم بنوع MIME الصحيح
+    import os as _os
+    if _os.path.exists("nabbah-decision.js"):
+        return FileResponse("nabbah-decision.js", media_type="application/javascript")
+    from fastapi.responses import Response as _Resp
+    return _Resp(content="/* nabbah-decision.js not uploaded yet */", media_type="application/javascript")
+
+
 @app.get("/nabbah-ask.js")
 def serve_ask():
     # اسأل نبّاه (البحث الذكي) — يُخدَم بنوع MIME الصحيح
