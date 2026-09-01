@@ -213,6 +213,9 @@ async function load(){
   }
 }
 load();
+// دعم الفلاتر الموحّدة: إعادة الجلب عند تغيير الفترة/الفرع
+window.nabbahReload = function(filters){ load(); };
+window.addEventListener("nabbahFilterChange", function(){ load(); });
 </script>
 <script src="i18n.js"></script>
 <script src="nabbah-sidebar.js"></script>
