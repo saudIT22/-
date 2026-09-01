@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نبّاه · التقرير التنفيذي الذكي</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="nabbah-design.css" rel="stylesheet">
+<style>
+  :root{--bg:#070b09;--panel:#101a15;--panel2:#0e1712;--line:#1d2c24;--mint:#10b981;--mint-deep:#0b8457;--gold:#f5b301;--red:#ef4444;--orange:#f97316;--txt:#e8f1ec;--txt-soft:#8ba396;--txt-mute:#5c6f66;}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--txt);line-height:1.7;min-height:100vh;
+    background-image:radial-gradient(ellipse 800px 400px at 15% -5%,rgba(16,185,129,.06),transparent)}
+  a{text-decoration:none;color:inherit}
+  header{position:sticky;top:0;z-index:40;background:rgba(7,11,9,.85);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+  .head-in{max-width:900px;margin:0 auto;padding:12px 18px;display:flex;align-items:center;justify-content:space-between}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:900;font-size:19px;color:#fff}
+  .brand .bell{width:36px;height:36px;border-radius:11px;background:linear-gradient(135deg,var(--mint),var(--mint-deep));display:grid;place-items:center;font-size:17px;transform:rotate(-6deg)}
+  .btn{display:inline-flex;align-items:center;gap:7px;font-weight:700;cursor:pointer;border-radius:11px;font-size:13.5px;padding:9px 15px;background:var(--panel);color:var(--txt-soft);border:1px solid var(--line)}
+  .wrap{max-width:900px;margin:0 auto;padding:26px 18px 80px}
+  .rep-head{text-align:center;padding:24px 0 20px;border-bottom:2px solid var(--line);margin-bottom:24px}
+  .rep-head .logo{font-size:34px;font-weight:900;color:var(--mint-deep);letter-spacing:-1px}
+  .rep-head .ttl{font-size:15px;color:var(--txt-soft);font-weight:700;letter-spacing:3px;margin-top:4px}
+  .rep-head .meta{font-size:12.5px;color:var(--txt-mute);margin-top:10px}
+  .sec{margin-bottom:26px}
+  .sec-h{font-size:14px;font-weight:800;color:var(--mint);margin-bottom:12px;display:flex;align-items:center;gap:8px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+  .snap{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px}
+  .snap .s{background:var(--grad-panel,linear-gradient(180deg,rgba(255,255,255,.028),rgba(255,255,255,.008)));border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:16px}
+  .snap .s .l{font-size:11.5px;color:var(--txt-soft);margin-bottom:6px}
+  .snap .s .v{font-size:26px;font-weight:900;letter-spacing:-1px;font-family:'Inter',sans-serif}
+  .summary{background:linear-gradient(135deg,rgba(16,185,129,.07),transparent);border:1px solid rgba(16,185,129,.2);border-radius:14px;padding:18px;font-size:14.5px;line-height:1.9;color:var(--txt)}
+  .drivers{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:600px){.drivers{grid-template-columns:1fr}}
+  .dcol h4{font-size:13px;margin-bottom:8px}
+  .dcol.pos h4{color:var(--mint)}.dcol.neg h4{color:var(--red)}
+  .ditem{display:flex;justify-content:space-between;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 13px;margin-bottom:7px;font-size:12.5px}
+  .impact{background:linear-gradient(135deg,rgba(245,179,1,.09),transparent);border:1px solid rgba(245,179,1,.25);border-radius:14px;padding:18px;text-align:center}
+  .impact .v{font-size:32px;font-weight:900;color:var(--gold);font-family:'Inter',sans-serif}
+  .impact .d{font-size:13px;color:var(--txt-soft);margin-top:4px}
+  table{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  th{background:var(--panel2);font-size:12px;color:var(--txt-soft);padding:11px 13px;text-align:right;font-weight:700}
+  td{padding:11px 13px;font-size:12.5px;border-top:1px solid var(--line)}
+  .dec{display:flex;align-items:flex-start;gap:12px;background:var(--panel2);border:1px solid var(--line);border-right:3px solid var(--mint);border-radius:12px;padding:14px 16px;margin-bottom:10px}
+  .dec .pr{font-size:10.5px;padding:2px 9px;border-radius:5px;font-weight:800;flex-shrink:0}
+  .dec .pr.high{background:rgba(239,68,68,.14);color:var(--red)}
+  .dec .pr.mid{background:rgba(245,179,1,.14);color:var(--gold)}
+  .dec .b .t{font-weight:700;font-size:13.5px;margin-bottom:3px}
+  .dec .b .r{font-size:12px;color:var(--txt-soft)}
+  .conf{font-size:12px;padding:10px 14px;border-radius:10px;margin-top:16px}
+  .conf.ok{background:rgba(16,185,129,.08);color:var(--mint-deep);border:1px solid rgba(16,185,129,.2)}
+  .conf.warn{background:rgba(245,179,1,.08);color:var(--gold);border:1px solid rgba(245,179,1,.2)}
+  .spin{width:32px;height:32px;border:3px solid var(--line);border-top-color:var(--mint);border-radius:50%;animation:sp 1s linear infinite;margin:60px auto}@keyframes sp{to{transform:rotate(360deg)}}
+  .actions{display:flex;gap:9px;justify-content:center;margin-top:24px}
+  @media print{header,.actions,#nbToggle,#nbAskBtn{display:none}body{background:#fff;color:#000}}
+</style>
+</head>
+<body>
+<header>
+  <div class="head-in">
+    <a class="brand" href="company-dashboard.html"><span class="bell">🔔</span>نبّاه</a>
+    <button class="btn" onclick="window.print()">🖨️ طباعة / PDF</button>
+  </div>
+</header>
+<div class="wrap">
+  <div id="loading"><div class="spin"></div></div>
+  <div id="content" style="display:none">
+
+    <div class="rep-head">
+      <div class="logo">نبّاه</div>
+      <div class="ttl">التقرير التنفيذي الذكي</div>
+      <div class="meta" id="meta"></div>
+    </div>
+
+    <!-- ① لقطة -->
+    <div class="sec">
+      <div class="sec-h">📸 لقطة سريعة</div>
+      <div class="snap" id="snapshot"></div>
+    </div>
+
+    <!-- ② الملخص التنفيذي -->
+    <div class="sec">
+      <div class="sec-h">📋 الملخص التنفيذي</div>
+      <div class="summary" id="summary"></div>
+    </div>
+
+    <!-- ③ المحرّكات -->
+    <div class="sec">
+      <div class="sec-h">⚙️ محرّكات الأداء</div>
+      <div class="drivers">
+        <div class="dcol pos"><h4>▲ عوامل إيجابية</h4><div id="driversPos"></div></div>
+        <div class="dcol neg"><h4>▼ عوامل سلبية</h4><div id="driversNeg"></div></div>
+      </div>
+    </div>
+
+    <!-- ④ الأثر المالي -->
+    <div class="sec" id="impactSec" style="display:none">
+      <div class="sec-h">💰 الأثر المالي المقدّر</div>
+      <div class="impact" id="impact"></div>
+    </div>
+
+    <!-- ⑤ أداء الفروع -->
+    <div class="sec">
+      <div class="sec-h">🏬 أداء الفروع</div>
+      <table id="branchTable"></table>
+    </div>
+
+    <!-- ⑥ القرارات الموصى بها -->
+    <div class="sec">
+      <div class="sec-h">⚡ القرارات الموصى بها</div>
+      <div id="decisions"></div>
+    </div>
+
+    <div id="confBox"></div>
+
+    <div class="actions">
+      <button class="btn" onclick="window.print()">🖨️ طباعة / PDF</button>
+      <a class="btn" href="company-command-center.html">🎛️ مركز القيادة</a>
+      <a class="btn" href="company-decisions.html">⚡ متابعة القرارات</a>
+    </div>
+  </div>
+</div>
+<script>
+const TOKEN=localStorage.getItem("nabbah_token")||"";
+if(!TOKEN) window.location.href="login.html";
+async function api(p){
+  const r=await fetch(p,{headers:{"Authorization":"Bearer "+TOKEN}});
+  if(r.status===401){ localStorage.removeItem("nabbah_token"); window.location.href="login.html"; throw new Error("جلسة"); }
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(d.detail||"خطأ");
+  return d;
+}
+const fmt=n=>(Math.round(n)||0).toLocaleString("en-US");
+const clr=s=>(window.NabbahState?window.NabbahState.color(s):(s>=75?"#10b981":(s>=55?"#f5b301":(s>=35?"#f97316":"#ef4444"))));
+
+async function load(){
+  try{
+    const d=await api("/company/executive-report");
+    document.getElementById("loading").style.display="none";
+    document.getElementById("content").style.display="block";
+    if(d.empty){
+      document.getElementById("content").innerHTML='<div style="text-align:center;padding:60px;color:var(--txt-mute)">لا توجد بيانات كافية لإنشاء التقرير. أدخِل بيانات فروعك أولاً.</div>';
+      return;
+    }
+    document.getElementById("meta").innerHTML=(d.company.name||"")+" · "+(d.company.sector||"")+"<br>"+(d.period||"")+" · "+(d.generated_at||"");
+
+    // لقطة
+    const s=d.snapshot;
+    document.getElementById("snapshot").innerHTML=`
+      <div class="s"><div class="l">صحة الشركة</div><div class="v" style="color:${clr(s.health)}">${s.health}<span style="font-size:14px;color:var(--txt-mute)">/100</span></div></div>
+      <div class="s"><div class="l">المبيعات</div><div class="v">${fmt(s.sales)}<span style="font-size:12px;color:var(--txt-mute)"> ر</span></div></div>
+      <div class="s"><div class="l">صافي الربح</div><div class="v">${fmt(s.profit)}<span style="font-size:12px;color:var(--txt-mute)"> ر</span></div></div>
+      <div class="s"><div class="l">هامش الربح</div><div class="v">${s.margin}<span style="font-size:14px">%</span></div></div>
+      <div class="s"><div class="l">العملاء</div><div class="v">${fmt(s.customers)}</div></div>
+      <div class="s"><div class="l">الفروع</div><div class="v">${s.branches}</div></div>`;
+
+    // الملخص
+    document.getElementById("summary").textContent=d.executive_summary||"";
+
+    // المحرّكات
+    const pos=document.getElementById("driversPos"), neg=document.getElementById("driversNeg");
+    pos.innerHTML=(d.drivers.positive||[]).length?d.drivers.positive.map(x=>`<div class="ditem"><span>${x.name}</span><span style="color:var(--mint);font-weight:700">${x.value}</span></div>`).join(""):'<div style="font-size:12px;color:var(--txt-mute);padding:8px">—</div>';
+    neg.innerHTML=(d.drivers.negative||[]).length?d.drivers.negative.map(x=>`<div class="ditem"><span>${x.name}</span><span style="color:var(--red);font-weight:700">${x.value}</span></div>`).join(""):'<div style="font-size:12px;color:var(--txt-mute);padding:8px">—</div>';
+
+    // الأثر
+    if(d.impact){
+      document.getElementById("impactSec").style.display="block";
+      document.getElementById("impact").innerHTML=`<div class="v">+${fmt(d.impact.value)} ${d.impact.unit}</div><div class="d">${d.impact.desc}</div>`;
+    }
+
+    // الفروع
+    document.getElementById("branchTable").innerHTML=`
+      <thead><tr><th>الفرع</th><th>المبيعات</th><th>الهامش</th><th>النمو</th><th>المؤشر</th></tr></thead>
+      <tbody>${d.branches.map(b=>`<tr>
+        <td style="font-weight:700">${b.name}${b.city?` <span style="color:var(--txt-mute);font-size:11px">${b.city}</span>`:""}</td>
+        <td>${fmt(b.sales)}</td><td>${b.margin}%</td>
+        <td style="color:${(b.growth||0)>=0?'var(--mint)':'var(--red)'}">${b.growth||0}%</td>
+        <td><span style="color:${clr(b.score)};font-weight:800">${b.score}</span> · ${b.level}</td>
+      </tr>`).join("")}</tbody>`;
+
+    // القرارات
+    document.getElementById("decisions").innerHTML=(d.decisions||[]).length?d.decisions.map(x=>`
+      <div class="dec"><span class="pr ${x.priority==='عالية'?'high':'mid'}">${x.priority}</span>
+        <div class="b"><div class="t">${x.title}</div><div class="r">${x.reason}</div></div></div>`).join(""):'<div style="color:var(--txt-mute);font-size:13px">لا قرارات عاجلة — الوضع مستقر.</div>';
+
+    // الثقة
+    if(d.confidence){
+      const c=d.confidence;
+      document.getElementById("confBox").innerHTML=`<div class="conf ${c.flag?'warn':'ok'}">${c.flag?'⚠️ ':'✓ '}${c.label} · جودة البيانات ${c.quality}%${c.note?' — '+c.note:''}</div>`;
+    }
+    if(window.NabbahI18n) window.NabbahI18n.apply();
+  }catch(e){
+    document.getElementById("loading").innerHTML='<p style="text-align:center;color:var(--red)">'+e.message+'</p>';
+  }
+}
+load();
+</script>
+<script src="i18n.js"></script>
+<script src="nabbah-sidebar.js"></script>
+<script src="nabbah-ask.js"></script>
+<script src="nabbah-filters.js"></script>
+</body>
+</html>
