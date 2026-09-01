@@ -810,6 +810,8 @@ async function loadPulse(){
 loadPulse();
 loadSetup();
 init();
+window.nabbahReload = function(){ init(); };
+window.addEventListener("nabbahFilterChange", function(){ init(); });
 </script>
   <script>
 // ═══ إعادة تطبيق الترجمة على المحتوى الديناميكي عند تبديل اللغة ═══
