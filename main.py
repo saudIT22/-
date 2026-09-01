@@ -600,6 +600,11 @@ def serve_sidebar():
     return _Resp(content="/* nabbah-sidebar.js not uploaded yet */", media_type="application/javascript")
 
 
+@app.get("/company-executive-report.html")
+def page_exec_report():
+    return FileResponse("company-executive-report.html")
+
+
 @app.get("/nabbah-decision.js")
 def serve_decision():
     # رحلة القرار (حوّل لقرار) — يُخدَم بنوع MIME الصحيح
@@ -2916,6 +2921,114 @@ def company_ask(request: Request, data: dict, user: User = Depends(get_current_u
 
 
 # ===== بيانات التقرير التنفيذي (للطباعة) =====
+@app.get("/company/executive-report")
+def company_executive_report(user: User = Depends(get_current_user)):
+    """التقرير التنفيذي الذكي (رؤية V2): يجمّع كل التحليلات في تقرير واحد
+    بالطبقات: لقطة → مؤشرات → أداء → أسباب → أثر → توقّع → توصية → قرار.
+    لا يعيد الحساب — يجمّع من الدوال الموجودة (صحة، ركائز، مخاطر)."""
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id)
+        if not company or not check_permission(get_user_role(s, user), "reports", "view"):
+            raise HTTPException(403, "غير مصرّح — التقرير للمالك والمحاسب فقط")
+        if company.is_active != 1:
+            raise HTTPException(402, "شركتك قيد التفعيل")
+
+        branches = s.exec(
+            select(CompanyBranch).where(CompanyBranch.company_id == company.id, CompanyBranch.is_active == 1)
+        ).all()
+        rows = []
+        for b in branches:
+            e = s.exec(
+                select(CompanyEntry).where(CompanyEntry.branch_id == b.id).order_by(CompanyEntry.created_at.desc())
+            ).first()
+            if e:
+                rows.append((b, e))
+        if not rows:
+            return {"company": {"name": company.name}, "empty": True}
+
+        n = len(rows)
+        total_sales = sum(e.sales for _, e in rows)
+        total_expenses = sum(e.expenses for _, e in rows)
+        total_profit = sum(e.profit for _, e in rows)
+        total_customers = sum(e.customers for _, e in rows)
+        avg_margin = round((total_profit / total_sales) * 100, 1) if total_sales else 0
+        overall = round(sum(e.branch_score for _, e in rows) / n)
+        ranked = sorted(rows, key=lambda x: x[1].branch_score, reverse=True)
+        best, worst = ranked[0], ranked[-1]
+
+        # ① لقطة (Snapshot)
+        level_word = "مستقرة" if overall >= 60 else ("تحتاج انتباه" if overall >= 40 else "حرجة")
+        snapshot = {
+            "health": overall, "status": level_word,
+            "sales": round(total_sales), "profit": round(total_profit),
+            "margin": avg_margin, "customers": total_customers, "branches": n,
+        }
+
+        # ② الأداء والاتجاه (نستخدم النمو من الفروع)
+        growths = [e.growth for _, e in rows if e.growth is not None]
+        avg_growth = round(sum(growths) / len(growths), 1) if growths else 0
+
+        # ③ الملخص التنفيذي (نصّي — من الأرقام)
+        summary_parts = []
+        summary_parts.append(f"بلغت المبيعات {round(total_sales):,} ريال بهامش ربح {avg_margin}%.")
+        if avg_growth > 0:
+            summary_parts.append(f"نمو إيجابي بمعدّل {avg_growth}%.")
+        elif avg_growth < 0:
+            summary_parts.append(f"تراجع في النمو بمعدّل {avg_growth}% يحتاج معالجة.")
+        summary_parts.append(f"الفرع الأقوى: {best[0].name} ({best[1].branch_score})، والأضعف: {worst[0].name} ({worst[1].branch_score}).")
+
+        # ④ المحرّكات (drivers) — إيجابية وسلبية
+        drivers_pos, drivers_neg = [], []
+        for b, e in rows:
+            if e.growth and e.growth > 5:
+                drivers_pos.append({"name": b.name, "value": f"+{e.growth}% نمو"})
+            if e.margin and e.margin < 10:
+                drivers_neg.append({"name": b.name, "value": f"هامش {e.margin}% منخفض"})
+
+        # ⑤ الأثر المالي المقدّر
+        impact = None
+        if worst[1].margin and worst[1].margin < avg_margin:
+            gap = round((avg_margin - worst[1].margin) / 100 * worst[1].sales)
+            impact = {"desc": f"لو وصل {worst[0].name} لمتوسط الهامش", "value": gap, "unit": "ريال"}
+
+        # ⑥ القرارات الموصى بها
+        decisions = []
+        if worst[1].branch_score < 45:
+            decisions.append({"title": f"خطة إنقاذ لفرع {worst[0].name}",
+                             "reason": f"أداؤه {worst[1].branch_score} — الأدنى", "priority": "عالية"})
+        if avg_margin < 15:
+            decisions.append({"title": "مراجعة التكاليف لرفع الهامش",
+                             "reason": f"الهامش {avg_margin}% دون الصحّي", "priority": "عالية"})
+        if drivers_pos:
+            decisions.append({"title": f"تعميم نجاح {drivers_pos[0]['name']}",
+                             "reason": "أداء نمو ممتاز يستحق التعميم", "priority": "متوسطة"})
+
+        # ⑦ جودة البيانات (confidence)
+        _q, _ = check_data_quality_rules([e for _, e in rows])
+        confidence = compute_confidence_flag(_q)
+
+        return {
+            "company": {"name": company.name, "sector": SECTOR_NAMES.get(company.sector, company.sector)},
+            "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "period": "الفترة الحالية",
+            "snapshot": snapshot,
+            "growth": avg_growth,
+            "executive_summary": " ".join(summary_parts),
+            "drivers": {"positive": drivers_pos[:3], "negative": drivers_neg[:3]},
+            "impact": impact,
+            "branches": [{
+                "name": b.name, "city": b.city, "sales": round(e.sales), "margin": e.margin,
+                "score": e.branch_score, "growth": e.growth, "level": score_level(e.branch_score)[0],
+            } for b, e in ranked],
+            "best_branch": {"name": best[0].name, "score": best[1].branch_score},
+            "worst_branch": {"name": worst[0].name, "score": worst[1].branch_score},
+            "decisions": decisions,
+            "confidence": confidence,
+        }
+
+
 @app.get("/company/report")
 def company_report(user: User = Depends(get_current_user)):
     if not user.company_id:
