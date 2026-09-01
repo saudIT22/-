@@ -101,7 +101,20 @@
 
   async function ask(q) {
     if (!q.trim()) return;
-    body.innerHTML = `<div class="nbQ">🔍 ${q}</div><div class="nbSpin"></div>`;
+    // رسالة انتظار مطمئنة (الذكاء يأخذ وقتاً — نوضّح أنه يعمل)
+    body.innerHTML = `<div class="nbQ">🔍 ${q}</div>
+      <div style="text-align:center;padding:24px 10px">
+        <div class="nbSpin"></div>
+        <div id="nbAskWait" style="color:#8ba396;font-size:13px;margin-top:6px">نبّاه يحلّل بياناتك…</div>
+      </div>`;
+    // رسائل متتابعة تطمئن المستخدم أثناء الانتظار
+    const waitMsgs = ["نبّاه يحلّل بياناتك…", "يراجع أداء الفروع…", "يربط الأرقام بالأسباب…", "يجهّز الإجابة…"];
+    let wi = 0;
+    const waitEl = () => document.getElementById("nbAskWait");
+    const waitTimer = setInterval(() => {
+      wi = (wi + 1) % waitMsgs.length;
+      const el = waitEl(); if (el) el.textContent = waitMsgs[wi];
+    }, 2500);
     sendBtn.disabled = true;
     try {
       const r = await fetch("/company/ask", {
@@ -116,6 +129,7 @@
     } catch (e) {
       body.innerHTML = `<div class="nbQ">🔍 ${q}</div><div class="nbAnswer" style="color:#ef4444">${e.message}</div>`;
     }
+    clearInterval(waitTimer);
     sendBtn.disabled = false;
   }
 
