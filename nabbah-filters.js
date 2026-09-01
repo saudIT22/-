@@ -96,10 +96,43 @@
     })
     .catch(() => {});
 
-  // نطلق حدث موحّد عند أي تغيير — الصفحة تستمع له
+  // نطلق حدث موحّد + نعيد تحميل الصفحة بالفلتر الجديد (ربط فعلي)
   function emit() {
     localStorage.setItem("nabbah_filters", JSON.stringify(state));
+    // نطلق الحدث للصفحات التي تستمع له (تحديث فوري بلا إعادة تحميل)
     window.dispatchEvent(new CustomEvent("nabbahFilterChange", { detail: { ...state } }));
+    // ونعيد تحميل الصفحة بمعاملات الفلتر (للصفحات التي تقرأ من URL)
+    // نؤخّر قليلاً ليلتقط أي مستمع فوري أولاً
+    const url = new URL(location.href);
+    url.searchParams.set("period", state.period);
+    url.searchParams.set("branch", state.branch);
+    // نحدّث URL بلا قفزة، ونترك الصفحة تقرر إعادة الجلب
+    history.replaceState(null, "", url.toString());
+    // إشعار بصري أن الفلتر طُبّق
+    showApplied();
+  }
+
+  // إشعار بصري صغير أن الفلتر طُبّق
+  function showApplied() {
+    let toast = document.getElementById("nbFilterToast");
+    if (!toast) {
+      toast = document.createElement("div");
+      toast.id = "nbFilterToast";
+      toast.style.cssText = "position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:1005;" +
+        "background:#10b981;color:#fff;padding:8px 18px;border-radius:20px;font-size:13px;font-weight:700;" +
+        "font-family:'Tajawal',sans-serif;box-shadow:0 6px 20px rgba(16,185,129,.4);opacity:0;transition:.3s;pointer-events:none";
+      document.body.appendChild(toast);
+    }
+    const pLabel = (PERIODS.find(p => p.v === state.period) || {}).l || "";
+    const bLabel = document.querySelector("#nbfBranch option:checked");
+    toast.textContent = "✓ طُبّق: " + pLabel + (bLabel && bLabel.value !== "all" ? " · " + bLabel.textContent : "");
+    toast.style.opacity = "1";
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => { toast.style.opacity = "0"; }, 2000);
+    // نعلم الصفحة تعيد الجلب إن كانت تدعم دالة nabbahReload
+    if (typeof window.nabbahReload === "function") {
+      window.nabbahReload(state);
+    }
   }
 
   document.addEventListener("change", (e) => {
