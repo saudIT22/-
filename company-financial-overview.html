@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نبّاه · الوحدة المالية</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="nabbah-design.css" rel="stylesheet">
+<style>
+  :root{--bg:#070b09;--panel:#101a15;--panel2:#0e1712;--line:#1d2c24;--mint:#10b981;--mint-deep:#0b8457;--gold:#f5b301;--red:#ef4444;--orange:#f97316;--txt:#e8f1ec;--txt-soft:#8ba396;--txt-mute:#5c6f66;}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--txt);line-height:1.7;min-height:100vh;
+    background-image:radial-gradient(ellipse 800px 400px at 15% -5%,rgba(16,185,129,.06),transparent)}
+  a{text-decoration:none;color:inherit}
+  header{position:sticky;top:0;z-index:40;background:rgba(7,11,9,.85);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+  .head-in{max-width:920px;margin:0 auto;padding:12px 18px;display:flex;align-items:center;justify-content:space-between}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:900;font-size:19px;color:#fff}
+  .brand .bell{width:36px;height:36px;border-radius:11px;background:linear-gradient(135deg,var(--mint),var(--mint-deep));display:grid;place-items:center;font-size:17px;transform:rotate(-6deg)}
+  .btn{display:inline-flex;align-items:center;gap:7px;font-weight:700;cursor:pointer;border-radius:11px;font-size:13.5px;padding:9px 15px;background:var(--panel);color:var(--txt-soft);border:1px solid var(--line)}
+  .wrap{max-width:920px;margin:0 auto;padding:24px 18px 70px}
+  .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+  .top h1{font-size:21px;font-weight:900;display:flex;align-items:center;gap:9px}
+  .sub{font-size:13px;color:var(--txt-soft);margin-bottom:22px}
+  .stamp{font-size:12px;color:var(--txt-mute);text-align:left}
+  .sec{margin-bottom:22px}
+  .sec-h{font-size:14px;font-weight:800;color:var(--mint);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+  /* P&L */
+  .pnl{background:linear-gradient(180deg,rgba(255,255,255,.028),rgba(255,255,255,.008));border:1px solid rgba(255,255,255,.06);border-radius:16px;overflow:hidden}
+  .pnl-row{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--line)}
+  .pnl-row:last-child{border-bottom:none}
+  .pnl-row .l{font-size:14px;font-weight:600}
+  .pnl-row .v{font-size:17px;font-weight:800;font-family:'Inter',sans-serif}
+  .pnl-row.total{background:rgba(16,185,129,.06)}
+  .pnl-row.total .l{font-weight:800;color:var(--mint)}
+  .pnl-row.total .v{color:var(--mint);font-size:19px}
+  .pnl-row .sub{font-size:11px;color:var(--txt-mute);font-weight:400}
+  .pnl-row.sub-item{padding:10px 20px 10px 40px;background:var(--panel2)}
+  .pnl-row.sub-item .l{font-size:12.5px;color:var(--txt-soft);font-weight:500}
+  .pnl-row.sub-item .v{font-size:14px;color:var(--txt-soft)}
+  .na{color:var(--txt-mute);font-size:13px;font-weight:500}
+  /* النسب */
+  .ratios{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+  .rc{background:linear-gradient(180deg,rgba(255,255,255,.028),rgba(255,255,255,.008));border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:16px}
+  .rc .rh{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+  .rc .rn{font-size:12.5px;color:var(--txt-soft);font-weight:600}
+  .rc .badge{font-size:10px;padding:2px 8px;border-radius:5px;font-weight:800}
+  .rc .rv{font-size:24px;font-weight:900;font-family:'Inter',sans-serif}
+  .rc .rf{font-size:10.5px;color:var(--txt-mute);margin-top:5px}
+  .conf{font-size:12px;padding:11px 15px;border-radius:11px;margin-top:16px}
+  .conf.ok{background:rgba(16,185,129,.08);color:var(--mint-deep);border:1px solid rgba(16,185,129,.2)}
+  .conf.warn{background:rgba(245,179,1,.08);color:var(--gold);border:1px solid rgba(245,179,1,.2)}
+  .spin{width:32px;height:32px;border:3px solid var(--line);border-top-color:var(--mint);border-radius:50%;animation:sp 1s linear infinite;margin:60px auto}@keyframes sp{to{transform:rotate(360deg)}}
+  .info{background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.18);border-radius:12px;padding:12px 16px;margin-bottom:18px;font-size:12.5px;color:var(--txt-soft)}
+</style>
+</head>
+<body>
+<header>
+  <div class="head-in">
+    <a class="brand" href="company-dashboard.html"><span class="bell">🔔</span>نبّاه</a>
+    <div style="display:flex;gap:8px">
+      <a class="btn" href="company-finance.html">✏️ إدخال البيانات المالية</a>
+      <a class="btn" href="company-dashboard.html" data-i18n="nav.dashboard">اللوحة</a>
+    </div>
+  </div>
+</header>
+<div class="wrap">
+  <div id="loading"><div class="spin"></div></div>
+  <div id="content" style="display:none">
+    <div class="top">
+      <h1>💰 <span>الوحدة المالية</span></h1>
+      <div class="stamp" id="stamp"></div>
+    </div>
+    <div class="sub">قائمة الدخل (P&L) والنِسب المالية — محسوبة من بياناتك الفعلية.</div>
+
+    <div class="info">💡 كل رقم من بياناتك. القيم غير المتوفّرة تظهر "بحاجة لإدخال" — أدخِل تفصيل المصروفات في وحدة المالية لعرض الربح الإجمالي و EBITDA.</div>
+
+    <!-- قائمة الدخل -->
+    <div class="sec">
+      <div class="sec-h">📊 قائمة الدخل (P&L)</div>
+      <div class="pnl" id="pnl"></div>
+    </div>
+
+    <!-- النِسب المالية -->
+    <div class="sec">
+      <div class="sec-h">📐 النِسب المالية</div>
+      <div class="ratios" id="ratios"></div>
+    </div>
+
+    <div id="confBox"></div>
+  </div>
+</div>
+<script>
+const TOKEN=localStorage.getItem("nabbah_token")||"";
+if(!TOKEN) window.location.href="login.html";
+async function api(p){
+  const r=await fetch(p,{headers:{"Authorization":"Bearer "+TOKEN}});
+  if(r.status===401){ localStorage.removeItem("nabbah_token"); window.location.href="login.html"; throw new Error("جلسة"); }
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(d.detail||"خطأ");
+  return d;
+}
+const fmt=n=>(Math.round(n)||0).toLocaleString("en-US");
+function badge(st){
+  if(st==="good") return '<span class="badge" style="background:rgba(16,185,129,.14);color:#10b981">جيد</span>';
+  if(st==="warn") return '<span class="badge" style="background:rgba(245,179,1,.14);color:#f5b301">متوسط</span>';
+  if(st==="bad") return '<span class="badge" style="background:rgba(239,68,68,.14);color:#ef4444">يحتاج انتباه</span>';
+  return "";
+}
+function ratioColor(st){return st==="good"?"#10b981":(st==="warn"?"#f5b301":(st==="bad"?"#ef4444":"#e8f1ec"));}
+
+async function load(){
+  try{
+    const d=await api("/company/financial-overview");
+    document.getElementById("loading").style.display="none";
+    document.getElementById("content").style.display="block";
+    document.getElementById("stamp").innerHTML=((d.company&&d.company.name)||"")+"<br>"+(d.generated_at||"");
+    const p=d.pnl, cur=d.currency||"ريال";
+
+    // P&L
+    let rows=`<div class="pnl-row"><span class="l">الإيرادات <span class="sub">Revenue</span></span><span class="v">${fmt(p.revenue)} ${cur}</span></div>`;
+    if(p.has_breakdown){
+      rows+=`<div class="pnl-row"><span class="l">تكلفة البضاعة المباعة <span class="sub">COGS</span></span><span class="v" style="color:var(--red)">−${fmt(p.cogs)}</span></div>`;
+      rows+=`<div class="pnl-row total"><span class="l">الربح الإجمالي <span class="sub">Gross Profit · ${p.gross_margin}%</span></span><span class="v">${fmt(p.gross_profit)} ${cur}</span></div>`;
+    }
+    rows+=`<div class="pnl-row"><span class="l">المصروفات التشغيلية <span class="sub">OpEx</span></span><span class="v" style="color:var(--red)">−${fmt(p.operating_expenses)}</span></div>`;
+    if(p.has_breakdown && p.expense_breakdown){
+      const eb=p.expense_breakdown;
+      if(eb.payroll)rows+=`<div class="pnl-row sub-item"><span class="l">— الرواتب</span><span class="v">${fmt(eb.payroll)}</span></div>`;
+      if(eb.marketing)rows+=`<div class="pnl-row sub-item"><span class="l">— التسويق</span><span class="v">${fmt(eb.marketing)}</span></div>`;
+      if(eb.rent)rows+=`<div class="pnl-row sub-item"><span class="l">— الإيجار</span><span class="v">${fmt(eb.rent)}</span></div>`;
+      if(eb.other)rows+=`<div class="pnl-row sub-item"><span class="l">— أخرى</span><span class="v">${fmt(eb.other)}</span></div>`;
+    }
+    rows+=`<div class="pnl-row total"><span class="l">صافي الربح <span class="sub">Net Profit · ${p.net_margin}%</span></span><span class="v">${fmt(p.net_profit)} ${cur}</span></div>`;
+    if(p.ebitda!==null && p.ebitda!==undefined){
+      rows+=`<div class="pnl-row"><span class="l">EBITDA <span class="sub">الأرباح قبل الفوائد والضرائب والإهلاك</span></span><span class="v">${fmt(p.ebitda)} ${cur}</span></div>`;
+    }
+    document.getElementById("pnl").innerHTML=rows;
+
+    // النِسب
+    document.getElementById("ratios").innerHTML=d.ratios.map(r=>{
+      if(!r.has_data) return `<div class="rc"><div class="rh"><span class="rn">${r.name}</span></div><div class="rv na">—</div><div class="rf">بحاجة لإدخال</div></div>`;
+      return `<div class="rc"><div class="rh"><span class="rn">${r.name}</span>${badge(r.status)}</div>
+        <div class="rv" style="color:${ratioColor(r.status)}">${r.value}<span style="font-size:15px">${r.unit||""}</span></div>
+        <div class="rf">${r.formula||""}</div></div>`;
+    }).join("");
+
+    // الثقة
+    if(d.confidence){
+      const c=d.confidence;
+      document.getElementById("confBox").innerHTML=`<div class="conf ${c.flag?'warn':'ok'}">${c.flag?'⚠️ ':'✓ '}${c.label} · جودة البيانات ${c.quality}%${c.note?' — '+c.note:''}</div>`;
+    }
+    if(window.NabbahI18n) window.NabbahI18n.apply();
+  }catch(e){
+    document.getElementById("loading").innerHTML='<p style="text-align:center;color:var(--red)">'+e.message+'</p>';
+  }
+}
+load();
+window.nabbahReload=function(){ load(); };
+window.addEventListener("nabbahFilterChange", function(){ load(); });
+</script>
+<script src="i18n.js"></script>
+<script src="nabbah-sidebar.js"></script>
+<script src="nabbah-filters.js"></script>
+<script src="nabbah-ask.js"></script>
+<script src="nabbah-decision.js"></script>
+</body>
+</html>
