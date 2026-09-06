@@ -617,6 +617,11 @@ def page_fin_overview():
     return FileResponse("company-financial-overview.html")
 
 
+@app.get("/company-ops-analytics.html")
+def page_ops_analytics():
+    return FileResponse("company-ops-analytics.html")
+
+
 @app.get("/company-check.html")
 def page_check():
     return FileResponse("company-check.html")
@@ -4958,6 +4963,92 @@ def compute_confidence_flag(quality_score):
         "note": ("" if quality_score >= QUALITY_THRESHOLD else
                  "هذه النتيجة مبنية على بيانات غير مكتملة — تعامل معها بحذر حتى تكتمل البيانات."),
     }
+
+
+@app.get("/company/ops-analytics")
+def company_ops_analytics(user: User = Depends(get_current_user)):
+    """وحدة العمليات الشاملة (المرحلة ٢): كفاءة، تسليم، جودة، SLA، طاقة.
+    كل مؤشر has_data — يميّز نقص البيانات عن ضعف الأداء (بلا اختراع)."""
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id)
+        if not company or (not check_permission(get_user_role(s, user), "ops", "view") and get_user_role(s, user) != "owner"):
+            raise HTTPException(403, "غير مصرّح — وحدة العمليات")
+        if company.is_active != 1:
+            raise HTTPException(402, "شركتك قيد التفعيل")
+
+        ops_entries = s.exec(
+            select(CompanyModuleEntry).where(
+                CompanyModuleEntry.company_id == company.id,
+                CompanyModuleEntry.module == "ops",
+            ).order_by(CompanyModuleEntry.created_at.desc())
+        ).all()
+        merged = {}
+        for oe in ops_entries:
+            try: merged.update(json.loads(oe.data) if oe.data else {})
+            except: pass
+
+        def pick(*kw):
+            for k, v in merged.items():
+                kl = str(k).lower()
+                if any(w in k or w in kl for w in kw):
+                    try: return float(str(v).replace(",", "").replace("%", "").strip())
+                    except: continue
+            return None
+
+        has_any = len(merged) > 0
+        on_time = pick("تسليم", "on-time", "on time", "الوقت", "delivery")
+        accuracy = pick("دقة", "accuracy", "صحة الطلب")
+        fulfillment = pick("تنفيذ", "fulfillment", "إنجاز", "مدة")
+        defect = pick("عيوب", "defect", "أخطاء", "errors")
+        downtime = pick("توقف", "downtime", "تعطل")
+        capacity = pick("طاقة", "capacity", "استغلال", "utilization")
+        sla = pick("sla", "اتفاقية", "مستوى الخدمة")
+        productivity = pick("إنتاجية", "productivity", "معدل")
+        complaints = pick("شكاوى", "complaints", "شكوى")
+
+        metrics = []
+        # ① كفاءة تشغيلية شاملة (نحسبها من المتوفّر)
+        eff_parts = [x for x in [on_time, accuracy, (100-defect if defect is not None else None), sla] if x is not None]
+        overall_eff = round(sum(eff_parts)/len(eff_parts)) if eff_parts else None
+        metrics.append({"key":"efficiency","icon":"⚙️","label":"الكفاءة التشغيلية","value":overall_eff,"unit":"/100",
+                        "has_data":overall_eff is not None,
+                        "status":("good" if (overall_eff and overall_eff>=80) else ("warn" if (overall_eff and overall_eff>=60) else "bad")) if overall_eff else None})
+        # ② التسليم في الوقت
+        metrics.append({"key":"ontime","icon":"⏱️","label":"التسليم في الوقت","value":round(on_time,1) if on_time is not None else None,"unit":"%",
+                        "has_data":on_time is not None,"status":("good" if (on_time and on_time>=90) else ("warn" if (on_time and on_time>=75) else "bad")) if on_time is not None else None})
+        # ③ دقة الطلبات
+        metrics.append({"key":"accuracy","icon":"✅","label":"دقة الطلبات","value":round(accuracy,1) if accuracy is not None else None,"unit":"%",
+                        "has_data":accuracy is not None,"status":("good" if (accuracy and accuracy>=95) else ("warn" if (accuracy and accuracy>=85) else "bad")) if accuracy is not None else None})
+        # ④ زمن التنفيذ
+        metrics.append({"key":"fulfillment","icon":"🚀","label":"زمن التنفيذ","value":round(fulfillment,1) if fulfillment is not None else None,"unit":"ساعة",
+                        "has_data":fulfillment is not None,"status":None})
+        # ⑤ معدل العيوب
+        metrics.append({"key":"defect","icon":"⚠️","label":"معدل العيوب","value":round(defect,1) if defect is not None else None,"unit":"%",
+                        "has_data":defect is not None,"status":("good" if (defect is not None and defect<3) else ("warn" if (defect is not None and defect<8) else "bad")) if defect is not None else None})
+        # ⑥ استغلال الطاقة
+        metrics.append({"key":"capacity","icon":"📊","label":"استغلال الطاقة","value":round(capacity,1) if capacity is not None else None,"unit":"%",
+                        "has_data":capacity is not None,"status":("good" if (capacity and 70<=capacity<=90) else "warn") if capacity is not None else None})
+        # ⑦ التزام SLA
+        metrics.append({"key":"sla","icon":"📋","label":"التزام SLA","value":round(sla,1) if sla is not None else None,"unit":"%",
+                        "has_data":sla is not None,"status":("good" if (sla and sla>=90) else ("warn" if (sla and sla>=75) else "bad")) if sla is not None else None})
+        # ⑧ الإنتاجية
+        metrics.append({"key":"productivity","icon":"📈","label":"الإنتاجية","value":round(productivity,1) if productivity is not None else None,"unit":"%",
+                        "has_data":productivity is not None,"status":None})
+        # ⑨ وقت التوقف
+        metrics.append({"key":"downtime","icon":"🔧","label":"وقت التوقف","value":round(downtime,1) if downtime is not None else None,"unit":"ساعة",
+                        "has_data":downtime is not None,"status":("good" if (downtime is not None and downtime<5) else "warn") if downtime is not None else None})
+
+        filled = sum(1 for m in metrics if m["has_data"])
+        return {
+            "company": {"name": company.name},
+            "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "has_any_data": has_any,
+            "metrics": metrics,
+            "filled_count": filled,
+            "total_count": len(metrics),
+        }
 
 
 @app.get("/company/hr-analytics")
