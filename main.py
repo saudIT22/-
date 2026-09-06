@@ -3021,6 +3021,45 @@ def company_financial_overview(user: User = Depends(get_current_user)):
         _q, _ = check_data_quality_rules([s.exec(select(CompanyEntry).where(CompanyEntry.branch_id == b.id).order_by(CompanyEntry.created_at.desc())).first() for b in branches if s.exec(select(CompanyEntry).where(CompanyEntry.branch_id == b.id)).first()])
         confidence = compute_confidence_flag(_q)
 
+        # ===== الميزانية العمومية + الذمم (AR/AP) — من وحدة المالية =====
+        def _fpick(fd, *kw):
+            for k, v in (fd or {}).items():
+                if any(w in str(k).lower() or w in str(k) for w in kw):
+                    try: return float(str(v).replace(",", "").replace("%", "").strip())
+                    except: pass
+            return None
+        fd = {}
+        if fin_entry and fin_entry.data:
+            try: fd = json.loads(fin_entry.data)
+            except: fd = {}
+        # الميزانية
+        assets = _fpick(fd, "أصول", "assets", "موجودات")
+        liabilities = _fpick(fd, "التزامات", "خصوم", "liabilities")
+        equity = None
+        if assets is not None and liabilities is not None:
+            equity = assets - liabilities
+        cash_reserve = company.cash_reserve or 0
+        balance_sheet = {
+            "has_data": assets is not None or liabilities is not None,
+            "assets": round(assets) if assets is not None else None,
+            "liabilities": round(liabilities) if liabilities is not None else None,
+            "equity": round(equity) if equity is not None else None,
+            "cash": round(cash_reserve) if cash_reserve else None,
+        }
+        # الذمم المدينة (AR) والدائنة (AP)
+        ar = _fpick(fd, "ذمم مدينة", "مستحقات", "receivable", "تحصيل")
+        ap = _fpick(fd, "ذمم دائنة", "مستحقات دائنة", "payable", "موردين")
+        dso = None
+        if ar is not None and total_sales > 0:
+            dso = round(ar / total_sales * 30)  # أيام التحصيل التقريبية (شهري)
+        receivables = {
+            "has_data": ar is not None or ap is not None,
+            "ar": round(ar) if ar is not None else None,
+            "ap": round(ap) if ap is not None else None,
+            "dso": dso,
+            "net_position": (round(ar - ap) if (ar is not None and ap is not None) else None),
+        }
+
         return {
             "company": {"name": company.name},
             "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
@@ -3039,6 +3078,8 @@ def company_financial_overview(user: User = Depends(get_current_user)):
                                        "marketing": round(marketing), "rent": round(rent),
                                        "other": round(other_exp)} if has_breakdown else None),
             },
+            "balance_sheet": balance_sheet,
+            "receivables": receivables,
             "ratios": ratios,
             "confidence": confidence,
         }
