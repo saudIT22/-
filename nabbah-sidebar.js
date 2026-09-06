@@ -36,7 +36,8 @@
       { label: "إدخال بيانات HR", href: "company-hr.html" },
     ]},
     { icon: "⚙️", label: "العمليات", items: [
-      { label: "التشغيل", href: "company-ops.html" },
+      { label: "وحدة العمليات", href: "company-ops-analytics.html" },
+      { label: "إدخال بيانات العمليات", href: "company-ops.html" },
       { label: "مقارنة الفروع", href: "company-branches.html" },
     ]},
     { icon: "📦", label: "سلسلة الإمداد", items: [
