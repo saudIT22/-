@@ -41,7 +41,8 @@
       { label: "مقارنة الفروع", href: "company-branches.html" },
     ]},
     { icon: "📦", label: "سلسلة الإمداد", items: [
-      { label: "المخزون", href: "company-inventory.html" },
+      { label: "وحدة المخزون", href: "company-inventory-analytics.html" },
+      { label: "إدخال بيانات المخزون", href: "company-inventory.html" },
       { label: "المشتريات", href: "company-procurement.html" },
     ]},
     { icon: "🎯", label: "الاستراتيجية", items: [
