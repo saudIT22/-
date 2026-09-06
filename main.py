@@ -622,6 +622,11 @@ def page_ops_analytics():
     return FileResponse("company-ops-analytics.html")
 
 
+@app.get("/company-inventory-analytics.html")
+def page_inv_analytics():
+    return FileResponse("company-inventory-analytics.html")
+
+
 @app.get("/company-check.html")
 def page_check():
     return FileResponse("company-check.html")
@@ -4963,6 +4968,77 @@ def compute_confidence_flag(quality_score):
         "note": ("" if quality_score >= QUALITY_THRESHOLD else
                  "هذه النتيجة مبنية على بيانات غير مكتملة — تعامل معها بحذر حتى تكتمل البيانات."),
     }
+
+
+@app.get("/company/inventory-analytics")
+def company_inventory_analytics(user: User = Depends(get_current_user)):
+    """وحدة المخزون الشاملة: دوران، DIO، نفاد، قيمة، بطيء الحركة.
+    كل مؤشر has_data — أسماء الحقول تطابق صفحة الإدخال بالضبط."""
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id)
+        if not company or (not check_permission(get_user_role(s, user), "inventory", "view") and get_user_role(s, user) != "owner"):
+            raise HTTPException(403, "غير مصرّح — وحدة المخزون")
+        if company.is_active != 1:
+            raise HTTPException(402, "شركتك قيد التفعيل")
+
+        entries = s.exec(
+            select(CompanyModuleEntry).where(
+                CompanyModuleEntry.company_id == company.id,
+                CompanyModuleEntry.module == "inventory",
+            ).order_by(CompanyModuleEntry.created_at.desc())
+        ).all()
+        merged = {}
+        for e in entries:
+            try: merged.update(json.loads(e.data) if e.data else {})
+            except: pass
+
+        def pick(*kw):
+            for k, v in merged.items():
+                if any(w in k for w in kw):
+                    try: return float(str(v).replace(",", "").replace("%", "").strip())
+                    except: continue
+            return None
+
+        has_any = len(merged) > 0
+        # الحقول الخام (تطابق صفحة الإدخال)
+        inv_value = pick("قيمة المخزون")
+        cogs_period = pick("تكلفة البضاعة المباعة")
+        stockouts = pick("مرات نفاد")
+        skus = pick("عدد الأصناف")
+        slow_items = pick("أصناف بطيئة")
+        obsolete = pick("أصناف راكدة")
+        stock_count = pick("عدد وحدات المخزون")
+
+        # المؤشرات المشتقّة
+        turnover = round(cogs_period / inv_value, 1) if (cogs_period and inv_value and inv_value > 0) else None
+        dio = round(inv_value / cogs_period * 30) if (cogs_period and inv_value and cogs_period > 0) else None
+        slow_pct = round(slow_items / skus * 100, 1) if (slow_items is not None and skus and skus > 0) else None
+
+        metrics = []
+        metrics.append({"key":"inv_value","icon":"📦","label":"قيمة المخزون الحالية","value":round(inv_value) if inv_value is not None else None,"unit":"ريال","has_data":inv_value is not None,"status":None})
+        metrics.append({"key":"turnover","icon":"🔄","label":"معدل دوران المخزون","value":turnover,"unit":"مرة","has_data":turnover is not None,
+                        "status":("good" if (turnover and turnover>=6) else ("warn" if (turnover and turnover>=3) else "bad")) if turnover is not None else None})
+        metrics.append({"key":"dio","icon":"📅","label":"أيام بقاء المخزون (DIO)","value":dio,"unit":"يوم","has_data":dio is not None,
+                        "status":("good" if (dio is not None and dio<45) else ("warn" if (dio is not None and dio<90) else "bad")) if dio is not None else None})
+        metrics.append({"key":"stockouts","icon":"⚠️","label":"مرات نفاد المخزون","value":int(stockouts) if stockouts is not None else None,"unit":"مرة","has_data":stockouts is not None,
+                        "status":("good" if (stockouts is not None and stockouts<3) else ("warn" if (stockouts is not None and stockouts<8) else "bad")) if stockouts is not None else None})
+        metrics.append({"key":"skus","icon":"🏷️","label":"عدد الأصناف","value":int(skus) if skus is not None else None,"unit":"صنف","has_data":skus is not None,"status":None})
+        metrics.append({"key":"slow","icon":"🐌","label":"الأصناف بطيئة الحركة","value":slow_pct,"unit":"%","has_data":slow_pct is not None,
+                        "status":("good" if (slow_pct is not None and slow_pct<10) else ("warn" if (slow_pct is not None and slow_pct<25) else "bad")) if slow_pct is not None else None})
+        metrics.append({"key":"obsolete","icon":"🗑️","label":"الأصناف الراكدة","value":int(obsolete) if obsolete is not None else None,"unit":"صنف","has_data":obsolete is not None,"status":None})
+        metrics.append({"key":"stock_count","icon":"📊","label":"إجمالي وحدات المخزون","value":int(stock_count) if stock_count is not None else None,"unit":"وحدة","has_data":stock_count is not None,"status":None})
+
+        filled = sum(1 for m in metrics if m["has_data"])
+        return {
+            "company": {"name": company.name},
+            "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "has_any_data": has_any,
+            "metrics": metrics,
+            "filled_count": filled,
+            "total_count": len(metrics),
+        }
 
 
 @app.get("/company/ops-analytics")
