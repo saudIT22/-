@@ -4998,15 +4998,32 @@ def company_ops_analytics(user: User = Depends(get_current_user)):
             return None
 
         has_any = len(merged) > 0
-        on_time = pick("تسليم", "on-time", "on time", "الوقت", "delivery")
-        accuracy = pick("دقة", "accuracy", "صحة الطلب")
-        fulfillment = pick("تنفيذ", "fulfillment", "إنجاز", "مدة")
-        defect = pick("عيوب", "defect", "أخطاء", "errors")
-        downtime = pick("توقف", "downtime", "تعطل")
-        capacity = pick("طاقة", "capacity", "استغلال", "utilization")
-        sla = pick("sla", "اتفاقية", "مستوى الخدمة")
-        productivity = pick("إنتاجية", "productivity", "معدل")
-        complaints = pick("شكاوى", "complaints", "شكوى")
+        # نطابق أسماء الحقول الفعلية في صفحة الإدخال (company-ops)
+        active = pick("النشطة", "المشاريع/الطلبات النشطة")
+        completed = pick("المكتملة", "المنجزة")
+        delayed = pick("المتأخرة")
+        on_time_count = pick("المنفّذة في الوقت", "في الوقت المحدد")
+        proc_time = pick("وقت معالجة", "متوسط وقت")
+        daily_prod = pick("الإنتاجية اليومية", "الإنتاجية")
+        faults = pick("عدد الأعطال", "الأعطال")
+        critical_faults = pick("الأعطال الحرجة")
+        downtime = pick("ساعات التوقف", "التوقف")
+
+        # نشتق المؤشرات من الحقول الخام
+        on_time = None
+        if on_time_count is not None and completed and completed > 0:
+            on_time = round(min(on_time_count / completed * 100, 100), 1)
+        elif completed is not None and delayed is not None and (completed + delayed) > 0:
+            on_time = round(completed / (completed + delayed) * 100, 1)
+        # دقة/جودة من العيوب
+        defect = None
+        if critical_faults is not None and completed and completed > 0:
+            defect = round(critical_faults / completed * 100, 1)
+        accuracy = round(100 - defect, 1) if defect is not None else None
+        fulfillment = proc_time
+        capacity = None  # يحتاج بيانات طاقة قصوى — نتركه للإدخال المستقبلي
+        sla = on_time  # التزام SLA ≈ نسبة التسليم في الوقت
+        productivity = daily_prod
 
         metrics = []
         # ① كفاءة تشغيلية شاملة (نحسبها من المتوفّر)
