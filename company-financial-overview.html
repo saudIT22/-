@@ -87,6 +87,18 @@
       <div class="ratios" id="ratios"></div>
     </div>
 
+    <!-- الميزانية العمومية -->
+    <div class="sec" id="bsSec" style="display:none">
+      <div class="sec-h">🏛️ الميزانية العمومية</div>
+      <div class="ratios" id="balanceSheet"></div>
+    </div>
+
+    <!-- الذمم المدينة/الدائنة -->
+    <div class="sec" id="arSec" style="display:none">
+      <div class="sec-h">💳 الذمم (المدينة والدائنة)</div>
+      <div class="ratios" id="receivables"></div>
+    </div>
+
     <div id="confBox"></div>
   </div>
 </div>
@@ -144,6 +156,25 @@ async function load(){
         <div class="rv" style="color:${ratioColor(r.status)}">${r.value}<span style="font-size:15px">${r.unit||""}</span></div>
         <div class="rf">${r.formula||""}</div></div>`;
     }).join("");
+
+    // الميزانية العمومية
+    if(d.balance_sheet && d.balance_sheet.has_data){
+      document.getElementById("bsSec").style.display="block";
+      const bs=d.balance_sheet;
+      const item=(lbl,val,color)=>val!==null&&val!==undefined?`<div class="rc"><div class="rh"><span class="rn">${lbl}</span></div><div class="rv" style="color:${color||'#e8f1ec'}">${fmt(val)}<span style="font-size:13px"> ${cur}</span></div></div>`:`<div class="rc"><div class="rh"><span class="rn">${lbl}</span></div><div class="rv na">—</div><div class="rf">بحاجة لإدخال</div></div>`;
+      document.getElementById("balanceSheet").innerHTML=
+        item("إجمالي الأصول",bs.assets)+item("إجمالي الالتزامات",bs.liabilities,"#f97316")+item("حقوق الملكية",bs.equity,"#10b981")+(bs.cash?item("النقد المتاح",bs.cash):"");
+    }
+
+    // الذمم AR/AP
+    if(d.receivables && d.receivables.has_data){
+      document.getElementById("arSec").style.display="block";
+      const r=d.receivables;
+      const item=(lbl,val,sub,color)=>val!==null&&val!==undefined?`<div class="rc"><div class="rh"><span class="rn">${lbl}</span></div><div class="rv" style="color:${color||'#e8f1ec'}">${fmt(val)}<span style="font-size:13px"> ${cur}</span></div>${sub?`<div class="rf">${sub}</div>`:""}</div>`:`<div class="rc"><div class="rh"><span class="rn">${lbl}</span></div><div class="rv na">—</div><div class="rf">بحاجة لإدخال</div></div>`;
+      let cells=item("ذمم مدينة (لك)",r.ar,r.dso?`أيام التحصيل ≈ ${r.dso} يوم`:"","#10b981")+item("ذمم دائنة (عليك)",r.ap,"","#f97316");
+      if(r.net_position!==null)cells+=item("الصافي",r.net_position,"مدينة − دائنة",r.net_position>=0?"#10b981":"#ef4444");
+      document.getElementById("receivables").innerHTML=cells;
+    }
 
     // الثقة
     if(d.confidence){
