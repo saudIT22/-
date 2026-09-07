@@ -58,6 +58,29 @@
   .act-btn.done{background:rgba(16,185,129,.12);color:var(--mint);border-color:rgba(16,185,129,.3)}
   .empty{text-align:center;padding:50px 20px;color:var(--txt-mute)}
   .spin{width:32px;height:32px;border:3px solid var(--line);border-top-color:var(--mint);border-radius:50%;animation:sp 1s linear infinite;margin:50px auto}@keyframes sp{to{transform:rotate(360deg)}}
+
+  .intel{background:linear-gradient(135deg,rgba(16,185,129,.1),transparent);border:1px solid rgba(16,185,129,.3);border-radius:16px;padding:18px 20px;margin-bottom:16px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+  .intel .score{font-size:40px;font-weight:900;font-family:'Inter';line-height:1}
+  .intel .txt{flex:1}
+  .intel .txt .t{font-size:14px;font-weight:800;margin-bottom:2px}
+  .intel .txt .s{font-size:12px;color:var(--txt-soft)}
+  .intel .cod{text-align:center;padding:10px 18px;background:rgba(239,68,68,.1);border-radius:12px}
+  .intel .cod .v{font-size:20px;font-weight:900;color:var(--red);font-family:'Inter'}
+  .intel .cod .l{font-size:10.5px;color:var(--txt-soft)}
+  .hscore{display:inline-flex;align-items:center;gap:5px;font-size:11px;padding:2px 9px;border-radius:6px;font-weight:800;margin-right:8px}
+  .hscore.good{background:rgba(16,185,129,.14);color:var(--mint)}
+  .hscore.mid{background:rgba(245,179,1,.14);color:var(--gold)}
+  .hscore.low{background:rgba(239,68,68,.14);color:var(--red)}
+  .delay-cost{background:rgba(239,68,68,.08);border-radius:9px;padding:8px 12px;font-size:12px;color:var(--red);font-weight:600;margin-top:8px}
+
+  .attention{background:linear-gradient(135deg,rgba(239,68,68,.1),transparent);border:1px solid rgba(239,68,68,.3);border-radius:14px;padding:14px 18px;margin-bottom:16px}
+  .attention .h{font-size:13.5px;font-weight:800;color:var(--red);margin-bottom:8px;display:flex;align-items:center;gap:7px}
+  .attention .item{font-size:12.5px;color:var(--txt-soft);padding:3px 0}
+  .eva{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+  .eva .box{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 13px}
+  .eva .box .l{font-size:10.5px;color:var(--txt-mute);margin-bottom:3px}
+  .eva .box .v{font-size:12.5px;font-weight:600}
+  .lesson{background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);border-radius:10px;padding:10px 13px;font-size:12px;color:#93c5fd;margin-top:8px}
 </style>
 </head>
 <body>
@@ -73,6 +96,8 @@
 
   <div id="loading"><div class="spin"></div></div>
   <div id="content" style="display:none">
+    <div id="attentionBox"></div>
+    <div id="intelBanner"></div>
     <div class="stats" id="stats"></div>
     <button class="new-btn" id="newBtn" onclick="toggleForm()">⚡ اعتمد قراراً جديداً</button>
 
@@ -87,6 +112,9 @@
       </div>
       <div class="frow">
         <div class="field full"><label>مؤشر النجاح (KPI)</label><input id="fKpi" placeholder="مثال: توفير 45,000 ريال شهرياً"></div>
+      </div>
+      <div class="frow">
+        <div class="field full"><label>التوقّع (ماذا تتوقّع من هذا القرار؟)</label><input id="fExpected" placeholder="مثال: زيادة المبيعات 20% خلال 60 يوم"><div style="font-size:10.5px;color:var(--txt-mute);margin-top:4px">← نبّاه يقارن توقّعك بالنتيجة الفعلية عند الإغلاق</div></div>
       </div>
       <div class="fbtns">
         <button class="sbtn" onclick="saveDecision()">حفظ القرار للمتابعة</button>
@@ -117,10 +145,10 @@ async function saveDecision(){
   try{
     await api("/company/decisions/save",{method:"POST",body:JSON.stringify({
       title, owner:document.getElementById("fOwner").value.trim(),
-      due_date:document.getElementById("fDue").value, kpi:document.getElementById("fKpi").value.trim()
+      due_date:document.getElementById("fDue").value, kpi:document.getElementById("fKpi").value.trim(), expected_impact:document.getElementById("fExpected").value.trim()
     })});
     document.getElementById("fTitle").value=""; document.getElementById("fOwner").value="";
-    document.getElementById("fKpi").value=""; document.getElementById("fDue").value="";
+    document.getElementById("fKpi").value=""; document.getElementById("fDue").value=""; if(document.getElementById("fExpected"))document.getElementById("fExpected").value="";
     toggleForm(); load();
   }catch(e){ msg.style.color="#ef4444"; msg.textContent=e.message; }
 }
@@ -138,6 +166,22 @@ async function load(){
     document.getElementById("content").style.display="block";
     const items=d.items||[];
     const done=items.filter(x=>x.status==="done").length;
+    // تنبيه: قرارات تحتاج تدخّل
+    if(d.needs_attention && d.needs_attention.length){
+      document.getElementById("attentionBox").innerHTML=`<div class="attention">
+        <div class="h">🔔 يحتاج انتباهك (${d.needs_attention.length})</div>
+        ${d.needs_attention.map(a=>`<div class="item">• ${a}</div>`).join("")}
+      </div>`;
+    } else { document.getElementById("attentionBox").innerHTML=""; }
+    // بانر ذكاء القرارات المؤسسية
+    const iscore=d.intelligence_score||0;
+    const icolor=iscore>=75?"var(--mint)":(iscore>=50?"var(--gold)":"var(--red)");
+    const codHtml=(d.total_delay_cost&&d.total_delay_cost>0)?`<div class="cod"><div class="v">${d.total_delay_cost.toLocaleString()} ر</div><div class="l">تكلفة التأخير التقديرية</div></div>`:"";
+    document.getElementById("intelBanner").innerHTML= items.length?`<div class="intel">
+      <div class="score" style="color:${icolor}">${iscore}<span style="font-size:16px;color:var(--txt-mute)">/100</span></div>
+      <div class="txt"><div class="t">درجة ذكاء القرارات المؤسسية</div><div class="s">جودة منظومة اتخاذ القرار لديكم — كل ما زادت، زادت دقة وانضباط قراراتكم.</div></div>
+      ${codHtml}
+    </div>`:"";
     document.getElementById("stats").innerHTML=`
       <div class="stat"><div class="v">${items.length}</div><div class="l">إجمالي القرارات</div></div>
       <div class="stat"><div class="v" style="color:var(--gold)">${d.open_count||0}</div><div class="l">قيد التنفيذ</div></div>
@@ -159,6 +203,7 @@ async function load(){
       }
       return `<div class="dec ${cls}">
         <div class="dec-h"><div class="t">${x.title}</div>${badge}</div>
+        <div style="margin-bottom:8px"><span class="hscore ${x.health_score>=75?'good':(x.health_score>=50?'mid':'low')}">🎯 جودة القرار ${x.health_score}/100 · ${x.health_label}</span></div>
         ${x.detail?`<div class="dec-detail">${x.detail}</div>`:""}
         <div class="dec-meta">
           ${x.owner?`<span class="m">👤 ${x.owner}</span>`:""}
@@ -167,6 +212,12 @@ async function load(){
         </div>
         ${x.result_note?`<div class="dec-detail">📝 ${x.result_note}</div>`:""}
         ${impact}
+        ${x.expected_vs_actual?`<div class="eva">
+          <div class="box"><div class="l">🎯 التوقّع</div><div class="v">${x.expected_vs_actual.expected}</div></div>
+          <div class="box"><div class="l">📊 الفعلي</div><div class="v">${x.expected_vs_actual.actual}</div></div>
+        </div>`:""}
+        ${x.lesson?`<div class="lesson">🧠 الدرس: ${x.lesson}</div>`:""}
+        ${(x.delay_cost&&x.delay_cost>0)?`<div class="delay-cost">💰 تكلفة التأخير: ~${x.delay_cost.toLocaleString()} ريال (متأخر ${x.delay_days} يوم) — كل يوم تأخير له ثمن.</div>`:""}
         ${x.status==="open"?`<div class="dec-actions"><button class="act-btn done" onclick="closeDecision(${x.id})">✓ إغلاق وقياس النتيجة</button></div>`:""}
       </div>`;
     }).join("");
