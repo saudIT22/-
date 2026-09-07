@@ -81,6 +81,22 @@
   .eva .box .l{font-size:10.5px;color:var(--txt-mute);margin-bottom:3px}
   .eva .box .v{font-size:12.5px;font-weight:600}
   .lesson{background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);border-radius:10px;padding:10px 13px;font-size:12px;color:#93c5fd;margin-top:8px}
+
+  .map-sec{background:linear-gradient(180deg,rgba(255,255,255,.028),rgba(255,255,255,.008));border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:20px;margin-bottom:20px}
+  .map-h{font-size:14px;font-weight:800;color:var(--mint);margin-bottom:4px;display:flex;align-items:center;gap:8px}
+  .map-sub{font-size:11.5px;color:var(--txt-mute);margin-bottom:16px}
+  .map-legend{display:flex;gap:16px;margin-bottom:14px;flex-wrap:wrap;font-size:11.5px}
+  .map-legend span{display:flex;align-items:center;gap:5px;color:var(--txt-soft)}
+  .map-legend .dot{width:9px;height:9px;border-radius:50%}
+  .map-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+  .map-node{background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:12px 14px;cursor:pointer;transition:.15s;border-top:3px solid var(--line)}
+  .map-node:hover{transform:translateY(-2px);border-color:var(--mint)}
+  .map-node.healthy{border-top-color:#10b981}
+  .map-node.watch{border-top-color:#f5b301}
+  .map-node.critical{border-top-color:#ef4444}
+  .map-node .mt{font-size:12.5px;font-weight:700;margin-bottom:5px;line-height:1.4}
+  .map-node .ms{font-size:10.5px;color:var(--txt-soft);display:flex;align-items:center;gap:5px}
+  .map-node .mdot{width:7px;height:7px;border-radius:50%}
 </style>
 </head>
 <body>
@@ -123,6 +139,7 @@
       <div id="formMsg" style="font-size:12.5px;margin-top:10px;font-weight:600"></div>
     </div>
 
+    <div id="decMap"></div>
     <div id="decList"></div>
   </div>
 </div>
@@ -159,6 +176,34 @@ async function closeDecision(id){
     load();
   }catch(e){ alert(e.message); }
 }
+function renderDecisionMap(items){
+  const box=document.getElementById("decMap");
+  if(!items.length){ box.innerHTML=""; return; }
+  const stateOf=x=>{
+    if(x.status==="done") return {cls:"healthy",dot:"#10b981",lbl:"مكتمل"};
+    if(x.overdue||x.health_score<50) return {cls:"critical",dot:"#ef4444",lbl:"خطر"};
+    if(x.health_score<75) return {cls:"watch",dot:"#f5b301",lbl:"يحتاج متابعة"};
+    return {cls:"healthy",dot:"#10b981",lbl:"صحي"};
+  };
+  const nodes=items.map(x=>{
+    const st=stateOf(x);
+    return `<div class="map-node ${st.cls}" onclick="document.getElementById('dec-${x.id}')?.scrollIntoView({behavior:'smooth',block:'center'})">
+      <div class="mt">${x.title.length>38?x.title.slice(0,38)+'…':x.title}</div>
+      <div class="ms"><span class="mdot" style="background:${st.dot}"></span>${st.lbl} · ${x.health_score}/100</div>
+    </div>`;
+  }).join("");
+  box.innerHTML=`<div class="map-sec">
+    <div class="map-h">🗺️ خريطة القرارات</div>
+    <div class="map-sub">نظرة بصرية على كل قراراتك — اضغط أي قرار للانتقال لتفاصيله.</div>
+    <div class="map-legend">
+      <span><span class="dot" style="background:#10b981"></span>صحي / مكتمل</span>
+      <span><span class="dot" style="background:#f5b301"></span>يحتاج متابعة</span>
+      <span><span class="dot" style="background:#ef4444"></span>خطر / متأخر</span>
+    </div>
+    <div class="map-grid">${nodes}</div>
+  </div>`;
+}
+
 async function load(){
   try{
     const d=await api("/company/decisions");
@@ -193,6 +238,8 @@ async function load(){
         <div>حوّل أي مشكلة تكتشفها إلى قرار متتبَّع — نبّاه يقيس نتيجته.</div></div>`;
       return;
     }
+    // خريطة القرارات (عرض بصري)
+    renderDecisionMap(items);
     document.getElementById("decList").innerHTML=items.map(x=>{
       const cls=x.status==="done"?"done":(x.overdue?"overdue":"open");
       const badge=x.status==="done"?'<span class="badge done">مكتمل</span>':(x.overdue?'<span class="badge overdue">متأخر</span>':'<span class="badge open">قيد التنفيذ</span>');
@@ -201,7 +248,7 @@ async function load(){
         const c=x.impact.change_pct;
         impact=`<div class="impact"><span>الأثر على المبيعات: </span><span class="big" style="color:${c>=0?'var(--mint)':'var(--red)'}">${c>=0?'+':''}${c}%</span> <span style="color:var(--txt-mute)">(${x.impact.baseline.toLocaleString()} ← ${x.impact.result.toLocaleString()})</span></div>`;
       }
-      return `<div class="dec ${cls}">
+      return `<div class="dec ${cls}" id="dec-${x.id}">
         <div class="dec-h"><div class="t">${x.title}</div>${badge}</div>
         <div style="margin-bottom:8px"><span class="hscore ${x.health_score>=75?'good':(x.health_score>=50?'mid':'low')}">🎯 جودة القرار ${x.health_score}/100 · ${x.health_label}</span></div>
         ${x.detail?`<div class="dec-detail">${x.detail}</div>`:""}
