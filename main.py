@@ -632,6 +632,11 @@ def page_proc_analytics():
     return FileResponse("company-procurement-analytics.html")
 
 
+@app.get("/company-sales-analytics.html")
+def page_sales_analytics():
+    return FileResponse("company-sales-analytics.html")
+
+
 @app.get("/company-check.html")
 def page_check():
     return FileResponse("company-check.html")
@@ -4973,6 +4978,80 @@ def compute_confidence_flag(quality_score):
         "note": ("" if quality_score >= QUALITY_THRESHOLD else
                  "هذه النتيجة مبنية على بيانات غير مكتملة — تعامل معها بحذر حتى تكتمل البيانات."),
     }
+
+
+@app.get("/company/sales-analytics")
+def company_sales_analytics(user: User = Depends(get_current_user)):
+    """وحدة المبيعات التفصيلية: إيراد، نمو، متوسط الطلب، التحويل، الخصومات.
+    كل مؤشر has_data — أسماء الحقول تطابق صفحة الإدخال بالضبط."""
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id)
+        if not company or (not check_permission(get_user_role(s, user), "sales", "view") and get_user_role(s, user) != "owner"):
+            raise HTTPException(403, "غير مصرّح — وحدة المبيعات")
+        if company.is_active != 1:
+            raise HTTPException(402, "شركتك قيد التفعيل")
+
+        entries = s.exec(
+            select(CompanyModuleEntry).where(
+                CompanyModuleEntry.company_id == company.id,
+                CompanyModuleEntry.module == "sales",
+            ).order_by(CompanyModuleEntry.created_at.desc())
+        ).all()
+        merged = {}
+        for e in entries:
+            try: merged.update(json.loads(e.data) if e.data else {})
+            except: pass
+
+        def pick(*kw):
+            for k, v in merged.items():
+                if any(w in k for w in kw):
+                    try: return float(str(v).replace(",", "").replace("%", "").strip())
+                    except: continue
+            return None
+
+        has_any = len(merged) > 0
+        revenue = pick("إجمالي الإيرادات")
+        orders = pick("عدد الطلبات")
+        visitors = pick("عدد الزوار")
+        target = pick("هدف المبيعات")
+        discounts = pick("قيمة الخصومات")
+        returns = pick("قيمة المرتجعات")
+        prev_revenue = pick("إيرادات الفترة السابقة")
+
+        # المؤشرات المشتقّة
+        aov = round(revenue / orders) if (revenue and orders and orders > 0) else None
+        conversion = round(orders / visitors * 100, 1) if (orders and visitors and visitors > 0) else None
+        growth = round((revenue - prev_revenue) / prev_revenue * 100, 1) if (revenue and prev_revenue and prev_revenue > 0) else None
+        target_pct = round(revenue / target * 100, 1) if (revenue and target and target > 0) else None
+        discount_pct = round(discounts / revenue * 100, 1) if (discounts is not None and revenue and revenue > 0) else None
+        return_pct = round(returns / revenue * 100, 1) if (returns is not None and revenue and revenue > 0) else None
+
+        metrics = []
+        metrics.append({"key":"revenue","icon":"💰","label":"إجمالي الإيرادات","value":round(revenue) if revenue is not None else None,"unit":"ريال","has_data":revenue is not None,"status":None})
+        metrics.append({"key":"growth","icon":"📈","label":"نمو المبيعات","value":growth,"unit":"%","has_data":growth is not None,
+                        "status":("good" if (growth is not None and growth>=5) else ("warn" if (growth is not None and growth>=0) else "bad")) if growth is not None else None})
+        metrics.append({"key":"orders","icon":"🛒","label":"عدد الطلبات","value":int(orders) if orders is not None else None,"unit":"طلب","has_data":orders is not None,"status":None})
+        metrics.append({"key":"aov","icon":"🧾","label":"متوسط قيمة الطلب","value":aov,"unit":"ريال","has_data":aov is not None,"status":None})
+        metrics.append({"key":"conversion","icon":"🎯","label":"معدل التحويل","value":conversion,"unit":"%","has_data":conversion is not None,
+                        "status":("good" if (conversion and conversion>=3) else "warn") if conversion is not None else None})
+        metrics.append({"key":"target","icon":"🏁","label":"تحقيق الهدف","value":target_pct,"unit":"%","has_data":target_pct is not None,
+                        "status":("good" if (target_pct and target_pct>=100) else ("warn" if (target_pct and target_pct>=80) else "bad")) if target_pct is not None else None})
+        metrics.append({"key":"discount","icon":"🏷️","label":"نسبة الخصومات","value":discount_pct,"unit":"%","has_data":discount_pct is not None,
+                        "status":("good" if (discount_pct is not None and discount_pct<10) else "warn") if discount_pct is not None else None})
+        metrics.append({"key":"returns","icon":"↩️","label":"نسبة المرتجعات","value":return_pct,"unit":"%","has_data":return_pct is not None,
+                        "status":("good" if (return_pct is not None and return_pct<5) else "warn") if return_pct is not None else None})
+
+        filled = sum(1 for m in metrics if m["has_data"])
+        return {
+            "company": {"name": company.name},
+            "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "has_any_data": has_any,
+            "metrics": metrics,
+            "filled_count": filled,
+            "total_count": len(metrics),
+        }
 
 
 @app.get("/company/procurement-analytics")
