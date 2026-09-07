@@ -234,6 +234,7 @@ class CompanyDecision(SQLModel, table=True):
     result_sales: float = 0         # مبيعات الشركة وقت الإغلاق
     result_note: str = ""           # ملاحظة النتيجة
     expected_impact: str = ""        # التوقّع عند الاعتماد (المتوقع مقابل الفعلي)
+    linked_to: str = ""              # معرّفات القرارات المرتبطة (يعتمد عليها) — مفصولة بفاصلة
     created_at: datetime = Field(default_factory=datetime.now)
     closed_at: Optional[datetime] = None
 
@@ -7226,6 +7227,7 @@ def company_decision_save(data: dict, user: User = Depends(get_current_user)):
             due_date=str(data.get("due_date") or "")[:10],
             kpi=str(data.get("kpi") or "")[:200],
             expected_impact=str(data.get("expected_impact") or "")[:200],
+            linked_to=str(data.get("linked_to") or "")[:200],
             baseline_sales=_company_total_sales(s, company.id),
         )
         s.add(d); s.commit(); s.refresh(d)
@@ -7312,8 +7314,27 @@ def company_decisions_list(user: User = Depends(get_current_user)):
                 "delay_days": delay_days, "delay_cost": delay_cost,
                 "expected_impact": d.expected_impact,
                 "expected_vs_actual": expected_vs_actual, "lesson": lesson,
+                "linked_to": d.linked_to,
             })
         open_count = sum(1 for d in out if d["status"] == "open")
+        # ===== القرارات المرتبطة (Dependency) =====
+        # نبني خريطة: أي قرار متأخر → القرارات التي تعتمد عليه تتأثّر
+        id_to_title = {d["id"]: d["title"] for d in out}
+        overdue_ids = {d["id"] for d in out if d["overdue"]}
+        for d in out:
+            # القرارات التي يعتمد عليها هذا القرار
+            deps = [int(x) for x in (d.get("linked_to") or "").split(",") if x.strip().isdigit()] if d.get("linked_to") else []
+            d["linked_titles"] = [id_to_title.get(dep, "") for dep in deps if dep in id_to_title]
+            # هل أحد اعتمادياته متأخر؟
+            blocked_by = [id_to_title.get(dep, "") for dep in deps if dep in overdue_ids]
+            d["blocked_by"] = [t for t in blocked_by if t]
+        # نحسب: القرارات التي تتأثّر بكل قرار متأخر
+        affected_count = 0
+        for oid in overdue_ids:
+            for d in out:
+                deps = [int(x) for x in (d.get("linked_to") or "").split(",") if x.strip().isdigit()] if d.get("linked_to") else []
+                if oid in deps:
+                    affected_count += 1
         # درجة ذكاء القرارات المؤسسية (متوسط جودة كل القرارات)
         scores = [d["health_score"] for d in out]
         intelligence_score = round(sum(scores) / len(scores)) if scores else 0
@@ -7331,7 +7352,8 @@ def company_decisions_list(user: User = Depends(get_current_user)):
                 "overdue_count": sum(1 for d in out if d["overdue"]),
                 "intelligence_score": intelligence_score,
                 "total_delay_cost": total_delay_cost,
-                "needs_attention": needs_attention[:5]}
+                "needs_attention": needs_attention[:5],
+                "affected_count": affected_count}
 
 
 @app.post("/company/decisions/close")
