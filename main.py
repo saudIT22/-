@@ -627,6 +627,11 @@ def page_inv_analytics():
     return FileResponse("company-inventory-analytics.html")
 
 
+@app.get("/company-procurement-analytics.html")
+def page_proc_analytics():
+    return FileResponse("company-procurement-analytics.html")
+
+
 @app.get("/company-check.html")
 def page_check():
     return FileResponse("company-check.html")
@@ -4968,6 +4973,76 @@ def compute_confidence_flag(quality_score):
         "note": ("" if quality_score >= QUALITY_THRESHOLD else
                  "هذه النتيجة مبنية على بيانات غير مكتملة — تعامل معها بحذر حتى تكتمل البيانات."),
     }
+
+
+@app.get("/company/procurement-analytics")
+def company_procurement_analytics(user: User = Depends(get_current_user)):
+    """وحدة المشتريات الشاملة: إنفاق، موردين، مخاطر تركّز، وفورات.
+    كل مؤشر has_data — أسماء الحقول تطابق صفحة الإدخال بالضبط."""
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id)
+        if not company or (not check_permission(get_user_role(s, user), "procurement", "view") and get_user_role(s, user) != "owner"):
+            raise HTTPException(403, "غير مصرّح — وحدة المشتريات")
+        if company.is_active != 1:
+            raise HTTPException(402, "شركتك قيد التفعيل")
+
+        entries = s.exec(
+            select(CompanyModuleEntry).where(
+                CompanyModuleEntry.company_id == company.id,
+                CompanyModuleEntry.module == "procurement",
+            ).order_by(CompanyModuleEntry.created_at.desc())
+        ).all()
+        merged = {}
+        for e in entries:
+            try: merged.update(json.loads(e.data) if e.data else {})
+            except: pass
+
+        def pick(*kw):
+            for k, v in merged.items():
+                if any(w in k for w in kw):
+                    try: return float(str(v).replace(",", "").replace("%", "").strip())
+                    except: continue
+            return None
+
+        has_any = len(merged) > 0
+        # الحقول الخام (تطابق صفحة الإدخال)
+        total_spend = pick("إجمالي الإنفاق")
+        suppliers = pick("عدد الموردين")
+        top_supplier_spend = pick("إنفاق أكبر مورّد")
+        savings = pick("الوفورات المحقّقة")
+        po_count = pick("عدد أوامر الشراء")
+        po_cycle = pick("متوسط دورة أمر الشراء")
+        late_deliveries = pick("توريدات متأخرة")
+
+        # المؤشرات المشتقّة
+        concentration = round(top_supplier_spend / total_spend * 100, 1) if (top_supplier_spend and total_spend and total_spend > 0) else None
+        savings_pct = round(savings / total_spend * 100, 1) if (savings is not None and total_spend and total_spend > 0) else None
+        late_pct = round(late_deliveries / po_count * 100, 1) if (late_deliveries is not None and po_count and po_count > 0) else None
+
+        metrics = []
+        metrics.append({"key":"spend","icon":"💵","label":"إجمالي الإنفاق","value":round(total_spend) if total_spend is not None else None,"unit":"ريال","has_data":total_spend is not None,"status":None})
+        metrics.append({"key":"suppliers","icon":"🏭","label":"عدد الموردين","value":int(suppliers) if suppliers is not None else None,"unit":"مورّد","has_data":suppliers is not None,"status":None})
+        metrics.append({"key":"concentration","icon":"⚠️","label":"تركّز المورّدين (أكبر مورّد)","value":concentration,"unit":"%","has_data":concentration is not None,
+                        "status":("good" if (concentration is not None and concentration<30) else ("warn" if (concentration is not None and concentration<50) else "bad")) if concentration is not None else None})
+        metrics.append({"key":"savings","icon":"💰","label":"الوفورات المحقّقة","value":savings_pct,"unit":"%","has_data":savings_pct is not None,
+                        "status":("good" if (savings_pct and savings_pct>=5) else "warn") if savings_pct is not None else None})
+        metrics.append({"key":"po","icon":"📋","label":"عدد أوامر الشراء","value":int(po_count) if po_count is not None else None,"unit":"أمر","has_data":po_count is not None,"status":None})
+        metrics.append({"key":"cycle","icon":"⏱️","label":"دورة أمر الشراء","value":round(po_cycle,1) if po_cycle is not None else None,"unit":"يوم","has_data":po_cycle is not None,
+                        "status":("good" if (po_cycle is not None and po_cycle<7) else "warn") if po_cycle is not None else None})
+        metrics.append({"key":"late","icon":"🚚","label":"التوريدات المتأخرة","value":late_pct,"unit":"%","has_data":late_pct is not None,
+                        "status":("good" if (late_pct is not None and late_pct<10) else ("warn" if (late_pct is not None and late_pct<25) else "bad")) if late_pct is not None else None})
+
+        filled = sum(1 for m in metrics if m["has_data"])
+        return {
+            "company": {"name": company.name},
+            "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "has_any_data": has_any,
+            "metrics": metrics,
+            "filled_count": filled,
+            "total_count": len(metrics),
+        }
 
 
 @app.get("/company/inventory-analytics")
