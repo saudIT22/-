@@ -27,7 +27,8 @@
       { label: "الضريبة والزكاة", href: "company-tax.html" },
     ]},
     { icon: "📈", label: "المبيعات والعملاء", items: [
-      { label: "المبيعات التفصيلية", href: "company-sales.html" },
+      { label: "وحدة المبيعات التفصيلية", href: "company-sales-analytics.html" },
+      { label: "إدخال بيانات المبيعات", href: "company-sales.html" },
       { label: "وحدة العملاء", href: "company-customers.html" },
       { label: "المنافسون", href: "company-competitors.html" },
     ]},
