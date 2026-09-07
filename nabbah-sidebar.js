@@ -43,7 +43,8 @@
     { icon: "📦", label: "سلسلة الإمداد", items: [
       { label: "وحدة المخزون", href: "company-inventory-analytics.html" },
       { label: "إدخال بيانات المخزون", href: "company-inventory.html" },
-      { label: "المشتريات", href: "company-procurement.html" },
+      { label: "وحدة المشتريات", href: "company-procurement-analytics.html" },
+      { label: "إدخال بيانات المشتريات", href: "company-procurement.html" },
     ]},
     { icon: "🎯", label: "الاستراتيجية", items: [
       { label: "الأهداف والنتائج", href: "company-goals.html" },
