@@ -233,6 +233,7 @@ class CompanyDecision(SQLModel, table=True):
     baseline_sales: float = 0       # مبيعات الشركة وقت اعتماد القرار (للقياس)
     result_sales: float = 0         # مبيعات الشركة وقت الإغلاق
     result_note: str = ""           # ملاحظة النتيجة
+    expected_impact: str = ""        # التوقّع عند الاعتماد (المتوقع مقابل الفعلي)
     created_at: datetime = Field(default_factory=datetime.now)
     closed_at: Optional[datetime] = None
 
@@ -7224,6 +7225,7 @@ def company_decision_save(data: dict, user: User = Depends(get_current_user)):
             owner=str(data.get("owner") or "")[:100],
             due_date=str(data.get("due_date") or "")[:10],
             kpi=str(data.get("kpi") or "")[:200],
+            expected_impact=str(data.get("expected_impact") or "")[:200],
             baseline_sales=_company_total_sales(s, company.id),
         )
         s.add(d); s.commit(); s.refresh(d)
@@ -7248,12 +7250,57 @@ def company_decisions_list(user: User = Depends(get_current_user)):
         ).all()
         today = datetime.now().strftime("%Y-%m-%d")
         out = []
+        # لحساب تكلفة التأخير: المبيعات اليومية التقديرية للشركة
+        daily_sales = round(_company_total_sales(s, company.id) / 30) if _company_total_sales(s, company.id) > 0 else 0
         for d in items:
             overdue = bool(d.status == "open" and d.due_date and d.due_date < today)
             impact = None
             if d.status == "done" and d.baseline_sales > 0 and d.result_sales > 0:
                 change = round((d.result_sales - d.baseline_sales) / d.baseline_sales * 100, 1)
                 impact = {"baseline": round(d.baseline_sales), "result": round(d.result_sales), "change_pct": change}
+
+            # ===== درجة جودة القرار (Decision Health Score 0-100) =====
+            # من: مسؤول + موعد + KPI + خط أساس + نتيجة + عدم التأخير
+            hs = 0
+            hs += 20 if d.owner else 0                          # مسؤول محدد
+            hs += 20 if d.due_date else 0                       # موعد واضح
+            hs += 20 if d.kpi else 0                            # KPI محدد
+            hs += 15 if d.baseline_sales > 0 else 0             # خط أساس قبل القرار
+            hs += 15 if (d.status == "done" and d.result_sales > 0) else 0  # نتيجة مقاسة
+            hs += 10 if not overdue else 0                      # ليس متأخراً
+            health_label = "قرار صحي" if hs >= 75 else ("يحتاج تحسين" if hs >= 50 else "ضعيف الجودة")
+
+            # ===== تكلفة التأخير (Cost of Delay) =====
+            delay_cost = None
+            delay_days = 0
+            if overdue and d.due_date:
+                try:
+                    from datetime import date as _date
+                    dd = _date.fromisoformat(d.due_date)
+                    delay_days = (datetime.now().date() - dd).days
+                    if delay_days > 0 and daily_sales > 0:
+                        # تقدير محافظ: 2% من المبيعات اليومية كأثر تقديري للقرار المتأخر
+                        delay_cost = round(delay_days * daily_sales * 0.02)
+                except Exception:
+                    pass
+
+            # ===== المتوقع مقابل الفعلي + درس (Post-Mortem) =====
+            expected_vs_actual = None
+            lesson = None
+            if d.status == "done" and d.expected_impact:
+                actual_txt = ""
+                if impact:
+                    actual_txt = f"المبيعات تغيّرت {impact['change_pct']:+}%"
+                expected_vs_actual = {"expected": d.expected_impact, "actual": actual_txt or (d.result_note or "—")}
+                # درس تلقائي بسيط
+                if impact:
+                    if impact["change_pct"] > 0:
+                        lesson = "القرار حقّق أثراً إيجابياً — يمكن تكرار نهجه في قرارات مشابهة."
+                    elif impact["change_pct"] < 0:
+                        lesson = "النتيجة جاءت دون المتوقّع — راجع الافتراضات قبل قرارات مشابهة."
+                    else:
+                        lesson = "لم يظهر أثر واضح — قد تحتاج فترة أطول أو مؤشراً أدق."
+
             out.append({
                 "id": d.id, "title": d.title, "detail": d.detail,
                 "owner": d.owner, "due_date": d.due_date, "kpi": d.kpi,
@@ -7261,10 +7308,30 @@ def company_decisions_list(user: User = Depends(get_current_user)):
                 "created": d.created_at.strftime("%Y-%m-%d"),
                 "closed": d.closed_at.strftime("%Y-%m-%d") if d.closed_at else None,
                 "result_note": d.result_note, "impact": impact,
+                "health_score": hs, "health_label": health_label,
+                "delay_days": delay_days, "delay_cost": delay_cost,
+                "expected_impact": d.expected_impact,
+                "expected_vs_actual": expected_vs_actual, "lesson": lesson,
             })
         open_count = sum(1 for d in out if d["status"] == "open")
+        # درجة ذكاء القرارات المؤسسية (متوسط جودة كل القرارات)
+        scores = [d["health_score"] for d in out]
+        intelligence_score = round(sum(scores) / len(scores)) if scores else 0
+        total_delay_cost = sum(d["delay_cost"] for d in out if d["delay_cost"])
+        # ===== قرارات تحتاج تدخّل (تنبيه ذكي) =====
+        needs_attention = []
+        for dd in out:
+            if dd["overdue"]:
+                needs_attention.append(f"«{dd['title'][:40]}» متأخر {dd['delay_days']} يوم")
+            elif dd["status"] == "open" and not dd["owner"]:
+                needs_attention.append(f"«{dd['title'][:40]}» بلا مسؤول محدد")
+            elif dd["status"] == "open" and not dd["kpi"]:
+                needs_attention.append(f"«{dd['title'][:40]}» بلا مؤشر نجاح")
         return {"items": out, "open_count": open_count,
-                "overdue_count": sum(1 for d in out if d["overdue"])}
+                "overdue_count": sum(1 for d in out if d["overdue"]),
+                "intelligence_score": intelligence_score,
+                "total_delay_cost": total_delay_cost,
+                "needs_attention": needs_attention[:5]}
 
 
 @app.post("/company/decisions/close")
