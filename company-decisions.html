@@ -106,6 +106,8 @@
   .raci .r .rl{font-size:9.5px;color:var(--txt-mute)}
   .raci .r .rn{font-size:12px;font-weight:700}
   .raci .sep{color:var(--txt-mute);align-self:center}
+
+  .rationale{background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.2);border-radius:10px;padding:10px 13px;font-size:12px;color:#c4b5fd;margin-top:8px}
 </style>
 </head>
 <body>
@@ -138,6 +140,9 @@
       <div class="frow">
         <div class="field"><label>المعتمِد (صاحب القرار)</label><input id="fApprover" placeholder="مثال: المدير التنفيذي"></div>
         <div class="field"><label>المراجع (يقيس النتيجة)</label><input id="fReviewer" placeholder="مثال: المدير المالي"></div>
+      </div>
+      <div class="frow">
+        <div class="field full"><label>لماذا اتخذنا هذا القرار؟ (اختياري)</label><input id="fRationale" placeholder="مثال: بناءً على تحليل ارتفاع التكاليف 18% وتوصية نبّاه"><div style="font-size:10.5px;color:var(--txt-mute);margin-top:4px">← ذاكرة القرار: بعد أشهر تعرف لماذا اتُّخذ</div></div>
       </div>
       <div class="frow">
         <div class="field full"><label>مؤشر النجاح (KPI)</label><input id="fKpi" placeholder="مثال: توفير 45,000 ريال شهرياً"></div>
@@ -180,12 +185,12 @@ async function saveDecision(){
       title, owner:document.getElementById("fOwner").value.trim(),
       due_date:document.getElementById("fDue").value, kpi:document.getElementById("fKpi").value.trim(), expected_impact:document.getElementById("fExpected").value.trim(),
       linked_to:Array.from(document.getElementById("fLinked")?.selectedOptions||[]).map(o=>o.value).join(","),
-      approver:document.getElementById("fApprover")?.value.trim()||"", reviewer:document.getElementById("fReviewer")?.value.trim()||""
+      approver:document.getElementById("fApprover")?.value.trim()||"", reviewer:document.getElementById("fReviewer")?.value.trim()||"", rationale:document.getElementById("fRationale")?.value.trim()||""
     })});
     document.getElementById("fTitle").value=""; document.getElementById("fOwner").value="";
     document.getElementById("fKpi").value=""; document.getElementById("fDue").value=""; if(document.getElementById("fExpected"))document.getElementById("fExpected").value="";
     if(document.getElementById("fApprover"))document.getElementById("fApprover").value="";
-    if(document.getElementById("fReviewer"))document.getElementById("fReviewer").value="";
+    if(document.getElementById("fReviewer"))document.getElementById("fReviewer").value=""; if(document.getElementById("fRationale"))document.getElementById("fRationale").value="";
     toggleForm(); load();
   }catch(e){ msg.style.color="#ef4444"; msg.textContent=e.message; }
 }
@@ -277,6 +282,7 @@ async function load(){
         <div class="dec-h"><div class="t">${x.title}</div>${badge}</div>
         <div style="margin-bottom:8px"><span class="hscore ${x.health_score>=75?'good':(x.health_score>=50?'mid':'low')}">🎯 جودة القرار ${x.health_score}/100 · ${x.health_label||"—"}</span></div>
         ${x.detail?`<div class="dec-detail">${x.detail}</div>`:""}
+        ${x.rationale?`<div class="rationale">🧭 لماذا: ${x.rationale}</div>`:""}
         <div class="dec-meta">
           ${x.owner?`<span class="m">👤 ${x.owner}</span>`:""}
           ${x.due_date?`<span class="m">📅 ${x.due_date}</span>`:""}
