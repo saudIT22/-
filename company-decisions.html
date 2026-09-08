@@ -100,6 +100,12 @@
 
   .blocked{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:9px 13px;font-size:12px;color:var(--red);margin-top:8px;font-weight:600}
   .linked-info{background:rgba(59,130,246,.06);border-radius:9px;padding:8px 12px;font-size:11.5px;color:#93c5fd;margin-top:8px}
+
+  .raci{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;padding:10px 13px;background:var(--panel2);border-radius:10px}
+  .raci .r{display:flex;flex-direction:column;gap:2px}
+  .raci .r .rl{font-size:9.5px;color:var(--txt-mute)}
+  .raci .r .rn{font-size:12px;font-weight:700}
+  .raci .sep{color:var(--txt-mute);align-self:center}
 </style>
 </head>
 <body>
@@ -126,8 +132,12 @@
         <div class="field full"><label>القرار *</label><input id="fTitle" placeholder="مثال: خفض تكلفة المشتريات 12%"></div>
       </div>
       <div class="frow">
-        <div class="field"><label>المسؤول</label><input id="fOwner" placeholder="مثال: مدير العمليات"></div>
+        <div class="field"><label>المنفِّذ (المسؤول)</label><input id="fOwner" placeholder="مثال: مدير العمليات"></div>
         <div class="field"><label>موعد الإنجاز</label><input id="fDue" type="date"></div>
+      </div>
+      <div class="frow">
+        <div class="field"><label>المعتمِد (صاحب القرار)</label><input id="fApprover" placeholder="مثال: المدير التنفيذي"></div>
+        <div class="field"><label>المراجع (يقيس النتيجة)</label><input id="fReviewer" placeholder="مثال: المدير المالي"></div>
       </div>
       <div class="frow">
         <div class="field full"><label>مؤشر النجاح (KPI)</label><input id="fKpi" placeholder="مثال: توفير 45,000 ريال شهرياً"></div>
@@ -169,10 +179,13 @@ async function saveDecision(){
     await api("/company/decisions/save",{method:"POST",body:JSON.stringify({
       title, owner:document.getElementById("fOwner").value.trim(),
       due_date:document.getElementById("fDue").value, kpi:document.getElementById("fKpi").value.trim(), expected_impact:document.getElementById("fExpected").value.trim(),
-      linked_to:Array.from(document.getElementById("fLinked")?.selectedOptions||[]).map(o=>o.value).join(",")
+      linked_to:Array.from(document.getElementById("fLinked")?.selectedOptions||[]).map(o=>o.value).join(","),
+      approver:document.getElementById("fApprover")?.value.trim()||"", reviewer:document.getElementById("fReviewer")?.value.trim()||""
     })});
     document.getElementById("fTitle").value=""; document.getElementById("fOwner").value="";
     document.getElementById("fKpi").value=""; document.getElementById("fDue").value=""; if(document.getElementById("fExpected"))document.getElementById("fExpected").value="";
+    if(document.getElementById("fApprover"))document.getElementById("fApprover").value="";
+    if(document.getElementById("fReviewer"))document.getElementById("fReviewer").value="";
     toggleForm(); load();
   }catch(e){ msg.style.color="#ef4444"; msg.textContent=e.message; }
 }
@@ -269,6 +282,12 @@ async function load(){
           ${x.due_date?`<span class="m">📅 ${x.due_date}</span>`:""}
           ${x.kpi?`<span class="m">🎯 ${x.kpi}</span>`:""}
         </div>
+        ${(x.approver||x.reviewer)?`<div class="raci">
+          ${x.approver?`<div class="r"><span class="rl">المعتمِد</span><span class="rn">👑 ${x.approver}</span></div>`:""}
+          ${x.approver&&x.owner?`<span class="sep">←</span>`:""}
+          ${x.owner?`<div class="r"><span class="rl">المنفِّذ</span><span class="rn">⚙️ ${x.owner}</span></div>`:""}
+          ${x.reviewer?`<span class="sep">←</span><div class="r"><span class="rl">المراجع</span><span class="rn">🔍 ${x.reviewer}</span></div>`:""}
+        </div>`:""}
         ${x.result_note?`<div class="dec-detail">📝 ${x.result_note}</div>`:""}
         ${impact}
         ${x.expected_vs_actual?`<div class="eva">
