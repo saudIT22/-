@@ -305,6 +305,18 @@ def run_migrations():
             'ALTER TABLE companyentry ADD COLUMN IF NOT EXISTS extra_data VARCHAR DEFAULT \'\'',
             'ALTER TABLE companybranch ADD COLUMN IF NOT EXISTS business_unit VARCHAR DEFAULT \'\'',
             'ALTER TABLE companybranch ADD COLUMN IF NOT EXISTS department VARCHAR DEFAULT \'\'',
+            # ===== أعمدة جدول القرارات (companydecision) =====
+            'ALTER TABLE companydecision ADD COLUMN IF NOT EXISTS expected_impact VARCHAR DEFAULT \'\'',
+            'ALTER TABLE companydecision ADD COLUMN IF NOT EXISTS linked_to VARCHAR DEFAULT \'\'',
+            'ALTER TABLE companydecision ADD COLUMN IF NOT EXISTS approver VARCHAR DEFAULT \'\'',
+            'ALTER TABLE companydecision ADD COLUMN IF NOT EXISTS reviewer VARCHAR DEFAULT \'\'',
+            'ALTER TABLE companydecision ADD COLUMN IF NOT EXISTS baseline_sales DOUBLE PRECISION DEFAULT 0',
+            'ALTER TABLE companydecision ADD COLUMN IF NOT EXISTS result_sales DOUBLE PRECISION DEFAULT 0',
+            'ALTER TABLE companydecision ADD COLUMN IF NOT EXISTS result_note VARCHAR DEFAULT \'\'',
+            'ALTER TABLE companydecision ADD COLUMN IF NOT EXISTS kpi VARCHAR DEFAULT \'\'',
+            'ALTER TABLE companydecision ADD COLUMN IF NOT EXISTS due_date VARCHAR DEFAULT \'\'',
+            'ALTER TABLE companydecision ADD COLUMN IF NOT EXISTS owner VARCHAR DEFAULT \'\'',
+            'ALTER TABLE companydecision ADD COLUMN IF NOT EXISTS closed_at TIMESTAMP',
         ]
     else:
         # SQLite - أبسط، لكن ما يدعم IF NOT EXISTS بنفس الطريقة
