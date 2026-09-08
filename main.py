@@ -237,6 +237,7 @@ class CompanyDecision(SQLModel, table=True):
     linked_to: str = ""              # معرّفات القرارات المرتبطة (يعتمد عليها) — مفصولة بفاصلة
     approver: str = ""               # المعتمِد (صاحب القرار النهائي) — RACI: Accountable
     reviewer: str = ""               # المراجع (يقيس النتيجة) — RACI: Consulted/Informed
+    rationale: str = ""              # لماذا اتخذنا هذا القرار؟ (Decision Memory)
     created_at: datetime = Field(default_factory=datetime.now)
     closed_at: Optional[datetime] = None
 
@@ -7244,6 +7245,7 @@ def company_decision_save(data: dict, user: User = Depends(get_current_user)):
             linked_to=str(data.get("linked_to") or "")[:200],
             approver=str(data.get("approver") or "")[:100],
             reviewer=str(data.get("reviewer") or "")[:100],
+            rationale=str(data.get("rationale") or "")[:500],
             baseline_sales=_company_total_sales(s, company.id),
         )
         s.add(d); s.commit(); s.refresh(d)
@@ -7332,6 +7334,7 @@ def company_decisions_list(user: User = Depends(get_current_user)):
                 "expected_vs_actual": expected_vs_actual, "lesson": lesson,
                 "linked_to": d.linked_to,
                 "approver": d.approver, "reviewer": d.reviewer,
+                "rationale": d.rationale,
             })
         open_count = sum(1 for d in out if d["status"] == "open")
         # ===== القرارات المرتبطة (Dependency) =====
