@@ -235,6 +235,8 @@ class CompanyDecision(SQLModel, table=True):
     result_note: str = ""           # ملاحظة النتيجة
     expected_impact: str = ""        # التوقّع عند الاعتماد (المتوقع مقابل الفعلي)
     linked_to: str = ""              # معرّفات القرارات المرتبطة (يعتمد عليها) — مفصولة بفاصلة
+    approver: str = ""               # المعتمِد (صاحب القرار النهائي) — RACI: Accountable
+    reviewer: str = ""               # المراجع (يقيس النتيجة) — RACI: Consulted/Informed
     created_at: datetime = Field(default_factory=datetime.now)
     closed_at: Optional[datetime] = None
 
@@ -7228,6 +7230,8 @@ def company_decision_save(data: dict, user: User = Depends(get_current_user)):
             kpi=str(data.get("kpi") or "")[:200],
             expected_impact=str(data.get("expected_impact") or "")[:200],
             linked_to=str(data.get("linked_to") or "")[:200],
+            approver=str(data.get("approver") or "")[:100],
+            reviewer=str(data.get("reviewer") or "")[:100],
             baseline_sales=_company_total_sales(s, company.id),
         )
         s.add(d); s.commit(); s.refresh(d)
@@ -7315,6 +7319,7 @@ def company_decisions_list(user: User = Depends(get_current_user)):
                 "expected_impact": d.expected_impact,
                 "expected_vs_actual": expected_vs_actual, "lesson": lesson,
                 "linked_to": d.linked_to,
+                "approver": d.approver, "reviewer": d.reviewer,
             })
         open_count = sum(1 for d in out if d["status"] == "open")
         # ===== القرارات المرتبطة (Dependency) =====
