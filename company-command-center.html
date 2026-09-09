@@ -129,6 +129,8 @@
     <a class="btn btn-ghost" href="company-branches.html">مقارنة الفروع</a>
     <a class="btn btn-ghost" href="company-cashflow.html">التدفق النقدي</a>
     <a class="btn btn-ghost" href="company-leakage.html">تحليل هدر الإيرادات</a>
+    <a class="btn btn-ghost" href="company-decisions.html">⚡ مركز القرارات</a>
+    <a class="btn btn-ghost" href="company-executive-report.html">📊 التقرير التنفيذي</a>
   </div>
 </div>
 <script>
@@ -180,11 +182,13 @@ async function load(){
 }
 
 function renderKPIs(k){
+  const marginColor = k.margin>=20?'var(--mint)':(k.margin>=10?'var(--gold)':'var(--red)');
+  const profitColor = k.total_profit>=0?'var(--mint)':'var(--red)';
   document.getElementById("kpis").innerHTML=`
-    <div class="k"><div class="l">إجمالي المبيعات</div><div class="v">${fmt(k.total_sales)}<small> ر</small></div></div>
-    <div class="k"><div class="l">صافي الربح</div><div class="v" style="color:${k.total_profit>=0?'var(--mint)':'var(--red)'}">${fmt(k.total_profit)}<small> ر</small></div></div>
-    <div class="k"><div class="l">هامش الربح</div><div class="v">${k.margin}<small>%</small></div></div>
-    <div class="k"><div class="l">الفروع النشطة</div><div class="v">${k.branches_with_data}<small> / ${k.branches_count}</small></div></div>`;
+    <div class="k"><div class="l">💰 إجمالي المبيعات</div><div class="v">${fmt(k.total_sales)}<small> ر</small></div></div>
+    <div class="k"><div class="l">📈 صافي الربح</div><div class="v" style="color:${profitColor}">${fmt(k.total_profit)}<small> ر</small></div></div>
+    <div class="k"><div class="l">🎯 هامش الربح</div><div class="v" style="color:${marginColor}">${k.margin}<small>%</small></div></div>
+    <div class="k"><div class="l">🏬 الفروع النشطة</div><div class="v">${k.branches_with_data}<small> / ${k.branches_count}</small></div></div>`;
 }
 
 function renderCoverage(d){
