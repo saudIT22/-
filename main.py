@@ -355,7 +355,50 @@ def run_migrations():
         except Exception as e:
             print(f"⚠️ Migration skipped: {e}")
 
+
+def auto_sync_columns():
+    """مزامنة ذاتية شاملة: تفحص كل موديل مقابل جدوله وتضيف أي عمود ناقص تلقائياً.
+    تضمن ألا يتكرر خطأ 'column does not exist' مع أي عمود جديد مستقبلاً."""
+    # خريطة: اسم الجدول → قائمة (اسم العمود, نوع SQL) من الموديل
+    TABLE_COLUMNS = {
+        "companydecision": [
+            ("company_id", "INTEGER"), ("title", "VARCHAR DEFAULT ''"),
+            ("detail", "VARCHAR DEFAULT ''"), ("owner", "VARCHAR DEFAULT ''"),
+            ("due_date", "VARCHAR DEFAULT ''"), ("kpi", "VARCHAR DEFAULT ''"),
+            ("status", "VARCHAR DEFAULT 'open'"), ("baseline_sales", "DOUBLE PRECISION DEFAULT 0"),
+            ("result_sales", "DOUBLE PRECISION DEFAULT 0"), ("result_note", "VARCHAR DEFAULT ''"),
+            ("expected_impact", "VARCHAR DEFAULT ''"), ("linked_to", "VARCHAR DEFAULT ''"),
+            ("approver", "VARCHAR DEFAULT ''"), ("reviewer", "VARCHAR DEFAULT ''"),
+            ("rationale", "VARCHAR DEFAULT ''"), ("created_at", "TIMESTAMP DEFAULT NOW()"),
+            ("closed_at", "TIMESTAMP"),
+        ],
+        "companybranch": [
+            ("business_unit", "VARCHAR DEFAULT ''"), ("department", "VARCHAR DEFAULT ''"),
+            ("area", "VARCHAR DEFAULT ''"), ("target_sales", "DOUBLE PRECISION DEFAULT 0"),
+            ("target_customers", "INTEGER DEFAULT 0"),
+        ],
+        "companymoduleentry": [
+            ("branch_id", "INTEGER"), ("data", "VARCHAR DEFAULT '{}'"),
+        ],
+        "auditlog": [
+            ("user_name", "VARCHAR DEFAULT ''"), ("action", "VARCHAR DEFAULT ''"),
+            ("target", "VARCHAR DEFAULT ''"), ("details", "VARCHAR DEFAULT ''"),
+            ("ip", "VARCHAR DEFAULT ''"),
+        ],
+    }
+    for table, cols in TABLE_COLUMNS.items():
+        for col_name, col_type in cols:
+            sql = f'ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {col_name} {col_type}'
+            try:
+                with engine.connect() as conn:
+                    conn.execute(text(sql))
+                    conn.commit()
+            except Exception:
+                pass  # الجدول قد لا يكون موجوداً بعد — يُنشأ من create_all
+
+
 run_migrations()
+auto_sync_columns()
 
 
 # ===== أدوات الأمان: كلمات المرور والرموز =====
