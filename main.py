@@ -5664,12 +5664,21 @@ def company_goals_get(user: User = Depends(get_current_user)):
                 })
         except: pass
 
+        # درجة التحقيق الاستراتيجي الإجمالية (متوسط نسب الإنجاز)
+        achievements = []
+        for c in comparisons:
+            if c.get("goal", 0) > 0:
+                pct = min(round(c["actual"] / c["goal"] * 100), 100) if c["label"] != "سقف المصروفات" else min(round(c["goal"] / max(c["actual"], 1) * 100), 100)
+                achievements.append(pct)
+        overall_achievement = round(sum(achievements) / len(achievements)) if achievements else 0
+
         return {
             "company": {"name": company.name},
             "period": period,
             "goals": goals,
             "comparisons": comparisons,
             "has_goals": len(goals) > 0,
+            "overall_achievement": overall_achievement,
         }
 
 
