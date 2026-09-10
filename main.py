@@ -697,6 +697,11 @@ def page_sales_analytics():
     return FileResponse("company-sales-analytics.html")
 
 
+@app.get("/company-readiness.html")
+def page_readiness():
+    return FileResponse("company-readiness.html")
+
+
 @app.get("/company-check.html")
 def page_check():
     return FileResponse("company-check.html")
@@ -5025,6 +5030,69 @@ def check_data_quality_rules(entries):
 
     score = round((passed_checks / total_checks) * 100) if total_checks else 0
     return score, flags
+
+
+@app.get("/company/readiness")
+def company_readiness(user: User = Depends(get_current_user)):
+    """درجة جاهزية التحليل (من تقرير التدقيق): لكل شركة ولكل فرع.
+    تُظهر بوضوح مدى اكتمال البيانات — بدل أن يبدو التحليل يقينياً دائماً."""
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id)
+        if not company:
+            raise HTTPException(403, "غير مصرّح")
+        if company.is_active != 1:
+            raise HTTPException(402, "شركتك قيد التفعيل")
+
+        branches = s.exec(
+            select(CompanyBranch).where(CompanyBranch.company_id == company.id, CompanyBranch.is_active == 1)
+        ).all()
+        # الوحدات المتوقّعة (كل وحدة مكتملة ترفع الجاهزية)
+        EXPECTED_MODULES = ["finance", "sales", "customers", "hr", "ops", "inventory"]
+        branch_readiness = []
+        all_scores = []
+        for b in branches:
+            e = s.exec(select(CompanyEntry).where(CompanyEntry.branch_id == b.id).order_by(CompanyEntry.created_at.desc())).first()
+            # جاهزية الفرع = اكتمال البيانات الأساسية + الوحدات
+            score = 0
+            factors = []
+            if e and e.sales > 0:
+                score += 30; factors.append("مبيعات ✓")
+            else:
+                factors.append("مبيعات ✗")
+            if e and e.expenses > 0:
+                score += 25; factors.append("مصروفات ✓")
+            else:
+                factors.append("مصروفات ✗")
+            if e and e.customers > 0:
+                score += 15; factors.append("عملاء ✓")
+            # الوحدات الموسّعة لهذا الفرع
+            mods = s.exec(select(CompanyModuleEntry).where(
+                CompanyModuleEntry.company_id == company.id,
+                (CompanyModuleEntry.branch_id == b.id) | (CompanyModuleEntry.branch_id == None)
+            )).all()
+            filled_mods = len(set(m.module for m in mods))
+            score += min(filled_mods * 5, 30)
+            score = min(score, 100)
+            all_scores.append(score)
+            level = "جاهز للتحليل" if score >= 75 else ("جزئي" if score >= 45 else "بيانات ناقصة")
+            branch_readiness.append({
+                "name": b.name, "city": b.city or "", "score": score, "level": level,
+                "factors": factors, "modules_filled": filled_mods,
+            })
+        branch_readiness.sort(key=lambda x: x["score"], reverse=True)
+
+        overall = round(sum(all_scores) / len(all_scores)) if all_scores else 0
+        overall_level = "جاهزة للتحليل" if overall >= 75 else ("جاهزية جزئية" if overall >= 45 else "بيانات ناقصة")
+        return {
+            "company": {"name": company.name},
+            "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "overall_readiness": overall,
+            "overall_level": overall_level,
+            "branch_readiness": branch_readiness,
+            "note": "درجة الجاهزية تقيس اكتمال بياناتك — كلما زادت، زادت دقة كل التحليلات والتوقعات.",
+        }
 
 
 def compute_confidence_flag(quality_score):
