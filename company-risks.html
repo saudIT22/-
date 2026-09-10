@@ -41,6 +41,16 @@
   .reason::before{content:"•";position:absolute;right:0;color:var(--txt-mute)}
   .action{font-size:12.5px;color:var(--mint);font-weight:700}
   .links{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 40px}
+
+  .compliance-sec{margin-top:24px}
+  .comp-h{font-size:15px;font-weight:800;color:var(--mint,#10b981);margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--line,#1d2c24)}
+  .comp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+  .comp-card{background:linear-gradient(180deg,rgba(255,255,255,.028),rgba(255,255,255,.008));border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:18px;text-decoration:none;color:inherit;transition:.15s;display:block}
+  .comp-card:hover{border-color:var(--mint,#10b981);transform:translateY(-2px)}
+  .comp-card .ci{font-size:24px;margin-bottom:8px}
+  .comp-card .ct{font-size:14px;font-weight:800;margin-bottom:4px}
+  .comp-card .cd{font-size:12px;color:var(--txt-soft,#8ba396);line-height:1.5}
+  .comp-card .carrow{font-size:12px;color:var(--mint,#10b981);font-weight:700;margin-top:8px}
 </style>
 </head>
 <body>
@@ -59,6 +69,11 @@
   <div id="content" style="display:none">
     <div class="overall" id="overall"></div>
     <div id="risks"></div>
+
+    <div class="compliance-sec">
+      <div class="comp-h">🛡️ الحوكمة والامتثال</div>
+      <div class="comp-grid" id="complianceGrid"></div>
+    </div>
   </div>
 
   <div class="links">
@@ -91,10 +106,15 @@ async function load(){
       </div>
       <div>
         <div class="t" style="color:${d.overall_color}">${d.overall_level}</div>
-        <div class="s">مؤشّر المخاطرة العام للشركة (٠-١٠٠) — ${d.company.name}</div>
-        <div class="s" style="margin-top:4px;color:var(--txt-mute);font-size:12px">${d.generated_at}</div>
+        <div class="s">مؤشّر المخاطرة العام للشركة (٠-١٠٠) — ${(d.company&&d.company.name)||""}</div>
+        <div class="s" style="margin-top:4px;color:var(--txt-mute);font-size:12px">${d.generated_at||""}</div>
       </div>`;
 
+    document.getElementById("complianceGrid").innerHTML=`
+      <a class="comp-card" href="company-audit.html"><div class="ci">🔒</div><div class="ct">سجل التدقيق</div><div class="cd">توثيق كل إجراء: مَن فعل ماذا ومتى.</div><div class="carrow">عرض ←</div></a>
+      <a class="comp-card" href="company-data-quality.html"><div class="ci">✓</div><div class="ct">جودة البيانات</div><div class="cd">فحص اكتمال ودقة بياناتك ومصداقيتها.</div><div class="carrow">عرض ←</div></a>
+      <a class="comp-card" href="company-tax.html"><div class="ci">🧾</div><div class="ct">الضريبة والزكاة</div><div class="cd">حساب ضريبة القيمة المضافة والزكاة.</div><div class="carrow">عرض ←</div></a>
+      <a class="comp-card" href="company-team.html"><div class="ci">👥</div><div class="ct">صلاحيات الفريق</div><div class="cd">من يرى ماذا — حوكمة الوصول.</div><div class="carrow">عرض ←</div></a>`;
     document.getElementById("risks").innerHTML=d.risks.map(r=>`
       <div class="risk-card" style="border-right-color:${r.color}">
         <div class="rc-h">
@@ -113,7 +133,13 @@ async function load(){
   }
 }
 load();
+window.nabbahReload = function(){ load(); };
+window.addEventListener("nabbahFilterChange", function(){ load(); });
 </script>
   <script src="i18n.js"></script>
+<script src="nabbah-sidebar.js"></script>
+<script src="nabbah-filters.js"></script>
+<script src="nabbah-ask.js"></script>
+<script src="nabbah-decision.js"></script>
 </body>
 </html>
