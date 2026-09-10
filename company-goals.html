@@ -3,192 +3,163 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>نبّاه · الأهداف والنتائج</title>
+<title>نبّاه · مركز الاستراتيجية</title>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="nabbah-design.css" rel="stylesheet">
 <style>
-  :root{--bg:#0a0f0c;--panel:#101a15;--panel2:#0e1712;--line:#1d2c24;--mint:#10b981;--mint-deep:#0c8f64;--gold:#f5b301;--orange:#f59e0b;--red:#ef4444;--txt:#e8f1ec;--txt-soft:#9fb4aa;--txt-mute:#678075;--r:16px;}
+  :root{--bg:#070b09;--panel:#101a15;--panel2:#0e1712;--line:#1d2c24;--mint:#10b981;--mint-deep:#0b8457;--gold:#f5b301;--red:#ef4444;--orange:#f97316;--txt:#e8f1ec;--txt-soft:#8ba396;--txt-mute:#5c6f66;}
   *{margin:0;padding:0;box-sizing:border-box}
-  body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--txt);line-height:1.7;min-height:100vh}
-  body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.5;background:radial-gradient(circle at 1px 1px,rgba(16,185,129,.05) 1px,transparent 0);background-size:26px 26px}
+  body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--txt);line-height:1.7;min-height:100vh;background-image:radial-gradient(ellipse 800px 400px at 15% -5%,rgba(16,185,129,.06),transparent)}
   a{text-decoration:none;color:inherit}
-  .wrap{max-width:780px;margin:0 auto;padding:0 16px;position:relative;z-index:1}
-  header{position:sticky;top:0;z-index:40;background:rgba(10,15,12,.86);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
-  .head-in{max-width:780px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
-  .brand{display:flex;align-items:center;gap:10px;font-weight:900;font-size:20px;color:#fff}
-  .brand .bell{width:36px;height:36px;border-radius:11px;background:var(--mint);display:grid;place-items:center;font-size:17px;transform:rotate(-5deg)}
-  .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;font-family:inherit;font-weight:700;cursor:pointer;border:none;border-radius:11px;font-size:14px;text-decoration:none}
-  .btn-mint{background:var(--mint);color:#04130d;padding:11px 18px}.btn-mint:hover{background:var(--mint-deep)}.btn-mint:disabled{opacity:.6}
-  .btn-ghost{background:var(--panel);color:var(--txt-soft);padding:10px 15px;border:1px solid var(--line)}
-  .page-head{padding:24px 0 14px}.page-head h1{font-size:25px;font-weight:900}.page-head p{color:var(--txt-soft);font-size:14.5px;margin-top:3px}
-  .state{padding:50px 20px;text-align:center;color:var(--txt-soft)}
-  .spin{width:32px;height:32px;border:3px solid var(--line);border-top-color:var(--mint);border-radius:50%;animation:sp 1s linear infinite;margin:0 auto 12px}@keyframes sp{to{transform:rotate(360deg)}}
-  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px;margin-bottom:14px}
-  .panel h2{font-size:15.5px;font-weight:800;margin-bottom:2px}.panel .sub{font-size:12.5px;color:var(--txt-mute);margin-bottom:14px}
-  label{display:block;font-size:13px;font-weight:700;margin-bottom:6px}
-  input{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:11px 13px;color:var(--txt);font-family:inherit;font-size:14.5px}
-  input:focus{outline:none;border-color:var(--mint)}
-  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:8px}
-
-  .progress-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 17px;margin-bottom:10px}
-  .pc-h{display:flex;align-items:center;gap:10px;margin-bottom:9px}
-  .pc-h .t{font-weight:800;font-size:15px;flex:1}
-  .pc-h .pct{font-size:18px;font-weight:900;flex-shrink:0}
-  .bar-bg{height:9px;background:var(--panel2);border-radius:99px;overflow:hidden;margin-bottom:8px}
-  .bar-fill{height:100%;border-radius:99px;transition:width .5s ease}
-  .pc-foot{display:flex;justify-content:space-between;font-size:12.5px;color:var(--txt-soft)}
-  .err{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#fca5a5;padding:10px 13px;border-radius:10px;font-size:13px;margin:10px 0;display:none}
-  .ok{background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.35);color:#6ee7b7;padding:11px 13px;border-radius:11px;font-size:13.5px;margin:10px 0;display:none;font-weight:700}
-  .links{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 40px}
-  @media(max-width:560px){.grid2{grid-template-columns:1fr}}
+  header{position:sticky;top:0;z-index:40;background:rgba(7,11,9,.85);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+  .head-in{max-width:860px;margin:0 auto;padding:12px 18px;display:flex;align-items:center;justify-content:space-between}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:900;font-size:19px;color:#fff}
+  .brand .bell{width:36px;height:36px;border-radius:11px;background:linear-gradient(135deg,var(--mint),var(--mint-deep));display:grid;place-items:center;font-size:17px;transform:rotate(-6deg)}
+  .btn{display:inline-flex;align-items:center;gap:7px;font-weight:700;cursor:pointer;border-radius:11px;font-size:13.5px;padding:9px 15px;background:var(--panel);color:var(--txt-soft);border:1px solid var(--line)}
+  .wrap{max-width:860px;margin:0 auto;padding:24px 18px 70px}
+  h1{font-size:22px;font-weight:900;display:flex;align-items:center;gap:9px;margin-bottom:4px}
+  .sub{font-size:13px;color:var(--txt-soft);margin-bottom:22px}
+  .hero{background:linear-gradient(135deg,rgba(16,185,129,.1),transparent);border:1px solid rgba(16,185,129,.3);border-radius:18px;padding:24px;margin-bottom:20px;display:flex;align-items:center;gap:24px}
+  .hero .ring{position:relative;width:120px;height:120px;flex-shrink:0}
+  .hero .rt{text-align:center}
+  .hero .rt .big{font-size:19px;font-weight:800;margin-bottom:4px}
+  .hero .rt .s{font-size:13px;color:var(--txt-soft)}
+  .goal{background:linear-gradient(180deg,rgba(255,255,255,.028),rgba(255,255,255,.008));border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:18px 20px;margin-bottom:12px}
+  .goal-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .goal-h .t{font-size:15px;font-weight:800}
+  .goal-h .badge{font-size:11px;padding:3px 11px;border-radius:6px;font-weight:800}
+  .goal-nums{display:flex;justify-content:space-between;font-size:12.5px;color:var(--txt-soft);margin-bottom:8px}
+  .goal-nums b{font-family:'Inter';font-size:14px}
+  .bar{height:10px;background:var(--panel2);border-radius:6px;overflow:hidden}
+  .bar i{display:block;height:100%;border-radius:6px;transition:width .6s}
+  .empty{text-align:center;padding:50px 20px;color:var(--txt-mute)}
+  .empty a{color:var(--mint);font-weight:700}
+  .spin{width:32px;height:32px;border:3px solid var(--line);border-top-color:var(--mint);border-radius:50%;animation:sp 1s linear infinite;margin:50px auto}@keyframes sp{to{transform:rotate(360deg)}}
+  .setgoal{background:linear-gradient(135deg,rgba(16,185,129,.06),transparent);border:1px solid rgba(16,185,129,.25);border-radius:16px;padding:20px;margin-top:20px}
+  .setgoal h3{font-size:15px;font-weight:800;color:var(--mint);margin-bottom:14px}
+  .grow{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+  @media(max-width:600px){.grow{grid-template-columns:1fr}}
+  .field label{display:block;font-size:12px;color:var(--txt-soft);font-weight:600;margin-bottom:5px}
+  .field input{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:10px 12px;font-family:inherit;font-size:14px;outline:none}
+  .field input:focus{border-color:var(--mint)}
+  .sbtn{background:linear-gradient(135deg,var(--mint),var(--mint-deep));color:#fff;border:none;border-radius:11px;padding:12px 22px;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit;margin-top:6px}
+  .msg{font-size:12.5px;margin-top:10px;font-weight:600}
 </style>
 </head>
 <body>
 <header>
   <div class="head-in">
     <a class="brand" href="company-dashboard.html"><span class="bell">🔔</span>نبّاه</a>
-    <a class="btn btn-ghost" href="company-command-center.html">مركز القيادة</a>
+    <a class="btn" href="company-command-center.html">🎛️ مركز القيادة</a>
   </div>
 </header>
 <div class="wrap">
-  <div class="page-head"><h1>🎯 <span data-i18n="goals.title">الأهداف والنتائج</span></h1><p>حدّد أهدافك الاستراتيجية، ونبّاه يقيس الإنجاز مقابل الفعلي تلقائياً</p></div>
+  <h1>🎯 مركز الاستراتيجية</h1>
+  <div class="sub">أهدافك مقابل الواقع — نبّاه يقيس تقدّمك نحو كل هدف تلقائياً (OKR).</div>
 
-  <div id="loading" class="state"><div class="spin"></div>جارٍ التحميل…</div>
-  <div id="error" class="state" style="display:none;color:var(--red)"></div>
-
+  <div id="loading"><div class="spin"></div></div>
   <div id="content" style="display:none">
-    <!-- المقارنة -->
-    <div id="comparisons"></div>
+    <div id="heroBox"></div>
+    <div id="goalsList"></div>
 
-    <!-- إدخال الأهداف -->
-    <div class="panel">
-      <h2>📝 <span data-i18n="goals.update">تحديث الأهداف</span></h2>
-      <div class="sub">حدّد الأهداف السنوية (أو الفترة المختارة) — نبّاه يحسب الإنجاز تلقائياً من البيانات الفعلية</div>
-      <div class="grid2">
-        <div><label data-i18n="goals.period">الفترة (السنة)</label><input id="period" placeholder="2026" value="2026"></div>
-        <div><label>هدف المبيعات (ريال)<span style="color:#f5b301;margin-inline-start:6px;font-size:11px">⭐⭐⭐⭐⭐</span></label><input id="g_sales" type="number" inputmode="decimal" placeholder="0"></div>
+    <div class="setgoal">
+      <h3>🎯 حدّد أهدافك</h3>
+      <div class="grow">
+        <div class="field"><label>هدف المبيعات (ريال)</label><input id="gSales" type="number" placeholder="مثال: 5000000"></div>
+        <div class="field"><label>هدف صافي الربح (ريال)</label><input id="gProfit" type="number" placeholder="مثال: 1000000"></div>
       </div>
-      <div class="grid2">
-        <div><label>هدف الربح (ريال)<span style="color:#f5b301;margin-inline-start:6px;font-size:11px">⭐⭐⭐⭐⭐</span></label><input id="g_profit" type="number" inputmode="decimal" placeholder="0"></div>
-        <div><label>هدف عدد العملاء<span style="color:#f5b301;margin-inline-start:6px;font-size:11px">⭐⭐⭐⭐</span></label><input id="g_customers" type="number" inputmode="numeric" placeholder="0"></div>
+      <div class="grow">
+        <div class="field"><label>هدف عدد العملاء</label><input id="gCustomers" type="number" placeholder="مثال: 50000"></div>
+        <div class="field"><label>هدف هامش الربح (%)</label><input id="gMargin" type="number" placeholder="مثال: 20"></div>
       </div>
-      <div class="grid2">
-        <div><label>هدف معدل الاحتفاظ %<span style="color:#f5b301;margin-inline-start:6px;font-size:11px">⭐⭐⭐⭐</span></label><input id="g_repeat" type="number" inputmode="decimal" placeholder="0" max="100" min="0"></div>
-        <div><label>هدف سقف المصروفات (ريال)<span style="color:#f5b301;margin-inline-start:6px;font-size:11px">⭐⭐⭐</span></label><input id="g_exp" type="number" inputmode="decimal" placeholder="0"></div>
-      </div>
-      <div class="err" id="err"></div>
-      <div class="ok" id="ok"></div>
-      <button data-i18n="goals.save" class="btn btn-mint" id="saveBtn" style="width:100%;padding:13px;margin-top:8px" onclick="save()">حفظ الأهداف</button>
+      <button class="sbtn" onclick="saveGoals()">حفظ الأهداف</button>
+      <div class="msg" id="msg"></div>
     </div>
-  </div>
-
-  <div class="links">
-    <a class="btn btn-ghost" href="company-dashboard.html">اللوحة</a>
-    <a class="btn btn-ghost" href="company-health.html">❤️ صحة الشركة</a>
-    <a class="btn btn-ghost" href="company-command-center.html">🎛️ مركز القيادة</a>
   </div>
 </div>
 <script>
 const TOKEN=localStorage.getItem("nabbah_token")||"";
-if(!TOKEN){ window.location.href="login.html"; }
+if(!TOKEN) window.location.href="login.html";
 async function api(p,o={}){
   const r=await fetch(p,{...o,headers:{"Content-Type":"application/json","Authorization":"Bearer "+TOKEN,...(o.headers||{})}});
   if(r.status===401){ localStorage.removeItem("nabbah_token"); window.location.href="login.html"; throw new Error("جلسة"); }
   const d=await r.json().catch(()=>({}));
-  const er=new Error(d.detail||"خطأ"); er.status=r.status;
-  if(!r.ok) throw er;
+  if(!r.ok) throw new Error(d.detail||"خطأ");
   return d;
 }
 const fmt=n=>(Math.round(n)||0).toLocaleString("en-US");
+const clr=p=>p>=90?"#10b981":(p>=60?"#f5b301":(p>=35?"#f97316":"#ef4444"));
 
 async function load(){
   try{
     const d=await api("/company/goals");
     document.getElementById("loading").style.display="none";
     document.getElementById("content").style.display="block";
+    const comps=d.comparisons||[];
 
-    if(d.period) document.getElementById("period").value=d.period;
-    if(d.goals){
-      document.getElementById("g_sales").value=d.goals["هدف المبيعات (ريال)"]||"";
-      document.getElementById("g_profit").value=d.goals["هدف الربح (ريال)"]||"";
-      document.getElementById("g_customers").value=d.goals["هدف عدد العملاء"]||"";
-      document.getElementById("g_repeat").value=d.goals["هدف معدل الاحتفاظ %"]||"";
-      document.getElementById("g_exp").value=d.goals["هدف سقف المصروفات (ريال)"]||"";
+    // البطاقة الرئيسية (درجة التحقيق)
+    if(d.has_goals){
+      const oa=d.overall_achievement||0;
+      const c=clr(oa);
+      const circ=2*Math.PI*52;
+      document.getElementById("heroBox").innerHTML=`<div class="hero">
+        <div class="ring">
+          <svg viewBox="0 0 120 120" style="width:120px;height:120px;transform:rotate(-90deg)">
+            <circle cx="60" cy="60" r="52" fill="none" stroke="#16221c" stroke-width="12"/>
+            <circle cx="60" cy="60" r="52" fill="none" stroke="${c}" stroke-width="12" stroke-linecap="round" stroke-dasharray="${circ}" stroke-dashoffset="${circ*(1-oa/100)}"/>
+          </svg>
+          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900;font-family:Inter;color:${c}">${oa}%</div>
+        </div>
+        <div class="rt"><div class="big">درجة التحقيق الاستراتيجي</div><div class="s">${d.period?("الفترة: "+d.period):"متوسط تقدّمك نحو كل أهدافك"}</div></div>
+      </div>`;
+    } else { document.getElementById("heroBox").innerHTML=""; }
+
+    // الأهداف
+    if(!comps.length){
+      document.getElementById("goalsList").innerHTML=`<div class="empty"><div style="font-size:40px;margin-bottom:12px">🎯</div>
+        <div style="font-size:16px;font-weight:700;color:var(--txt);margin-bottom:6px">لم تحدّد أهدافاً بعد</div>
+        <div>حدّد أهدافك أدناه — نبّاه يقيس تقدّمك نحوها تلقائياً من بياناتك.</div></div>`;
+      return;
     }
-
-    renderComparisons(d.comparisons, d.has_goals);
+    document.getElementById("goalsList").innerHTML=comps.map(c=>{
+      const isExpense=c.label==="سقف المصروفات";
+      let pct= c.goal>0 ? (isExpense? Math.min(Math.round(c.goal/Math.max(c.actual,1)*100),100) : Math.min(Math.round(c.actual/c.goal*100),100)) : 0;
+      const col=clr(pct);
+      const status=pct>=100?"مكتمل":(pct>=90?"شبه مكتمل":(pct>=60?"في المسار":(pct>=35?"متأخر":"يحتاج تدخّل")));
+      return `<div class="goal">
+        <div class="goal-h"><div class="t">${c.label}</div><div class="badge" style="background:${col}22;color:${col}">${status}</div></div>
+        <div class="goal-nums"><span>الفعلي: <b style="color:${col}">${fmt(c.actual)}</b></span><span>الهدف: <b>${fmt(c.goal)}</b></span></div>
+        <div class="bar"><i style="width:${pct}%;background:${col}"></i></div>
+        <div style="text-align:left;font-size:11.5px;color:var(--txt-mute);margin-top:5px">${pct}%</div>
+      </div>`;
+    }).join("");
+    // نملأ الحقول بالأهداف الحالية
+    const g=d.goals||{};
+    if(g.sales)document.getElementById("gSales").value=g.sales;
+    if(g.profit)document.getElementById("gProfit").value=g.profit;
+    if(g.customers)document.getElementById("gCustomers").value=g.customers;
+    if(g.margin)document.getElementById("gMargin").value=g.margin;
   }catch(e){
-    document.getElementById("loading").style.display="none";
-    const er=document.getElementById("error"); er.style.display="block";
-    if(e.status===402) er.innerHTML=`⏳ شركتك قيد التفعيل. <a href="company-dashboard.html" style="color:var(--mint)">رجوع</a>`;
-    else er.textContent=e.message;
+    document.getElementById("loading").innerHTML='<p style="text-align:center;color:var(--red)">'+e.message+'</p>';
   }
 }
-
-function colorFor(pct){
-  if(pct>=80) return "#10b981";
-  if(pct>=60) return "#f5b301";
-  if(pct>=40) return "#f59e0b";
-  return "#ef4444";
-}
-
-function renderComparisons(arr, hasGoals){
-  const box=document.getElementById("comparisons");
-  if(!hasGoals){
-    box.innerHTML=`<div class="panel" style="text-align:center"><div style="font-size:34px;margin-bottom:6px">🎯</div>
-      <div style="font-weight:800;font-size:16px;margin-bottom:4px">حدّد أهدافك أولاً</div>
-      <div style="font-size:13px;color:var(--txt-soft)">املأ الأهداف بالأسفل وستظهر نسبة الإنجاز فوراً مقابل البيانات الفعلية.</div></div>`;
-    return;
-  }
-  if(!arr.length){
-    box.innerHTML=`<div class="panel" style="text-align:center;color:var(--txt-soft)">احفظ أهدافك ليبدأ القياس</div>`;
-    return;
-  }
-  box.innerHTML=`<div class="panel"><h2>📊 الإنجاز مقابل الهدف</h2><div class="sub">يُحسب تلقائياً من بيانات الفروع الفعلية</div>
-  ${arr.map(c=>{
-    const col=colorFor(c.pct);
-    const width=Math.min(c.pct,100);
-    return `<div class="progress-card">
-      <div class="pc-h"><span style="font-size:18px">${c.status}</span>
-        <div class="t">${c.label}</div>
-        <div class="pct" style="color:${col}">${c.pct}%</div></div>
-      <div class="bar-bg"><div class="bar-fill" style="width:${width}%;background:${col}"></div></div>
-      <div class="pc-foot">
-        <span>الفعلي: <b style="color:var(--txt)">${fmt(c.actual)} ${c.unit}</b></span>
-        <span style="color:${col}">${c.level}</span>
-        <span>الهدف: <b style="color:var(--txt)">${fmt(c.goal)} ${c.unit}</b></span>
-      </div>
-    </div>`;
-  }).join("")}</div>`;
-}
-
-async function save(){
-  document.getElementById("err").style.display="none";
-  document.getElementById("ok").style.display="none";
+async function saveGoals(){
+  const msg=document.getElementById("msg"); msg.style.color="#8ba396"; msg.textContent="جارٍ الحفظ…";
   const goals={};
-  const s=v=>+v||null;
-  const v=id=>document.getElementById(id).value.trim();
-  if(s(v("g_sales"))) goals["هدف المبيعات (ريال)"]=s(v("g_sales"));
-  if(s(v("g_profit"))) goals["هدف الربح (ريال)"]=s(v("g_profit"));
-  if(s(v("g_customers"))) goals["هدف عدد العملاء"]=s(v("g_customers"));
-  if(s(v("g_repeat"))){
-    const r=s(v("g_repeat"));
-    if(r>100||r<0){const er=document.getElementById("err"); er.textContent="معدل الاحتفاظ يجب أن يكون بين 0 و 100"; er.style.display="block"; return;}
-    goals["هدف معدل الاحتفاظ %"]=r;
-  }
-  if(s(v("g_exp"))) goals["هدف سقف المصروفات (ريال)"]=s(v("g_exp"));
-  if(Object.keys(goals).length===0){const er=document.getElementById("err"); er.textContent="أدخل هدفاً واحداً على الأقل"; er.style.display="block"; return;}
-
-  const btn=document.getElementById("saveBtn"); btn.disabled=true; btn.textContent="جارٍ الحفظ…";
+  const s=document.getElementById("gSales").value, p=document.getElementById("gProfit").value,
+        c=document.getElementById("gCustomers").value, m=document.getElementById("gMargin").value;
+  if(s)goals.sales=+s; if(p)goals.profit=+p; if(c)goals.customers=+c; if(m)goals.margin=+m;
+  if(Object.keys(goals).length===0){ msg.style.color="#ef4444"; msg.textContent="حدّد هدفاً واحداً على الأقل"; return; }
   try{
-    await api("/company/goals/save",{method:"POST",body:JSON.stringify({goals,period:v("period")||"2026"})});
-    document.getElementById("ok").textContent=`✅ تم حفظ ${Object.keys(goals).length} هدف`; document.getElementById("ok").style.display="block";
-    await load();
-  }catch(e){ const er=document.getElementById("err"); er.textContent=e.message; er.style.display="block"; }
-  btn.disabled=false; btn.textContent="حفظ الأهداف";
+    await api("/company/goals/save",{method:"POST",body:JSON.stringify({goals})});
+    msg.style.color="#10b981"; msg.textContent="✅ حُفظت الأهداف";
+    load();
+  }catch(e){ msg.style.color="#ef4444"; msg.textContent=e.message; }
 }
 load();
 </script>
-  <script src="i18n.js"></script>
+<script src="i18n.js"></script>
+<script src="nabbah-sidebar.js"></script>
 </body>
 </html>
