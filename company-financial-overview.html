@@ -99,6 +99,24 @@
       <div class="ratios" id="receivables"></div>
     </div>
 
+    <!-- قائمة التدفقات النقدية -->
+    <div class="sec" id="cfSec" style="display:none">
+      <div class="sec-h">💧 قائمة التدفقات النقدية</div>
+      <div class="pnl" id="cashFlow"></div>
+    </div>
+
+    <!-- الموازنة مقابل الفعلي -->
+    <div class="sec" id="budgetSec" style="display:none">
+      <div class="sec-h">🎯 الموازنة مقابل الفعلي</div>
+      <div id="budgetBox"></div>
+    </div>
+
+    <!-- التنبؤ المالي -->
+    <div class="sec" id="forecastSec" style="display:none">
+      <div class="sec-h">🔮 التنبؤ المالي (الفترة القادمة)</div>
+      <div class="ratios" id="forecast"></div>
+    </div>
+
     <div id="confBox"></div>
   </div>
 </div>
@@ -174,6 +192,43 @@ async function load(){
       let cells=item("ذمم مدينة (لك)",r.ar,r.dso?`أيام التحصيل ≈ ${r.dso} يوم`:"","#10b981")+item("ذمم دائنة (عليك)",r.ap,"","#f97316");
       if(r.net_position!==null)cells+=item("الصافي",r.net_position,"مدينة − دائنة",r.net_position>=0?"#10b981":"#ef4444");
       document.getElementById("receivables").innerHTML=cells;
+    }
+
+    // التدفقات النقدية
+    if(d.cash_flow && d.cash_flow.has_data){
+      document.getElementById("cfSec").style.display="block";
+      const cf=d.cash_flow;
+      const row=(l,v,strong)=>v!==null&&v!==undefined?`<div class="pnl-row${strong?' total':''}"><span class="l">${l}</span><span class="v"${strong?'':' style="color:'+(v>=0?'var(--mint)':'var(--red)')+'"'}>${v>=0?'':'−'}${fmt(Math.abs(v))} ${cur}</span></div>`:`<div class="pnl-row"><span class="l">${l}</span><span class="na">—</span></div>`;
+      document.getElementById("cashFlow").innerHTML=
+        row("التدفق التشغيلي",cf.operating)+
+        (cf.investing!==null?row("التدفق الاستثماري",cf.investing):`<div class="pnl-row"><span class="l">التدفق الاستثماري</span><span class="na">بحاجة لإدخال</span></div>`)+
+        (cf.financing!==null?row("التدفق التمويلي",cf.financing):`<div class="pnl-row"><span class="l">التدفق التمويلي</span><span class="na">بحاجة لإدخال</span></div>`)+
+        row("صافي التغيّر النقدي",cf.net_change,true)+
+        (cf.closing_cash!==null?row("النقد ختام الفترة",cf.closing_cash):"");
+    }
+
+    // الموازنة مقابل الفعلي
+    if(d.budget_variance && d.budget_variance.has_data){
+      document.getElementById("budgetSec").style.display="block";
+      const bv=d.budget_variance;
+      const col=bv.status==="above"?"#10b981":"#ef4444";
+      document.getElementById("budgetBox").innerHTML=`
+        <div class="ratios">
+          <div class="rc"><div class="rh"><span class="rn">الموازنة المخطّطة</span></div><div class="rv">${fmt(bv.budget)}<span style="font-size:13px"> ${cur}</span></div></div>
+          <div class="rc"><div class="rh"><span class="rn">الفعلي المحقّق</span></div><div class="rv">${fmt(bv.actual)}<span style="font-size:13px"> ${cur}</span></div></div>
+          <div class="rc"><div class="rh"><span class="rn">الانحراف</span></div><div class="rv" style="color:${col}">${bv.variance>=0?'+':''}${fmt(bv.variance)}</div><div class="rf">${bv.variance_pct>=0?'+':''}${bv.variance_pct}% ${bv.status==="above"?"فوق الموازنة":"دون الموازنة"}</div></div>
+        </div>`;
+    }
+
+    // التنبؤ المالي
+    if(d.forecast && d.forecast.has_data){
+      document.getElementById("forecastSec").style.display="block";
+      const f=d.forecast;
+      const tcol=f.trend_pct>=0?"#10b981":"#ef4444";
+      document.getElementById("forecast").innerHTML=`
+        <div class="rc"><div class="rh"><span class="rn">📈 اتجاه النمو</span></div><div class="rv" style="color:${tcol}">${f.trend_pct>=0?'+':''}${f.trend_pct}%</div></div>
+        <div class="rc"><div class="rh"><span class="rn">الإيراد المتوقّع</span></div><div class="rv" style="color:#10b981">${fmt(f.next_revenue)}<span style="font-size:13px"> ${cur}</span></div></div>
+        <div class="rc"><div class="rh"><span class="rn">الربح المتوقّع</span></div><div class="rv" style="color:#10b981">${fmt(f.next_profit)}<span style="font-size:13px"> ${cur}</span></div></div>`;
     }
 
     // الثقة
