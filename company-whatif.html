@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نبّاه · محاكاة السيناريوهات</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="nabbah-design.css" rel="stylesheet">
+<style>
+  :root{--bg:#070b09;--panel:#101a15;--panel2:#0e1712;--line:#1d2c24;--mint:#10b981;--mint-deep:#0b8457;--gold:#f5b301;--red:#ef4444;--orange:#f97316;--blue:#3b82f6;--txt:#e8f1ec;--txt-soft:#8ba396;--txt-mute:#5c6f66;}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--txt);line-height:1.7;min-height:100vh;background-image:radial-gradient(ellipse 800px 400px at 15% -5%,rgba(16,185,129,.06),transparent)}
+  a{text-decoration:none;color:inherit}
+  header{position:sticky;top:0;z-index:40;background:rgba(7,11,9,.85);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+  .head-in{max-width:860px;margin:0 auto;padding:12px 18px;display:flex;align-items:center;justify-content:space-between}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:900;font-size:19px;color:#fff}
+  .brand .bell{width:36px;height:36px;border-radius:11px;background:linear-gradient(135deg,var(--mint),var(--mint-deep));display:grid;place-items:center;font-size:17px;transform:rotate(-6deg)}
+  .btn{display:inline-flex;align-items:center;gap:7px;font-weight:700;cursor:pointer;border-radius:11px;font-size:13.5px;padding:9px 15px;background:var(--panel);color:var(--txt-soft);border:1px solid var(--line)}
+  .wrap{max-width:860px;margin:0 auto;padding:24px 18px 70px}
+  h1{font-size:22px;font-weight:900;display:flex;align-items:center;gap:9px;margin-bottom:4px}
+  .sub{font-size:13px;color:var(--txt-soft);margin-bottom:22px}
+  .info{background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.2);border-radius:12px;padding:13px 16px;margin-bottom:18px;font-size:12.5px;color:#93c5fd}
+  .controls{background:linear-gradient(180deg,rgba(255,255,255,.028),rgba(255,255,255,.008));border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:22px;margin-bottom:18px}
+  .ctrl{margin-bottom:20px}
+  .ctrl:last-child{margin-bottom:0}
+  .ctrl-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+  .ctrl-h .l{font-size:14px;font-weight:700}
+  .ctrl-h .v{font-size:16px;font-weight:900;font-family:'Inter';padding:2px 12px;border-radius:8px;background:var(--panel2)}
+  input[type=range]{width:100%;-webkit-appearance:none;height:6px;border-radius:5px;background:var(--panel2);outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--mint);cursor:pointer;box-shadow:0 2px 8px rgba(16,185,129,.4)}
+  .presets{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+  .preset{background:var(--panel);border:1px solid var(--line);color:var(--txt-soft);border-radius:20px;padding:8px 15px;font-size:12.5px;cursor:pointer;font-family:inherit;transition:.15s}
+  .preset:hover{border-color:var(--mint);color:var(--mint)}
+  .result{background:linear-gradient(135deg,rgba(16,185,129,.08),transparent);border:1px solid rgba(16,185,129,.3);border-radius:18px;padding:24px}
+  .cmp{display:grid;grid-template-columns:1fr auto 1fr;gap:16px;align-items:center;margin-bottom:20px}
+  @media(max-width:600px){.cmp{grid-template-columns:1fr}}
+  .cmp-box{text-align:center}
+  .cmp-box .cl{font-size:12px;color:var(--txt-soft);margin-bottom:8px}
+  .cmp-box .cv{font-size:26px;font-weight:900;font-family:'Inter';letter-spacing:-1px}
+  .cmp-box .cm{font-size:12px;color:var(--txt-mute);margin-top:4px}
+  .cmp .arrow{font-size:24px;color:var(--mint);text-align:center}
+  @media(max-width:600px){.cmp .arrow{transform:rotate(90deg)}}
+  .impact-big{text-align:center;padding:18px;border-radius:14px;margin-top:8px}
+  .impact-big .il{font-size:13px;color:var(--txt-soft);margin-bottom:6px}
+  .impact-big .iv{font-size:36px;font-weight:900;font-family:'Inter';letter-spacing:-1px}
+  .impact-big .is{font-size:13px;margin-top:4px}
+  .spin{width:22px;height:22px;border:3px solid var(--line);border-top-color:var(--mint);border-radius:50%;animation:sp 1s linear infinite;display:inline-block}@keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<header>
+  <div class="head-in">
+    <a class="brand" href="company-dashboard.html"><span class="bell">🔔</span>نبّاه</a>
+    <a class="btn" href="company-financial-overview.html">💰 الوحدة المالية</a>
+  </div>
+</header>
+<div class="wrap">
+  <h1>🔮 محاكاة السيناريوهات</h1>
+  <div class="sub">"ماذا لو؟" — جرّب أي قرار وشاهد أثره على الربح فوراً، قبل التنفيذ.</div>
+  <div class="info">💡 كل محاكاة من بياناتك الفعلية. حرّك المؤشرات وشاهد النتيجة تتغيّر مباشرة.</div>
+
+  <div class="presets">
+    <button class="preset" onclick="applyPreset(10,0,0,0)">رفع الأسعار 10%</button>
+    <button class="preset" onclick="applyPreset(0,15,0,0)">زيادة العملاء 15%</button>
+    <button class="preset" onclick="applyPreset(0,0,-8,0)">خفض التكاليف 8%</button>
+    <button class="preset" onclick="applyPreset(5,10,-5,0)">سيناريو نمو</button>
+    <button class="preset" onclick="applyPreset(0,0,0,0)">إعادة تعيين</button>
+  </div>
+
+  <div class="controls">
+    <div class="ctrl">
+      <div class="ctrl-h"><span class="l">💵 تغيير الأسعار</span><span class="v" id="vPrice">0%</span></div>
+      <input type="range" id="price" min="-30" max="30" value="0" step="1" oninput="update()">
+    </div>
+    <div class="ctrl">
+      <div class="ctrl-h"><span class="l">👥 تغيير حجم المبيعات/العملاء</span><span class="v" id="vVolume">0%</span></div>
+      <input type="range" id="volume" min="-30" max="30" value="0" step="1" oninput="update()">
+    </div>
+    <div class="ctrl">
+      <div class="ctrl-h"><span class="l">📦 تغيير تكلفة البضاعة</span><span class="v" id="vCost">0%</span></div>
+      <input type="range" id="cost" min="-30" max="30" value="0" step="1" oninput="update()">
+    </div>
+    <div class="ctrl">
+      <div class="ctrl-h"><span class="l">🏢 تغيير المصروفات التشغيلية</span><span class="v" id="vExpense">0%</span></div>
+      <input type="range" id="expense" min="-30" max="30" value="0" step="1" oninput="update()">
+    </div>
+  </div>
+
+  <div class="result" id="result">
+    <div style="text-align:center;color:var(--txt-mute);padding:20px">حرّك أي مؤشر لبدء المحاكاة…</div>
+  </div>
+</div>
+<script>
+const TOKEN=localStorage.getItem("nabbah_token")||"";
+if(!TOKEN) window.location.href="login.html";
+async function api(p,o={}){
+  const r=await fetch(p,{...o,headers:{"Content-Type":"application/json","Authorization":"Bearer "+TOKEN,...(o.headers||{})}});
+  if(r.status===401){ localStorage.removeItem("nabbah_token"); window.location.href="login.html"; throw new Error("جلسة"); }
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(d.detail||"خطأ");
+  return d;
+}
+const fmt=n=>(Math.round(n)||0).toLocaleString("en-US");
+let timer=null;
+
+function applyPreset(p,v,c,e){
+  document.getElementById("price").value=p;
+  document.getElementById("volume").value=v;
+  document.getElementById("cost").value=c;
+  document.getElementById("expense").value=e;
+  update();
+}
+function update(){
+  const p=+document.getElementById("price").value, v=+document.getElementById("volume").value,
+        c=+document.getElementById("cost").value, e=+document.getElementById("expense").value;
+  document.getElementById("vPrice").textContent=(p>=0?"+":"")+p+"%";
+  document.getElementById("vVolume").textContent=(v>=0?"+":"")+v+"%";
+  document.getElementById("vCost").textContent=(c>=0?"+":"")+c+"%";
+  document.getElementById("vExpense").textContent=(e>=0?"+":"")+e+"%";
+  document.getElementById("vPrice").style.color=p>0?"var(--mint)":(p<0?"var(--red)":"var(--txt)");
+  document.getElementById("vVolume").style.color=v>0?"var(--mint)":(v<0?"var(--red)":"var(--txt)");
+  // نؤخّر الطلب قليلاً (debounce)
+  clearTimeout(timer);
+  timer=setTimeout(()=>simulate(p,v,c,e),250);
+}
+async function simulate(p,v,c,e){
+  if(p===0&&v===0&&c===0&&e===0){
+    document.getElementById("result").innerHTML='<div style="text-align:center;color:var(--txt-mute);padding:20px">حرّك أي مؤشر لبدء المحاكاة…</div>';
+    return;
+  }
+  document.getElementById("result").innerHTML='<div style="text-align:center;padding:20px"><span class="spin"></span></div>';
+  try{
+    const d=await api("/company/whatif",{method:"POST",body:JSON.stringify({price_change:p,volume_change:v,cost_change:c,expense_change:e})});
+    if(!d.has_data){ document.getElementById("result").innerHTML=`<div style="text-align:center;color:var(--txt-mute);padding:20px">${d.message||"لا بيانات كافية"}</div>`; return; }
+    const cur=d.currency||"ريال", im=d.impact, col=im.direction==="positive"?"var(--mint)":"var(--red)";
+    document.getElementById("result").innerHTML=`
+      <div class="cmp">
+        <div class="cmp-box"><div class="cl">الوضع الحالي</div><div class="cv">${fmt(d.baseline.profit)}</div><div class="cm">هامش ${d.baseline.margin}%</div></div>
+        <div class="arrow">←</div>
+        <div class="cmp-box"><div class="cl">السيناريو المتوقّع</div><div class="cv" style="color:${col}">${fmt(d.scenario.profit)}</div><div class="cm">هامش ${d.scenario.margin}%</div></div>
+      </div>
+      <div class="impact-big" style="background:${col}18">
+        <div class="il">الأثر على صافي الربح</div>
+        <div class="iv" style="color:${col}">${im.profit_change>=0?'+':''}${fmt(im.profit_change)} ${cur}</div>
+        <div class="is" style="color:${col}">${im.profit_change_pct>=0?'+':''}${im.profit_change_pct}% · الهامش ${im.margin_change>=0?'+':''}${im.margin_change} نقطة</div>
+      </div>`;
+  }catch(err){
+    document.getElementById("result").innerHTML=`<div style="text-align:center;color:var(--red);padding:20px">${err.message}</div>`;
+  }
+}
+</script>
+<script src="i18n.js"></script>
+<script src="nabbah-sidebar.js"></script>
+</body>
+</html>
