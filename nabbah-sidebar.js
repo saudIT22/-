@@ -60,10 +60,11 @@
     { icon: "🌍", label: "السوق", items: [
       { label: "المنافسون", href: "company-competitors.html" },
       { label: "الأحداث المؤثرة", href: "company-events.html" },
-      { label: "مقارنة بالقطاع", href: "company-benchmarks.html" },
+      { label: "المقارنة القطاعية", href: "company-benchmark.html" },
     ]},
     { icon: "🤖", label: "ذكاء نبّاه", items: [
       { label: "التنبؤ بالأداء", href: "company-predictions.html" },
+      { label: "محاكاة السيناريوهات", href: "company-whatif.html" },
       { label: "الأسباب الجذرية", href: "company-root-cause.html" },
       { label: "ذاكرة الشركة", href: "company-memory.html" },
     ]},
