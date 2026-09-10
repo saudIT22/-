@@ -3145,6 +3145,49 @@ def company_financial_overview(user: User = Depends(get_current_user)):
             "net_position": (round(ar - ap) if (ar is not None and ap is not None) else None),
         }
 
+        # ===== قائمة التدفقات النقدية (Cash Flow Statement) — P0 من التقرير =====
+        # مبسّطة: التشغيلي (الربح) + تغيّر الذمم، الاستثماري، التمويلي
+        operating_cf = round(total_profit)  # التدفق التشغيلي ≈ صافي الربح
+        ar_change = -(ar if ar is not None else 0) * 0.1  # تقدير محافظ لتغيّر الذمم
+        net_cash_flow = round(operating_cf + ar_change)
+        cash_flow = {
+            "has_data": total_sales > 0,
+            "operating": operating_cf,
+            "investing": None,   # يحتاج بيانات استثمار
+            "financing": None,   # يحتاج بيانات تمويل
+            "net_change": net_cash_flow,
+            "opening_cash": round(cash_reserve) if cash_reserve else None,
+            "closing_cash": round(cash_reserve + net_cash_flow) if cash_reserve else None,
+        }
+
+        # ===== الموازنة مقابل الفعلي (Budget vs Actual) — P0 من التقرير =====
+        budget_data = _fpick(fd, "الموازنة", "الميزانية التقديرية", "budget", "المخطّط")
+        budget_variance = None
+        if budget_data is not None and budget_data > 0:
+            variance = total_sales - budget_data
+            variance_pct = round(variance / budget_data * 100, 1)
+            budget_variance = {
+                "has_data": True, "budget": round(budget_data), "actual": round(total_sales),
+                "variance": round(variance), "variance_pct": variance_pct,
+                "status": "above" if variance >= 0 else "below",
+            }
+        else:
+            budget_variance = {"has_data": False}
+
+        # ===== التنبؤ المالي (Financial Forecast) — من اتجاه البيانات =====
+        # نجمع آخر فترتين لكل فرع لحساب الاتجاه
+        forecast = {"has_data": False}
+        growths_f = [e.growth for _, e in [(b, s.exec(select(CompanyEntry).where(CompanyEntry.branch_id == b.id).order_by(CompanyEntry.created_at.desc())).first()) for b in branches] if e and e.growth is not None]
+        if growths_f:
+            avg_g = sum(growths_f) / len(growths_f)
+            next_revenue = round(total_sales * (1 + avg_g / 100))
+            next_profit = round(total_profit * (1 + avg_g / 100))
+            forecast = {
+                "has_data": True, "trend_pct": round(avg_g, 1),
+                "next_revenue": next_revenue, "next_profit": next_profit,
+                "note": "توقّع الفترة القادمة مبني على اتجاه نموّك الحالي.",
+            }
+
         return {
             "company": {"name": company.name},
             "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
@@ -3165,6 +3208,9 @@ def company_financial_overview(user: User = Depends(get_current_user)):
             },
             "balance_sheet": balance_sheet,
             "receivables": receivables,
+            "cash_flow": cash_flow,
+            "budget_variance": budget_variance,
+            "forecast": forecast,
             "ratios": ratios,
             "confidence": confidence,
         }
