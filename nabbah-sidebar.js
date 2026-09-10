@@ -55,6 +55,7 @@
       { label: "الضريبة والزكاة", href: "company-tax.html" },
       { label: "سجل التدقيق", href: "company-audit.html" },
       { label: "جودة البيانات", href: "company-data-quality.html" },
+      { label: "درجة جاهزية التحليل", href: "company-readiness.html" },
     ]},
     { icon: "🌍", label: "السوق", items: [
       { label: "المنافسون", href: "company-competitors.html" },
