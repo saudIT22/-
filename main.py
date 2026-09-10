@@ -702,6 +702,16 @@ def page_readiness():
     return FileResponse("company-readiness.html")
 
 
+@app.get("/company-whatif.html")
+def page_whatif():
+    return FileResponse("company-whatif.html")
+
+
+@app.get("/company-benchmark.html")
+def page_benchmark():
+    return FileResponse("company-benchmark.html")
+
+
 @app.get("/company-check.html")
 def page_check():
     return FileResponse("company-check.html")
@@ -5076,6 +5086,140 @@ def check_data_quality_rules(entries):
 
     score = round((passed_checks / total_checks) * 100) if total_checks else 0
     return score, flags
+
+
+@app.post("/company/whatif")
+def company_whatif(data: dict, user: User = Depends(get_current_user)):
+    """محاكاة السيناريوهات (What-If) — إضافة مميّزة:
+    'لو رفعت الأسعار 10%؟' → نبّاه يحاكي الأثر على الربح والهامش فوراً.
+    كل الحسابات من بياناتك الفعلية — لا اختراع."""
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id)
+        if not company or not check_permission(get_user_role(s, user), "finance", "view"):
+            raise HTTPException(403, "غير مصرّح")
+        if company.is_active != 1:
+            raise HTTPException(402, "شركتك قيد التفعيل")
+
+        # الوضع الحالي (خط الأساس)
+        branches = s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company.id, CompanyBranch.is_active == 1)).all()
+        base_sales = base_expenses = base_customers = 0.0
+        for b in branches:
+            e = s.exec(select(CompanyEntry).where(CompanyEntry.branch_id == b.id).order_by(CompanyEntry.created_at.desc())).first()
+            if e:
+                base_sales += e.sales or 0
+                base_expenses += e.expenses or 0
+                base_customers += e.customers or 0
+        if base_sales <= 0:
+            return {"has_data": False, "message": "لا توجد بيانات كافية للمحاكاة."}
+
+        base_profit = base_sales - base_expenses
+        base_margin = round(base_profit / base_sales * 100, 1) if base_sales else 0
+
+        # المتغيّرات من الطلب (نسب التغيير %)
+        price_change = float(data.get("price_change", 0) or 0)        # تغيير الأسعار %
+        volume_change = float(data.get("volume_change", 0) or 0)      # تغيير الكمية/العملاء %
+        cost_change = float(data.get("cost_change", 0) or 0)          # تغيير التكاليف %
+        expense_change = float(data.get("expense_change", 0) or 0)    # تغيير المصروفات %
+
+        # المحاكاة (منطق مالي معياري)
+        # المبيعات الجديدة = الأساس × (1+تغير السعر) × (1+تغير الكمية)
+        new_sales = base_sales * (1 + price_change / 100) * (1 + volume_change / 100)
+        # المصروفات: جزء متغيّر مع الكمية (COGS) + تغيير مباشر
+        new_expenses = base_expenses * (1 + volume_change / 100) * (1 + cost_change / 100) * (1 + expense_change / 100)
+        new_profit = new_sales - new_expenses
+        new_margin = round(new_profit / new_sales * 100, 1) if new_sales else 0
+
+        profit_change = round(new_profit - base_profit)
+        profit_change_pct = round((new_profit - base_profit) / abs(base_profit) * 100, 1) if base_profit else 0
+
+        return {
+            "has_data": True,
+            "currency": company.currency or "SAR",
+            "baseline": {"sales": round(base_sales), "expenses": round(base_expenses),
+                         "profit": round(base_profit), "margin": base_margin},
+            "scenario": {"sales": round(new_sales), "expenses": round(new_expenses),
+                         "profit": round(new_profit), "margin": new_margin},
+            "impact": {"profit_change": profit_change, "profit_change_pct": profit_change_pct,
+                       "margin_change": round(new_margin - base_margin, 1),
+                       "direction": "positive" if profit_change >= 0 else "negative"},
+            "inputs": {"price_change": price_change, "volume_change": volume_change,
+                       "cost_change": cost_change, "expense_change": expense_change},
+        }
+
+
+@app.get("/company/benchmark")
+def company_benchmark(user: User = Depends(get_current_user)):
+    """البنشمارك القطاعي (P1 من التقرير): يقارن أداء الشركة بمعايير قطاعها.
+    المعايير تقديرية إرشادية — تُوسم بوضوح (لا تُقدَّم كأرقام رسمية)."""
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id)
+        if not company:
+            raise HTTPException(403, "غير مصرّح")
+        if company.is_active != 1:
+            raise HTTPException(402, "شركتك قيد التفعيل")
+
+        # نحسب أداء الشركة الفعلي
+        branches = s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company.id, CompanyBranch.is_active == 1)).all()
+        total_sales = total_expenses = total_invoices = 0.0
+        growths = []
+        for b in branches:
+            e = s.exec(select(CompanyEntry).where(CompanyEntry.branch_id == b.id).order_by(CompanyEntry.created_at.desc())).first()
+            if e:
+                total_sales += e.sales or 0
+                total_expenses += e.expenses or 0
+                total_invoices += e.invoices or 0
+                if e.growth is not None:
+                    growths.append(e.growth)
+        if total_sales <= 0:
+            return {"has_data": False, "message": "لا توجد بيانات كافية للمقارنة."}
+
+        my_margin = round((total_sales - total_expenses) / total_sales * 100, 1)
+        my_expense_ratio = round(total_expenses / total_sales * 100, 1)
+        my_avg_ticket = round(total_sales / total_invoices) if total_invoices > 0 else 0
+        my_growth = round(sum(growths) / len(growths), 1) if growths else 0
+
+        # نجلب معايير القطاع (بمرونة — نطابق قطاع الشركة)
+        sector_map = {"fnb": "restaurant", "retail": "retail", "cafe": "cafe"}
+        bkey = sector_map.get(company.sector, "restaurant")
+        bm = BENCHMARKS.get(bkey, BENCHMARKS["restaurant"])
+
+        def compare(my_val, benchmark, higher_better=True):
+            if higher_better:
+                pct = round((my_val - benchmark) / benchmark * 100) if benchmark else 0
+                status = "above" if my_val >= benchmark else "below"
+            else:
+                pct = round((benchmark - my_val) / benchmark * 100) if benchmark else 0
+                status = "above" if my_val <= benchmark else "below"
+            return {"pct": pct, "status": status}
+
+        metrics = [
+            {"label": "هامش الربح", "my": my_margin, "benchmark": bm["margin_ok"], "unit": "%",
+             **compare(my_margin, bm["margin_ok"], True)},
+            {"label": "متوسط قيمة الفاتورة", "my": my_avg_ticket, "benchmark": bm["avg_ticket_good"], "unit": "ريال",
+             **compare(my_avg_ticket, bm["avg_ticket_good"], True)},
+            {"label": "نسبة المصروفات", "my": my_expense_ratio, "benchmark": bm["expense_ratio_ok"], "unit": "%",
+             **compare(my_expense_ratio, bm["expense_ratio_ok"], False)},
+            {"label": "معدل النمو", "my": my_growth, "benchmark": bm["orders_growth"], "unit": "%",
+             **compare(my_growth, bm["orders_growth"], True)},
+        ]
+        # درجة الموقع التنافسي (كم مؤشر فوق المعيار)
+        above_count = sum(1 for m in metrics if m["status"] == "above")
+        position_score = round(above_count / len(metrics) * 100)
+        position = "متفوّق على القطاع" if position_score >= 75 else ("في مستوى القطاع" if position_score >= 50 else "دون مستوى القطاع")
+
+        return {
+            "has_data": True,
+            "company": {"name": company.name},
+            "sector_name": bm["name"],
+            "metrics": metrics,
+            "position_score": position_score,
+            "position": position,
+            "disclaimer": "المعايير تقديرية إرشادية مبنية على متوسطات القطاع العامة — ليست أرقاماً رسمية.",
+        }
 
 
 @app.get("/company/readiness")
