@@ -712,6 +712,11 @@ def page_benchmark():
     return FileResponse("company-benchmark.html")
 
 
+@app.get("/company-customer-health.html")
+def page_cust_health():
+    return FileResponse("company-customer-health.html")
+
+
 @app.get("/company-check.html")
 def page_check():
     return FileResponse("company-check.html")
@@ -5286,6 +5291,117 @@ def company_benchmark(user: User = Depends(get_current_user)):
             "position_score": position_score,
             "position": position,
             "disclaimer": "المعايير تقديرية إرشادية مبنية على متوسطات القطاع العامة — ليست أرقاماً رسمية.",
+        }
+
+
+@app.get("/company/customer-health")
+def company_customer_health(user: User = Depends(get_current_user)):
+    """صحة العملاء والتنبؤ بالتسرّب (Customer Health) — إضافة مميّزة (Gainsight-style):
+    درجة صحة قاعدة العملاء + مؤشرات التسرّب + توصيات الاحتفاظ.
+    من بيانات وحدة العملاء الفعلية + معدل التكرار."""
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id)
+        if not company or (not check_permission(get_user_role(s, user), "customers", "view") and get_user_role(s, user) != "owner"):
+            raise HTTPException(403, "غير مصرّح")
+        if company.is_active != 1:
+            raise HTTPException(402, "شركتك قيد التفعيل")
+
+        # نجمع بيانات العملاء من الفروع + وحدة العملاء
+        branches = s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company.id, CompanyBranch.is_active == 1)).all()
+        total_customers = 0.0
+        repeats = []
+        for b in branches:
+            e = s.exec(select(CompanyEntry).where(CompanyEntry.branch_id == b.id).order_by(CompanyEntry.created_at.desc())).first()
+            if e:
+                total_customers += e.customers or 0
+                if e.repeat_rate and e.repeat_rate > 0:
+                    repeats.append(e.repeat_rate)
+        avg_repeat = round(sum(repeats) / len(repeats), 1) if repeats else 0
+
+        # بيانات وحدة العملاء الموسّعة (إن وُجدت)
+        ce = s.exec(select(CompanyModuleEntry).where(
+            CompanyModuleEntry.company_id == company.id, CompanyModuleEntry.module == "customers"
+        ).order_by(CompanyModuleEntry.created_at.desc())).first()
+        cdata = {}
+        if ce and ce.data:
+            try: cdata = json.loads(ce.data)
+            except: pass
+        def cpick(*kw):
+            for k, v in cdata.items():
+                if any(w in k for w in kw):
+                    try: return float(str(v).replace(",", "").replace("%", "").strip())
+                    except: continue
+            return None
+        new_customers = cpick("عملاء جدد", "جدد")
+        lost_customers = cpick("عملاء مفقودين", "فقدنا", "مغادرين")
+        complaints = cpick("شكاوى", "شكوى")
+        nps = cpick("nps", "رضا", "توصية")
+
+        if total_customers <= 0 and not cdata:
+            return {"has_data": False, "message": "لا توجد بيانات عملاء بعد. أدخِل بيانات وحدة العملاء."}
+
+        # درجة صحة العملاء (0-100)
+        health = 0
+        factors = []
+        if avg_repeat >= 40: health += 40; factors.append(("ولاء ممتاز", "good"))
+        elif avg_repeat >= 25: health += 28; factors.append(("ولاء جيد", "good"))
+        elif avg_repeat >= 15: health += 18; factors.append(("ولاء متوسط", "warn"))
+        elif avg_repeat > 0: health += 8; factors.append(("ولاء ضعيف", "bad"))
+        # نمو العملاء
+        if new_customers is not None and lost_customers is not None:
+            net = new_customers - lost_customers
+            if net > 0: health += 30; factors.append((f"نمو صافي +{int(net)} عميل", "good"))
+            else: health += 10; factors.append((f"تراجع صافي {int(net)} عميل", "bad"))
+        elif total_customers > 0:
+            health += 25
+        # الشكاوى
+        if complaints is not None:
+            if complaints == 0: health += 15; factors.append(("لا شكاوى", "good"))
+            elif complaints < 10: health += 8; factors.append((f"{int(complaints)} شكوى", "warn"))
+            else: factors.append((f"{int(complaints)} شكوى — مرتفع", "bad"))
+        # NPS
+        if nps is not None:
+            if nps >= 50: health += 15; factors.append((f"NPS {int(nps)} ممتاز", "good"))
+            elif nps >= 0: health += 8; factors.append((f"NPS {int(nps)}", "warn"))
+        health = min(health, 100)
+
+        # مخاطر التسرّب (Churn Risk)
+        churn_risk = "منخفض"
+        churn_color = "good"
+        churn_pct = 0
+        if lost_customers is not None and total_customers > 0:
+            churn_pct = round(lost_customers / total_customers * 100, 1)
+            if churn_pct >= 15: churn_risk = "مرتفع"; churn_color = "bad"
+            elif churn_pct >= 7: churn_risk = "متوسط"; churn_color = "warn"
+        elif avg_repeat < 20 and avg_repeat > 0:
+            churn_risk = "مرتفع (تكرار منخفض)"; churn_color = "bad"; churn_pct = round(100 - avg_repeat, 0)
+
+        # توصيات الاحتفاظ
+        recommendations = []
+        if avg_repeat < 25:
+            recommendations.append("أطلق برنامج ولاء — معدل التكرار الحالي منخفض ويهدّد الإيراد المتكرر.")
+        if lost_customers and lost_customers > 0:
+            recommendations.append(f"تواصل مع العملاء المفقودين ({int(lost_customers)}) لفهم أسباب المغادرة.")
+        if complaints and complaints >= 10:
+            recommendations.append("عالج الشكاوى المرتفعة — سبب رئيسي للتسرّب.")
+        if not recommendations:
+            recommendations.append("حافظ على مستوى الولاء الحالي وراقب المؤشرات دورياً.")
+
+        hlevel = "صحية" if health >= 70 else ("تحتاج انتباه" if health >= 45 else "حرجة")
+        return {
+            "has_data": True,
+            "company": {"name": company.name},
+            "health_score": health, "health_level": hlevel,
+            "total_customers": int(total_customers),
+            "avg_repeat": avg_repeat,
+            "churn_risk": churn_risk, "churn_color": churn_color, "churn_pct": churn_pct,
+            "new_customers": int(new_customers) if new_customers is not None else None,
+            "lost_customers": int(lost_customers) if lost_customers is not None else None,
+            "nps": int(nps) if nps is not None else None,
+            "factors": factors,
+            "recommendations": recommendations,
         }
 
 
