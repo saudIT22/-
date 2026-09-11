@@ -2859,6 +2859,73 @@ def company_analyze(data: dict, request: Request, user: User = Depends(get_curre
 
 
 # ===== اسأل نبّاه الذكي (صندوق المحادثة) =====
+@app.post("/company/finance-copilot")
+def company_finance_copilot(data: dict, user: User = Depends(get_current_user)):
+    """المساعد المالي الذكي (Copilot) — إضافة مميّزة:
+    يجيب أسئلة مالية محددة بأرقام فورية دقيقة من البيانات (بلا انتظار AI).
+    'كم أكبر مصروف؟' · 'أي فرع الأربح؟' · 'كم هامشي؟'"""
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    q = (data.get("question") or "").strip()
+    if not q:
+        raise HTTPException(400, "اكتب سؤالك")
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id)
+        if not company or not check_permission(get_user_role(s, user), "finance", "view"):
+            raise HTTPException(403, "غير مصرّح")
+        if company.is_active != 1:
+            raise HTTPException(402, "شركتك قيد التفعيل")
+
+        # نجمع البيانات
+        branches = s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company.id, CompanyBranch.is_active == 1)).all()
+        brdata = []
+        total_sales = total_expenses = total_profit = total_customers = 0.0
+        for b in branches:
+            e = s.exec(select(CompanyEntry).where(CompanyEntry.branch_id == b.id).order_by(CompanyEntry.created_at.desc())).first()
+            if e:
+                brdata.append({"name": b.name, "sales": e.sales or 0, "expenses": e.expenses or 0,
+                               "profit": e.profit or 0, "margin": e.margin or 0, "customers": e.customers or 0})
+                total_sales += e.sales or 0
+                total_expenses += e.expenses or 0
+                total_profit += e.profit or 0
+                total_customers += e.customers or 0
+        cur = company.currency or "ريال"
+        fmt = lambda n: f"{round(n):,}"
+        margin = round(total_profit / total_sales * 100, 1) if total_sales else 0
+
+        ql = q.lower()
+        answer = None
+
+        # نمط الأسئلة المالية الشائعة (إجابة فورية دقيقة)
+        if any(w in ql for w in ["هامش", "margin", "الربحية"]):
+            answer = f"هامش الربح الحالي: **{margin}%** (صافي ربح {fmt(total_profit)} {cur} من مبيعات {fmt(total_sales)} {cur})."
+        elif any(w in ql for w in ["أكبر مصروف", "أعلى مصروف", "أكثر صرف", "المصروفات"]):
+            answer = f"إجمالي المصروفات: **{fmt(total_expenses)} {cur}** ({round(total_expenses/total_sales*100) if total_sales else 0}% من المبيعات). لتفصيل البنود، أدخِل بيانات الوحدة المالية."
+        elif any(w in ql for w in ["أربح فرع", "أفضل فرع", "أعلى فرع", "الأفضل"]):
+            if brdata:
+                best = max(brdata, key=lambda x: x["profit"])
+                answer = f"الفرع الأربح: **{best['name']}** بصافي ربح {fmt(best['profit'])} {cur} وهامش {round(best['margin'],1)}%."
+        elif any(w in ql for w in ["أسوأ فرع", "أضعف فرع", "أقل فرع"]):
+            if brdata:
+                worst = min(brdata, key=lambda x: x["profit"])
+                answer = f"الفرع الأضعف: **{worst['name']}** بصافي ربح {fmt(worst['profit'])} {cur} وهامش {round(worst['margin'],1)}%. يحتاج مراجعة."
+        elif any(w in ql for w in ["مبيعات", "إيراد", "revenue", "sales"]):
+            answer = f"إجمالي المبيعات: **{fmt(total_sales)} {cur}** عبر {len(brdata)} فرع."
+        elif any(w in ql for w in ["ربح", "profit"]):
+            answer = f"صافي الربح: **{fmt(total_profit)} {cur}** (هامش {margin}%)."
+        elif any(w in ql for w in ["عملاء", "customers"]):
+            answer = f"إجمالي العملاء: **{fmt(total_customers)}** عبر كل الفروع."
+        elif any(w in ql for w in ["كم فرع", "عدد الفروع", "الفروع"]):
+            answer = f"لديك **{len(branches)} فرع**، منها {len(brdata)} فرع فيه بيانات."
+
+        if answer:
+            return {"answered": True, "answer": answer, "instant": True}
+        # لو ما فهم السؤال المالي المحدد، نوجّه لـ"اسأل نبّاه" العام
+        return {"answered": False,
+                "answer": "هذا سؤال يحتاج تحليلاً أعمق — استخدم «اسأل نبّاه» للإجابة التفصيلية بالذكاء الاصطناعي.",
+                "instant": False}
+
+
 @app.post("/company/ask")
 def company_ask(request: Request, data: dict, user: User = Depends(get_current_user)):
     if not user.company_id:
