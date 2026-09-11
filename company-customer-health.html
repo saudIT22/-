@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نبّاه · صحة العملاء</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="nabbah-design.css" rel="stylesheet">
+<style>
+  :root{--bg:#070b09;--panel:#101a15;--panel2:#0e1712;--line:#1d2c24;--mint:#10b981;--mint-deep:#0b8457;--gold:#f5b301;--red:#ef4444;--orange:#f97316;--txt:#e8f1ec;--txt-soft:#8ba396;--txt-mute:#5c6f66;}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--txt);line-height:1.7;min-height:100vh;background-image:radial-gradient(ellipse 800px 400px at 15% -5%,rgba(16,185,129,.06),transparent)}
+  a{text-decoration:none;color:inherit}
+  header{position:sticky;top:0;z-index:40;background:rgba(7,11,9,.85);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+  .head-in{max-width:860px;margin:0 auto;padding:12px 18px;display:flex;align-items:center;justify-content:space-between}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:900;font-size:19px;color:#fff}
+  .brand .bell{width:36px;height:36px;border-radius:11px;background:linear-gradient(135deg,var(--mint),var(--mint-deep));display:grid;place-items:center;font-size:17px;transform:rotate(-6deg)}
+  .btn{display:inline-flex;align-items:center;gap:7px;font-weight:700;cursor:pointer;border-radius:11px;font-size:13.5px;padding:9px 15px;background:var(--panel);color:var(--txt-soft);border:1px solid var(--line)}
+  .wrap{max-width:860px;margin:0 auto;padding:24px 18px 70px}
+  h1{font-size:22px;font-weight:900;display:flex;align-items:center;gap:9px;margin-bottom:4px}
+  .sub{font-size:13px;color:var(--txt-soft);margin-bottom:22px}
+  .hero{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+  @media(max-width:600px){.hero{grid-template-columns:1fr}}
+  .card{background:linear-gradient(180deg,rgba(255,255,255,.028),rgba(255,255,255,.008));border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:22px;text-align:center}
+  .card .ring{position:relative;width:110px;height:110px;margin:0 auto 10px}
+  .card .cl{font-size:13px;color:var(--txt-soft)}
+  .card .big{font-size:24px;font-weight:900;font-family:'Inter'}
+  .churn{display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .churn .icon{font-size:40px;margin-bottom:10px}
+  .churn .risk{font-size:22px;font-weight:900}
+  .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:16px}
+  .mc{background:linear-gradient(180deg,rgba(255,255,255,.028),rgba(255,255,255,.008));border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:16px;text-align:center}
+  .mc .mv{font-size:22px;font-weight:900;font-family:'Inter'}
+  .mc .ml{font-size:11.5px;color:var(--txt-soft);margin-top:5px}
+  .sec-h{font-size:14px;font-weight:800;color:var(--mint);margin:18px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+  .factors{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+  .factor{font-size:12px;padding:5px 12px;border-radius:8px;font-weight:600}
+  .factor.good{background:rgba(16,185,129,.12);color:var(--mint)}
+  .factor.warn{background:rgba(245,179,1,.12);color:var(--gold)}
+  .factor.bad{background:rgba(239,68,68,.12);color:var(--red)}
+  .rec{background:var(--panel2);border:1px solid var(--line);border-right:3px solid var(--mint);border-radius:11px;padding:13px 16px;margin-bottom:9px;font-size:13px}
+  .spin{width:32px;height:32px;border:3px solid var(--line);border-top-color:var(--mint);border-radius:50%;animation:sp 1s linear infinite;margin:50px auto}@keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<header>
+  <div class="head-in">
+    <a class="brand" href="company-dashboard.html"><span class="bell">🔔</span>نبّاه</a>
+    <a class="btn" href="company-customers.html">✏️ إدخال بيانات العملاء</a>
+  </div>
+</header>
+<div class="wrap">
+  <h1>❤️ صحة العملاء</h1>
+  <div class="sub">درجة صحة قاعدة عملائك + التنبؤ بالتسرّب + توصيات الاحتفاظ.</div>
+
+  <div id="loading"><div class="spin"></div></div>
+  <div id="content" style="display:none">
+    <div class="hero" id="heroBox"></div>
+    <div class="metrics" id="metricsBox"></div>
+    <div class="sec-h">🔍 عوامل الصحة</div>
+    <div class="factors" id="factorsBox"></div>
+    <div class="sec-h">💡 توصيات الاحتفاظ</div>
+    <div id="recsBox"></div>
+  </div>
+</div>
+<script>
+const TOKEN=localStorage.getItem("nabbah_token")||"";
+if(!TOKEN) window.location.href="login.html";
+async function api(p){
+  const r=await fetch(p,{headers:{"Authorization":"Bearer "+TOKEN}});
+  if(r.status===401){ localStorage.removeItem("nabbah_token"); window.location.href="login.html"; throw new Error("جلسة"); }
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(d.detail||"خطأ");
+  return d;
+}
+const fmt=n=>(Math.round(n)||0).toLocaleString("en-US");
+const hclr=s=>s>=70?"#10b981":(s>=45?"#f5b301":"#ef4444");
+const cclr=c=>c==="good"?"#10b981":(c==="warn"?"#f5b301":"#ef4444");
+async function load(){
+  try{
+    const d=await api("/company/customer-health");
+    document.getElementById("loading").style.display="none";
+    document.getElementById("content").style.display="block";
+    if(!d.has_data){
+      document.getElementById("content").innerHTML=`<div style="text-align:center;padding:60px;color:var(--txt-mute)"><div style="font-size:40px;margin-bottom:12px">❤️</div>${d.message||"لا بيانات"}<br><a href="company-customers.html" style="color:var(--mint);font-weight:700">أدخِل بيانات العملاء ←</a></div>`;
+      return;
+    }
+    const hc=hclr(d.health_score), circ=2*Math.PI*46;
+    document.getElementById("heroBox").innerHTML=`
+      <div class="card">
+        <div class="ring">
+          <svg viewBox="0 0 110 110" style="width:110px;height:110px;transform:rotate(-90deg)">
+            <circle cx="55" cy="55" r="46" fill="none" stroke="#16221c" stroke-width="11"/>
+            <circle cx="55" cy="55" r="46" fill="none" stroke="${hc}" stroke-width="11" stroke-linecap="round" stroke-dasharray="${circ}" stroke-dashoffset="${circ*(1-d.health_score/100)}"/>
+          </svg>
+          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:900;font-family:Inter;color:${hc}">${d.health_score}</div>
+        </div>
+        <div class="cl">صحة العملاء</div><div class="big" style="color:${hc}">${d.health_level}</div>
+      </div>
+      <div class="card churn">
+        <div class="icon">${d.churn_color==="bad"?"⚠️":(d.churn_color==="warn"?"🟡":"🛡️")}</div>
+        <div class="cl">مخاطر التسرّب</div>
+        <div class="risk" style="color:${cclr(d.churn_color)}">${d.churn_risk}</div>
+        ${d.churn_pct?`<div style="font-size:12px;color:var(--txt-mute);margin-top:4px">${d.churn_pct}%</div>`:""}
+      </div>`;
+
+    let m=`<div class="mc"><div class="mv">${fmt(d.total_customers)}</div><div class="ml">إجمالي العملاء</div></div>
+      <div class="mc"><div class="mv" style="color:${hclr(d.avg_repeat*2)}">${d.avg_repeat}%</div><div class="ml">معدل التكرار</div></div>`;
+    if(d.new_customers!==null)m+=`<div class="mc"><div class="mv" style="color:#10b981">+${fmt(d.new_customers)}</div><div class="ml">عملاء جدد</div></div>`;
+    if(d.lost_customers!==null)m+=`<div class="mc"><div class="mv" style="color:#ef4444">-${fmt(d.lost_customers)}</div><div class="ml">عملاء مفقودون</div></div>`;
+    if(d.nps!==null)m+=`<div class="mc"><div class="mv">${d.nps}</div><div class="ml">NPS</div></div>`;
+    document.getElementById("metricsBox").innerHTML=m;
+
+    document.getElementById("factorsBox").innerHTML=(d.factors||[]).map(f=>`<span class="factor ${f[1]}">${f[0]}</span>`).join("");
+    document.getElementById("recsBox").innerHTML=(d.recommendations||[]).map(r=>`<div class="rec">💡 ${r}</div>`).join("");
+  }catch(e){
+    document.getElementById("loading").innerHTML='<p style="text-align:center;color:var(--red)">'+e.message+'</p>';
+  }
+}
+load();
+</script>
+<script src="i18n.js"></script>
+<script src="nabbah-sidebar.js"></script>
+</body>
+</html>
