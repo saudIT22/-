@@ -22,6 +22,8 @@
     "أي فرع الأفضل؟",
     "وش أكبر المخاطر؟",
     "ليش الإيراد زاد والربح نزل؟",
+    "كم هامش الربح؟",
+    "أي فرع الأربح؟",
   ];
 
   const css = `
@@ -101,13 +103,29 @@
 
   async function ask(q) {
     if (!q.trim()) return;
-    // رسالة انتظار مطمئنة (الذكاء يأخذ وقتاً — نوضّح أنه يعمل)
+    // ① نجرّب المساعد المالي الفوري أولاً (إجابة سريعة دقيقة بلا انتظار)
+    try {
+      const fr = await fetch("/company/finance-copilot", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + TOKEN },
+        body: JSON.stringify({ question: q }),
+      });
+      if (fr.ok) {
+        const fd = await fr.json().catch(() => ({}));
+        if (fd.answered) {
+          const ans = fd.answer.replace(/\*\*(.+?)\*\*/g, '<b style="color:#10b981">$1</b>');
+          body.innerHTML = `<div class="nbQ">🔍 ${q}</div><div class="nbAnswer">⚡ ${ans}</div>`;
+          return;  // جواب فوري — انتهينا
+        }
+      }
+    } catch (e) { /* نكمل للذكاء العام */ }
+
+    // ② لو ما جاوب المساعد المالي، نستخدم الذكاء العام
     body.innerHTML = `<div class="nbQ">🔍 ${q}</div>
       <div style="text-align:center;padding:24px 10px">
         <div class="nbSpin"></div>
         <div id="nbAskWait" style="color:#8ba396;font-size:13px;margin-top:6px">نبّاه يحلّل بياناتك…</div>
       </div>`;
-    // رسائل متتابعة تطمئن المستخدم أثناء الانتظار
     const waitMsgs = ["نبّاه يحلّل بياناتك…", "يراجع أداء الفروع…", "يربط الأرقام بالأسباب…", "يجهّز الإجابة…"];
     let wi = 0;
     const waitEl = () => document.getElementById("nbAskWait");
