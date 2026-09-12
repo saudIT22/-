@@ -22,6 +22,7 @@
     { icon: "💰", label: "المالية", items: [
       { label: "الوحدة المالية", href: "company-financial-overview.html" },
       { label: "إدخال البيانات المالية", href: "company-finance.html" },
+      { label: "الخزينة والسيولة", href: "company-treasury.html" },
       { label: "التدفق النقدي", href: "company-cashflow.html" },
       { label: "هدر الإيرادات", href: "company-leakage.html" },
       { label: "الضريبة والزكاة", href: "company-tax.html" },
