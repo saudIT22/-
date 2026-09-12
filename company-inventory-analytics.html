@@ -76,6 +76,7 @@
 
     <div id="emptyBox" style="display:none"></div>
     <div class="grid" id="metrics"></div>
+    <div id="abcBox" style="margin-top:16px"></div>
 
     <div class="foot">
       <a class="btn" href="company-inventory.html">✏️ <span data-i18n="inv.entry">إدخال بيانات المخزون</span></a>
@@ -143,6 +144,16 @@ async function load(){
         <div><span class="mv">${fmt(m.value)}</span>${m.unit?`<span class="mu">${m.unit}</span>`:""}</div>
         ${m.extra?`<div class="mextra">${m.extra}</div>`:""}</div>`;
     }).join("");
+    // تصنيف ABC (تحليل باريتو)
+    if(d.abc_analysis){
+      const a=d.abc_analysis;
+      const bar=(x,col)=>`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:5px"><span>${x.label}</span><span style="font-weight:800;color:${col}">${x.count} (${x.pct}%)</span></div><div style="height:8px;background:var(--panel2,#0e1712);border-radius:5px;overflow:hidden"><div style="height:100%;width:${x.pct}%;background:${col};border-radius:5px"></div></div></div>`;
+      document.getElementById("abcBox").innerHTML=`<div style="background:linear-gradient(180deg,rgba(255,255,255,.028),rgba(255,255,255,.008));border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:20px">
+        <div style="font-size:14px;font-weight:800;color:var(--mint,#10b981);margin-bottom:14px">📊 تصنيف الأصناف (ABC — تحليل باريتو)</div>
+        ${bar(a.a,"#10b981")}${bar(a.b,"#f5b301")}${bar(a.c,"#ef4444")}
+        <div style="font-size:11px;color:var(--txt-mute,#5c6f66);margin-top:8px">ركّز على أصناف A (تحقّق معظم القيمة)، وصفِّ أصناف C الراكدة.</div>
+      </div>`;
+    }
     if(window.NabbahI18n) window.NabbahI18n.apply();
   }catch(e){
     document.getElementById("loading").innerHTML='<p style="text-align:center;color:var(--red)">'+e.message+'</p>';
