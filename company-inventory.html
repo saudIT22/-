@@ -72,6 +72,15 @@
       <div class="field"><label>أصناف بطيئة الحركة</label><input id="slow" type="number" inputmode="decimal" placeholder="0"><div class="hint">← نسبة البطيء من الإجمالي</div></div>
       <div class="field"><label>أصناف راكدة (لا تُباع)</label><input id="obsolete" type="number" inputmode="decimal" placeholder="0"></div>
     </div>
+    <div class="sec-h">💎 مؤشرات متقدّمة (اختياري)</div>
+    <div class="row">
+      <div class="field"><label>هامش إجمالي المخزون (%)</label><input id="gross_margin" type="number" inputmode="decimal" placeholder="0"><div class="hint">← حساب GMROI</div></div>
+      <div class="field"><label>نقطة إعادة الطلب (وحدة)</label><input id="reorder" type="number" inputmode="decimal" placeholder="0"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>مدة التوريد (يوم)</label><input id="lead_time" type="number" inputmode="decimal" placeholder="0"></div>
+      <div class="field"><label>أصناف مخزون زائد</label><input id="overstock" type="number" inputmode="decimal" placeholder="0"></div>
+    </div>
     <div class="sec-h">⚠️ النفاد</div>
     <div class="row">
       <div class="field"><label>مرات نفاد المخزون</label><input id="stockouts" type="number" inputmode="decimal" placeholder="0"><div class="hint">كم مرة نفد صنف مطلوب</div></div>
@@ -111,6 +120,10 @@ const FIELDS=[
   ["slow","أصناف بطيئة الحركة"],
   ["obsolete","أصناف راكدة"],
   ["stock_count","عدد وحدات المخزون"],
+  ["gross_margin","هامش إجمالي المخزون"],
+  ["reorder","نقطة إعادة الطلب"],
+  ["lead_time","مدة التوريد"],
+  ["overstock","مخزون زائد"],
 ];
 function initPeriod(){
   const now=new Date();
