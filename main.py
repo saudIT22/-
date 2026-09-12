@@ -717,6 +717,11 @@ def page_cust_health():
     return FileResponse("company-customer-health.html")
 
 
+@app.get("/company-treasury.html")
+def page_treasury():
+    return FileResponse("company-treasury.html")
+
+
 @app.get("/company-check.html")
 def page_check():
     return FileResponse("company-check.html")
@@ -3602,6 +3607,80 @@ def company_financials(data: dict, user: User = Depends(get_current_user)):
         s.add(company)
         s.commit()
         return {"ok": True, "cash_reserve": company.cash_reserve, "monthly_obligations": company.monthly_obligations}
+
+
+@app.get("/company/treasury")
+def company_treasury(user: User = Depends(get_current_user)):
+    """الخزينة والسيولة (Treasury Intelligence) — تعميق من التقرير:
+    Cash runway · توقّع 13 أسبوع · AR/AP aging · جدول الديون · الالتزامات القادمة."""
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id)
+        if not company or not check_permission(get_user_role(s, user), "cashflow", "view"):
+            raise HTTPException(403, "غير مصرّح — الخزينة للمالك والمحاسب فقط")
+        if company.is_active != 1:
+            raise HTTPException(402, "شركتك قيد التفعيل")
+
+        cash = company.cash_reserve or 0
+        obligations = company.monthly_obligations or 0
+        est = company_monthly_estimate(s, company.id)
+        monthly_net = round(est["profit"] - obligations)
+        cur = company.currency or "SAR"
+
+        # Cash Runway (كم شهر تكفي السيولة)
+        runway_months = round(cash / abs(monthly_net), 1) if monthly_net < 0 and cash > 0 else None
+        runway_status = "critical" if (runway_months is not None and runway_months < 3) else ("warn" if (runway_months is not None and runway_months < 6) else "good")
+
+        # توقّع ١٣ أسبوع (13-week cash forecast) — من الصافي الشهري
+        weekly_net = round(monthly_net / 4.33)
+        forecast_13w = []
+        running = cash
+        for w in range(1, 14):
+            running += weekly_net
+            forecast_13w.append({"week": w, "cash": round(running)})
+        # نقطة العجز (متى تنفد السيولة)
+        deficit_week = None
+        for f in forecast_13w:
+            if f["cash"] < 0:
+                deficit_week = f["week"]; break
+
+        # AR/AP aging من وحدة المالية
+        fin = s.exec(select(CompanyModuleEntry).where(
+            CompanyModuleEntry.company_id == company.id, CompanyModuleEntry.module == "finance"
+        ).order_by(CompanyModuleEntry.created_at.desc())).first()
+        fd = {}
+        if fin and fin.data:
+            try: fd = json.loads(fin.data)
+            except: pass
+        def fpick(*kw):
+            for k, v in fd.items():
+                if any(w in k for w in kw):
+                    try: return float(str(v).replace(",", "").replace("%", "").strip())
+                    except: continue
+            return None
+        ar = fpick("ذمم مدينة", "مستحقات لك")
+        ap = fpick("ذمم دائنة", "مستحقات عليك")
+        debt_short = fpick("ديون قصيرة", "قصيرة الأجل")
+        debt_long = fpick("ديون طويلة", "طويلة الأجل")
+
+        return {
+            "has_data": True,
+            "company": {"name": company.name},
+            "currency": cur,
+            "cash_now": round(cash),
+            "monthly_net": monthly_net,
+            "obligations": round(obligations),
+            "runway": {"months": runway_months, "status": runway_status,
+                       "note": "السيولة كافية" if runway_months is None else f"تكفي {runway_months} شهر بالمعدل الحالي"},
+            "forecast_13w": forecast_13w,
+            "deficit_week": deficit_week,
+            "receivables": {"ar": round(ar) if ar is not None else None, "ap": round(ap) if ap is not None else None,
+                            "net": round(ar - ap) if (ar is not None and ap is not None) else None},
+            "debt": {"short": round(debt_short) if debt_short is not None else None,
+                     "long": round(debt_long) if debt_long is not None else None,
+                     "total": round((debt_short or 0) + (debt_long or 0)) if (debt_short is not None or debt_long is not None) else None},
+        }
 
 
 @app.get("/company/cashflow")
