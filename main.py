@@ -5685,12 +5685,49 @@ def company_inventory_analytics(user: User = Depends(get_current_user)):
         metrics.append({"key":"obsolete","icon":"🗑️","label":"الأصناف الراكدة","value":int(obsolete) if obsolete is not None else None,"unit":"صنف","has_data":obsolete is not None,"status":None})
         metrics.append({"key":"stock_count","icon":"📊","label":"إجمالي وحدات المخزون","value":int(stock_count) if stock_count is not None else None,"unit":"وحدة","has_data":stock_count is not None,"status":None})
 
+        # ===== مؤشرات مؤسسية عميقة (من تقرير التدقيق) =====
+        gross_margin_inv = pick("هامش إجمالي", "ربحية المخزون")
+        reorder = pick("نقطة إعادة الطلب", "reorder")
+        lead_time = pick("مدة التوريد", "lead time", "زمن التوريد")
+        overstock = pick("مخزون زائد", "overstock", "فائض")
+        # GMROI = هامش الربح الإجمالي ÷ متوسط تكلفة المخزون
+        gmroi = None
+        if gross_margin_inv is not None and inv_value and inv_value > 0:
+            gmroi = round(gross_margin_inv / inv_value * 100, 1)
+        elif cogs_period and inv_value and inv_value > 0 and turnover:
+            # تقدير: هامش × دوران
+            gmroi = round((1 - 0.6) * turnover, 1)  # افتراض هامش 40%
+
+        # GMROI (ربحية الاستثمار في المخزون)
+        metrics.append({"key":"gmroi","icon":"💎","label":"عائد الاستثمار في المخزون (GMROI)","value":gmroi,"unit":"","has_data":gmroi is not None,
+                        "status":("good" if (gmroi and gmroi>=3) else ("warn" if (gmroi and gmroi>=1.5) else "bad")) if gmroi is not None else None})
+        # المخزون الزائد (Overstock)
+        overstock_pct = round(overstock / skus * 100, 1) if (overstock is not None and skus and skus > 0) else None
+        metrics.append({"key":"overstock","icon":"📈","label":"المخزون الزائد","value":overstock_pct,"unit":"%","has_data":overstock_pct is not None,
+                        "status":("good" if (overstock_pct is not None and overstock_pct<10) else "warn") if overstock_pct is not None else None})
+        # نقطة إعادة الطلب
+        metrics.append({"key":"reorder","icon":"🔔","label":"نقطة إعادة الطلب","value":int(reorder) if reorder is not None else None,"unit":"وحدة","has_data":reorder is not None,"status":None})
+        # مدة التوريد (Lead Time)
+        metrics.append({"key":"lead_time","icon":"🚚","label":"مدة التوريد","value":round(lead_time,1) if lead_time is not None else None,"unit":"يوم","has_data":lead_time is not None,
+                        "status":("good" if (lead_time is not None and lead_time<7) else "warn") if lead_time is not None else None})
+
+        # ===== تصنيف ABC (تحليل باريتو للأصناف) =====
+        abc = None
+        if skus and slow_items is not None and obsolete is not None:
+            fast = skus - (slow_items or 0) - (obsolete or 0)
+            abc = {
+                "a": {"count": int(fast), "pct": round(fast/skus*100), "label": "أصناف A (سريعة — 80% من القيمة)"},
+                "b": {"count": int(slow_items or 0), "pct": round((slow_items or 0)/skus*100), "label": "أصناف B (متوسطة)"},
+                "c": {"count": int(obsolete or 0), "pct": round((obsolete or 0)/skus*100), "label": "أصناف C (راكدة — مرشّحة للتصفية)"},
+            }
+
         filled = sum(1 for m in metrics if m["has_data"])
         return {
             "company": {"name": company.name},
             "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
             "has_any_data": has_any,
             "metrics": metrics,
+            "abc_analysis": abc,
             "filled_count": filled,
             "total_count": len(metrics),
         }
