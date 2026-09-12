@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نبّاه · الخزينة والسيولة</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="nabbah-design.css" rel="stylesheet">
+<style>
+  :root{--bg:#070b09;--panel:#101a15;--panel2:#0e1712;--line:#1d2c24;--mint:#10b981;--mint-deep:#0b8457;--gold:#f5b301;--red:#ef4444;--orange:#f97316;--txt:#e8f1ec;--txt-soft:#8ba396;--txt-mute:#5c6f66;}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--txt);line-height:1.7;min-height:100vh;background-image:radial-gradient(ellipse 800px 400px at 15% -5%,rgba(16,185,129,.06),transparent)}
+  a{text-decoration:none;color:inherit}
+  header{position:sticky;top:0;z-index:40;background:rgba(7,11,9,.85);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+  .head-in{max-width:860px;margin:0 auto;padding:12px 18px;display:flex;align-items:center;justify-content:space-between}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:900;font-size:19px;color:#fff}
+  .brand .bell{width:36px;height:36px;border-radius:11px;background:linear-gradient(135deg,var(--mint),var(--mint-deep));display:grid;place-items:center;font-size:17px;transform:rotate(-6deg)}
+  .btn{display:inline-flex;align-items:center;gap:7px;font-weight:700;cursor:pointer;border-radius:11px;font-size:13.5px;padding:9px 15px;background:var(--panel);color:var(--txt-soft);border:1px solid var(--line)}
+  .wrap{max-width:860px;margin:0 auto;padding:24px 18px 70px}
+  h1{font-size:22px;font-weight:900;display:flex;align-items:center;gap:9px;margin-bottom:4px}
+  .sub{font-size:13px;color:var(--txt-soft);margin-bottom:22px}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+  @media(max-width:600px){.stats{grid-template-columns:1fr}}
+  .stat{background:linear-gradient(180deg,rgba(255,255,255,.028),rgba(255,255,255,.008));border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:18px;text-align:center}
+  .stat .v{font-size:24px;font-weight:900;font-family:'Inter';letter-spacing:-1px}
+  .stat .l{font-size:11.5px;color:var(--txt-soft);margin-top:5px}
+  .runway{border-radius:16px;padding:20px;margin-bottom:16px;text-align:center}
+  .runway.good{background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25)}
+  .runway.warn{background:rgba(245,179,1,.08);border:1px solid rgba(245,179,1,.25)}
+  .runway.critical{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25)}
+  .runway .rt{font-size:14px;font-weight:800;margin-bottom:4px}
+  .runway .rn{font-size:13px;color:var(--txt-soft)}
+  .card{background:linear-gradient(180deg,rgba(255,255,255,.028),rgba(255,255,255,.008));border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:22px;margin-bottom:16px}
+  .card-t{font-size:14px;font-weight:800;color:var(--mint);margin-bottom:16px}
+  .ratios{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
+  .rc{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .rc .rl{font-size:11.5px;color:var(--txt-soft);margin-bottom:5px}
+  .rc .rv{font-size:20px;font-weight:900;font-family:'Inter'}
+  .na{color:var(--txt-mute);font-size:12px}
+  .spin{width:32px;height:32px;border:3px solid var(--line);border-top-color:var(--mint);border-radius:50%;animation:sp 1s linear infinite;margin:50px auto}@keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<header>
+  <div class="head-in">
+    <a class="brand" href="company-dashboard.html"><span class="bell">🔔</span>نبّاه</a>
+    <a class="btn" href="company-cashflow.html">💧 التدفق النقدي</a>
+  </div>
+</header>
+<div class="wrap">
+  <h1>🏦 الخزينة والسيولة</h1>
+  <div class="sub">مركز السيولة: كم تكفي أموالك · توقّع ١٣ أسبوع · الذمم والديون.</div>
+
+  <div id="loading"><div class="spin"></div></div>
+  <div id="content" style="display:none">
+    <div class="stats" id="statsBox"></div>
+    <div id="runwayBox"></div>
+    <div class="card">
+      <div class="card-t">📈 توقّع السيولة — ١٣ أسبوع القادمة</div>
+      <div id="chartBox"></div>
+    </div>
+    <div class="card">
+      <div class="card-t">💳 الذمم والديون</div>
+      <div class="ratios" id="debtBox"></div>
+    </div>
+  </div>
+</div>
+<script>
+const TOKEN=localStorage.getItem("nabbah_token")||"";
+if(!TOKEN) window.location.href="login.html";
+async function api(p){
+  const r=await fetch(p,{headers:{"Authorization":"Bearer "+TOKEN}});
+  if(r.status===401){ localStorage.removeItem("nabbah_token"); window.location.href="login.html"; throw new Error("جلسة"); }
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(d.detail||"خطأ");
+  return d;
+}
+const fmt=n=>(Math.round(n)||0).toLocaleString("en-US");
+async function load(){
+  try{
+    const d=await api("/company/treasury");
+    document.getElementById("loading").style.display="none";
+    document.getElementById("content").style.display="block";
+    const cur=d.currency||"ريال";
+
+    document.getElementById("statsBox").innerHTML=`
+      <div class="stat"><div class="v">${fmt(d.cash_now)}</div><div class="l">النقد الحالي (${cur})</div></div>
+      <div class="stat"><div class="v" style="color:${d.monthly_net>=0?'var(--mint)':'var(--red)'}">${d.monthly_net>=0?'+':''}${fmt(d.monthly_net)}</div><div class="l">الصافي الشهري</div></div>
+      <div class="stat"><div class="v">${fmt(d.obligations)}</div><div class="l">الالتزامات الشهرية</div></div>`;
+
+    // Runway
+    const rw=d.runway;
+    const rcol=rw.status==="critical"?"var(--red)":(rw.status==="warn"?"var(--gold)":"var(--mint)");
+    document.getElementById("runwayBox").innerHTML=`<div class="runway ${rw.status}">
+      <div class="rt" style="color:${rcol}">${rw.months?("⏳ السيولة تكفي "+rw.months+" شهر"):("🛡️ السيولة مستقرة")}</div>
+      <div class="rn">${rw.note}${d.deficit_week?(" · نقطة العجز المتوقّعة: الأسبوع "+d.deficit_week):""}</div>
+    </div>`;
+
+    // رسم التوقّع ١٣ أسبوع (SVG)
+    const fw=d.forecast_13w||[];
+    if(fw.length){
+      const W=760, H=180, pad=30;
+      const vals=fw.map(x=>x.cash);
+      const mn=Math.min(...vals,0), mx=Math.max(...vals);
+      const range=mx-mn||1;
+      const px=i=>pad+(i/(fw.length-1))*(W-pad*2);
+      const py=v=>H-pad-((v-mn)/range)*(H-pad*2);
+      const pts=fw.map((x,i)=>`${px(i)},${py(x.cash)}`).join(" ");
+      const zeroY=py(0);
+      document.getElementById("chartBox").innerHTML=`<svg viewBox="0 0 ${W} ${H}" style="width:100%">
+        <line x1="${pad}" y1="${zeroY}" x2="${W-pad}" y2="${zeroY}" stroke="#ef4444" stroke-width="1" stroke-dasharray="4"/>
+        <polyline points="${pts}" fill="none" stroke="#10b981" stroke-width="2.5"/>
+        ${fw.map((x,i)=>`<circle cx="${px(i)}" cy="${py(x.cash)}" r="3" fill="${x.cash<0?'#ef4444':'#10b981'}"/>`).join("")}
+        <text x="${pad}" y="14" fill="#8ba396" font-size="11">أسبوع 1</text>
+        <text x="${W-pad-40}" y="14" fill="#8ba396" font-size="11">أسبوع 13</text>
+      </svg>
+      <div style="font-size:11.5px;color:var(--txt-mute);margin-top:8px;text-align:center">الخط الأحمر = نفاد السيولة. مبني على صافيك الشهري الحالي.</div>`;
+    }
+
+    // الذمم والديون
+    const r=d.receivables, debt=d.debt;
+    const item=(l,v,col)=>v!==null&&v!==undefined?`<div class="rc"><div class="rl">${l}</div><div class="rv" style="color:${col||'var(--txt)'}">${fmt(v)} <span style="font-size:12px">${cur}</span></div></div>`:`<div class="rc"><div class="rl">${l}</div><div class="rv na">بحاجة لإدخال</div></div>`;
+    document.getElementById("debtBox").innerHTML=
+      item("ذمم مدينة (لك)",r.ar,"var(--mint)")+
+      item("ذمم دائنة (عليك)",r.ap,"var(--orange)")+
+      item("صافي الذمم",r.net,r.net>=0?"var(--mint)":"var(--red)")+
+      item("إجمالي الديون",debt.total,"var(--red)");
+  }catch(e){
+    document.getElementById("loading").innerHTML='<p style="text-align:center;color:var(--red)">'+e.message+'</p>';
+  }
+}
+load();
+</script>
+<script src="i18n.js"></script>
+<script src="nabbah-sidebar.js"></script>
+</body>
+</html>
