@@ -5904,10 +5904,40 @@ def company_ops_analytics(user: User = Depends(get_current_user)):
         metrics.append({"key":"downtime","icon":"🔧","label":"وقت التوقف","value":round(downtime,1) if downtime is not None else None,"unit":"ساعة",
                         "has_data":downtime is not None,"status":("good" if (downtime is not None and downtime<5) else "warn") if downtime is not None else None})
 
+        # ===== مؤشرات عميقة (من تقرير التدقيق) =====
+        wait_time = pick("وقت الانتظار", "الانتظار")
+        complaints_ops = pick("الشكاوى", "شكاوى")
+        returns_ops = pick("المرتجعات", "مرتجعات")
+        # المبيعات لكل موظف/وردية (من الطلبات المكتملة)
+        # تكلفة عدم التصحيح (Cost of Poor Quality) — الأثر المالي للهدر
+        # نحسبها من: معدل العيوب × متوسط قيمة الطلب × عدد الطلبات
+        cost_of_waste = None
+        if defect is not None and completed and completed > 0:
+            # نجيب متوسط قيمة الطلب من بيانات المبيعات
+            _branches = s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company.id, CompanyBranch.is_active == 1)).all()
+            _total_sales = 0
+            for _b in _branches:
+                _e = s.exec(select(CompanyEntry).where(CompanyEntry.branch_id == _b.id).order_by(CompanyEntry.created_at.desc())).first()
+                if _e: _total_sales += _e.sales or 0
+            if _total_sales > 0 and completed > 0:
+                avg_order = _total_sales / completed
+                # تكلفة العيوب = نسبة العيوب × المبيعات (تقدير محافظ)
+                cost_of_waste = round(defect / 100 * _total_sales)
+
+        # ⑩ وقت الانتظار
+        metrics.append({"key":"wait","icon":"⏳","label":"وقت الانتظار","value":round(wait_time,1) if wait_time is not None else None,"unit":"دقيقة",
+                        "has_data":wait_time is not None,"status":("good" if (wait_time is not None and wait_time<10) else "warn") if wait_time is not None else None})
+        # ⑪ المرتجعات
+        return_rate = round(returns_ops / completed * 100, 1) if (returns_ops is not None and completed and completed > 0) else None
+        metrics.append({"key":"returns","icon":"↩️","label":"معدل المرتجعات","value":return_rate,"unit":"%",
+                        "has_data":return_rate is not None,"status":("good" if (return_rate is not None and return_rate<3) else "warn") if return_rate is not None else None})
+
         filled = sum(1 for m in metrics if m["has_data"])
         return {
             "company": {"name": company.name},
             "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "cost_of_waste": cost_of_waste,
+            "currency": company.currency or "SAR",
             "has_any_data": has_any,
             "metrics": metrics,
             "filled_count": filled,
