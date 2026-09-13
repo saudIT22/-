@@ -84,6 +84,15 @@
       <div class="field"></div>
     </div>
 
+    <div class="sec-h">⏳ الخدمة والجودة</div>
+    <div class="row">
+      <div class="field"><label>متوسط وقت الانتظار (دقيقة)</label><input id="wait" type="number" inputmode="decimal" placeholder="0"></div>
+      <div class="field"><label>عدد المرتجعات</label><input id="returns" type="number" inputmode="decimal" placeholder="0"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>عدد الشكاوى</label><input id="complaints" type="number" inputmode="decimal" placeholder="0"></div>
+      <div class="field"></div>
+    </div>
     <div class="sec-h">📡 مصدر البيانات</div>
     <div class="field" style="margin-bottom:14px">
       <select id="source">
@@ -120,6 +129,9 @@ const FIELDS=[
   ["productivity","الإنتاجية اليومية"],
   ["capacity","استغلال الطاقة"],
   ["sla","التزام SLA"],
+  ["wait","وقت الانتظار"],
+  ["returns","المرتجعات"],
+  ["complaints","الشكاوى"],
 ];
 function initPeriod(){
   const now=new Date();
