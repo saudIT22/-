@@ -75,6 +75,7 @@
     <div class="info" data-i18n="ops.info">💡 كل مؤشر يُحسب من بياناتك الفعلية. المؤشرات بدون بيانات تظهر "بحاجة لإدخال" — وليست صفراً.</div>
 
     <div id="emptyBox" style="display:none"></div>
+    <div id="wasteBox" style="margin-bottom:16px"></div>
     <div class="grid" id="metrics"></div>
 
     <div class="foot">
@@ -119,6 +120,15 @@ async function load(){
       return;
     }
 
+    // بطاقة تكلفة الهدر (Cost of Poor Quality) — رقم مالي بارز
+    if(d.cost_of_waste && d.cost_of_waste>0){
+      const cur=d.currency||"ريال";
+      document.getElementById("wasteBox").innerHTML=`<div style="background:linear-gradient(135deg,rgba(239,68,68,.1),transparent);border:1px solid rgba(239,68,68,.3);border-radius:16px;padding:20px;text-align:center">
+        <div style="font-size:13px;color:var(--txt-soft,#8ba396);margin-bottom:6px">💰 تكلفة الهدر التقديرية (العيوب والأخطاء)</div>
+        <div style="font-size:34px;font-weight:900;color:#ef4444;font-family:Inter">${(Math.round(d.cost_of_waste)||0).toLocaleString()} ${cur}</div>
+        <div style="font-size:12px;color:var(--txt-mute,#5c6f66);margin-top:6px">كل تحسين في الجودة يوفّر جزءاً من هذا المبلغ — الهدر له ثمن.</div>
+      </div>`;
+    }
     document.getElementById("metrics").innerHTML=d.metrics.map(m=>{
       if(!m.has_data){
         return `<div class="mc nodata"><div class="mh"><div class="mi">${m.icon}</div><div class="ml">${m.label}</div></div>
