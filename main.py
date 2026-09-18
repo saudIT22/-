@@ -75,6 +75,54 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type", "X-Admin-Key"],
 )
 
+
+# ═══════════════════════════════════════════════════════════
+#  طبقة معالجة الأخطاء الموحّدة (Error Handling Layer) — Phase 1.5
+#  تُخفي التفاصيل الداخلية عن المستخدم، تسجّلها داخلياً للمطوّر.
+#  لا تكشف: أسماء جداول، مسارات، stack traces، تفاصيل قاعدة البيانات.
+# ═══════════════════════════════════════════════════════════
+import logging as _logging
+_logging.basicConfig(level=_logging.INFO)
+_logger = _logging.getLogger("nabbah")
+
+from fastapi.responses import JSONResponse as _JSONResponse
+from fastapi.exceptions import RequestValidationError as _ReqValidationError
+from starlette.exceptions import HTTPException as _StarletteHTTPException
+
+
+@app.exception_handler(_StarletteHTTPException)
+async def _http_exception_handler(request: Request, exc):
+    """معالج HTTPException — يمرّر الرسائل المقصودة (عربية آمنة) كما هي."""
+    return _JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+    )
+
+
+@app.exception_handler(_ReqValidationError)
+async def _validation_exception_handler(request: Request, exc):
+    """معالج أخطاء التحقق — رسالة عامة بدل تفاصيل Pydantic التقنية."""
+    return _JSONResponse(
+        status_code=422,
+        content={"detail": "البيانات المُرسلة غير صحيحة — تأكّد من صحة الحقول."},
+    )
+
+
+@app.exception_handler(Exception)
+async def _unhandled_exception_handler(request: Request, exc):
+    """معالج الأخطاء غير المتوقّعة — يُخفي التفاصيل عن المستخدم.
+    يسجّل الخطأ كاملاً داخلياً للمطوّر، ويرد رسالة عامة آمنة."""
+    # نسجّل داخلياً (للمطوّر فقط — لا يصل المستخدم)
+    _logger.error(
+        f"خطأ غير متوقّع في {request.method} {request.url.path}: "
+        f"{type(exc).__name__}: {str(exc)[:300]}"
+    )
+    # نرد رسالة عامة آمنة (لا تكشف أي تفصيل داخلي)
+    return _JSONResponse(
+        status_code=500,
+        content={"detail": "حدث خطأ غير متوقّع. حاول مرة أخرى، وإن استمرّ تواصل مع الدعم."},
+    )
+
 class SalesData(BaseModel):
     restaurant: str
     sector: Optional[str] = "restaurant"  # restaurant / cafe / retail
@@ -4425,8 +4473,11 @@ def company_module_save(payload: dict, user: User = Depends(get_current_user)):
     data = payload.get("data") or {}
     if not isinstance(data, dict):
         raise HTTPException(400, "البيانات غير صالحة")
-    # نظّف القيم الفارغة
-    cleaned = {k: v for k, v in data.items() if v is not None and str(v).strip() != ""}
+    # ═══ طبقة سلامة البيانات (Phase 1.4): تحقّق قبل الحفظ ═══
+    validation = validate_module_input(data)
+    cleaned = validation["cleaned"]
+    # نزيل القيم الفارغة (كما كان)
+    cleaned = {k: v for k, v in cleaned.items() if v is not None and str(v).strip() != ""}
     with Session(engine) as s:
         company = _module_guard(s, user, module)
         bid = int(branch_id) if branch_id else None
@@ -4444,9 +4495,10 @@ def company_module_save(payload: dict, user: User = Depends(get_current_user)):
             s.refresh(entry)
         except Exception as e:
             s.rollback()
-            raise HTTPException(500, f"تعذّر الحفظ: {str(e)[:160]}")
+            _logger.error(f"فشل حفظ الوحدة: {type(e).__name__}: {str(e)[:200]}"); raise HTTPException(500, "تعذّر حفظ البيانات. حاول مرة أخرى.")
         log_activity(user.name, f"حفظ بيانات وحدة {MODULE_LABEL.get(module, module)} ({period})", user.email)
-        return {"ok": True, "id": entry.id, "period": period, "module": module, "fields": len(cleaned)}
+        return {"ok": True, "id": entry.id, "period": period, "module": module,
+                "fields": len(cleaned), "warnings": validation.get("warnings", [])}
 
 
 @app.get("/company/module/{module}")
@@ -5319,6 +5371,81 @@ MODULE_KEY_FIELDS = {
 #  حقل مستمر تستخدمه كل الخدمات اللاحقة (صحة، مركز قيادة، تنبؤ...).
 # ═══════════════════════════════════════════════════════════
 QUALITY_THRESHOLD = 60  # عتبة الثقة: أقل منها = confidence_flag
+
+
+# ═══════════════════════════════════════════════════════════
+#  طبقة سلامة البيانات (Data Integrity Layer) — Phase 1.4
+#  تحقّق من المدخلات عند الحفظ: أنواع، حدود، قيم منطقية.
+#  لا ترفض بيانات المستخدم قسراً (تجنّب الكسر) — تنظّف وتُبلّغ.
+# ═══════════════════════════════════════════════════════════
+# حدود منطقية للقيم المالية (سقف معقول لكشف الأخطاء الجسيمة)
+MAX_REASONABLE_VALUE = 10_000_000_000  # 10 مليار — سقف لكشف الأخطاء الكتابية
+# الحقول التي يجب ألا تكون سالبة (قيم مطلقة)
+NON_NEGATIVE_HINTS = ("مبيعات", "sales", "إيراد", "revenue", "عدد", "count",
+                       "عملاء", "customers", "موظف", "employee", "كمية", "quantity",
+                       "مخزون", "inventory", "تكلفة", "cost", "رواتب", "salary")
+
+
+def validate_module_input(data: dict) -> dict:
+    """يتحقق من مدخلات الوحدة قبل الحفظ.
+    يُرجع: {cleaned, warnings, rejected}
+    - cleaned: القيم الصالحة (بعد التنظيف)
+    - warnings: تنبيهات على قيم مشبوهة (لا ترفض)
+    - rejected: قيم رُفضت (نوع خاطئ فقط)
+    آمن: لا يرفض بيانات صالحة، يزيل فقط الفاسد بوضوح."""
+    cleaned = {}
+    warnings = []
+    rejected = []
+    if not isinstance(data, dict):
+        return {"cleaned": {}, "warnings": [], "rejected": ["البيانات ليست كائناً صالحاً"]}
+
+    for k, v in data.items():
+        key = str(k).strip()
+        if not key:
+            continue
+        # القيم النصّية الوصفية (أسباب، ملاحظات) تُقبل كما هي
+        if key.startswith("__") or isinstance(v, str) and not _looks_numeric(v):
+            cleaned[key] = v
+            continue
+        # نحاول تحويل رقمي
+        num = _safe_number(v)
+        if num is None:
+            # قيمة غير رقمية في حقل يُتوقّع أن يكون رقمياً — نقبلها كنص (لا نرفض)
+            cleaned[key] = v
+            continue
+        # فحص ١: قيمة سالبة في حقل يجب أن يكون موجباً
+        kl = key.lower()
+        if num < 0 and any(h in key or h in kl for h in NON_NEGATIVE_HINTS):
+            # لا نرفض (قد تكون مرتجعات) — لكن ننبّه
+            warnings.append(f"قيمة سالبة في «{key}» ({num}) — تأكّد أنها مقصودة")
+            cleaned[key] = num
+        # فحص ٢: قيمة أكبر من المعقول (خطأ كتابي محتمل)
+        elif abs(num) > MAX_REASONABLE_VALUE:
+            warnings.append(f"قيمة كبيرة جداً في «{key}» — تأكّد من عدم وجود خطأ كتابي")
+            cleaned[key] = num
+        else:
+            cleaned[key] = num
+
+    return {"cleaned": cleaned, "warnings": warnings, "rejected": rejected}
+
+
+def _looks_numeric(s):
+    """هل النص يبدو رقماً؟"""
+    try:
+        float(str(s).replace(",", "").replace("%", "").strip())
+        return True
+    except (ValueError, TypeError):
+        return False
+
+
+def _safe_number(v):
+    """يحوّل لرقم بأمان أو None."""
+    if isinstance(v, (int, float)):
+        return v
+    try:
+        return float(str(v).replace(",", "").replace("%", "").strip())
+    except (ValueError, TypeError):
+        return None
 
 
 def check_data_quality_rules(entries):
@@ -7067,7 +7194,7 @@ def parse_excel(data_bytes):
         rows = [[c for c in r] for r in all_rows[hidx+1:] if any(c is not None for c in r)]
         return headers, rows, {"year_hint": year_hint}
     except Exception as e:
-        raise HTTPException(400, f"تعذّر قراءة الملف: {str(e)[:120]}")
+        _logger.error(f"فشل قراءة الملف: {type(e).__name__}: {str(e)[:200]}"); raise HTTPException(400, "تعذّر قراءة الملف. تأكّد أنه Excel أو CSV صالح.")
 
 
 def _to_num(v):
@@ -7517,7 +7644,7 @@ async def company_upload_import(file: UploadFile = File(...), user: User = Depen
         try:
             aggregated = aggregate_transactions(rows, col_map, headers, year_hint=fctx.get("year_hint"))
         except Exception as e:
-            raise HTTPException(400, f"خطأ أثناء تلخيص المعاملات: {type(e).__name__}: {str(e)[:180]}")
+            _logger.error(f"فشل تلخيص المعاملات: {type(e).__name__}: {str(e)[:200]}"); raise HTTPException(400, "تعذّر تحليل المعاملات في الملف. تأكّد من تنسيق البيانات.")
         if not aggregated:
             raise HTTPException(400, "لم نستطع تلخيص المعاملات — تأكد من صحة أعمدة التاريخ والفرع والمبلغ")
         with Session(engine) as s:
@@ -7592,7 +7719,7 @@ async def company_upload_import(file: UploadFile = File(...), user: User = Depen
 
             except Exception as e:
                 s.rollback()
-                raise HTTPException(500, f"خطأ أثناء حفظ الملخّصات: {type(e).__name__}: {str(e)[:180]}")
+                _logger.error(f"فشل حفظ الملخّصات: {type(e).__name__}: {str(e)[:200]}"); raise HTTPException(500, "تعذّر حفظ ملخّص الملف. حاول مرة أخرى.")
             # وحدة المبيعات: مرتجعات آخر فترة لكل فرع (بمصدر pos)
             module_entries = 0
             for bid, (ret_amt, ret_cnt, period) in returns_by_branch.items():
@@ -8296,7 +8423,7 @@ def pages_check(_: bool = Depends(verify_admin)):
                 results.append({"file": fname, "status": "⚠️ نسخة قديمة — أعد رفعها"})
                 old_pages.append(fname)
         except Exception as e:
-            results.append({"file": fname, "status": f"خطأ: {str(e)[:40]}"})
+            _logger.error(f"فشل معالجة ملف {fname}: {type(e).__name__}: {str(e)[:150]}"); results.append({"file": fname, "status": "تعذّرت المعالجة"})
     return {
         "summary": "✅ كل الصفحات محدّثة" if not old_pages else f"⚠️ {len(old_pages)} صفحة قديمة أو مفقودة تحتاج إعادة رفع",
         "needs_reupload": old_pages,
