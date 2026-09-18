@@ -1,0 +1,4 @@
+# NABBAH — متطلبات الاختبار (منفصلة عن الإنتاج)
+pytest>=7.4.0
+httpx>=0.24.0
+# ملاحظة: fastapi, sqlmodel, bcrypt, PyJWT موجودة في requirements.txt الرئيسي
