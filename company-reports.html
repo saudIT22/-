@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نبّاه · مركز التقارير</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<link href="nabbah-design.css" rel="stylesheet">
+<style>
+  :root{--bg:#070b09;--panel:#101a15;--panel2:#0e1712;--line:#1d2c24;--mint:#10b981;--mint-deep:#0b8457;--gold:#f5b301;--red:#ef4444;--blue:#3b82f6;--purple:#a855f7;--txt:#e8f1ec;--txt-soft:#8ba396;--txt-mute:#5c6f66;}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--txt);line-height:1.7;min-height:100vh;background-image:radial-gradient(ellipse 800px 400px at 15% -5%,rgba(16,185,129,.06),transparent)}
+  a{text-decoration:none;color:inherit}
+  header{position:sticky;top:0;z-index:40;background:rgba(7,11,9,.85);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+  .head-in{max-width:900px;margin:0 auto;padding:12px 18px;display:flex;align-items:center;justify-content:space-between}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:900;font-size:19px;color:#fff}
+  .brand .bell{width:36px;height:36px;border-radius:11px;background:linear-gradient(135deg,var(--mint),var(--mint-deep));display:grid;place-items:center;font-size:17px;transform:rotate(-6deg)}
+  .btn{display:inline-flex;align-items:center;gap:7px;font-weight:700;cursor:pointer;border-radius:11px;font-size:13.5px;padding:9px 15px;background:var(--panel);color:var(--txt-soft);border:1px solid var(--line)}
+  .wrap{max-width:900px;margin:0 auto;padding:24px 18px 70px}
+  h1{font-size:22px;font-weight:900;display:flex;align-items:center;gap:9px;margin-bottom:4px}
+  .sub{font-size:13px;color:var(--txt-soft);margin-bottom:24px}
+  .cat{margin-bottom:26px}
+  .cat-h{font-size:14px;font-weight:800;color:var(--mint);margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+  .rep{background:linear-gradient(180deg,rgba(255,255,255,.028),rgba(255,255,255,.008));border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:18px;transition:.15s;display:block}
+  .rep:hover{border-color:var(--mint);transform:translateY(-2px)}
+  .rep.soon{opacity:.5;pointer-events:none}
+  .rep .ri{font-size:24px;margin-bottom:10px}
+  .rep .rt{font-size:14.5px;font-weight:800;margin-bottom:5px}
+  .rep .rd{font-size:12px;color:var(--txt-soft);line-height:1.5}
+  .rep .rgo{font-size:12px;color:var(--mint);font-weight:700;margin-top:10px}
+  .rep .soon-badge{font-size:10px;color:var(--txt-mute);background:var(--panel2);padding:2px 9px;border-radius:5px;display:inline-block;margin-top:8px}
+</style>
+</head>
+<body>
+<header>
+  <div class="head-in">
+    <a class="brand" href="company-dashboard.html"><span class="bell">🔔</span>نبّاه</a>
+    <a class="btn" href="company-command-center.html">🎛️ مركز القيادة</a>
+  </div>
+</header>
+<div class="wrap">
+  <h1>📊 مركز التقارير</h1>
+  <div class="sub">كل تقاريرك في مكان واحد — تنفيذية، مالية، تشغيلية. كل تقرير قابل للطباعة و PDF.</div>
+
+  <div class="cat">
+    <div class="cat-h">👔 التقارير التنفيذية</div>
+    <div class="grid">
+      <a class="rep" href="company-executive-report.html"><div class="ri">📊</div><div class="rt">التقرير التنفيذي الذكي</div><div class="rd">لقطة شاملة: صحة، أداء، مخاطر، قرارات.</div><div class="rgo">افتح ←</div></a>
+      <a class="rep" href="company-monthly-report.html"><div class="ri">📅</div><div class="rt">التقرير الشهري</div><div class="rd">مراجعة الأداء الشهري والتوصيات.</div><div class="rgo">افتح ←</div></a>
+      <a class="rep" href="company-board.html"><div class="ri">📋</div><div class="rt">عرض مجلس الإدارة</div><div class="rd">تقرير مختصر لأعضاء المجلس.</div><div class="rgo">افتح ←</div></a>
+      <a class="rep" href="company-report.html"><div class="ri">📄</div><div class="rt">التقرير العام</div><div class="rd">ملخّص أداء الشركة والفروع.</div><div class="rgo">افتح ←</div></a>
+    </div>
+  </div>
+
+  <div class="cat">
+    <div class="cat-h">💰 التقارير المالية</div>
+    <div class="grid">
+      <a class="rep" href="company-financial-overview.html"><div class="ri">💰</div><div class="rt">التقرير المالي (P&L)</div><div class="rd">قائمة الدخل، الميزانية، التدفقات، النِسب.</div><div class="rgo">افتح ←</div></a>
+      <a class="rep" href="company-treasury.html"><div class="ri">🏦</div><div class="rt">تقرير الخزينة</div><div class="rd">السيولة، Runway، الذمم، الديون.</div><div class="rgo">افتح ←</div></a>
+      <a class="rep" href="company-leakage.html"><div class="ri">📉</div><div class="rt">تقرير هدر الإيرادات</div><div class="rd">أين تخسر الشركة ولماذا.</div><div class="rgo">افتح ←</div></a>
+      <a class="rep" href="company-cashflow.html"><div class="ri">💧</div><div class="rt">تقرير التدفق النقدي</div><div class="rd">التدفق وتوقّع السيولة.</div><div class="rgo">افتح ←</div></a>
+    </div>
+  </div>
+
+  <div class="cat">
+    <div class="cat-h">⚙️ التقارير التشغيلية</div>
+    <div class="grid">
+      <a class="rep" href="company-branches.html"><div class="ri">🏬</div><div class="rt">تقرير أداء الفروع</div><div class="rd">مقارنة وترتيب كل الفروع.</div><div class="rgo">افتح ←</div></a>
+      <a class="rep" href="company-hr-analytics.html"><div class="ri">👨‍💼</div><div class="rt">تقرير الموارد البشرية</div><div class="rd">القوى العاملة، الإنتاجية، الدوران.</div><div class="rgo">افتح ←</div></a>
+      <a class="rep" href="company-ops-analytics.html"><div class="ri">⚙️</div><div class="rt">تقرير العمليات</div><div class="rd">الكفاءة، الجودة، تكلفة الهدر.</div><div class="rgo">افتح ←</div></a>
+      <a class="rep" href="company-inventory-analytics.html"><div class="ri">📦</div><div class="rt">تقرير المخزون</div><div class="rd">الدوران، GMROI، تصنيف ABC.</div><div class="rgo">افتح ←</div></a>
+    </div>
+  </div>
+
+  <div class="cat">
+    <div class="cat-h">📈 تقارير العملاء والمخاطر</div>
+    <div class="grid">
+      <a class="rep" href="company-customer-health.html"><div class="ri">❤️</div><div class="rt">تقرير صحة العملاء</div><div class="rd">الولاء، التسرّب، التوصيات.</div><div class="rgo">افتح ←</div></a>
+      <a class="rep" href="company-sales-analytics.html"><div class="ri">🛒</div><div class="rt">تقرير المبيعات</div><div class="rd">الإيراد، النمو، التحويل.</div><div class="rgo">افتح ←</div></a>
+      <a class="rep" href="company-risks.html"><div class="ri">⚠️</div><div class="rt">تقرير المخاطر</div><div class="rd">المخاطر الأربع والحوكمة.</div><div class="rgo">افتح ←</div></a>
+      <a class="rep" href="company-benchmark.html"><div class="ri">📐</div><div class="rt">تقرير المقارنة القطاعية</div><div class="rd">أداؤك مقابل القطاع.</div><div class="rgo">افتح ←</div></a>
+    </div>
+  </div>
+</div>
+<script src="i18n.js"></script>
+<script src="nabbah-sidebar.js"></script>
+</body>
+</html>
