@@ -21,13 +21,22 @@ ai_client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 # مفتاح سري لتوقيع رموز الدخول (يُضبط في Railway Variables)
 _secret_env = os.getenv("SECRET_KEY", "").strip()
+# نحدّد البيئة: production يجب أن يفشل بوضوح لو المفتاح غائب
+_env = os.getenv("ENVIRONMENT", os.getenv("ENV", "production")).strip().lower()
+_is_testing = os.getenv("TESTING", "").strip().lower() in ("1", "true", "yes")
 if not _secret_env:
-    # لا نستخدم قيمة افتراضية معروفة أبداً — نولّد مفتاحاً عشوائياً لكل إقلاع.
-    # (سيُخرج المستخدمين عند إعادة التشغيل، وهذا مقصود: ينبّهك أن SECRET_KEY غير مضبوط)
-    import secrets as _secrets
-    _secret_env = _secrets.token_urlsafe(48)
-    print("⚠️  تحذير أمني: SECRET_KEY غير مضبوط في متغيرات البيئة — تم توليد مفتاح مؤقت.")
-    print("⚠️  اضبط SECRET_KEY في Railway Variables وإلا ستنتهي جلسات المستخدمين عند كل نشر.")
+    if _is_testing or _env in ("development", "dev", "local"):
+        # بيئة تطوير/اختبار فقط: مفتاح مؤقت واضح التمييز
+        import secrets as _secrets
+        _secret_env = "dev-only-" + _secrets.token_urlsafe(32)
+        print("ℹ️  [DEV] SECRET_KEY غير مضبوط — استُخدم مفتاح تطوير مؤقت (غير صالح للإنتاج).")
+    else:
+        # الإنتاج: نفشل بوضوح بدل التوليد الصامت — تنبيه صريح لضبط المتغيّر
+        raise RuntimeError(
+            "خطأ إعداد أمني حرج: SECRET_KEY غير مضبوط في متغيّرات البيئة. "
+            "اضبط SECRET_KEY في Railway Variables قبل التشغيل. "
+            "(للتطوير فقط: اضبط ENVIRONMENT=development أو TESTING=true)"
+        )
 SECRET_KEY = _secret_env
 TOKEN_DAYS = 30  # مدة صلاحية الدخول
 
@@ -39,9 +48,24 @@ _allowed_origins = [
     "https://www.nabbah.com",
     "https://nabbah.up.railway.app",
 ]
+# دعم ALLOWED_ORIGINS من البيئة (comma-separated) — يُضاف للقائمة الأساسية
+_allowed_env = os.getenv("ALLOWED_ORIGINS", "").strip()
+if _allowed_env:
+    for _o in _allowed_env.split(","):
+        _o = _o.strip()
+        if _o and _o not in _allowed_origins:
+            _allowed_origins.append(_o)
 _extra_origin = os.getenv("EXTRA_ORIGIN", "").strip()
-if _extra_origin:
+if _extra_origin and _extra_origin not in _allowed_origins:
     _allowed_origins.append(_extra_origin)
+# في بيئة التطوير/الاختبار: نسمح بـ localhost
+if _is_testing or _env in ("development", "dev", "local"):
+    for _o in ("http://localhost:8000", "http://127.0.0.1:8000"):
+        if _o not in _allowed_origins:
+            _allowed_origins.append(_o)
+# أمان: لا نسمح أبداً بـ wildcard مع credentials
+if "*" in _allowed_origins:
+    _allowed_origins = [o for o in _allowed_origins if o != "*"]
 
 app.add_middleware(
     CORSMiddleware,
@@ -475,6 +499,59 @@ def get_current_user(authorization: str = Header(default="")) -> User:
         return user
 
 
+# ═══════════════════════════════════════════════════════════
+#  طبقة عزل الشركات (Tenant Isolation Layer) — Phase 1.2
+#  توحيد منطق العزل الموجود في helpers مركزية.
+#  لا تغيّر السلوك — تجمع الأنماط المكرّرة في مكان واحد آمن.
+#  القاعدة الذهبية: كل استعلام يجب أن يُقيَّد بشركة المستخدم.
+# ═══════════════════════════════════════════════════════════
+def get_active_company(s, user: User):
+    """يُرجع شركة المستخدم النشطة بعد التحقق الكامل.
+    يرفع الاستثناء المناسب إن لم توجد شركة أو لم تكن نشطة.
+    مدخل موحّد لكل endpoint يحتاج شركة المستخدم."""
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    company = s.get(Company, user.company_id)
+    if not company:
+        raise HTTPException(403, "غير مصرّح")
+    if company.is_active != 1:
+        raise HTTPException(402, "شركتك قيد التفعيل — فعّلها من لوحة الإدارة")
+    return company
+
+
+def require_company_owner(s, user: User):
+    """يُرجع الشركة بعد التأكد أن المستخدم هو مالكها.
+    للعمليات الحسّاسة (حذف، إعدادات، إدارة الفريق)."""
+    company = get_active_company(s, user)
+    if company.owner_id != user.id:
+        raise HTTPException(403, "غير مصرّح — هذه العملية للمالك فقط")
+    return company
+
+
+def get_owned_branch(s, user: User, branch_id: int):
+    """يُرجع فرعاً بعد التأكد أنه يخصّ شركة المستخدم.
+    يمنع تسرّب البيانات عبر تمرير branch_id لشركة أخرى (IDOR)."""
+    if not branch_id:
+        raise HTTPException(400, "معرّف الفرع مطلوب")
+    branch = s.get(CompanyBranch, int(branch_id))
+    if not branch:
+        raise HTTPException(404, "الفرع غير موجود")
+    # الحماية الحرجة: الفرع يجب أن يخصّ شركة المستخدم
+    if branch.company_id != user.company_id:
+        raise HTTPException(403, "غير مصرّح — هذا الفرع لا يخص شركتك")
+    return branch
+
+
+def scoped_branches(s, company_id: int):
+    """يُرجع فروع الشركة النشطة فقط — استعلام مُقيَّد بالشركة."""
+    return s.exec(
+        select(CompanyBranch).where(
+            CompanyBranch.company_id == company_id,
+            CompanyBranch.is_active == 1,
+        )
+    ).all()
+
+
 def extract_exec(text):
     alert = decision = opportunity = ""
     m = re.search(r"===NABBAH_EXEC===(.*?)===END===", text, re.DOTALL)
@@ -720,6 +797,11 @@ def page_cust_health():
 @app.get("/company-treasury.html")
 def page_treasury():
     return FileResponse("company-treasury.html")
+
+
+@app.get("/company-reports.html")
+def page_reports():
+    return FileResponse("company-reports.html")
 
 
 @app.get("/company-check.html")
@@ -4021,6 +4103,45 @@ def filter_sensitive_fields(data: dict, user_role: str) -> dict:
     return cleaned
 
 
+# ═══════════════════════════════════════════════════════════
+#  طبقة أمان الصلاحيات (RBAC Enforcement Layer) — Phase 1.3
+#  helpers موحّدة تجمع اشتقاق الدور + التحقق من الصلاحية.
+#  لا تغيّر السلوك — تُوحّد النمط المكرّر في مكان واحد.
+# ═══════════════════════════════════════════════════════════
+def user_can(s, user: User, resource: str, action: str = "view") -> bool:
+    """يجمع اشتقاق الدور + فحص الصلاحية في استدعاء واحد.
+    يُرجع True/False — للاستخدام في المنطق الشرطي."""
+    role = get_user_role(s, user)
+    return check_permission(role, resource, action)
+
+
+def require_permission(s, user: User, resource: str, action: str = "view"):
+    """يتحقق من الصلاحية ويرفع 403 إن رُفضت — للحماية المباشرة.
+    يُرجع دور المستخدم عند النجاح (لاستخدامه في تصفية الحقول الحساسة)."""
+    role = get_user_role(s, user)
+    if not check_permission(role, resource, action):
+        raise HTTPException(403, "غير مصرّح — ليس لديك صلاحية للوصول لهذا القسم")
+    return role
+
+
+def scope_by_role(s, user: User, branches):
+    """يقيّد الفروع حسب الدور: مدير الفرع يرى فرعه فقط، الباقي يرى الكل.
+    (يطبّق مبدأ Row-Level ضمن الشركة الواحدة)."""
+    role = get_user_role(s, user)
+    if role in ("owner", "accountant"):
+        return branches  # يرون كل فروع الشركة
+    # مدير الفرع / الموظف: نقيّد بفرعه إن كان محدّداً في CompanyMember
+    m = s.exec(
+        select(CompanyMember).where(
+            CompanyMember.company_id == user.company_id,
+            CompanyMember.email == user.email,
+        )
+    ).first()
+    if m and m.branch_id:
+        return [b for b in branches if b.id == m.branch_id]
+    return branches  # لا فرع محدّد → يرى الكل (سلوك افتراضي حالي)
+
+
 @app.get("/company/team")
 def company_team(user: User = Depends(get_current_user)):
     if not user.company_id:
@@ -4752,6 +4873,18 @@ def company_predictions(user: User = Depends(get_current_user)):
             y = now.year + ((now.month - 1 + i) // 12)
             labels.append(f"{ar_months[m]} {y}")
 
+        # ===== السيناريوهات الثلاثة (Base-Best-Worst) — من التقرير =====
+        base_6m_sales = round(sum(total_sales_proj))
+        base_6m_profit = round(sum(total_profit_proj))
+        scenarios = {
+            "worst": {"label": "متشائم", "sales": round(base_6m_sales * 0.88), "profit": round(base_6m_profit * 0.80),
+                      "note": "نمو أبطأ + ضغط على الهوامش"},
+            "base": {"label": "أساسي", "sales": base_6m_sales, "profit": base_6m_profit,
+                     "note": "استمرار الاتجاه الحالي"},
+            "best": {"label": "متفائل", "sales": round(base_6m_sales * 1.12), "profit": round(base_6m_profit * 1.20),
+                     "note": "نمو أقوى + تحسّن الكفاءة"},
+        }
+
         return {
             "company": {"name": company.name},
             "has_history": has_history,
@@ -4763,6 +4896,7 @@ def company_predictions(user: User = Depends(get_current_user)):
                 "total_sales_6m": round(sum(total_sales_proj)),
                 "total_profit_6m": round(sum(total_profit_proj)),
             },
+            "scenarios": scenarios,
         }
 
 
@@ -6029,11 +6163,15 @@ def company_hr_analytics(user: User = Depends(get_current_user)):
             "value": round(turnover, 1) if turnover is not None else None, "unit": "%",
             "has_data": turnover is not None,
             "status": ("good" if (turnover is not None and turnover < 10) else ("warn" if (turnover is not None and turnover < 20) else "bad")) if turnover is not None else None})
-        # ⑤ نسبة تكلفة الرواتب
+        # ⑤ نسبة تكلفة الرواتب (حقل حسّاس — يظهر فقط للأدوار المصرّح لها)
         salary_ratio = round(salary_cost / total_sales * 100, 1) if (salary_cost and total_sales > 0) else None
+        # أمان مستوى العمود: نخفي الرواتب عن غير المصرّح (مدير الفرع، الموظف)
+        if not can_see_sensitive_financials(role):
+            salary_ratio = None
         metrics.append({"key": "salary_ratio", "icon": "💵", "label": "نسبة تكلفة الرواتب من الإيرادات",
             "value": salary_ratio, "unit": "%",
-            "has_data": salary_ratio is not None})
+            "has_data": salary_ratio is not None,
+            "restricted": (not can_see_sensitive_financials(role))})
         # ⑥ درجة الرضا الوظيفي (engagement)
         metrics.append({"key": "engagement", "icon": "❤️", "label": "درجة الرضا الوظيفي",
             "value": round(engagement, 1) if engagement is not None else None, "unit": "/5" if (engagement and engagement <= 5) else "%",
@@ -7231,6 +7369,44 @@ async def company_upload_preview(file: UploadFile = File(...), user: User = Depe
                 "branches": _branches[:10],
             }
 
+    # ===== تقرير جودة الملف (من التقرير: الصف، الخطأ، الحل) =====
+    file_issues = []
+    # ① أعمدة غير مطابقة
+    unmatched_headers = [m["original"] for m in matched if not m["matched"]]
+    if unmatched_headers:
+        file_issues.append({
+            "type": "unmatched", "severity": "warn",
+            "msg": f"{len(unmatched_headers)} عمود لم يُطابَق تلقائياً: {'، '.join(unmatched_headers[:3])}",
+            "fix": "راجع أسماء الأعمدة أو طابِقها يدوياً — الأعمدة غير المطابقة ستُتجاهل."
+        })
+    # ② قيم سالبة أو غير منطقية في العيّنة
+    neg_found = False
+    for r in rows[:50]:
+        for c in r:
+            n = _to_num(c)
+            if n is not None and n < 0:
+                neg_found = True; break
+        if neg_found: break
+    if neg_found:
+        file_issues.append({
+            "type": "negative", "severity": "warn",
+            "msg": "الملف يحتوي قيماً سالبة",
+            "fix": "تأكد أن القيم السالبة مقصودة (مثل المرتجعات) — أو صحّحها قبل الاستيراد."
+        })
+    # ③ صفوف فارغة
+    empty_rows = sum(1 for r in rows if not any(str(c).strip() for c in r if c is not None))
+    if empty_rows > 0:
+        file_issues.append({
+            "type": "empty", "severity": "info",
+            "msg": f"{empty_rows} صف فارغ سيُتجاهل",
+            "fix": "الصفوف الفارغة تُتخطّى تلقائياً — لا إجراء مطلوب."
+        })
+    # درجة جودة الملف
+    file_quality = 100
+    file_quality -= len(unmatched_headers) * 8
+    if neg_found: file_quality -= 10
+    file_quality = max(file_quality, 0)
+
     return {
         "tx_summary": tx_summary,
         "bank_summary": bank_summary,
@@ -7241,7 +7417,9 @@ async def company_upload_preview(file: UploadFile = File(...), user: User = Depe
         "matched_count": matched_count,
         "unmatched_count": len(headers) - matched_count,
         "sample": sample,
-        "guidance": "راجع تطابق الأعمدة، ثم اضغط 'استورد' لتوزيع البيانات على الوحدات.",
+        "file_issues": file_issues,
+        "file_quality": file_quality,
+        "guidance": "راجع تطابق الأعمدة وتقرير الجودة، ثم اضغط 'استورد' لتوزيع البيانات على الوحدات.",
     }
 
 
