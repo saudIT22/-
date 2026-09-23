@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>نبّاه · مركز الإجراءات</title>
+<link href="nabbah-design.css" rel="stylesheet">
+<style>
+  body{background:var(--bg,#070b09);color:var(--txt,#e8f1ec);font-family:Tajawal,Tahoma,Arial,sans-serif;margin:0}
+  *{box-sizing:border-box}
+  .wrap{max-width:1180px;margin:0 auto;padding:70px 16px 60px}
+  h1{margin:0 0 4px;font-size:24px}.sub{color:var(--txt-soft,#8ba396);margin:0 0 18px;font-size:14px}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+  .tile{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:14px;padding:14px}
+  .tile .l{font-size:12px;color:var(--txt-soft,#8ba396)}.tile .v{font-size:26px;font-weight:800;margin-top:4px}
+  .bar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;align-items:center}
+  .bar input,.bar select,.dr input,.dr select,.dr textarea{background:var(--panel,#101a15);color:var(--txt,#e8f1ec);border:1px solid var(--line,#1d2c24);border-radius:10px;padding:8px 10px;font:inherit;font-size:13px}
+  .bar input[type=search]{flex:1;min-width:180px}
+  .seg button{background:transparent;color:var(--txt-soft,#8ba396);border:1px solid var(--line,#1d2c24);padding:8px 12px;cursor:pointer;font:inherit}
+  .seg button.on{background:var(--mint-soft,rgba(16,185,129,.12));color:var(--mint,#10b981);border-color:var(--mint,#10b981)}
+  .board{display:grid;grid-template-columns:repeat(4,minmax(220px,1fr));gap:12px;overflow-x:auto}
+  .col{background:rgba(255,255,255,.02);border:1px solid var(--line,#1d2c24);border-radius:14px;padding:10px;min-height:120px}
+  .col h3{margin:2px 4px 10px;font-size:14px;display:flex;justify-content:space-between}
+  .card{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:12px;padding:11px;margin-bottom:9px;cursor:pointer}
+  .card:hover{border-color:var(--mint,#10b981)}.card .t{font-weight:700;font-size:14px;margin-bottom:4px}
+  .meta{font-size:12px;color:var(--txt-soft,#8ba396);display:flex;flex-wrap:wrap;gap:8px}
+  .pb{height:6px;background:var(--line,#1d2c24);border-radius:6px;margin-top:8px;overflow:hidden}.pb i{display:block;height:100%;background:var(--mint,#10b981)}
+  .b{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700;display:inline-block}
+  .P1{background:rgba(239,68,68,.15);color:#ef4444}.P2{background:rgba(245,179,1,.15);color:#f5b301}.P3{background:rgba(16,185,129,.15);color:#10b981}
+  .late{color:#ef4444;font-weight:700}.est{background:rgba(168,85,247,.15);color:#a855f7}
+  table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px 8px;border-bottom:1px solid var(--line,#1d2c24);text-align:start}
+  th{color:var(--txt-soft,#8ba396);font-weight:600}tbody tr{cursor:pointer}tbody tr:hover{background:rgba(255,255,255,.03)}
+  .tblwrap{overflow-x:auto;background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:14px}
+  .state{padding:40px 16px;text-align:center;color:var(--txt-soft,#8ba396);background:var(--panel,#101a15);border:1px dashed var(--line,#1d2c24);border-radius:14px}
+  .err{color:#ef4444}
+  .ov{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;z-index:50}.ov.on{display:block}
+  .dr{position:fixed;top:0;bottom:0;inset-inline-end:0;width:min(460px,100%);background:var(--bg,#070b09);border-inline-start:1px solid var(--line,#1d2c24);z-index:51;overflow-y:auto;padding:18px;transform:translateX(0);display:none}
+  .dr.on{display:block}.dr h2{margin:0 0 6px;font-size:18px}.dr .row{display:grid;grid-template-columns:120px 1fr;gap:8px;font-size:13px;margin:6px 0}
+  .dr .row span:first-child{color:var(--txt-soft,#8ba396)}.dr section{border-top:1px solid var(--line,#1d2c24);margin-top:14px;padding-top:12px}
+  .dr .f{display:grid;gap:10px}.dr .f label{display:grid;gap:5px;font-size:12px;color:var(--txt-soft,#8ba396)}
+  .dr .f input,.dr .f select,.dr .f textarea{width:100%}.dr input[type=range]{padding:0;accent-color:var(--mint,#10b981)}
+  .dl{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--txt-soft,#8ba396)}.btn{background:var(--mint,#10b981);color:#062b1c;border:0;border-radius:10px;padding:9px 14px;font-weight:800;cursor:pointer;font:inherit}
+  .btn.ghost{background:transparent;color:var(--txt-soft,#8ba396);border:1px solid var(--line,#1d2c24)}
+  .msg{font-size:13px;margin-top:6px}.hist li,.notes li{font-size:12px;margin:5px 0;color:var(--txt-soft,#8ba396)}
+  @media(max-width:760px){.board{grid-template-columns:repeat(4,78vw)}h1{font-size:20px}.tile .v{font-size:22px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1 data-i18n="act.title">مركز الإجراءات</h1>
+  <p class="sub" data-i18n="act.subtitle">متابعة المهام الناتجة عن القرارات والتوصيات</p>
+  <div class="tiles" id="tiles"></div>
+  <div class="bar">
+    <input type="search" id="q" data-i18n-ph="act.search">
+    <select id="fStatus"></select><select id="fOwner"></select><select id="fBranch"></select>
+    <label class="dl"><span id="lFrom"></span><input type="date" id="fFrom"></label><label class="dl"><span id="lTo"></span><input type="date" id="fTo"></label>
+    <select id="fSort"></select>
+    <span class="seg"><button id="vBoard" class="on"></button><button id="vTable"></button></span>
+  </div>
+  <div id="content"><div class="state" id="loading">…</div></div>
+</div>
+<div class="ov" id="ov"></div>
+<aside class="dr" id="dr" aria-modal="true" role="dialog"></aside>
+<script src="i18n.js"></script>
+<script>
+(function(){
+  const TOKEN=localStorage.getItem("nabbah_token")||"";
+  if(!TOKEN){location.href="login.html";return;}
+  const I=()=>window.NabbahI18n, L=()=>(I()&&I().getLang)?I().getLang():"ar";
+  const tr=(k,fb)=>{const v=I()&&I().t?I().t(k,L()):k;return(v&&v!==k)?v:(fb||k);};
+  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const num=v=>v==null?"—":Number(v).toLocaleString(L()==="ar"?"ar-SA":"en-US",{maximumFractionDigits:2});
+  const ST=["not_started","in_progress","blocked","completed","cancelled"];
+  const H={Authorization:"Bearer "+TOKEN,"Content-Type":"application/json"};
+  let data=null,view="board",current=null;
+  const $=id=>document.getElementById(id);
+
+  function labels(){
+    $("q").placeholder=tr("act.search");
+    $("fStatus").innerHTML=`<option value="">${tr("act.allStatus")}</option>`+ST.map(s=>`<option value="${s}">${tr("act.status."+s)}</option>`).join("");
+    $("fSort").innerHTML=`<option value="due_date">${tr("act.sortDue")}</option><option value="priority">${tr("act.sortPriority")}</option>`;
+    $("vBoard").textContent=tr("act.board");$("vTable").textContent=tr("act.table");
+    $("lFrom").textContent=tr("act.dueFrom");$("lTo").textContent=tr("act.dueTo");
+  }
+  function qs(){const p=new URLSearchParams();[["status","fStatus"],["owner","fOwner"],["branch_id","fBranch"],["due_from","fFrom"],["due_to","fTo"],["sort","fSort"],["q","q"]].forEach(([k,id])=>{const v=$(id).value;if(v)p.set(k,v)});return p.toString();}
+  function load(){
+    $("content").innerHTML=`<div class="state">${L()==="ar"?"جارٍ التحميل…":"Loading…"}</div>`;
+    fetch("/company/actions?"+qs(),{headers:H}).then(r=>{
+      if(r.status===401){location.href="login.html";return null;}
+      if(r.status===403||r.status===402){$("content").innerHTML=`<div class="state">${tr("act.denied")}</div>`;$("tiles").innerHTML="";return null;}
+      if(!r.ok)throw new Error(r.status);return r.json();
+    }).then(d=>{if(!d)return;data=d;tiles(d.summary);filters(d);render();})
+    .catch(()=>{$("content").innerHTML=`<div class="state err">${tr("act.error")}</div>`;});
+  }
+  function tiles(s){
+    const t=(l,v,c="")=>`<div class="tile"><div class="l">${l}</div><div class="v ${c}">${v}</div></div>`;
+    $("tiles").innerHTML=t(tr("act.total"),s.total)+t(tr("act.overdue"),s.overdue,s.overdue?"late":"")+t(tr("act.inProgress"),s.in_progress)+t(tr("act.completed"),s.completed)+t(tr("act.rate"),s.completion_rate==null?"—":num(s.completion_rate)+"%");
+  }
+  function filters(d){
+    const keepO=$("fOwner").value,keepB=$("fBranch").value;
+    $("fOwner").innerHTML=`<option value="">${tr("act.allOwners")}</option>`+d.owners.map(o=>`<option>${esc(o)}</option>`).join("");$("fOwner").value=keepO;
+    const br={};d.actions.forEach(a=>{if(a.branch_id)br[a.branch_id]=a.branch_name||("#"+a.branch_id)});
+    $("fBranch").innerHTML=`<option value="">${tr("act.allBranches")}</option>`+Object.entries(br).map(([i,n])=>`<option value="${i}">${esc(n)}</option>`).join("");$("fBranch").value=keepB;
+  }
+  function card(a){
+    return `<div class="card" data-id="${a.id}"><div class="t">${esc(a.title)}</div>
+      ${a.decision_title?`<div class="meta" style="margin-bottom:6px">${esc(a.decision_title)}</div>`:""}
+      <div class="meta"><span class="b ${a.priority}">${a.priority}</span>${a.owner?`<span>👤 ${esc(a.owner)}</span>`:""}${a.branch_name?`<span>🏬 ${esc(a.branch_name)}</span>`:""}
+      ${a.due_date?`<span class="${a.overdue?"late":""}">📅 ${esc(a.due_date)}</span>`:""}</div>
+      <div class="pb"><i style="width:${a.progress}%"></i></div></div>`;
+  }
+  function render(){
+    const rows=data.actions;
+    if(!data.summary.total){$("content").innerHTML=`<div class="state">${tr("act.empty")}</div>`;return;}
+    if(!rows.length){$("content").innerHTML=`<div class="state">${tr("act.noMatch")}</div>`;return;}
+    if(view==="board"){
+      $("content").innerHTML=`<div class="board">`+["not_started","in_progress","blocked","completed"].map(s=>{
+        const c=rows.filter(a=>a.status===s);
+        return `<div class="col"><h3><span>${tr("act.status."+s)}</span><span class="b P3">${c.length}</span></h3>${c.map(card).join("")}</div>`;}).join("")+`</div>`;
+    }else{
+      $("content").innerHTML=`<div class="tblwrap"><table><thead><tr><th>${L()==="ar"?"الإجراء":"Action"}</th><th>${tr("act.owner")}</th><th>${tr("act.branch")}</th><th>${tr("act.priority")}</th><th>${L()==="ar"?"الحالة":"Status"}</th><th>${tr("act.due")}</th><th>${tr("act.progress")}</th><th>${tr("act.expected")}</th></tr></thead><tbody>`+
+      rows.map(a=>`<tr data-id="${a.id}"><td>${esc(a.title)}</td><td>${esc(a.owner||"—")}</td><td>${esc(a.branch_name||"—")}</td><td><span class="b ${a.priority}">${a.priority}</span></td><td>${tr("act.status."+a.status)}</td><td class="${a.overdue?"late":""}">${esc(a.due_date||"—")}</td><td>${a.progress}%</td><td>${a.expected_impact==null?"—":num(a.expected_impact)+` <span class="b est">${tr("act.estimate")}</span>`}</td></tr>`).join("")+`</tbody></table></div>`;
+    }
+    document.querySelectorAll("[data-id]").forEach(el=>el.addEventListener("click",()=>open(+el.dataset.id)));
+  }
+  function open(id){
+    const a=data.actions.find(x=>x.id===id);if(!a)return;current=a;
+    const closed=["completed","cancelled"].includes(a.status),editable=data.can_edit&&!closed;
+    const row=(l,v)=>`<div class="row"><span>${l}</span><span>${v}</span></div>`;
+    $("dr").innerHTML=`<button class="btn ghost" id="xClose" style="float:inline-end">${tr("act.close")}</button><h2>${esc(a.title)}</h2>
+      <div class="meta">${esc(a.description||"")}</div>
+      ${row(tr("act.decision"),esc(a.decision_title||"—"))}${row(tr("act.recommendation"),esc((a.recommendation_title&&(a.recommendation_title[L()]||a.recommendation_title.ar))||(a.recommendation?"—":"—")))}
+      ${row(tr("act.branch"),esc(a.branch_name||"—"))}${row(tr("act.priority"),`<span class="b ${a.priority}">${a.priority}</span>`)}
+      ${row(tr("act.expected"),a.expected_impact==null?"—":num(a.expected_impact)+` <span class="b est">${tr("act.estimate")}</span>`)}
+      ${row(tr("act.actual"),a.actual_impact==null?"—":num(a.actual_impact))}
+      ${row(tr("act.created"),esc((a.created_at||"").slice(0,10)))}${row(tr("act.updated"),esc((a.updated_at||"").slice(0,16).replace("T"," ")))}
+      <section>${editable?`<div class="f">
+        <label>${L()==="ar"?"الحالة":"Status"}<select id="eStatus">${ST.map(s=>`<option value="${s}" ${s===a.status?"selected":""}>${tr("act.status."+s)}</option>`).join("")}</select></label>
+        <label><span>${tr("act.progress")} <b id="pv">${a.progress}%</b></span><input id="eProg" type="range" min="0" max="100" step="5" value="${a.progress}"></label>
+        <label>${tr("act.owner")}<input id="eOwner" value="${esc(a.owner)}"></label>
+        <label>${tr("act.due")}<input id="eDue" type="date" value="${esc(a.due_date)}"></label>
+        <label>${tr("act.notes")}<textarea id="eNote" rows="3" placeholder="${tr("act.note")}"></textarea></label>
+        <button class="btn" id="eSave">${tr("act.save")}</button><div class="msg" id="eMsg"></div></div>`
+        :`<div class="msg">${closed?tr("act.closed"):tr("act.readonly")}</div>`}</section>
+      <section><b>${tr("act.notes")}</b><ul class="notes">${(a.notes||"").split("\n").filter(Boolean).map(n=>`<li>${esc(n)}</li>`).join("")||`<li>—</li>`}</ul></section>
+      <section><b>${tr("act.history")}</b><ul class="hist" id="hist"><li>…</li></ul></section>
+      <section><b>${tr("dm.title")}</b><div id="mem" class="meta">…</div></section>`;
+    $("dr").classList.add("on");$("ov").classList.add("on");
+    $("xClose").onclick=close;
+    if(editable){$("eProg").oninput=e=>$("pv").textContent=e.target.value+"%";$("eStatus").onchange=e=>{if(e.target.value==="completed"){$("eProg").value=100;$("pv").textContent="100%";}};$("eSave").onclick=save;}
+    fetch(`/company/actions/${a.id}/history`,{headers:H}).then(r=>r.ok?r.json():{history:[]}).then(h=>{
+      $("hist").innerHTML=h.history.length?h.history.map(x=>`<li>${esc((x.at||"").slice(0,16).replace("T"," "))} · ${esc(x.by)} · ${histText(x)}</li>`).join(""):`<li>${tr("act.noHistory")}</li>`;});
+    fetch(`/company/decisions/${a.decision_id}/memory`,{headers:H}).then(r=>r.ok?r.json():null).then(m=>{
+      if(!m){$("mem").textContent="—";return;}
+      const o=m.outcome[L()]||m.outcome.ar,lst=a=>a.length?a.map(esc).join(" · "):"—";
+      $("mem").innerHTML=`<div><span class="b P2">${tr("dm.status."+m.outcome.status)}</span></div>
+        <div style="margin-top:6px"><b>${tr("dm.expected")}:</b> ${lst(o.expected)}</div><div><b>${tr("dm.measured")}:</b> ${lst(o.measured)}</div>
+        <div><b>${tr("dm.unknown")}:</b> ${lst(o.unknown)}</div><div><b>${tr("dm.missing")}:</b> ${lst(o.missing)}</div>
+        <div style="margin-top:8px"><b>${tr("dm.similar")}</b></div>${m.similar.items.length?m.similar.items.map(x=>`<div>• ${esc(x.title)} — ${tr("dm.status."+x.outcome_status)} (${x.reasons.map(r=>tr("dm.reason."+r)).join("، ")})</div>`).join(""):`<div>${tr("dm.none")}</div>`}
+        <div style="margin-top:6px;opacity:.8">${esc(m.similar.caveat[L()]||m.similar.caveat.ar)}</div>`;});
+  }
+  function histText(x){
+    const m=/(\w+)\/(\d+) -> (\w+)\/(\d+)/.exec(x.details||"");
+    if(x.action==="action_update"&&m)return esc(`${tr("act.status."+m[1])} → ${tr("act.status."+m[3])} · ${tr("act.progress")} ${m[2]}% → ${m[4]}%`)+(/note/.test(x.details)?` · ${esc(tr("act.notes"))}`:"");
+    const d=/decision=(\d+)/.exec(x.details||"");
+    if(x.action==="action_create"&&d)return esc(`${tr("act.created")} · ${tr("act.decision")} #${d[1]}`);
+    return esc(x.details);
+  }
+  function save(){
+    const body={id:current.id,status:$("eStatus").value,progress:+$("eProg").value,owner:$("eOwner").value,due_date:$("eDue").value,note:$("eNote").value};
+    $("eMsg").textContent="…";
+    fetch("/company/actions/update",{method:"POST",headers:H,body:JSON.stringify(body)}).then(async r=>{
+      const d=await r.json().catch(()=>({}));
+      if(!r.ok){$("eMsg").className="msg err";$("eMsg").textContent=(typeof d.detail==="string"?d.detail:tr("act.error"));return;}
+      $("eMsg").className="msg";$("eMsg").textContent=tr("act.saved");close();load();
+    }).catch(()=>{$("eMsg").className="msg err";$("eMsg").textContent=tr("act.error");});
+  }
+  function close(){$("dr").classList.remove("on");$("ov").classList.remove("on");}
+  $("ov").onclick=close;document.addEventListener("keydown",e=>{if(e.key==="Escape")close();});
+  $("vBoard").onclick=()=>{view="board";$("vBoard").classList.add("on");$("vTable").classList.remove("on");data&&render();};
+  $("vTable").onclick=()=>{view="table";$("vTable").classList.add("on");$("vBoard").classList.remove("on");data&&render();};
+  ["fStatus","fOwner","fBranch","fFrom","fTo","fSort"].forEach(id=>$(id).addEventListener("change",load));
+  let t;$("q").addEventListener("input",()=>{clearTimeout(t);t=setTimeout(load,300);});
+  labels();load();
+})();
+</script>
+<script src="nabbah-sidebar.js"></script>
+</body></html>
