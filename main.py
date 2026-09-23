@@ -312,6 +312,63 @@ class CompanyDecision(SQLModel, table=True):
     rationale: str = ""              # لماذا اتخذنا هذا القرار؟ (Decision Memory)
     created_at: datetime = Field(default_factory=datetime.now)
     closed_at: Optional[datetime] = None
+    # Phase 2.3 — additive, nullable (existing rows unaffected)
+    branch_id: Optional[int] = Field(default=None, index=True)
+    metric_id: str = ""
+    baseline_value: Optional[float] = None
+    expected_impact_value: Optional[float] = None
+    actual_value: Optional[float] = None
+    actual_impact_value: Optional[float] = None
+    impact_status: str = ""          # "" | expected | insufficient_data | verified
+    source_signal: str = ""          # signal id the decision came from
+    updated_at: Optional[datetime] = None
+    # Decision memory & outcomes (additive, nullable)
+    problem_type: str = ""           # rule code of the problem (e.g. negative_margin_branch)
+    decision_type: str = ""          # category (sales, cost, branch, profitability, ...)
+    measurement_period: str = ""     # YYYY-MM measured
+    outcome_status: str = ""         # pending_measurement | insufficient_data | measured | verified | not_verified | cancelled
+    outcome_notes: str = ""
+    created_by: str = ""
+    data_source: str = ""
+
+
+class CompanyAction(SQLModel, table=True):
+    """Phase 2.3 — task that implements a decision."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    decision_id: int = Field(index=True)
+    branch_id: Optional[int] = Field(default=None, index=True)
+    title: str = ""
+    description: str = ""
+    owner: str = ""
+    priority: str = "P2"             # P1 | P2 | P3
+    start_date: str = ""
+    due_date: str = ""
+    status: str = "not_started"      # not_started | in_progress | blocked | completed | cancelled
+    progress: int = 0                # 0..100
+    notes: str = ""
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: Optional[datetime] = None
+
+
+class CompanyScenario(SQLModel, table=True):
+    """Saved what-if scenario. Results are ESTIMATES, never actual financial data."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    branch_id: Optional[int] = Field(default=None, index=True)
+    created_by: str = ""
+    name: str = ""
+    description: str = ""
+    scenario_type: str = "custom"
+    base_period: str = ""
+    assumptions: str = "{}"          # JSON
+    baseline_values: str = "{}"      # JSON snapshot used at last run
+    scenario_values: str = "{}"      # JSON comparison rows at last run
+    results: str = "{}"              # JSON full run output
+    status: str = "draft"            # draft | ran | archived
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: Optional[datetime] = None
+    ran_at: Optional[datetime] = None
 
 
 class CompanyMemory(SQLModel, table=True):
@@ -443,6 +500,15 @@ def auto_sync_columns():
             ("approver", "VARCHAR DEFAULT ''"), ("reviewer", "VARCHAR DEFAULT ''"),
             ("rationale", "VARCHAR DEFAULT ''"), ("created_at", "TIMESTAMP DEFAULT NOW()"),
             ("closed_at", "TIMESTAMP"),
+            ("branch_id", "INTEGER"), ("metric_id", "VARCHAR DEFAULT ''"),
+            ("baseline_value", "DOUBLE PRECISION"), ("expected_impact_value", "DOUBLE PRECISION"),
+            ("actual_value", "DOUBLE PRECISION"), ("actual_impact_value", "DOUBLE PRECISION"),
+            ("impact_status", "VARCHAR DEFAULT ''"), ("source_signal", "VARCHAR DEFAULT ''"),
+            ("updated_at", "TIMESTAMP"),
+            ("problem_type", "VARCHAR DEFAULT ''"), ("decision_type", "VARCHAR DEFAULT ''"),
+            ("measurement_period", "VARCHAR DEFAULT ''"), ("outcome_status", "VARCHAR DEFAULT ''"),
+            ("outcome_notes", "VARCHAR DEFAULT ''"), ("created_by", "VARCHAR DEFAULT ''"),
+            ("data_source", "VARCHAR DEFAULT ''"),
         ],
         "companybranch": [
             ("business_unit", "VARCHAR DEFAULT ''"), ("department", "VARCHAR DEFAULT ''"),
@@ -827,6 +893,16 @@ def page_readiness():
     return FileResponse("company-readiness.html")
 
 
+@app.get("/company-actions.html")
+def page_actions():
+    return FileResponse("company-actions.html")
+
+
+@app.get("/company-scenarios.html")
+def page_scenarios():
+    return FileResponse("company-scenarios.html")
+
+
 @app.get("/company-whatif.html")
 def page_whatif():
     return FileResponse("company-whatif.html")
@@ -865,6 +941,14 @@ def serve_decision():
         return FileResponse("nabbah-decision.js", media_type="application/javascript")
     from fastapi.responses import Response as _Resp
     return _Resp(content="/* nabbah-decision.js not uploaded yet */", media_type="application/javascript")
+
+
+@app.get("/nabbah-exec-intel.js")
+def serve_exec_intel():
+    import os as _os
+    if _os.path.exists("nabbah-exec-intel.js"):
+        return FileResponse("nabbah-exec-intel.js", media_type="application/javascript")
+    raise HTTPException(404, "not found")
 
 
 @app.get("/nabbah-ask.js")
@@ -1745,14 +1829,47 @@ def score_level(score):
     return ("ضعيف", "#ef4444")
 
 
+_LEGACY_ADAPTER = None
+
+
+def _legacy_adapter():
+    """Loads the central-engine adapter once. Returns None if phase21/phase22 are absent."""
+    global _LEGACY_ADAPTER
+    if _LEGACY_ADAPTER is None:
+        try:
+            import sys as _sys, os as _os
+            _p22 = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "phase22")
+            if _p22 not in _sys.path:
+                _sys.path.insert(0, _p22)
+            import legacy_adapters as _la
+            _LEGACY_ADAPTER = _la
+        except Exception:
+            _LEGACY_ADAPTER = False
+    return _LEGACY_ADAPTER or None
+
+
 def compute_company_metrics(sales, invoices, customers, repeat_customers, expenses, prev_sales=None):
-    """يحسب المؤشرات المالية ومؤشر أداء الفرع من المدخلات الخام."""
-    profit = round(sales - expenses, 2)
-    margin = round((profit / sales) * 100, 1) if sales > 0 else 0
-    avg_invoice = round(sales / invoices, 1) if invoices > 0 else 0
-    repeat_rate = round((repeat_customers / customers) * 100, 1) if customers > 0 else 0
-    has_prev = bool(prev_sales and prev_sales > 0)
-    growth = round(((sales - prev_sales) / prev_sales) * 100, 1) if has_prev else 0
+    """يحسب المؤشرات المالية ومؤشر أداء الفرع من المدخلات الخام.
+    Phase 2.2 (Option B): financial fields come from the central engine in
+    LEGACY_COMPATIBLE mode (identical output). The inline block below is the
+    fallback used only if the engine files are unavailable."""
+    _ad = _legacy_adapter()
+    _m = None
+    if _ad:
+        try:
+            _m = _ad.central_company_metrics(sales, invoices, customers, repeat_customers, expenses, prev_sales)
+        except Exception:
+            _m = None
+    if _m is not None:
+        profit, margin, avg_invoice = _m["profit"], _m["margin"], _m["avg_invoice"]
+        repeat_rate, growth, has_prev = _m["repeat_rate"], _m["growth"], _m["has_prev"]
+    else:
+        profit = round(sales - expenses, 2)
+        margin = round((profit / sales) * 100, 1) if sales > 0 else 0
+        avg_invoice = round(sales / invoices, 1) if invoices > 0 else 0
+        repeat_rate = round((repeat_customers / customers) * 100, 1) if customers > 0 else 0
+        has_prev = bool(prev_sales and prev_sales > 0)
+        growth = round(((sales - prev_sales) / prev_sales) * 100, 1) if has_prev else 0
 
     score = 0
     # الهامش (35)
@@ -3240,6 +3357,677 @@ def company_ask(request: Request, data: dict, user: User = Depends(get_current_u
 
 
 # ===== بيانات التقرير التنفيذي (للطباعة) =====
+# ═══════════════════════════════════════════════════════════
+#  Phase 2.2 — تكامل محرّكات الذكاء المركزية
+#  endpoint جديد يستخدم المحرّكات الموحّدة (KPI/Variance/Driver/
+#  RootCause/Impact/AI Gateway). لا يلمس الـendpoints القديمة.
+# ═══════════════════════════════════════════════════════════
+def _load_phase22_bridge():
+    """يحمّل جسر Phase 2.2 بأمان — يُرجع None إن لم تُرفع الملفات."""
+    try:
+        import sys as _sys, os as _os
+        _p22 = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "phase22")
+        if _p22 not in _sys.path:
+            _sys.path.insert(0, _p22)
+        import platform_bridge as _bridge
+        return _bridge
+    except Exception as _e:
+        _logger.error(f"Phase 2.2 bridge غير متاح: {type(_e).__name__}")
+        return None
+
+
+@app.get("/company/intelligence")
+def company_intelligence(user: User = Depends(get_current_user), period: Optional[str] = None):
+    """تحليل ذكاء الأعمال المركزي (Phase 2.2).
+    يستخدم: KPI Engine + Data Trust + Driver/RootCause/Impact + Quality Gate.
+    كل الأرقام من المحرّك المركزي (Decimal) — لا صيغ مكرّرة."""
+    bridge = _load_phase22_bridge()
+    if bridge is None:
+        raise HTTPException(503, "محرّكات التحليل غير متاحة حالياً — ارفع ملفات phase22.")
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id)
+        role = get_user_role(s, user)
+        if not company or (not check_permission(role, "finance", "view") and role != "owner"):
+            raise HTTPException(403, "غير مصرّح")
+        if company.is_active != 1:
+            raise HTTPException(402, "شركتك قيد التفعيل")
+
+        # نجلب البيانات — مُفلترة بـcompany_id (العزل محفوظ)
+        branches = s.exec(select(CompanyBranch).where(
+            CompanyBranch.company_id == company.id, CompanyBranch.is_active == 1)).all()
+        # Period-aware selection (remediation): the current and comparison periods are
+        # determined from the parsed CompanyEntry.period, not from "latest two rows".
+        # Double tenant scoping: company_id AND membership in this company's active branches.
+        branch_ids = [b.id for b in branches]
+        rows = []
+        if branch_ids:
+            rows = s.exec(select(CompanyEntry).where(
+                CompanyEntry.company_id == company.id,
+                CompanyEntry.branch_id.in_(branch_ids),
+            ).order_by(CompanyEntry.created_at.desc()).limit(5000)).all()
+        split = bridge.split_by_period(rows, current_period=period)
+        entries = split["current_entries"]
+        prev_entries = split["comparison_entries"]
+
+        # بيانات الوحدة المالية (مُفلترة بالشركة)
+        fin = s.exec(select(CompanyModuleEntry).where(
+            CompanyModuleEntry.company_id == company.id,
+            CompanyModuleEntry.module == "finance"
+        ).order_by(CompanyModuleEntry.created_at.desc())).first()
+        module_data = {}
+        if fin and fin.data:
+            try:
+                module_data = json.loads(fin.data)
+            except Exception:
+                module_data = {}
+
+        result = bridge.analyze_company_financials(
+            entries, module_data=module_data,
+            previous_entries=prev_entries or None,
+            currency=company.currency or "SAR",
+            period=split["current_period"],
+            comparison_period=split["comparison_period"],
+            period_gaps=split["data_gaps"],
+            user_role=role, company_name=company.name)
+        return result
+
+
+@app.post("/company/intelligence/ask")
+def company_intelligence_ask(data: dict, request: Request, user: User = Depends(get_current_user)):
+    """سؤال AI عبر البوابة المُهيكلة (Phase 2.2).
+    AI يستقبل أرقاماً محسوبة مسبقاً — لا يخترع، ويحترم بوابة الجودة."""
+    bridge = _load_phase22_bridge()
+    if bridge is None:
+        raise HTTPException(503, "محرّكات التحليل غير متاحة حالياً.")
+    question = (data.get("question") or "").strip()
+    analysis = company_intelligence(user)  # يعيد استخدام نفس المنطق الآمن
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id)
+    return bridge.ai_analyze(company_gemini, analysis, question,
+                             lang=get_lang(request), company=company)
+
+
+# ═══════════════════════════════════════════════════════════
+#  Phase 2.3 — Executive Intelligence, Decisions & Actions
+#  Numbers come from phase23/intelligence_engine (deterministic).
+#  AI is optional narrative only, through the Phase 2.2 quality gate.
+# ═══════════════════════════════════════════════════════════
+ACTION_STATUSES = {"not_started", "in_progress", "blocked", "completed", "cancelled"}
+ACTION_TERMINAL = {"completed", "cancelled"}
+
+
+def _load_phase23():
+    try:
+        import sys as _sys, os as _os
+        _base = _os.path.dirname(_os.path.abspath(__file__))
+        for _d in ("phase21", "phase22", "phase23"):
+            _p = _os.path.join(_base, _d)
+            if _p not in _sys.path:
+                _sys.path.insert(0, _p)
+        import intelligence_engine as _ie
+        import period_aggregation as _pa
+        return _ie, _pa
+    except Exception as _e:
+        _logger.error(f"Phase 2.3 engine unavailable: {type(_e).__name__}")
+        return None, None
+
+
+def _load_p23_mod(name):
+    _load_phase23()
+    try:
+        import importlib
+        return importlib.import_module(name)
+    except Exception as _e:
+        _logger.error(f"Phase 2.3 module {name} unavailable: {type(_e).__name__}")
+        return None
+
+
+
+def _row_dict(e):
+    return {"id": e.id, "branch_id": e.branch_id, "period": e.period, "sales": e.sales, "expenses": e.expenses,
+            "invoices": e.invoices, "customers": e.customers, "repeat_customers": e.repeat_customers,
+            "deposited": getattr(e, "deposited", 0), "margin": e.margin, "profit": e.profit,
+            "created_at": e.created_at}
+
+
+def _exec_scope(s, user, need="view"):
+    """Auth + tenant + RBAC. Returns (company, role). Finance view (or owner) required."""
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    company = s.get(Company, user.company_id)
+    role = get_user_role(s, user)
+    if not company or (not check_permission(role, "finance", "view") and role != "owner"):
+        raise HTTPException(403, "غير مصرّح")
+    if company.is_active != 1:
+        raise HTTPException(402, "شركتك قيد التفعيل")
+    if need == "edit" and not check_permission(role, "decisions", "edit"):
+        raise HTTPException(403, "غير مصرّح — تعديل القرارات للمالك فقط")
+    return company, role
+
+
+def _build_exec(s, company, period=None):
+    ie, pa = _load_phase23()
+    if ie is None:
+        raise HTTPException(503, "محرّك الذكاء التنفيذي غير متاح — ارفع مجلد phase23.")
+    branches = s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company.id,
+                                                  CompanyBranch.is_active == 1)).all()
+    ids = [b.id for b in branches]
+    rows = []
+    if ids:
+        rows = [_row_dict(e) for e in s.exec(select(CompanyEntry).where(
+            CompanyEntry.company_id == company.id, CompanyEntry.branch_id.in_(ids))
+            .order_by(CompanyEntry.created_at.desc()).limit(5000)).all()]
+    split = pa.split_by_period(rows, current_period=period)
+    inv = {}
+    me = s.exec(select(CompanyModuleEntry).where(CompanyModuleEntry.company_id == company.id,
+                                                 CompanyModuleEntry.module == "inventory")
+                .order_by(CompanyModuleEntry.created_at.desc())).first()
+    if me and me.data:
+        try:
+            d = json.loads(me.data)
+            for k, v in d.items():
+                if "قيمة المخزون" in k: inv["value"] = v
+                if "تكلفة البضاعة" in k: inv["cogs"] = v
+        except Exception:
+            pass
+    open_dec = len(s.exec(select(CompanyDecision).where(CompanyDecision.company_id == company.id,
+                                                        CompanyDecision.status == "open")).all())
+    today = datetime.now().strftime("%Y-%m-%d")
+    overdue = len([a for a in s.exec(select(CompanyAction).where(CompanyAction.company_id == company.id)).all()
+                   if a.status not in ACTION_TERMINAL and a.due_date and a.due_date < today])
+    return ie.build_executive(
+        all_rows=rows, current_rows=split["current_entries"], comparison_rows=split["comparison_entries"],
+        branches=[{"id": b.id, "name": b.name, "target_sales": b.target_sales} for b in branches],
+        period=split["current_period"], comparison_period=split["comparison_period"],
+        period_gaps=split["data_gaps"], company_target_margin=company.target_margin or None,
+        inventory=inv, currency=company.currency or "SAR", open_decisions=open_dec, overdue_actions=overdue)
+
+
+@app.get("/company/executive-intelligence")
+def company_executive_intelligence(request: Request, user: User = Depends(get_current_user),
+                                   period: Optional[str] = None, ai: int = 0):
+    with Session(engine) as s:
+        company, _role = _exec_scope(s, user)
+        result = _build_exec(s, company, period)
+        result["ai_summary"] = None
+        if ai:
+            bridge = _load_phase22_bridge()
+            if bridge is not None:
+                trust = {"overall_score": {"pass": 90, "warning": 65, "fail": 20}[result["data_quality"]["status"]],
+                         "status": result["data_quality"]["status"],
+                         "has_critical_fail": result["data_quality"]["gate"] == "BLOCK", "main_causes": [
+                             {"explanation": w["message_ar"], "fix": w["fix"]} for w in result["data_quality"]["warnings"][:3]]}
+                ctx = {"summary": result["summary"], "top_risks": result["risks"][:5],
+                       "recommendations": result["recommendations"][:5], "data_quality": result["data_quality"]["status"]}
+                from ai_gateway import GeminiProvider, request_ai_analysis
+                result["ai_summary"] = request_ai_analysis(
+                    GeminiProvider(company_gemini), ctx, "اكتب ملخصاً تنفيذياً مختصراً",
+                    trust_report=trust, lang=get_lang(request), company=company)
+        return result
+
+
+@app.post("/company/recommendations/to-decision")
+def company_recommendation_to_decision(data: dict, user: User = Depends(get_current_user)):
+    """Creates a decision (+ actions) from a signal. Signal is RE-COMPUTED server-side:
+    numbers from the client are ignored."""
+    signal_id = str(data.get("signal_id") or "")
+    with Session(engine) as s:
+        company, _role = _exec_scope(s, user, need="edit")
+        intel = _build_exec(s, company, data.get("period"))
+        sig = next((x for x in intel["risks"] + intel["opportunities"] if x["id"] == signal_id), None)
+        rec = next((r for r in intel["recommendations"] if r["signal_id"] == signal_id), None)
+        if not sig or not rec:
+            raise HTTPException(404, "التوصية غير موجودة أو لم تعد قائمة لهذه الفترة")
+        impact = (rec.get("expected_impact") or {}).get("value")
+        d = CompanyDecision(
+            company_id=company.id, title=str(data.get("title") or rec["problem_ar"])[:200],
+            detail=f"{rec['evidence']['detail_ar']} | القاعدة: {rec['evidence']['rule']}"[:1000],
+            owner=str(data.get("owner") or "")[:100], due_date=str(data.get("due_date") or "")[:20],
+            kpi=sig["metric_id"], status="open", baseline_sales=_company_total_sales(s, company.id),
+            expected_impact=(f"{impact} {intel['currency']} (تقديري)" if impact is not None else "غير قابل للتقدير")[:200],
+            linked_to=f"signal:{signal_id}", rationale=rec["recommendation_ar"][:500],
+            branch_id=sig.get("branch_id"), metric_id=sig["metric_id"], baseline_value=sig["current_value"],
+            expected_impact_value=impact, impact_status="expected", source_signal=signal_id,
+            updated_at=datetime.now(), problem_type=rec.get("problem_type", sig["code"]),
+            decision_type=sig.get("category", ""), outcome_status="pending_measurement",
+            created_by=user.name or user.email, data_source="companyentry")
+        s.add(d); s.commit(); s.refresh(d)
+        created = []
+        for a in (data.get("actions") or [{"title": rec["suggested_action"]["title_ar"]}])[:10]:
+            act = CompanyAction(company_id=company.id, decision_id=d.id, branch_id=sig.get("branch_id"),
+                                title=str(a.get("title") or "")[:200], owner=str(a.get("owner") or d.owner)[:100],
+                                priority=rec["priority"], due_date=str(a.get("due_date") or d.due_date)[:20],
+                                start_date=datetime.now().strftime("%Y-%m-%d"), updated_at=datetime.now())
+            s.add(act); s.commit(); s.refresh(act); created.append(act.id)
+        log_audit(company.id, user.id, user.name, "decision_from_recommendation", f"decision:{d.id}",
+                  f"signal={signal_id} actions={created}")
+        return {"ok": True, "decision_id": d.id, "action_ids": created}
+
+
+def _action_json(a, today):
+    return {"id": a.id, "decision_id": a.decision_id, "branch_id": a.branch_id, "title": a.title,
+            "description": a.description, "owner": a.owner, "priority": a.priority, "start_date": a.start_date,
+            "due_date": a.due_date, "status": a.status, "progress": a.progress, "notes": a.notes,
+            "overdue": bool(a.status not in ACTION_TERMINAL and a.due_date and a.due_date < today),
+            "updated_at": a.updated_at.isoformat() if a.updated_at else None}
+
+
+@app.get("/company/actions")
+def company_actions(user: User = Depends(get_current_user), status: str = "", branch_id: Optional[int] = None,
+                    owner: str = "", overdue: int = 0, due_from: str = "", due_to: str = "", q: str = "",
+                    sort: str = "due_date"):
+    with Session(engine) as s:
+        if not user.company_id:
+            raise HTTPException(403, "لا توجد شركة نشطة")
+        company = s.get(Company, user.company_id)
+        role = get_user_role(s, user) if company else None
+        if not company or not check_permission(role, "decisions", "view"):
+            raise HTTPException(403, "غير مصرّح")
+        for v in (due_from, due_to):
+            if v and not _valid_date(v):
+                raise HTTPException(422, "تاريخ غير صالح (YYYY-MM-DD)")
+        today = datetime.now().strftime("%Y-%m-%d")
+        all_items = s.exec(select(CompanyAction).where(CompanyAction.company_id == company.id)).all()
+        decisions = {d.id: d for d in s.exec(select(CompanyDecision).where(CompanyDecision.company_id == company.id)).all()}
+        branches = {b.id: b.name for b in s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company.id)).all()}
+        rcat = _load_p23_mod("rule_catalog")
+        rows = []
+        for a in all_items:
+            j = _action_json(a, today)
+            _pt = decisions.get(a.decision_id).problem_type if decisions.get(a.decision_id) else ""
+            j["recommendation_title"] = ({"ar": rcat.localize(_pt, "ar")["title"], "en": rcat.localize(_pt, "en")["title"]}
+                                         if (rcat and _pt) else None)
+            d = decisions.get(a.decision_id)
+            j.update({"branch_name": branches.get(a.branch_id), "created_at": a.created_at.isoformat() if a.created_at else None,
+                      "decision_title": d.title if d else None, "recommendation": (d.source_signal if d else "") or None,
+                      "problem_type": d.problem_type if d else None, "metric_id": d.metric_id if d else None,
+                      "expected_impact": d.expected_impact_value if d else None,
+                      "actual_impact": d.actual_impact_value if d else None,
+                      "outcome_status": (d.outcome_status or "pending_measurement") if d else None})
+            rows.append(j)
+        total = len(rows)
+        summary = {"total": total,
+                   "open": sum(1 for r in rows if r["status"] not in ACTION_TERMINAL),
+                   "overdue": sum(1 for r in rows if r["overdue"]),
+                   "in_progress": sum(1 for r in rows if r["status"] == "in_progress"),
+                   "completed": sum(1 for r in rows if r["status"] == "completed"),
+                   "blocked": sum(1 for r in rows if r["status"] == "blocked")}
+        live = [r for r in rows if r["status"] != "cancelled"]
+        summary["completion_rate"] = round(sum(r["progress"] for r in live) / len(live), 1) if live else None
+        if status: rows = [r for r in rows if r["status"] == status]
+        if branch_id is not None: rows = [r for r in rows if r["branch_id"] == branch_id]
+        if owner: rows = [r for r in rows if r["owner"] == owner]
+        if overdue: rows = [r for r in rows if r["overdue"]]
+        if due_from: rows = [r for r in rows if r["due_date"] and r["due_date"] >= due_from]
+        if due_to: rows = [r for r in rows if r["due_date"] and r["due_date"] <= due_to]
+        if q:
+            ql = q.lower()
+            rows = [r for r in rows if ql in (r["title"] or "").lower() or ql in (r["description"] or "").lower()
+                    or ql in (r["decision_title"] or "").lower()]
+        if sort == "priority":
+            rows.sort(key=lambda r: (r["priority"], r["due_date"] or "9999"))
+        else:
+            rows.sort(key=lambda r: (r["due_date"] or "9999", r["priority"]))
+        return {"actions": rows, "count": len(rows), "summary": summary,
+                "owners": sorted({r["owner"] for r in rows if r["owner"]}), "can_edit": check_permission(role, "decisions", "edit")}
+
+
+@app.post("/company/actions/update")
+def company_action_update(data: dict, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, _role = _exec_scope(s, user, need="edit")
+        a = s.get(CompanyAction, int(data.get("id") or 0))
+        if not a or a.company_id != company.id:
+            raise HTTPException(404, "المهمة غير موجودة")
+        if a.status in ACTION_TERMINAL:
+            raise HTTPException(409, "المهمة مغلقة ولا يمكن تعديلها")
+        new_status = str(data.get("status") or a.status)
+        if new_status not in ACTION_STATUSES:
+            raise HTTPException(400, "حالة غير صالحة")
+        progress = data.get("progress", a.progress)
+        try:
+            progress = int(progress)
+        except (TypeError, ValueError):
+            raise HTTPException(400, "نسبة إنجاز غير صالحة")
+        if not 0 <= progress <= 100:
+            raise HTTPException(400, "نسبة الإنجاز يجب أن تكون بين 0 و100")
+        if new_status == "completed":
+            progress = 100
+        if "due_date" in data:
+            due = str(data.get("due_date") or "")
+            if due and not _valid_date(due):
+                raise HTTPException(422, "تاريخ الاستحقاق غير صالح (YYYY-MM-DD)")
+            a.due_date = due
+        if "owner" in data:
+            a.owner = str(data.get("owner") or "")[:100]
+        before = f"{a.status}/{a.progress}"
+        a.status, a.progress = new_status, progress
+        note = str(data.get("note") or data.get("notes") or "").strip()
+        if note:
+            stamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+            a.notes = ((a.notes + "\n") if a.notes else "") + f"[{stamp} · {user.name}] {note[:500]}"
+        a.updated_at = datetime.now()
+        s.add(a); s.commit()
+        log_audit(company.id, user.id, user.name, "action_update", f"action:{a.id}",
+                  f"{before} -> {a.status}/{a.progress}" + (f" note" if note else ""))
+        return {"ok": True, "action": _action_json(a, datetime.now().strftime("%Y-%m-%d"))}
+
+
+@app.post("/company/decisions/measure")
+def company_decision_measure(data: dict, user: User = Depends(get_current_user)):
+    """Measures a decision's KPI in the latest month after it. 'verified' = reliable measurement
+    (complete month, all branches in scope), never a causal claim."""
+    with Session(engine) as s:
+        company, _role = _exec_scope(s, user, need="edit")
+        d = s.get(CompanyDecision, int(data.get("decision_id") or 0))
+        if not d or d.company_id != company.id:
+            raise HTTPException(404, "القرار غير موجود")
+        dm, pa = _load_p23_mod("decision_memory"), _load_p23_mod("period_aggregation")
+        if dm is None or pa is None:
+            raise HTTPException(503, "المحرّك غير متاح")
+        branches = s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company.id,
+                                                      CompanyBranch.is_active == 1)).all()
+        scope = [d.branch_id] if d.branch_id else [b.id for b in branches]
+        rows = []
+        if scope:
+            rows = [_row_dict(e) for e in s.exec(select(CompanyEntry).where(
+                CompanyEntry.company_id == company.id, CompanyEntry.branch_id.in_(scope))).all()]
+        dec_month = d.created_at.strftime("%Y-%m") if d.created_at else None
+        months = sorted({pa.format_period(pa.parse_period(r["period"])) for r in rows if pa.parse_period(r["period"])})
+        later = [m for m in months if dec_month and m > dec_month]
+        measured = later[-1] if later else None
+        split = pa.split_by_period(rows, current_period=measured) if measured else {}
+        out = dm.evaluate_measurement(d, split, scope, dec_month, measured)
+        d.outcome_status = out["outcome_status"]
+        d.measurement_period = out.get("measurement_period") or ""
+        d.data_source = out["data_source"]
+        if out.get("actual_value") is not None:
+            d.actual_value, d.actual_impact_value = out["actual_value"], out["actual_change"]
+        d.impact_status = {"verified": "verified", "measured": "measured"}.get(out["outcome_status"], "insufficient_data")
+        if "notes" in data:
+            d.outcome_notes = str(data.get("notes") or "")[:1000]
+        d.updated_at = datetime.now()
+        s.add(d); s.commit()
+        log_audit(company.id, user.id, user.name, "decision_measure", f"decision:{d.id}",
+                  f"status={d.outcome_status} period={d.measurement_period} actual={d.actual_value}")
+        return {"ok": True, **out, "impact_status": d.impact_status,
+                "baseline_value": d.baseline_value, "expected_impact_value": d.expected_impact_value}
+
+
+def _decisions_scope(s, user):
+    """Decision memory follows the existing RBAC resource 'decisions' (owner, manager: view)."""
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    company = s.get(Company, user.company_id)
+    if not company or not check_permission(get_user_role(s, user), "decisions", "view"):
+        raise HTTPException(403, "غير مصرّح")
+    if company.is_active != 1:
+        raise HTTPException(402, "شركتك قيد التفعيل")
+    return company
+
+
+def _decision_json(d):
+    return {"id": d.id, "title": d.title, "metric_id": d.metric_id, "branch_id": d.branch_id,
+            "problem_type": d.problem_type, "decision_type": d.decision_type, "status": d.status,
+            "baseline_value": d.baseline_value, "expected_impact_value": d.expected_impact_value,
+            "actual_value": d.actual_value, "actual_impact_value": d.actual_impact_value,
+            "outcome_status": d.outcome_status or "pending_measurement", "measurement_period": d.measurement_period,
+            "outcome_notes": d.outcome_notes, "created_by": d.created_by, "source_signal": d.source_signal,
+            "created_at": d.created_at.isoformat() if d.created_at else None}
+
+
+@app.get("/company/decisions/{decision_id}/memory")
+def company_decision_memory_one(decision_id: int, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company = _decisions_scope(s, user)
+        d = s.get(CompanyDecision, decision_id)
+        if not d or d.company_id != company.id:
+            raise HTTPException(404, "القرار غير موجود")
+        dm = _load_p23_mod("decision_memory")
+        if dm is None:
+            raise HTTPException(503, "المحرّك غير متاح")
+        others = s.exec(select(CompanyDecision).where(CompanyDecision.company_id == company.id)).all()
+        return {"decision": _decision_json(d), "outcome": dm.summarize(d),
+                "similar": dm.find_similar(d, others)}
+
+
+@app.get("/company/decision-memory")
+def company_decision_memory(user: User = Depends(get_current_user), metric_id: str = "",
+                            problem_type: str = "", branch_id: Optional[int] = None):
+    """Past decisions related to a problem the user is looking at now (same company only)."""
+    if not (metric_id or problem_type):
+        raise HTTPException(400, "حدّد المؤشر أو نوع المشكلة")
+    with Session(engine) as s:
+        company = _decisions_scope(s, user)
+        dm = _load_p23_mod("decision_memory")
+        if dm is None:
+            raise HTTPException(503, "المحرّك غير متاح")
+        others = s.exec(select(CompanyDecision).where(CompanyDecision.company_id == company.id)).all()
+        target = {"id": None, "metric_id": metric_id, "problem_type": problem_type, "branch_id": branch_id}
+        return dm.find_similar(target, others)
+
+
+# ── Saved what-if scenarios ────────────────────────────────
+def _scenario_json(sc):
+    ld = lambda t: json.loads(t or "{}")
+    return {"id": sc.id, "name": sc.name, "description": sc.description, "scenario_type": sc.scenario_type,
+            "branch_id": sc.branch_id, "base_period": sc.base_period, "status": sc.status,
+            "assumptions": ld(sc.assumptions), "baseline_values": ld(sc.baseline_values),
+            "scenario_values": ld(sc.scenario_values), "results": ld(sc.results), "created_by": sc.created_by,
+            "created_at": sc.created_at.isoformat() if sc.created_at else None,
+            "updated_at": sc.updated_at.isoformat() if sc.updated_at else None,
+            "ran_at": sc.ran_at.isoformat() if sc.ran_at else None, "is_estimate": True}
+
+
+def _scenario_scope(s, user, need="view"):
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    company = s.get(Company, user.company_id)
+    role = get_user_role(s, user)
+    if not company or not (role == "owner" or check_permission(role, "finance", "view")):
+        raise HTTPException(403, "غير مصرّح")
+    if company.is_active != 1:
+        raise HTTPException(402, "شركتك قيد التفعيل")
+    if need == "edit" and not (role == "owner" or check_permission(role, "finance", "edit")):
+        raise HTTPException(403, "غير مصرّح — تعديل السيناريوهات للمالك والمحاسب")
+    if need == "delete" and role != "owner":
+        raise HTTPException(403, "غير مصرّح — الحذف للمالك فقط")
+    return company
+
+
+def _scenario_run(s, company, clean):
+    se, pa = _load_p23_mod("scenario_engine"), _load_p23_mod("period_aggregation")
+    if se is None or pa is None:
+        raise HTTPException(503, "محرّك السيناريوهات غير متاح")
+    branches = s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company.id,
+                                                  CompanyBranch.is_active == 1)).all()
+    ids = [b.id for b in branches]
+    if clean.get("branch_id") is not None and clean["branch_id"] not in ids:
+        raise HTTPException(404, "الفرع غير موجود")
+    rows = []
+    if ids:
+        rows = [_row_dict(e) for e in s.exec(select(CompanyEntry).where(
+            CompanyEntry.company_id == company.id, CompanyEntry.branch_id.in_(ids))).all()]
+    split = pa.split_by_period(rows, current_period=clean.get("base_period"))
+    breakdown = {}
+    fin = s.exec(select(CompanyModuleEntry).where(CompanyModuleEntry.company_id == company.id,
+                                                  CompanyModuleEntry.module == "finance")
+                 .order_by(CompanyModuleEntry.created_at.desc())).first()
+    if fin and fin.data:
+        try:
+            for k, v in json.loads(fin.data).items():
+                for key, words in (("cogs", ("تكلفة البضاعة", "cogs")), ("payroll", ("رواتب", "payroll")),
+                                   ("rent", ("إيجار", "rent")), ("marketing", ("تسويق", "marketing"))):
+                    if any(w in str(k).lower() for w in words):
+                        breakdown[key] = v
+        except Exception:
+            breakdown = {}
+    base = se.build_baseline(split["current_entries"], clean.get("branch_id"), breakdown, split["current_period"])
+    return se.run(base, clean["assumptions"]), split["current_period"]
+
+
+def _scenario_validate(data):
+    se = _load_p23_mod("scenario_engine")
+    if se is None:
+        raise HTTPException(503, "محرّك السيناريوهات غير متاح")
+    try:
+        return se.validate(data)
+    except se.ScenarioError as e:
+        raise HTTPException(422, {"field": e.field, "message_ar": e.message_ar, "message_en": e.message_en})
+
+
+def _scenario_store(sc, result, period):
+    sc.base_period = period or ""
+    sc.baseline_values = json.dumps(result.get("baseline_values", {}), ensure_ascii=False)
+    sc.scenario_values = json.dumps(result.get("comparison", []), ensure_ascii=False)
+    sc.results = json.dumps(result, ensure_ascii=False, default=str)
+    sc.status = "ran" if result.get("status") == "ok" else "draft"
+    sc.ran_at = datetime.now(); sc.updated_at = datetime.now()
+
+
+@app.get("/company/scenarios")
+def company_scenarios_list(user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company = _scenario_scope(s, user)
+        items = s.exec(select(CompanyScenario).where(CompanyScenario.company_id == company.id,
+                                                     CompanyScenario.status != "archived")
+                       .order_by(CompanyScenario.updated_at.desc())).all()
+        branches = s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company.id,
+                                                      CompanyBranch.is_active == 1)).all()
+        return {"scenarios": [_scenario_json(x) for x in items], "count": len(items),
+                "branches": [{"id": x.id, "name": x.name} for x in branches]}
+
+
+@app.post("/company/scenarios")
+def company_scenarios_create(data: dict, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company = _scenario_scope(s, user, "edit")
+        clean = _scenario_validate(data)
+        result, period = _scenario_run(s, company, clean)
+        sc = CompanyScenario(company_id=company.id, branch_id=clean["branch_id"], created_by=user.name or user.email,
+                             name=clean["name"], description=clean["description"], scenario_type=clean["scenario_type"],
+                             assumptions=json.dumps(clean["assumptions"]))
+        _scenario_store(sc, result, period)
+        s.add(sc); s.commit(); s.refresh(sc)
+        log_audit(company.id, user.id, user.name, "scenario_create", f"scenario:{sc.id}", clean["name"])
+        return _scenario_json(sc)
+
+
+def _own_scenario(s, company, sid):
+    sc = s.get(CompanyScenario, sid)
+    if not sc or sc.company_id != company.id or sc.status == "archived":
+        raise HTTPException(404, "السيناريو غير موجود")
+    return sc
+
+
+@app.get("/company/scenarios/{sid}")
+def company_scenarios_get(sid: int, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        return _scenario_json(_own_scenario(s, _scenario_scope(s, user), sid))
+
+
+@app.put("/company/scenarios/{sid}")
+def company_scenarios_update(sid: int, data: dict, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company = _scenario_scope(s, user, "edit")
+        sc = _own_scenario(s, company, sid)
+        clean = _scenario_validate(data)
+        result, period = _scenario_run(s, company, clean)
+        sc.name, sc.description, sc.scenario_type = clean["name"], clean["description"], clean["scenario_type"]
+        sc.branch_id, sc.assumptions = clean["branch_id"], json.dumps(clean["assumptions"])
+        _scenario_store(sc, result, period)
+        s.add(sc); s.commit(); s.refresh(sc)
+        log_audit(company.id, user.id, user.name, "scenario_update", f"scenario:{sc.id}", clean["name"])
+        return _scenario_json(sc)
+
+
+@app.post("/company/scenarios/{sid}/run")
+def company_scenarios_run(sid: int, user: User = Depends(get_current_user)):
+    """Re-runs against the CURRENT baseline (server-side data only)."""
+    with Session(engine) as s:
+        company = _scenario_scope(s, user, "edit")
+        sc = _own_scenario(s, company, sid)
+        clean = {"assumptions": json.loads(sc.assumptions or "{}"), "branch_id": sc.branch_id, "base_period": None}
+        result, period = _scenario_run(s, company, clean)
+        _scenario_store(sc, result, period)
+        s.add(sc); s.commit(); s.refresh(sc)
+        return _scenario_json(sc)
+
+
+@app.get("/company/scenarios/{sid}/compare")
+def company_scenarios_compare(sid: int, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        sc = _own_scenario(s, _scenario_scope(s, user), sid)
+        r = json.loads(sc.results or "{}")
+        return {"id": sc.id, "name": sc.name, "base_period": sc.base_period, "is_estimate": True,
+                "status": r.get("status"), "comparison": r.get("comparison", []), "warnings": r.get("warnings", []),
+                "revenue_impact": r.get("revenue_impact"), "profit_impact": r.get("profit_impact"),
+                "margin_impact_pts": r.get("margin_impact_pts")}
+
+
+@app.delete("/company/scenarios/{sid}")
+def company_scenarios_delete(sid: int, user: User = Depends(get_current_user)):
+    """Soft delete (archived) — history is kept for audit."""
+    with Session(engine) as s:
+        company = _scenario_scope(s, user, "delete")
+        sc = _own_scenario(s, company, sid)
+        sc.status, sc.updated_at = "archived", datetime.now()
+        s.add(sc); s.commit()
+        log_audit(company.id, user.id, user.name, "scenario_archive", f"scenario:{sid}", sc.name)
+        return {"ok": True}
+
+
+# ── Action Center ───────────────────────────────────────────
+@app.post("/company/actions")
+def company_action_create(data: dict, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, _ = _exec_scope(s, user, need="edit")
+        d = s.get(CompanyDecision, int(data.get("decision_id") or 0))
+        if not d or d.company_id != company.id:
+            raise HTTPException(404, "القرار غير موجود")
+        title = str(data.get("title") or "").strip()
+        if not title:
+            raise HTTPException(422, "عنوان الإجراء مطلوب")
+        due = str(data.get("due_date") or "")
+        if due and not _valid_date(due):
+            raise HTTPException(422, "تاريخ الاستحقاق غير صالح (YYYY-MM-DD)")
+        pr = data.get("priority") or "P2"
+        if pr not in ("P1", "P2", "P3"):
+            raise HTTPException(422, "أولوية غير صالحة")
+        a = CompanyAction(company_id=company.id, decision_id=d.id, branch_id=d.branch_id, title=title[:200],
+                          description=str(data.get("description") or "")[:1000], owner=str(data.get("owner") or "")[:100],
+                          priority=pr, due_date=due, start_date=datetime.now().strftime("%Y-%m-%d"), updated_at=datetime.now())
+        s.add(a); s.commit(); s.refresh(a)
+        log_audit(company.id, user.id, user.name, "action_create", f"action:{a.id}", f"decision={d.id}")
+        return {"ok": True, "action": _action_json(a, datetime.now().strftime("%Y-%m-%d"))}
+
+
+def _valid_date(v):
+    try:
+        datetime.strptime(v, "%Y-%m-%d"); return True
+    except ValueError:
+        return False
+
+
+@app.get("/company/actions/{aid}/history")
+def company_action_history(aid: int, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        if not user.company_id:
+            raise HTTPException(403, "لا توجد شركة نشطة")
+        company = s.get(Company, user.company_id)
+        if not company or not check_permission(get_user_role(s, user), "decisions", "view"):
+            raise HTTPException(403, "غير مصرّح")
+        a = s.get(CompanyAction, aid)
+        if not a or a.company_id != company.id:
+            raise HTTPException(404, "المهمة غير موجودة")
+        logs = s.exec(select(AuditLog).where(AuditLog.company_id == company.id, AuditLog.target == f"action:{aid}")
+                      .order_by(AuditLog.created_at.desc())).all()
+        return {"history": [{"action": l.action, "by": l.user_name, "details": l.details,
+                             "at": l.created_at.isoformat() if l.created_at else None} for l in logs]}
+
+
 @app.get("/company/financial-overview")
 def company_financial_overview(user: User = Depends(get_current_user)):
     """الوحدة المالية الشاملة (P3 — رؤية أحمد): P&L + النِسب المالية.
@@ -4930,11 +5718,11 @@ def company_predictions(user: User = Depends(get_current_user)):
         base_6m_profit = round(sum(total_profit_proj))
         scenarios = {
             "worst": {"label": "متشائم", "sales": round(base_6m_sales * 0.88), "profit": round(base_6m_profit * 0.80),
-                      "note": "نمو أبطأ + ضغط على الهوامش"},
+                      "note": "افتراض ثابت: −12% مبيعات و−20% ربح (ليس مشتقاً من بياناتك)", "basis": "fixed_assumption"},
             "base": {"label": "أساسي", "sales": base_6m_sales, "profit": base_6m_profit,
                      "note": "استمرار الاتجاه الحالي"},
             "best": {"label": "متفائل", "sales": round(base_6m_sales * 1.12), "profit": round(base_6m_profit * 1.20),
-                     "note": "نمو أقوى + تحسّن الكفاءة"},
+                     "note": "افتراض ثابت: +12% مبيعات و+20% ربح (ليس مشتقاً من بياناتك)", "basis": "fixed_assumption"},
         }
 
         return {
