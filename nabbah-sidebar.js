@@ -67,6 +67,7 @@
     { icon: "🤖", label: "ذكاء نبّاه", items: [
       { label: "التنبؤ بالأداء", href: "company-predictions.html" },
       { label: "محاكاة السيناريوهات", href: "company-whatif.html" },
+      { label: "السيناريوهات المحفوظة", href: "company-scenarios.html" },
       { label: "الأسباب الجذرية", href: "company-root-cause.html" },
       { label: "ذاكرة الشركة", href: "company-memory.html" },
     ]},
@@ -76,6 +77,7 @@
       { label: "التقرير التنفيذي", href: "company-report.html" },
       { label: "التقرير الشهري", href: "company-monthly-report.html" },
       { label: "متابعة القرارات", href: "company-decisions.html" },
+      { label: "مركز الإجراءات", href: "company-actions.html" },
     ]},
   ];
 
