@@ -488,6 +488,7 @@ def run_migrations():
 def auto_sync_columns():
     """مزامنة ذاتية شاملة: تفحص كل موديل مقابل جدوله وتضيف أي عمود ناقص تلقائياً.
     تضمن ألا يتكرر خطأ 'column does not exist' مع أي عمود جديد مستقبلاً."""
+    from sqlalchemy import text  # كان مفقوداً: بدونه تفشل كل الأوامر بصمت
     # خريطة: اسم الجدول → قائمة (اسم العمود, نوع SQL) من الموديل
     TABLE_COLUMNS = {
         "companydecision": [
