@@ -8830,8 +8830,15 @@ NABBAH_VERSION = "5.2-smart-recognition"
 def version_check():
     """افتح nabbah.up.railway.app/version — لو ما شفت هذي النسخة فالتحديث غير منشور."""
     # النسخة العامة مختصرة عمداً — التفاصيل الكاملة عبر /files-check للأدمن
+    import os as _os
+    _pages = {p: _os.path.exists(p) for p in ("company-actions.html", "company-scenarios.html")}
+    _engines = {d: _os.path.isdir(_os.path.join(_os.path.dirname(_os.path.abspath(__file__)), d))
+                for d in ("phase21", "phase22", "phase23")}
     return {
         "version": NABBAH_VERSION,
+        "build": "phase-2.3",
+        "pages_present": _pages,
+        "engines_present": _engines,
         "status": "ok",
         "features": {
             "pos_transactions_import": True,
