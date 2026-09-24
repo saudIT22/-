@@ -3545,6 +3545,40 @@ def _build_exec(s, company, period=None):
         inventory=inv, currency=company.currency or "SAR", open_decisions=open_dec, overdue_actions=overdue)
 
 
+@app.get("/engines-check")
+def engines_check(user: User = Depends(get_current_user)):
+    """تشخيص للمالك: هل وصلت ملفات المحركات، وما سبب فشل أي منها؟"""
+    import importlib, os as _os
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id) if user.company_id else None
+        if not company or company.owner_id != user.id:
+            raise HTTPException(403, "غير مصرّح")
+    base = _os.path.dirname(_os.path.abspath(__file__))
+    _load_phase23()
+    out = {"folders": {}, "files": {}, "imports": {}}
+    expected = {
+        "phase21": ["nabbah_finance.py", "nabbah_trust.py"],
+        "phase22": ["semantic_layer.py", "kpi_engine.py", "analysis_engines.py", "ai_gateway.py",
+                     "platform_bridge.py", "period_aggregation.py", "legacy_adapters.py"],
+        "phase23": ["intelligence_engine.py", "forecast_engine.py", "scenario_engine.py",
+                     "decision_memory.py", "rule_catalog.py"],
+    }
+    for folder, files in expected.items():
+        d = _os.path.join(base, folder)
+        out["folders"][folder] = _os.path.isdir(d)
+        out["files"][folder] = {f: _os.path.exists(_os.path.join(d, f)) for f in files}
+    for mod in ("nabbah_finance", "nabbah_trust", "platform_bridge", "period_aggregation", "legacy_adapters",
+                "intelligence_engine", "forecast_engine", "scenario_engine", "decision_memory", "rule_catalog"):
+        try:
+            importlib.import_module(mod)
+            out["imports"][mod] = "ok"
+        except Exception as e:
+            out["imports"][mod] = f"{type(e).__name__}: {str(e)[:160]}"
+    out["missing_files"] = [f"{k}/{f}" for k, v in out["files"].items() for f, ok in v.items() if not ok]
+    out["failed_imports"] = [k for k, v in out["imports"].items() if v != "ok"]
+    return out
+
+
 @app.get("/company/executive-intelligence")
 def company_executive_intelligence(request: Request, user: User = Depends(get_current_user),
                                    period: Optional[str] = None, ai: int = 0):
