@@ -524,6 +524,7 @@ def auto_sync_columns():
             ("ip", "VARCHAR DEFAULT ''"),
         ],
     }
+    report = {"added_or_ok": 0, "failed": []}
     for table, cols in TABLE_COLUMNS.items():
         for col_name, col_type in cols:
             sql = f'ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {col_name} {col_type}'
@@ -531,8 +532,15 @@ def auto_sync_columns():
                 with engine.connect() as conn:
                     conn.execute(text(sql))
                     conn.commit()
-            except Exception:
-                pass  # الجدول قد لا يكون موجوداً بعد — يُنشأ من create_all
+                report["added_or_ok"] += 1
+            except Exception as e:
+                # لا نكسر الإقلاع، لكن لا نُخفي السبب أبداً
+                report["failed"].append({"table": table, "column": col_name,
+                                         "error": f"{type(e).__name__}: {str(e)[:200]}"})
+    if report["failed"]:
+        _logger.error(f"auto_sync_columns: فشل {len(report['failed'])} عمود — "
+                      + ", ".join(f"{f['table']}.{f['column']}" for f in report["failed"][:10]))
+    return report
 
 
 run_migrations()
@@ -3470,8 +3478,34 @@ def _load_phase23():
         import period_aggregation as _pa
         return _ie, _pa
     except Exception as _e:
-        _logger.error(f"Phase 2.3 engine unavailable: {type(_e).__name__}")
+        import os as _os
+        _b = _os.path.dirname(_os.path.abspath(__file__))
+        _d = _os.path.join(_b, "phase23")
+        _have = sorted(_os.listdir(_d)) if _os.path.isdir(_d) else "المجلد غير موجود"
+        _logger.error(f"Phase 2.3 engine unavailable: {type(_e).__name__}: {str(_e)[:120]} | "
+                      f"phase23 = {_have} | phase22 = "
+                      f"{sorted(_os.listdir(_os.path.join(_b,'phase22'))) if _os.path.isdir(_os.path.join(_b,'phase22')) else 'مفقود'} | "
+                      f"phase21 = {sorted(_os.listdir(_os.path.join(_b,'phase21'))) if _os.path.isdir(_os.path.join(_b,'phase21')) else 'مفقود'}")
         return None, None
+
+
+_P23_LAST_ERROR = {"msg": ""}
+
+
+def _p23_diagnostic():
+    """نص تشخيصي قصير يظهر للمالك في الواجهة بدل رسالة عامة."""
+    import os as _os
+    base = _os.path.dirname(_os.path.abspath(__file__))
+    parts = []
+    for d in ("phase21", "phase22", "phase23"):
+        p = _os.path.join(base, d)
+        if _os.path.isdir(p):
+            files = sorted(f for f in _os.listdir(p) if f.endswith(".py") and not f.startswith("test_"))
+            parts.append(f"{d}: {len(files)} ملف" + (f" ({', '.join(files)})" if len(files) < 8 else ""))
+        else:
+            parts.append(f"{d}: المجلد مفقود")
+    err = _P23_LAST_ERROR.get("msg") or "—"
+    return f"سبب العطل: {err} | {' · '.join(parts)}"
 
 
 def _load_p23_mod(name):
@@ -3480,7 +3514,8 @@ def _load_p23_mod(name):
         import importlib
         return importlib.import_module(name)
     except Exception as _e:
-        _logger.error(f"Phase 2.3 module {name} unavailable: {type(_e).__name__}")
+        _P23_LAST_ERROR["msg"] = f"{type(_e).__name__}: {str(_e)[:120]}"
+        _logger.error(f"Phase 2.3 module {name} unavailable: {_P23_LAST_ERROR['msg']}")
         return None
 
 
@@ -3510,7 +3545,7 @@ def _exec_scope(s, user, need="view"):
 def _build_exec(s, company, period=None):
     ie, pa = _load_phase23()
     if ie is None:
-        raise HTTPException(503, "محرّك الذكاء التنفيذي غير متاح — ارفع مجلد phase23.")
+        raise HTTPException(503, "محرّك الذكاء التنفيذي غير متاح — " + _p23_diagnostic())
     branches = s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company.id,
                                                   CompanyBranch.is_active == 1)).all()
     ids = [b.id for b in branches]
@@ -3543,6 +3578,33 @@ def _build_exec(s, company, period=None):
         period=split["current_period"], comparison_period=split["comparison_period"],
         period_gaps=split["data_gaps"], company_target_margin=company.target_margin or None,
         inventory=inv, currency=company.currency or "SAR", open_decisions=open_dec, overdue_actions=overdue)
+
+
+@app.post("/db-sync")
+def db_sync(user: User = Depends(get_current_user)):
+    """للمالك: يشغّل مزامنة الأعمدة ويعرض النتيجة بدل إخفائها، ويتحقق من الجداول الجديدة."""
+    from sqlalchemy import text as _text, inspect as _inspect
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id) if user.company_id else None
+        if not company or company.owner_id != user.id:
+            raise HTTPException(403, "غير مصرّح")
+    result = auto_sync_columns()
+    try:
+        SQLModel.metadata.create_all(engine)
+    except Exception as e:
+        result["create_all_error"] = f"{type(e).__name__}: {str(e)[:200]}"
+    insp = _inspect(engine)
+    tables = insp.get_table_names()
+    out = {"columns_ok": result["added_or_ok"], "columns_failed": result["failed"],
+           "tables": {t: (t in tables) for t in ("companydecision", "companyaction", "companyscenario")}}
+    for t in ("companydecision", "companyaction", "companyscenario"):
+        if t in tables:
+            out[f"{t}_columns"] = sorted(c["name"] for c in insp.get_columns(t))
+    missing = [c for c in ("branch_id", "metric_id", "outcome_status", "problem_type", "data_source")
+               if t and "companydecision" in tables and c not in out.get("companydecision_columns", [])]
+    out["decision_missing_columns"] = missing
+    out["healthy"] = not result["failed"] and not missing and all(out["tables"].values())
+    return out
 
 
 @app.get("/engines-check")
@@ -3760,7 +3822,7 @@ def company_decision_measure(data: dict, user: User = Depends(get_current_user))
             raise HTTPException(404, "القرار غير موجود")
         dm, pa = _load_p23_mod("decision_memory"), _load_p23_mod("period_aggregation")
         if dm is None or pa is None:
-            raise HTTPException(503, "المحرّك غير متاح")
+            raise HTTPException(503, "المحرّك غير متاح — " + _p23_diagnostic())
         branches = s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company.id,
                                                       CompanyBranch.is_active == 1)).all()
         scope = [d.branch_id] if d.branch_id else [b.id for b in branches]
@@ -3821,7 +3883,7 @@ def company_decision_memory_one(decision_id: int, user: User = Depends(get_curre
             raise HTTPException(404, "القرار غير موجود")
         dm = _load_p23_mod("decision_memory")
         if dm is None:
-            raise HTTPException(503, "المحرّك غير متاح")
+            raise HTTPException(503, "المحرّك غير متاح — " + _p23_diagnostic())
         others = s.exec(select(CompanyDecision).where(CompanyDecision.company_id == company.id)).all()
         return {"decision": _decision_json(d), "outcome": dm.summarize(d),
                 "similar": dm.find_similar(d, others)}
@@ -3837,7 +3899,7 @@ def company_decision_memory(user: User = Depends(get_current_user), metric_id: s
         company = _decisions_scope(s, user)
         dm = _load_p23_mod("decision_memory")
         if dm is None:
-            raise HTTPException(503, "المحرّك غير متاح")
+            raise HTTPException(503, "المحرّك غير متاح — " + _p23_diagnostic())
         others = s.exec(select(CompanyDecision).where(CompanyDecision.company_id == company.id)).all()
         target = {"id": None, "metric_id": metric_id, "problem_type": problem_type, "branch_id": branch_id}
         return dm.find_similar(target, others)
@@ -3874,7 +3936,7 @@ def _scenario_scope(s, user, need="view"):
 def _scenario_run(s, company, clean):
     se, pa = _load_p23_mod("scenario_engine"), _load_p23_mod("period_aggregation")
     if se is None or pa is None:
-        raise HTTPException(503, "محرّك السيناريوهات غير متاح")
+        raise HTTPException(503, "محرّك السيناريوهات غير متاح — " + _p23_diagnostic())
     branches = s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company.id,
                                                   CompanyBranch.is_active == 1)).all()
     ids = [b.id for b in branches]
@@ -3905,7 +3967,7 @@ def _scenario_run(s, company, clean):
 def _scenario_validate(data):
     se = _load_p23_mod("scenario_engine")
     if se is None:
-        raise HTTPException(503, "محرّك السيناريوهات غير متاح")
+        raise HTTPException(503, "محرّك السيناريوهات غير متاح — " + _p23_diagnostic())
     try:
         return se.validate(data)
     except se.ScenarioError as e:
