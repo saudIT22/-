@@ -371,6 +371,159 @@ class CompanyScenario(SQLModel, table=True):
     ran_at: Optional[datetime] = None
 
 
+class CompanyDataset(SQLModel, table=True):
+    """Phase 2.4 — سجل رفع بيانات: مصدرها وجودتها ونتيجتها (lineage + history)."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    dataset_type: str = Field(index=True)     # sale | purchase | inventory | employee | ...
+    source_file: str = ""
+    source_type: str = "upload"
+    period: str = ""
+    branches: str = ""                        # أسماء/أرقام الفروع المتأثرة
+    total_rows: int = 0
+    valid_rows: int = 0
+    rejected_rows: int = 0
+    quality_score: int = 0
+    quality_gate: str = ""                    # ALLOW | QUALIFY | BLOCK
+    status: str = "processing"                # processing | validated | imported | partial | rejected
+    mapping_json: str = "{}"
+    staging_json: str = "[]"                  # صفوف قيد المراجعة قبل الاعتماد
+    errors_json: str = "[]"
+    uploaded_by: str = ""
+    created_at: datetime = Field(default_factory=datetime.now)
+    imported_at: Optional[datetime] = None
+
+
+class CompanyDepartment(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    branch_id: Optional[int] = Field(default=None, index=True)
+    name: str = ""
+    code: str = ""
+    active: int = 1
+    created_at: datetime = Field(default_factory=datetime.now)
+
+
+class CompanyEmployee(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    branch_id: Optional[int] = Field(default=None, index=True)
+    department_id: Optional[int] = None
+    employee_code: str = ""
+    name: str = ""
+    role: str = ""
+    employment_status: str = "active"
+    hire_date: str = ""
+    termination_date: str = ""
+    monthly_cost: Optional[float] = None       # حسّاس: يخضع لقواعد الصلاحيات القائمة
+    dataset_id: Optional[int] = None
+    source_row: Optional[int] = None
+    created_at: datetime = Field(default_factory=datetime.now)
+
+
+class CompanyProduct(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    sku: str = Field(default="", index=True)
+    name: str = ""
+    category: str = ""
+    unit: str = ""
+    cost: Optional[float] = None
+    selling_price: Optional[float] = None
+    active: int = 1
+    dataset_id: Optional[int] = None
+    created_at: datetime = Field(default_factory=datetime.now)
+
+
+class CompanySupplier(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    name: str = ""
+    category: str = ""
+    payment_terms: str = ""
+    active: int = 1
+    dataset_id: Optional[int] = None
+    created_at: datetime = Field(default_factory=datetime.now)
+
+
+class CompanySale(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    branch_id: Optional[int] = Field(default=None, index=True)
+    date: str = Field(default="", index=True)
+    period: str = Field(default="", index=True)
+    reference: str = ""
+    channel: str = ""
+    product_sku: str = ""
+    category: str = ""
+    quantity: Optional[float] = None
+    gross_sales: Optional[float] = None
+    discounts: Optional[float] = None
+    returns: Optional[float] = None
+    net_sales: Optional[float] = None
+    vat: Optional[float] = None
+    payment_method: str = ""
+    dataset_id: Optional[int] = Field(default=None, index=True)
+    source_row: Optional[int] = None
+    created_at: datetime = Field(default_factory=datetime.now)
+
+
+class CompanyPurchase(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    branch_id: Optional[int] = Field(default=None, index=True)
+    supplier_id: Optional[int] = None
+    supplier_name: str = ""
+    date: str = Field(default="", index=True)
+    period: str = Field(default="", index=True)
+    reference: str = ""
+    product_sku: str = ""
+    category: str = ""
+    quantity: Optional[float] = None
+    unit_cost: Optional[float] = None
+    total_cost: Optional[float] = None
+    vat: Optional[float] = None
+    status: str = ""
+    dataset_id: Optional[int] = Field(default=None, index=True)
+    source_row: Optional[int] = None
+    created_at: datetime = Field(default_factory=datetime.now)
+
+
+class CompanyInventory(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    branch_id: Optional[int] = Field(default=None, index=True)
+    product_sku: str = Field(default="", index=True)
+    period: str = Field(default="", index=True)
+    opening_qty: Optional[float] = None
+    opening_value: Optional[float] = None
+    purchases_qty: Optional[float] = None
+    sold_qty: Optional[float] = None
+    adjustments_qty: Optional[float] = None
+    closing_qty: Optional[float] = None
+    closing_value: Optional[float] = None
+    dataset_id: Optional[int] = Field(default=None, index=True)
+    source_row: Optional[int] = None
+    created_at: datetime = Field(default_factory=datetime.now)
+
+
+class CompanyCashMovement(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    branch_id: Optional[int] = Field(default=None, index=True)
+    date: str = Field(default="", index=True)
+    period: str = Field(default="", index=True)
+    movement_type: str = ""
+    category: str = ""
+    amount: Optional[float] = None
+    direction: str = ""                        # in | out
+    reference: str = ""
+    source: str = ""
+    dataset_id: Optional[int] = Field(default=None, index=True)
+    source_row: Optional[int] = None
+    created_at: datetime = Field(default_factory=datetime.now)
+
+
 class CompanyMemory(SQLModel, table=True):
     """ذاكرة الشركة المؤسسية: كل تحليل وقرار وسؤال ورفع بيانات يُسجَّل هنا للأبد."""
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -900,6 +1053,11 @@ def page_sales_analytics():
 @app.get("/company-readiness.html")
 def page_readiness():
     return FileResponse("company-readiness.html")
+
+
+@app.get("/company-data-center.html")
+def page_data_center():
+    return FileResponse("company-data-center.html")
 
 
 @app.get("/company-actions.html")
@@ -3652,6 +3810,296 @@ def engines_check(user: User = Depends(get_current_user)):
     out["missing_files"] = [f"{k}/{f}" for k, v in out["files"].items() for f, ok in v.items() if not ok]
     out["failed_imports"] = [k for k, v in out["imports"].items() if v != "ok"]
     return out
+
+
+# ═══════════════════════════════════════════════════════════
+#  Phase 2.4 — Data Foundation: datasets, ingestion, periods, master data
+#  يعيد استخدام: parse_csv/parse_excel · طبقة الموثوقية · RBAC · سجل التدقيق
+# ═══════════════════════════════════════════════════════════
+DATA_ROLES_VIEW = ("owner", "manager", "accountant")
+DATA_ROLES_EDIT = ("owner", "accountant")
+MAX_STAGING_ROWS = 5000
+
+
+def _load_p24(name):
+    """يحمّل محركات 2.4 من المجلد أو من حزمة nabbah_engines."""
+    try:
+        import sys as _sys, os as _os, importlib
+        for _d in ("phase21", "phase22", "phase23", "phase24"):
+            _p = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), _d)
+            if _p not in _sys.path:
+                _sys.path.insert(0, _p)
+        try:
+            return importlib.import_module(name)
+        except ModuleNotFoundError:
+            import nabbah_engines  # noqa: F401
+            return importlib.import_module(name)
+    except Exception as _e:
+        _P23_LAST_ERROR["msg"] = f"{type(_e).__name__}: {str(_e)[:120]}"
+        _logger.error(f"Phase 2.4 module {name} unavailable: {_P23_LAST_ERROR['msg']}")
+        return None
+
+
+def _data_scope(s, user, need="view"):
+    """نطاق الشركة + الصلاحيات لبيانات المؤسسة."""
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    company = s.get(Company, user.company_id)
+    role = get_user_role(s, user) if company else None
+    if not company or role not in DATA_ROLES_VIEW:
+        raise HTTPException(403, "غير مصرّح")
+    if company.is_active != 1:
+        raise HTTPException(402, "شركتك قيد التفعيل")
+    if need == "edit" and role not in DATA_ROLES_EDIT:
+        raise HTTPException(403, "غير مصرّح — رفع البيانات للمالك والمحاسب")
+    return company, role
+
+
+def _branch_lookup(s, company_id):
+    rows = s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company_id,
+                                              CompanyBranch.is_active == 1)).all()
+    return {b.name: b.id for b in rows}, {b.id: b.name for b in rows}
+
+
+def _dataset_json(d, role=None):
+    j = {"id": d.id, "dataset_type": d.dataset_type, "source_file": d.source_file, "period": d.period,
+         "branches": d.branches, "total_rows": d.total_rows, "valid_rows": d.valid_rows,
+         "rejected_rows": d.rejected_rows, "quality_score": d.quality_score, "quality_gate": d.quality_gate,
+         "status": d.status, "uploaded_by": d.uploaded_by,
+         "created_at": d.created_at.isoformat() if d.created_at else None,
+         "imported_at": d.imported_at.isoformat() if d.imported_at else None}
+    if role not in DATA_ROLES_EDIT:
+        j["uploaded_by"] = ""      # لا نكشف من رفع لغير المصرّح لهم
+    return j
+
+
+@app.get("/company/datasets")
+def company_datasets(user: User = Depends(get_current_user), dataset_type: str = "", status: str = ""):
+    with Session(engine) as s:
+        company, role = _data_scope(s, user)
+        q = select(CompanyDataset).where(CompanyDataset.company_id == company.id)
+        if dataset_type:
+            q = q.where(CompanyDataset.dataset_type == dataset_type)
+        if status:
+            q = q.where(CompanyDataset.status == status)
+        items = s.exec(q.order_by(CompanyDataset.created_at.desc()).limit(200)).all()
+        cm = _load_p24("canonical_model")
+        return {"datasets": [_dataset_json(d, role) for d in items], "count": len(items),
+                "types": ({k: {"ar": v["ar"], "en": v["en"]} for k, v in cm.ENTITIES.items()} if cm else {}),
+                "can_upload": role in DATA_ROLES_EDIT}
+
+
+@app.post("/company/datasets/preview")
+async def company_dataset_preview(file: UploadFile = File(...), dataset_type: str = Form(...),
+                                  user: User = Depends(get_current_user)):
+    """يقرأ الملف، يطابق الأعمدة، يتحقق من الصفوف، ويخزّنها للمراجعة — بدون استيراد."""
+    ing, cm = _load_p24("ingestion"), _load_p24("canonical_model")
+    if ing is None or cm is None:
+        raise HTTPException(503, "محرّك استيعاب البيانات غير متاح — " + _p23_diagnostic())
+    if dataset_type not in cm.DATASET_TYPES:
+        raise HTTPException(422, "نوع بيانات غير مدعوم")
+    with Session(engine) as s:
+        company, role = _data_scope(s, user, "edit")
+        data = await file.read()
+        name = (file.filename or "").lower()
+        try:
+            if name.endswith(".csv"):
+                headers, rows, _ = parse_csv(data)
+            elif name.endswith((".xlsx", ".xlsm")):
+                headers, rows, _ = parse_excel(data)
+            else:
+                raise HTTPException(400, "ادعم CSV أو Excel (.csv .xlsx) فقط")
+        except HTTPException:
+            raise
+        except Exception as e:
+            _logger.error(f"dataset preview read failed: {type(e).__name__}: {str(e)[:150]}")
+            raise HTTPException(400, "تعذّر قراءة الملف. تأكد أنه CSV أو Excel صالح.")
+        if len(rows) > MAX_STAGING_ROWS:
+            raise HTTPException(422, f"الملف كبير: الحد {MAX_STAGING_ROWS} صف في الرفعة الواحدة")
+        names, ids = _branch_lookup(s, company.id)
+        mapped = ing.map_columns(headers, dataset_type)
+        validation = ing.validate_rows(rows, mapped["mapping"], dataset_type, branch_names=names)
+        quality = ing.assess_quality(validation, dataset_type)
+        periods = sorted({r.get("period") or (r.get("date") or "")[:7] for r in validation["valid"] if r.get("period") or r.get("date")})
+        branches = sorted({ids.get(r.get("branch_id"), "") for r in validation["valid"] if r.get("branch_id")})
+        d = CompanyDataset(company_id=company.id, dataset_type=dataset_type, source_file=(file.filename or "")[:200],
+                           period=", ".join(periods[:6]), branches=", ".join(b for b in branches if b)[:200],
+                           total_rows=validation["total"], valid_rows=validation["valid_count"],
+                           rejected_rows=validation["rejected_count"], quality_score=quality["overall_score"],
+                           quality_gate=quality["gate"], status="validated",
+                           mapping_json=json.dumps({str(k): v for k, v in mapped["mapping"].items()}, ensure_ascii=False),
+                           staging_json=json.dumps(validation["valid"], ensure_ascii=False, default=str),
+                           errors_json=json.dumps(validation["rejected"][:200], ensure_ascii=False, default=str),
+                           uploaded_by=user.name or user.email)
+        s.add(d); s.commit(); s.refresh(d)
+        log_audit(company.id, user.id, user.name, "dataset_preview", f"dataset:{d.id}",
+                  f"type={dataset_type} rows={validation['total']} valid={validation['valid_count']}")
+        return {"dataset": _dataset_json(d, role), "headers": headers,
+                "mapping": {headers[i]: f for i, f in mapped["mapping"].items() if i < len(headers)},
+                "unmapped": mapped["unmapped"], "missing_required": mapped["missing_required"],
+                "fields": mapped["fields"], "required": mapped["required"],
+                "sample": validation["valid"][:10], "rejected_sample": validation["rejected"][:20],
+                "quality": quality}
+
+
+@app.post("/company/datasets/{dataset_id}/validate")
+def company_dataset_validate(dataset_id: int, data: dict, user: User = Depends(get_current_user)):
+    """إعادة التحقق بعد تعديل ربط الأعمدة يدوياً (بدون رفع الملف مرة أخرى)."""
+    ing = _load_p24("ingestion")
+    if ing is None:
+        raise HTTPException(503, "محرّك استيعاب البيانات غير متاح")
+    with Session(engine) as s:
+        company, role = _data_scope(s, user, "edit")
+        d = s.get(CompanyDataset, dataset_id)
+        if not d or d.company_id != company.id:
+            raise HTTPException(404, "الملف غير موجود")
+        if d.status == "imported":
+            raise HTTPException(409, "تم اعتماد هذه البيانات ولا يمكن تعديل ربطها")
+        overrides = data.get("mapping") or {}
+        if not isinstance(overrides, dict):
+            raise HTTPException(422, "ربط الأعمدة غير صالح")
+        mapping = {int(k): v for k, v in json.loads(d.mapping_json or "{}").items()}
+        for k, v in overrides.items():
+            try:
+                mapping[int(k)] = str(v)
+            except (TypeError, ValueError):
+                raise HTTPException(422, "مفتاح عمود غير صالح")
+        d.mapping_json = json.dumps({str(k): v for k, v in mapping.items()}, ensure_ascii=False)
+        s.add(d); s.commit()
+        log_audit(company.id, user.id, user.name, "dataset_mapping", f"dataset:{dataset_id}", str(overrides)[:200])
+        return {"ok": True, "mapping": {str(k): v for k, v in mapping.items()},
+                "note": "أعد رفع الملف لتطبيق ربط مختلف على الصفوف المرفوضة."}
+
+
+_IMPORT_TARGETS = {
+    "sale": ("CompanySale", ("branch_id", "date", "reference", "channel", "product_sku", "category", "quantity",
+                              "gross_sales", "discounts", "returns", "net_sales", "vat", "payment_method")),
+    "purchase": ("CompanyPurchase", ("branch_id", "date", "supplier_name", "reference", "product_sku", "category",
+                                      "quantity", "unit_cost", "total_cost", "status", "vat")),
+    "inventory": ("CompanyInventory", ("branch_id", "product_sku", "period", "opening_qty", "opening_value",
+                                        "purchases_qty", "sold_qty", "adjustments_qty", "closing_qty", "closing_value")),
+    "cash_movement": ("CompanyCashMovement", ("branch_id", "date", "movement_type", "category", "amount",
+                                               "direction", "reference", "source")),
+    "employee": ("CompanyEmployee", ("branch_id", "department_id", "employee_code", "name", "role",
+                                      "employment_status", "hire_date", "termination_date", "monthly_cost")),
+    "product": ("CompanyProduct", ("sku", "name", "category", "unit", "cost", "selling_price", "active")),
+    "supplier": ("CompanySupplier", ("name", "category", "payment_terms", "active")),
+    "department": ("CompanyDepartment", ("name", "branch_id", "code", "active")),
+}
+
+
+@app.post("/company/datasets/{dataset_id}/import")
+def company_dataset_import(dataset_id: int, user: User = Depends(get_current_user)):
+    """يعتمد الصفوف الصالحة فقط. لا يُستورد أي صف مرفوض إطلاقاً."""
+    pm = _load_p24("period_model")
+    with Session(engine) as s:
+        company, role = _data_scope(s, user, "edit")
+        d = s.get(CompanyDataset, dataset_id)
+        if not d or d.company_id != company.id:
+            raise HTTPException(404, "الملف غير موجود")
+        if d.status == "imported":
+            raise HTTPException(409, "تم اعتماد هذه البيانات مسبقاً")
+        if d.quality_gate == "BLOCK":
+            raise HTTPException(422, {"message_ar": "جودة البيانات غير كافية للاعتماد — صحّح الأخطاء وأعد الرفع",
+                                      "message_en": "Data quality too low to import — fix the errors and re-upload",
+                                      "quality_score": d.quality_score})
+        target = _IMPORT_TARGETS.get(d.dataset_type)
+        if not target:
+            raise HTTPException(422, "نوع بيانات غير مدعوم للاعتماد")
+        model = globals()[target[0]]
+        fields = target[1]
+        rows = json.loads(d.staging_json or "[]")
+        created = 0
+        for r in rows:
+            payload = {f: r.get(f) for f in fields if f in r}
+            payload["company_id"] = company.id
+            if hasattr(model, "dataset_id"):
+                payload["dataset_id"] = d.id
+            if hasattr(model, "source_row"):
+                payload["source_row"] = r.get("_row")
+            if hasattr(model, "period") and not payload.get("period") and r.get("date") and pm:
+                payload["period"] = pm.period_key(r["date"], "month") or ""
+            s.add(model(**payload)); created += 1
+        d.status = "imported" if d.rejected_rows == 0 else "partial"
+        d.imported_at = datetime.now()
+        d.staging_json = "[]"          # لا نحتفظ بالنسخة المؤقتة بعد الاعتماد
+        s.add(d); s.commit()
+        log_audit(company.id, user.id, user.name, "dataset_import", f"dataset:{dataset_id}",
+                  f"type={d.dataset_type} imported={created} rejected={d.rejected_rows} quality={d.quality_score}")
+        return {"ok": True, "imported": created, "rejected": d.rejected_rows, "status": d.status,
+                "quality_score": d.quality_score, "quality_gate": d.quality_gate}
+
+
+@app.get("/company/datasets/{dataset_id}")
+def company_dataset_detail(dataset_id: int, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role = _data_scope(s, user)
+        d = s.get(CompanyDataset, dataset_id)
+        if not d or d.company_id != company.id:
+            raise HTTPException(404, "الملف غير موجود")
+        ing = _load_p24("ingestion")
+        lineage = (ing.lineage(d.id, d.source_file, d.uploaded_by if role in DATA_ROLES_EDIT else "",
+                               None, d.period, None) if ing else {})
+        return {"dataset": _dataset_json(d, role),
+                "mapping": json.loads(d.mapping_json or "{}"),
+                "errors": json.loads(d.errors_json or "[]")[:100],
+                "lineage": lineage}
+
+
+@app.get("/company/periods")
+def company_periods(user: User = Depends(get_current_user), grain: str = "month", source: str = "sale"):
+    """الفترات المتاحة فعلياً + سياق المقارنة (بدون اختلاق فترات غير موجودة)."""
+    pm = _load_p24("period_model")
+    if pm is None:
+        raise HTTPException(503, "محرّك الفترات غير متاح")
+    if grain not in pm.GRAINS:
+        raise HTTPException(422, "تدرّج زمني غير مدعوم")
+    with Session(engine) as s:
+        company, _ = _data_scope(s, user)
+        keys = set()
+        if source == "sale":
+            for r in s.exec(select(CompanySale).where(CompanySale.company_id == company.id).limit(20000)).all():
+                k = pm.period_key(r.date, grain)
+                if k:
+                    keys.add(k)
+        else:
+            for e in s.exec(select(CompanyEntry).where(CompanyEntry.company_id == company.id).limit(20000)).all():
+                k = e.period if grain == "month" else None
+                if k:
+                    keys.add(k)
+        return pm.build_comparison(keys, grain=grain)
+
+
+@app.get("/company/master-data")
+def company_master_data(user: User = Depends(get_current_user), entity: str = "product"):
+    """قوائم البيانات الأساسية: المنتجات والموردون والأقسام والموظفون."""
+    with Session(engine) as s:
+        company, role = _data_scope(s, user)
+        models = {"product": CompanyProduct, "supplier": CompanySupplier,
+                  "department": CompanyDepartment, "employee": CompanyEmployee}
+        model = models.get(entity)
+        if not model:
+            raise HTTPException(422, "كيان غير مدعوم")
+        rows = s.exec(select(model).where(model.company_id == company.id).limit(500)).all()
+        out = []
+        for r in rows:
+            item = {c: getattr(r, c) for c in r.__fields__ if c not in ("company_id",)}
+            if entity == "employee" and not can_see_sensitive_financials(role):
+                item["monthly_cost"] = None     # حقل حسّاس: يخضع للقواعد القائمة
+                item["restricted"] = True
+            out.append(item)
+        return {"entity": entity, "items": out, "count": len(out)}
+
+
+@app.get("/company/metrics-registry")
+def company_metrics_registry(user: User = Depends(get_current_user)):
+    """التعريف المرجعي للمؤشرات — مصدر واحد لكل الوحدات."""
+    mr = _load_p24("metric_registry")
+    if mr is None:
+        raise HTTPException(503, "سجل المؤشرات غير متاح")
+    with Session(engine) as s:
+        company, role = _data_scope(s, user)
+    return {"metrics": mr.list_metrics(role=role), "conflicts": mr.conflicts()}
 
 
 @app.get("/company/executive-intelligence")
