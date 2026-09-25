@@ -3475,8 +3475,14 @@ def _load_phase23():
             _p = _os.path.join(_base, _d)
             if _p not in _sys.path:
                 _sys.path.insert(0, _p)
-        import intelligence_engine as _ie
-        import period_aggregation as _pa
+        try:
+            import intelligence_engine as _ie
+            import period_aggregation as _pa
+        except ModuleNotFoundError:
+            # المجلدات غير موجودة: نستخدم حزمة المحركات في ملف واحد بجانب main.py
+            import nabbah_engines  # noqa: F401
+            import intelligence_engine as _ie
+            import period_aggregation as _pa
         return _ie, _pa
     except Exception as _e:
         import os as _os
@@ -3505,6 +3511,8 @@ def _p23_diagnostic():
             parts.append(f"{d}: {len(files)} ملف" + (f" ({', '.join(files)})" if len(files) < 8 else ""))
         else:
             parts.append(f"{d}: المجلد مفقود")
+    bundle = _os.path.exists(_os.path.join(base, "nabbah_engines.py"))
+    parts.append("nabbah_engines.py: " + ("موجود" if bundle else "مفقود"))
     err = _P23_LAST_ERROR.get("msg") or "—"
     return f"سبب العطل: {err} | {' · '.join(parts)}"
 
@@ -3513,7 +3521,11 @@ def _load_p23_mod(name):
     _load_phase23()
     try:
         import importlib
-        return importlib.import_module(name)
+        try:
+            return importlib.import_module(name)
+        except ModuleNotFoundError:
+            import nabbah_engines  # noqa: F401
+            return importlib.import_module(name)
     except Exception as _e:
         _P23_LAST_ERROR["msg"] = f"{type(_e).__name__}: {str(_e)[:120]}"
         _logger.error(f"Phase 2.3 module {name} unavailable: {_P23_LAST_ERROR['msg']}")
