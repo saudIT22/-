@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>نبّاه · ذكاء المبيعات</title>
+<link href="nabbah-design.css" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{background:var(--bg,#070b09);color:var(--txt,#e8f1ec);font-family:Tajawal,Tahoma,Arial,sans-serif;margin:0}
+  .wrap{max-width:1180px;margin:0 auto;padding:70px 16px 60px}
+  h1{margin:0 0 4px;font-size:24px}.sub{color:var(--txt-soft,#8ba396);margin:0 0 16px;font-size:14px}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+  select{background:var(--panel,#101a15);color:var(--txt,#e8f1ec);border:1px solid var(--line,#1d2c24);border-radius:10px;padding:8px 10px;font:inherit;font-size:13px}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:14px}
+  .tile,.panel{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:14px;padding:14px}
+  .tile .l{font-size:12px;color:var(--txt-soft,#8ba396)}.tile .v{font-size:22px;font-weight:800;margin-top:4px}
+  .panel{margin-bottom:14px}.panel h2{margin:0 0 10px;font-size:16px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px;border-bottom:1px solid var(--line,#1d2c24);text-align:start}
+  th{color:var(--txt-soft,#8ba396);font-weight:600}.tbl{overflow-x:auto}
+  .barrow{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:13px}
+  .barrow .t{flex:0 0 110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .barrow .g{flex:1;height:10px;background:var(--line,#1d2c24);border-radius:6px;overflow:hidden}
+  .barrow .g i{display:block;height:100%;background:var(--mint,#10b981)}
+  .pos{color:#10b981}.neg{color:#ef4444}.muted{color:var(--txt-soft,#8ba396);font-size:12px}
+  .b{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700;display:inline-block}
+  .high{background:rgba(234,88,12,.16);color:#ea580c}.medium{background:rgba(245,179,1,.15);color:#f5b301}
+  .low{background:rgba(16,185,129,.15);color:#10b981}.critical{background:rgba(239,68,68,.16);color:#ef4444}
+  .est{background:rgba(168,85,247,.15);color:#a855f7}
+  .sig{border-inline-start:4px solid var(--line,#1d2c24);padding:8px 10px;margin:8px 0;background:rgba(255,255,255,.02);border-radius:8px}
+  .btn{background:var(--mint,#10b981);color:#062b1c;border:0;border-radius:10px;padding:7px 13px;font-weight:800;cursor:pointer;font:inherit;font-size:12px}
+  .btn.ghost{background:transparent;color:var(--txt-soft,#8ba396);border:1px solid var(--line,#1d2c24);font-weight:600}
+  .state{padding:36px 16px;text-align:center;color:var(--txt-soft,#8ba396);border:1px dashed var(--line,#1d2c24);border-radius:14px}
+  svg{width:100%;height:150px}
+  @media(max-width:760px){.grid2{grid-template-columns:1fr}h1{font-size:20px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1 data-i18n="si.title">ذكاء المبيعات</h1>
+  <p class="sub"></p>
+  <div class="bar">
+    <select id="fPeriod"></select><select id="fGrain"></select><select id="fBranch"></select>
+    <select id="fChannel"></select><select id="fCategory"></select>
+  </div>
+  <div id="content"><div class="state">…</div></div>
+</div>
+<script src="i18n.js"></script>
+<script>
+(function(){
+  const TOKEN=localStorage.getItem("nabbah_token")||"";if(!TOKEN){location.href="login.html";return;}
+  const I=()=>window.NabbahI18n,L=()=>(I()&&I().getLang)?I().getLang():"ar";
+  const tr=(k,fb)=>{const v=I()&&I().t?I().t(k,L()):k;return(v&&v!==k)?v:(fb||k);};
+  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const n=v=>v==null?"—":Number(v).toLocaleString(L()==="ar"?"ar-SA":"en-US",{maximumFractionDigits:2});
+  const mv=m=>m&&m.value!=null?n(m.value):"—";
+  const pct=v=>v==null?"—":`<span class="${v>=0?"pos":"neg"}">${n(v)}%</span>`;
+  const H={Authorization:"Bearer "+TOKEN,"Content-Type":"application/json"},$=id=>document.getElementById(id);
+  let D=null;
+  document.querySelector(".sub").textContent=tr("si.subtitle");
+  const GR=["day","week","month","quarter","year"];
+  function qs(){const p=new URLSearchParams();
+    const g=$("fGrain").value||"month";p.set("grain",g);
+    [["period","fPeriod"],["branch_id","fBranch"],["channel","fChannel"],["category","fCategory"]].forEach(([k,id])=>{const v=$(id).value;if(v)p.set(k,v)});
+    return p.toString();}
+  function load(){
+    $("content").innerHTML=`<div class="state">…</div>`;
+    fetch("/company/sales-intelligence?"+qs(),{headers:H}).then(r=>{
+      if(r.status===401){location.href="login.html";return null;}
+      if(r.status===403||r.status===402){$("content").innerHTML=`<div class="state">${tr("si.denied")}</div>`;return null;}
+      if(!r.ok)throw 0;return r.json();
+    }).then(d=>{if(d){D=d;filters(d);render(d);}}).catch(()=>{$("content").innerHTML=`<div class="state neg">${tr("si.error")}</div>`;});
+  }
+  function opt(sel,list,label,cur){
+    $(sel).innerHTML=`<option value="">${label}</option>`+list.map(x=>`<option value="${esc(x)}" ${String(cur)===String(x)?"selected":""}>${esc(x)}</option>`).join("");
+  }
+  function filters(d){
+    const o=d.options||{},f=d.filters||{};
+    opt("fPeriod",o.periods||[],tr("si.period"),f.period);
+    $("fGrain").innerHTML=GR.map(g=>`<option value="${g}" ${f.grain===g?"selected":""}>${tr("si.grain."+g)}</option>`).join("");
+    opt("fBranch",[],tr("si.branch"));
+    $("fBranch").innerHTML=`<option value="">${tr("si.branch")}: ${tr("si.all")}</option>`+(d.branches&&d.branches.items||[]).map(b=>`<option value="">${esc(b.key)}</option>`).join("");
+    opt("fChannel",o.channels||[],tr("si.channel")+": "+tr("si.all"),f.channel);
+    opt("fCategory",o.categories||[],tr("si.category")+": "+tr("si.all"),f.category);
+  }
+  function tiles(o,cmp){
+    const t=(l,v,x="")=>`<div class="tile"><div class="l">${l}</div><div class="v">${v}</div>${x?`<div class="muted">${x}</div>`:""}</div>`;
+    return `<div class="tiles">
+      ${t(tr("si.net"),mv(o.net_sales),o.net_sales.currency||"")}
+      ${t(tr("si.growth"),cmp.previous&&cmp.previous.growth_pct!=null?pct(cmp.previous.growth_pct):tr("si.unavailable"))}
+      ${t(tr("si.tx"),n(o.transactions.value))}
+      ${t(tr("si.aov"),mv(o.aov))}
+      ${t(tr("si.returns"),mv(o.returns),tr("si.rate")+" "+(o.return_rate.value==null?"—":n(o.return_rate.value)+"%"))}
+      ${t(tr("si.discounts"),mv(o.discounts),tr("si.rate")+" "+(o.discount_rate.value==null?"—":n(o.discount_rate.value)+"%"))}
+    </div>`;
+  }
+  function trend(t){
+    if(!t.available)return "";
+    const s=t.series,max=Math.max(...s.map(x=>x.net_sales.value||0))||1,W=600,Hh=140;
+    const pts=s.map((x,i)=>`${(i/(Math.max(s.length-1,1)))*W},${Hh-((x.net_sales.value||0)/max)*(Hh-20)}`).join(" ");
+    return `<div class="panel"><h2>${tr("si.trend")}</h2>
+      <svg viewBox="0 0 ${W} ${Hh}" preserveAspectRatio="none"><polyline points="${pts}" fill="none" stroke="var(--mint,#10b981)" stroke-width="2"/></svg>
+      <div class="muted">${esc(s[0].period)} → ${esc(s[s.length-1].period)}${t.undated_records?` · ${t.undated_records} ${L()==="ar"?"سجل بلا تاريخ":"records without date"}`:""}</div></div>`;
+  }
+  function bars(title,g){
+    if(!g.available)return `<div class="panel"><h2>${title}</h2><div class="muted">${esc(g.unavailable_reason_ar&&L()==="ar"?g.unavailable_reason_ar:tr("si.noDimension"))}</div></div>`;
+    const max=Math.max(...g.items.map(i=>i.net_sales.value||0))||1;
+    return `<div class="panel"><h2>${title}</h2>${g.items.slice(0,8).map(i=>`
+      <div class="barrow"><span class="t">${esc(i.key)}</span><span class="g"><i style="width:${((i.net_sales.value||0)/max*100).toFixed(1)}%"></i></span>
+      <span>${mv(i.net_sales)}</span><span>${i.growth_pct==null?"":pct(i.growth_pct)}</span></div>`).join("")}
+      ${g.note_ar?`<div class="muted">${esc(L()==="ar"?g.note_ar:g.note_en)}</div>`:""}</div>`;
+  }
+  function ptable(title,g){
+    if(!g.available)return `<div class="panel"><h2>${title}</h2><div class="muted">${tr("si.noDimension")}</div></div>`;
+    return `<div class="panel"><h2>${title}</h2><div class="tbl"><table><thead><tr><th>${tr("si.product")}</th><th>${tr("si.net")}</th><th>${tr("si.qty")}</th><th>${tr("si.growth")}</th><th>${tr("si.share")}</th></tr></thead><tbody>`+
+      g.items.slice(0,12).map(i=>`<tr><td>${esc(i.key)}</td><td>${mv(i.net_sales)}</td><td>${n(i.quantity)}</td><td>${i.growth_pct==null?"—":pct(i.growth_pct)}</td><td>${i.contribution_pct==null?"—":n(i.contribution_pct)+"%"}</td></tr>`).join("")+
+      `</tbody></table></div>${g.note_ar?`<div class="muted">${esc(L()==="ar"?g.note_ar:g.note_en)}</div>`:""}</div>`;
+  }
+  function cmpPanel(c){
+    const row=(l,x)=>`<div class="barrow"><span class="t">${l}</span><span>${x&&x.available===false?`<span class="muted">${tr("si.unavailable")} — ${esc(L()==="ar"?x.reason_ar:x.reason_en)}</span>`:`${n(x.value)} ${x.growth_pct!=null?pct(x.growth_pct):""}`}</span></div>`;
+    return `<div class="panel"><h2>${tr("si.compare")}</h2>
+      <div class="barrow"><span class="t">${esc(c.current_period)}</span><span><b>${n(c.current.value)}</b></span></div>
+      ${row(tr("si.prev"),c.previous)}${row(tr("si.yoy"),c.same_period_last_year)}</div>`;
+  }
+  function signals(list,canEdit){
+    if(!list.length)return "";
+    return `<div class="panel"><h2>${tr("si.signals")}</h2>`+list.map(s=>`
+      <div class="sig" style="border-color:${s.severity==="critical"?"#ef4444":s.severity==="high"?"#ea580c":s.severity==="medium"?"#f5b301":"#10b981"}">
+        <b>${esc(L()==="ar"?s.name_ar:s.name_en)}</b> ${s.dimension?`— ${esc(s.dimension)}`:""} <span class="b ${s.severity}">${esc(s.severity)}</span>
+        <div class="muted">${tr("si.evidence")}: ${(s.evidence||[]).map(esc).join(" · ")}</div>
+        <div class="muted">${tr("si.rule")}: ${esc(s.method)}</div>
+        ${s.estimated_impact?`<div>${tr("si.impact")}: ${n(s.estimated_impact.value)} <span class="b est">${tr("si.estimate")}</span></div>`:""}
+        <div>${esc(L()==="ar"?s.suggested_action_ar:s.suggested_action_en)}</div>
+        <button class="btn" data-sig="${esc(s.id)}" style="margin-top:6px">${tr("si.toDecision")}</button><div class="frm"></div>
+      </div>`).join("")+`</div>`;
+  }
+  function render(d){
+    if(!d.has_data){$("content").innerHTML=`<div class="state">${esc(L()==="ar"?d.message_ar:d.message_en)||tr("si.empty")}</div>`;return;}
+    const o=d.overview,q=d.data_quality||{};
+    $("content").innerHTML=tiles(o,d.comparison)+
+      `<div class="muted" style="margin-bottom:10px">${tr("si.quality")}: ${esc(q.gate||"—")}${q.score!=null?` (${q.score}%)`:""}${q.source_file?` · ${esc(q.source_file)}`:""}</div>`+
+      trend(d.trend)+cmpPanel(d.comparison)+
+      `<div class="grid2">${bars(tr("si.byBranch"),d.branches)}${bars(tr("si.byChannel"),d.channels)}</div>`+
+      ptable(tr("si.products"),d.products)+bars(tr("si.categories"),d.categories)+
+      `<div class="grid2">
+        <div class="panel"><h2>${tr("si.discountAnalysis")}</h2>
+          <div class="barrow"><span class="t">${tr("si.gross")}</span><span>${mv(d.discounts.gross_sales)}</span></div>
+          <div class="barrow"><span class="t">${tr("si.discounts")}</span><span>${mv(d.discounts.discounts)} (${d.discounts.discount_rate_pct==null?"—":n(d.discounts.discount_rate_pct)+"%"})</span></div>
+          <div class="barrow"><span class="t">${tr("si.withDiscount")}</span><span>${mv(d.discounts.sales_with_discount)}</span></div>
+          <div class="barrow"><span class="t">${tr("si.withoutDiscount")}</span><span>${mv(d.discounts.sales_without_discount)}</span></div>
+          <div class="muted">${esc(L()==="ar"?d.discounts.note_ar:d.discounts.note_en)}</div></div>
+        <div class="panel"><h2>${tr("si.returnsAnalysis")}</h2>
+          <div class="barrow"><span class="t">${tr("si.returns")}</span><span>${mv(d.returns.return_value)} (${d.returns.return_rate_pct==null?"—":n(d.returns.return_rate_pct)+"%"})</span></div>
+          <div class="muted">${tr("si.topBranches")}: ${(d.returns.by_branch||[]).map(b=>esc(b.key)+" "+mv(b.net_sales)).join(" · ")||"—"}</div>
+          <div class="muted">${tr("si.topProducts")}: ${(d.returns.by_product||[]).map(b=>esc(b.key)).join(" · ")||"—"}</div></div>
+      </div>`+
+      signals(d.signals||[]);
+    document.querySelectorAll("[data-sig]").forEach(b=>b.onclick=()=>form(b));
+  }
+  function form(btn){
+    const box=btn.nextElementSibling;
+    box.innerHTML=`<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap"><input class="o" placeholder="${tr("si.owner")}" style="flex:1;background:var(--panel,#101a15);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:8px;padding:6px"><input class="d" type="date" style="background:var(--panel,#101a15);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:8px;padding:6px"><button class="btn c">${tr("si.create")}</button></div><div class="m muted"></div>`;
+    box.querySelector(".c").onclick=()=>{
+      fetch("/company/sales/to-decision",{method:"POST",headers:H,body:JSON.stringify({signal_id:btn.dataset.sig,owner:box.querySelector(".o").value,due_date:box.querySelector(".d").value,period:(D.filters||{}).period,grain:(D.filters||{}).grain})})
+        .then(r=>{box.querySelector(".m").textContent=r.ok?tr("si.created"):(r.status===403?tr("si.onlyOwner"):tr("si.error"));});
+    };
+  }
+  ["fPeriod","fGrain","fBranch","fChannel","fCategory"].forEach(id=>$(id).addEventListener("change",load));
+  load();
+})();
+</script>
+<script src="nabbah-sidebar.js"></script>
+</body></html>
