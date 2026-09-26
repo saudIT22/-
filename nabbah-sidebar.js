@@ -78,6 +78,7 @@
       { label: "التقرير الشهري", href: "company-monthly-report.html" },
       { label: "متابعة القرارات", href: "company-decisions.html" },
       { label: "مركز الإجراءات", href: "company-actions.html" },
+      { label: "ذكاء المبيعات", href: "company-sales-intelligence.html" },
       { label: "مركز البيانات", href: "company-data-center.html" },
     ]},
   ];
