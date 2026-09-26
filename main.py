@@ -1055,6 +1055,11 @@ def page_readiness():
     return FileResponse("company-readiness.html")
 
 
+@app.get("/company-sales-intelligence.html")
+def page_sales_intel():
+    return FileResponse("company-sales-intelligence.html")
+
+
 @app.get("/company-data-center.html")
 def page_data_center():
     return FileResponse("company-data-center.html")
@@ -4128,6 +4133,123 @@ def company_metrics_registry(user: User = Depends(get_current_user)):
     return {"metrics": mr.list_metrics(role=role), "conflicts": mr.conflicts()}
 
 
+# ═══════════════════════════════════════════════════════════
+#  Phase 2.5 — Sales Intelligence (يبني على بيانات 2.4 وإشارات 2.3)
+# ═══════════════════════════════════════════════════════════
+def _sales_scope(s, user):
+    _ensure_data_tables()
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    company = s.get(Company, user.company_id)
+    role = get_user_role(s, user) if company else None
+    if not company or not (role == "owner" or check_permission(role, "sales", "view")
+                           or check_permission(role, "finance", "view")):
+        raise HTTPException(403, "غير مصرّح")
+    if company.is_active != 1:
+        raise HTTPException(402, "شركتك قيد التفعيل")
+    return company, role
+
+
+def _sales_rows(s, company_id, branch_ids=None):
+    names = {b.id: b.name for b in s.exec(select(CompanyBranch).where(
+        CompanyBranch.company_id == company_id)).all()}
+    q = select(CompanySale).where(CompanySale.company_id == company_id)
+    rows = []
+    for r in s.exec(q.order_by(CompanySale.date.desc()).limit(20000)).all():
+        if branch_ids and r.branch_id not in branch_ids:
+            continue
+        rows.append({"date": r.date, "period": r.period, "branch_id": r.branch_id,
+                     "branch_name": names.get(r.branch_id) or (f"#{r.branch_id}" if r.branch_id else None),
+                     "reference": r.reference, "channel": r.channel, "product_sku": r.product_sku,
+                     "category": r.category, "quantity": r.quantity, "gross_sales": r.gross_sales,
+                     "discounts": r.discounts, "returns": r.returns, "net_sales": r.net_sales,
+                     "vat": r.vat, "payment_method": r.payment_method, "dataset_id": r.dataset_id})
+    return rows
+
+
+def _sales_quality(s, company_id):
+    d = s.exec(select(CompanyDataset).where(CompanyDataset.company_id == company_id,
+                                            CompanyDataset.dataset_type == "sale")
+               .order_by(CompanyDataset.created_at.desc())).first()
+    if not d:
+        return {"status": "unknown", "gate": "QUALIFY", "reason_ar": "لا يوجد ملف مبيعات مرفوع"}
+    return {"status": "pass" if d.quality_gate == "ALLOW" else ("warning" if d.quality_gate == "QUALIFY" else "fail"),
+            "gate": d.quality_gate, "score": d.quality_score, "dataset_id": d.id,
+            "source_file": d.source_file, "rejected_rows": d.rejected_rows}
+
+
+def _sales_result(s, company, *, period=None, grain="month", branch_id=None,
+                  channel="", category="", product=""):
+    se = _load_p24("sales_engine")
+    if se is None:
+        raise HTTPException(503, "محرّك المبيعات غير متاح — " + _p23_diagnostic())
+    all_rows = _sales_rows(s, company.id, [branch_id] if branch_id else None)
+    flt = [r for r in all_rows
+           if (not channel or (r.get("channel") or "") == channel)
+           and (not category or (r.get("category") or "") == category)
+           and (not product or (r.get("product_sku") or "") == product)]
+    pm = _load_p24("period_model")
+    cur_period = period
+    if not cur_period and pm:
+        keys = sorted({pm.period_key(r.get("date"), grain) for r in flt if pm.period_key(r.get("date"), grain)})
+        cur_period = keys[-1] if keys else None
+    rows = [r for r in flt if pm and pm.period_key(r.get("date"), grain) == cur_period] if cur_period else flt
+    result = se.analyze_sales(rows, flt, period=cur_period, grain=grain,
+                              currency=company.currency or "SAR", quality=_sales_quality(s, company.id))
+    result["filters"] = {"period": cur_period, "grain": grain, "branch_id": branch_id,
+                         "channel": channel, "category": category, "product": product}
+    result["options"] = {
+        "branches": sorted({r["branch_name"] for r in all_rows if r.get("branch_name")}),
+        "channels": sorted({r["channel"] for r in all_rows if r.get("channel")}),
+        "categories": sorted({r["category"] for r in all_rows if r.get("category")}),
+        "periods": sorted({pm.period_key(r.get("date"), grain) for r in all_rows
+                           if pm and pm.period_key(r.get("date"), grain)})[-24:] if pm else []}
+    return result
+
+
+@app.get("/company/sales-intelligence")
+def company_sales_intelligence(user: User = Depends(get_current_user), period: str = "", grain: str = "month",
+                               branch_id: Optional[int] = None, channel: str = "", category: str = "",
+                               product: str = ""):
+    with Session(engine) as s:
+        company, role = _sales_scope(s, user)
+        return _sales_result(s, company, period=period or None, grain=grain, branch_id=branch_id,
+                             channel=channel, category=category, product=product)
+
+
+@app.post("/company/sales/to-decision")
+def company_sales_to_decision(data: dict, user: User = Depends(get_current_user)):
+    """يحوّل إشارة مبيعات إلى قرار ومهمة — تُعاد الإشارة حسابياً في الخادم."""
+    with Session(engine) as s:
+        company, role = _exec_scope(s, user, need="edit")
+        res = _sales_result(s, company, period=data.get("period") or None,
+                            grain=data.get("grain") or "month")
+        sig = next((x for x in res.get("signals", []) if x["id"] == str(data.get("signal_id") or "")), None)
+        if not sig:
+            raise HTTPException(404, "الإشارة غير موجودة أو لم تعد قائمة لهذه الفترة")
+        impact = (sig.get("estimated_impact") or {}).get("value")
+        d = CompanyDecision(
+            company_id=company.id, title=str(data.get("title") or sig["name_ar"])[:200],
+            detail=" · ".join(sig.get("evidence", []))[:1000], owner=str(data.get("owner") or "")[:100],
+            due_date=str(data.get("due_date") or "")[:20], kpi=sig["metric_id"], status="open",
+            baseline_sales=_company_total_sales(s, company.id),
+            expected_impact=(f"{impact} {res['currency']} (تقديري)" if impact is not None else "غير قابل للتقدير")[:200],
+            linked_to=f"sales_signal:{sig['id']}", rationale=sig.get("suggested_action_ar", "")[:500],
+            metric_id=sig["metric_id"], baseline_value=sig.get("current_value"),
+            expected_impact_value=impact, impact_status="expected", source_signal=sig["id"],
+            problem_type=sig["code"], decision_type="sales", outcome_status="pending_measurement",
+            created_by=user.name or user.email, data_source="companysale", updated_at=datetime.now())
+        s.add(d); s.commit(); s.refresh(d)
+        act = CompanyAction(company_id=company.id, decision_id=d.id, title=sig.get("suggested_action_ar", "")[:200],
+                            owner=d.owner, priority="P1" if sig["severity"] in ("high", "critical") else "P2",
+                            due_date=d.due_date, start_date=datetime.now().strftime("%Y-%m-%d"),
+                            updated_at=datetime.now())
+        s.add(act); s.commit(); s.refresh(act)
+        log_audit(company.id, user.id, user.name, "decision_from_sales_signal", f"decision:{d.id}",
+                  f"signal={sig['id']} code={sig['code']}")
+        return {"ok": True, "decision_id": d.id, "action_ids": [act.id]}
+
+
 @app.get("/company/executive-intelligence")
 def company_executive_intelligence(request: Request, user: User = Depends(get_current_user),
                                    period: Optional[str] = None, ai: int = 0):
@@ -4135,6 +4257,16 @@ def company_executive_intelligence(request: Request, user: User = Depends(get_cu
         company, _role = _exec_scope(s, user)
         result = _build_exec(s, company, period)
         result["ai_summary"] = None
+        try:   # إشارات الوحدات: المبيعات (لا تُنشأ إن لم توجد بيانات تفصيلية)
+            _sales = _sales_result(s, company, grain="month")
+            if _sales.get("has_data"):
+                result["module_signals"] = {"sales": _sales.get("signals", [])[:6]}
+                result["risks"] = result["risks"] + [x for x in _sales.get("signals", []) if x["type"] == "risk"][:3]
+                result["opportunities"] = result["opportunities"] + [x for x in _sales.get("signals", []) if x["type"] == "opportunity"][:2]
+        except HTTPException:
+            pass
+        except Exception as _e:
+            _logger.error(f"sales signals skipped: {type(_e).__name__}: {str(_e)[:120]}")
         if ai:
             bridge = _load_phase22_bridge()
             if bridge is not None:
