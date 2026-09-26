@@ -271,8 +271,8 @@ def log_activity(actor: str, action: str, target_email: str = ""):
         with Session(engine) as s:
             s.add(ActivityLog(actor=actor, action=action, target_email=target_email))
             s.commit()
-    except Exception:
-        pass
+    except Exception as _dbe:
+        _logger.error(f"db op failed (line ~274): {type(_dbe).__name__}: {str(_dbe)[:150]}")
 
 
 # قاعدة البيانات: تستخدم PostgreSQL من Railway تلقائياً، أو SQLite محلياً
@@ -623,10 +623,10 @@ def run_migrations():
                         migrations.append("ALTER TABLE companyentry ADD COLUMN deposited REAL DEFAULT 0")
                     if "extra_data" not in ecols:
                         migrations.append("ALTER TABLE companyentry ADD COLUMN extra_data VARCHAR DEFAULT ''")
-                except Exception:
-                    pass
-        except Exception:
-            pass
+                except Exception as _dbe:
+                    _logger.error(f"db op failed (line ~626): {type(_dbe).__name__}: {str(_dbe)[:150]}")
+        except Exception as _dbe:
+            _logger.error(f"db op failed (line ~628): {type(_dbe).__name__}: {str(_dbe)[:150]}")
 
     for sql in migrations:
         try:
@@ -2008,9 +2008,14 @@ def _legacy_adapter():
             _p22 = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "phase22")
             if _p22 not in _sys.path:
                 _sys.path.insert(0, _p22)
-            import legacy_adapters as _la
+            try:
+                import legacy_adapters as _la
+            except ModuleNotFoundError:
+                import nabbah_engines  # noqa: F401
+                import legacy_adapters as _la
             _LEGACY_ADAPTER = _la
-        except Exception:
+        except Exception as _e:
+            _logger.error(f"legacy adapter unavailable: {type(_e).__name__}: {str(_e)[:120]}")
             _LEGACY_ADAPTER = False
     return _LEGACY_ADAPTER or None
 
@@ -2281,8 +2286,8 @@ def save_memory(company_id: int, kind: str, title: str, content: str = ""):
                 title=str(title)[:200], content=str(content)[:3000],
             ))
             ms.commit()
-    except Exception:
-        pass
+    except Exception as _dbe:
+        _logger.error(f"db op failed (line ~2289): {type(_dbe).__name__}: {str(_dbe)[:150]}")
 
 
 def log_audit(company_id: int, user_id: int, user_name: str, action: str,
@@ -2296,8 +2301,8 @@ def log_audit(company_id: int, user_id: int, user_name: str, action: str,
                 target=str(target)[:200], details=str(details)[:500], ip=str(ip)[:60],
             ))
             ms.commit()
-    except Exception:
-        pass
+    except Exception as _dbe:
+        _logger.error(f"db op failed (line ~2304): {type(_dbe).__name__}: {str(_dbe)[:150]}")
 
 
 def get_lang(request=None) -> str:
@@ -3529,6 +3534,20 @@ def company_ask(request: Request, data: dict, user: User = Depends(get_current_u
 #  endpoint جديد يستخدم المحرّكات الموحّدة (KPI/Variance/Driver/
 #  RootCause/Impact/AI Gateway). لا يلمس الـendpoints القديمة.
 # ═══════════════════════════════════════════════════════════
+_DATA_TABLES_READY = {"done": False}
+
+
+def _ensure_data_tables():
+    """يتأكد مرة واحدة أن جداول 2.4 موجودة (مهم لقواعد البيانات القائمة)."""
+    if _DATA_TABLES_READY["done"]:
+        return
+    try:
+        SQLModel.metadata.create_all(engine)
+        _DATA_TABLES_READY["done"] = True
+    except Exception as e:
+        _logger.error(f"create_all للجداول الجديدة فشل: {type(e).__name__}: {str(e)[:200]}")
+
+
 def _load_phase22_bridge():
     """يحمّل جسر Phase 2.2 بأمان — يُرجع None إن لم تُرفع الملفات."""
     try:
@@ -3700,6 +3719,7 @@ def _row_dict(e):
 
 def _exec_scope(s, user, need="view"):
     """Auth + tenant + RBAC. Returns (company, role). Finance view (or owner) required."""
+    _ensure_data_tables()
     if not user.company_id:
         raise HTTPException(403, "لا توجد شركة نشطة")
     company = s.get(Company, user.company_id)
@@ -3841,6 +3861,7 @@ def _load_p24(name):
 
 
 def _data_scope(s, user, need="view"):
+    _ensure_data_tables()
     """نطاق الشركة + الصلاحيات لبيانات المؤسسة."""
     if not user.company_id:
         raise HTTPException(403, "لا توجد شركة نشطة")
@@ -3882,7 +3903,12 @@ def company_datasets(user: User = Depends(get_current_user), dataset_type: str =
             q = q.where(CompanyDataset.dataset_type == dataset_type)
         if status:
             q = q.where(CompanyDataset.status == status)
-        items = s.exec(q.order_by(CompanyDataset.created_at.desc()).limit(200)).all()
+        try:
+            items = s.exec(q.order_by(CompanyDataset.created_at.desc()).limit(200)).all()
+        except Exception as e:
+            _logger.error(f"datasets list failed: {type(e).__name__}: {str(e)[:200]}")
+            raise HTTPException(503, "جداول البيانات غير جاهزة بعد. أعد تحميل الصفحة بعد دقيقة، "
+                                     "وإن استمرت المشكلة شغّل /db-sync.")
         cm = _load_p24("canonical_model")
         return {"datasets": [_dataset_json(d, role) for d in items], "count": len(items),
                 "types": ({k: {"ar": v["ar"], "en": v["en"]} for k, v in cm.ENTITIES.items()} if cm else {}),
@@ -4379,6 +4405,7 @@ def _scenario_json(sc):
 
 
 def _scenario_scope(s, user, need="view"):
+    _ensure_data_tables()
     if not user.company_id:
         raise HTTPException(403, "لا توجد شركة نشطة")
     company = s.get(Company, user.company_id)
