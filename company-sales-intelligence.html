@@ -63,13 +63,27 @@
     const g=$("fGrain").value||"month";p.set("grain",g);
     [["period","fPeriod"],["branch_id","fBranch"],["channel","fChannel"],["category","fCategory"]].forEach(([k,id])=>{const v=$(id).value;if(v)p.set(k,v)});
     return p.toString();}
+  function showErr(msg){
+    $("content").innerHTML=`<div class="state neg">${tr("si.error")}<div class="muted" style="margin-top:8px;font-size:12px;direction:auto;word-break:break-word">${esc(msg||"")}</div></div>`;
+  }
   function load(){
     $("content").innerHTML=`<div class="state">…</div>`;
-    fetch("/company/sales-intelligence?"+qs(),{headers:H}).then(r=>{
+    fetch("/company/sales-intelligence?"+qs(),{headers:H}).then(async r=>{
       if(r.status===401){location.href="login.html";return null;}
       if(r.status===403||r.status===402){$("content").innerHTML=`<div class="state">${tr("si.denied")}</div>`;return null;}
-      if(!r.ok)throw 0;return r.json();
-    }).then(d=>{if(d){D=d;filters(d);render(d);}}).catch(()=>{$("content").innerHTML=`<div class="state neg">${tr("si.error")}</div>`;});
+      if(!r.ok){
+        let detail="";
+        try{const j=await r.json();detail=typeof j.detail==="string"?j.detail:JSON.stringify(j.detail||j);}
+        catch(_){try{detail=(await r.text()).slice(0,300);}catch(__){}}
+        showErr(`HTTP ${r.status}${detail?" — "+detail:""}`);return null;
+      }
+      return r.json();
+    }).then(d=>{
+      if(!d)return;
+      D=d;
+      try{filters(d);}catch(e){console.error("sales filters",e);}
+      try{render(d);}catch(e){console.error("sales render",e);showErr("render: "+(e&&e.message||e));}
+    }).catch(e=>{console.error("sales load",e);showErr("network: "+(e&&e.message||e));});
   }
   function opt(sel,list,label,cur){
     $(sel).innerHTML=`<option value="">${label}</option>`+list.map(x=>`<option value="${esc(x)}" ${String(cur)===String(x)?"selected":""}>${esc(x)}</option>`).join("");
@@ -78,8 +92,9 @@
     const o=d.options||{},f=d.filters||{};
     opt("fPeriod",o.periods||[],tr("si.period"),f.period);
     $("fGrain").innerHTML=GR.map(g=>`<option value="${g}" ${f.grain===g?"selected":""}>${tr("si.grain."+g)}</option>`).join("");
-    opt("fBranch",[],tr("si.branch"));
-    $("fBranch").innerHTML=`<option value="">${tr("si.branch")}: ${tr("si.all")}</option>`+(d.branches&&d.branches.items||[]).map(b=>`<option value="">${esc(b.key)}</option>`).join("");
+    const bl=o.branch_list||[];   // [{id,name}] من الخادم — بدونها لا نعرض فلتراً لا يعمل
+    $("fBranch").innerHTML=`<option value="">${tr("si.branch")}: ${tr("si.all")}</option>`+bl.map(b=>`<option value="${esc(b.id)}" ${String(f.branch_id)===String(b.id)?"selected":""}>${esc(b.name)}</option>`).join("");
+    $("fBranch").style.display=bl.length?"":"none";
     opt("fChannel",o.channels||[],tr("si.channel")+": "+tr("si.all"),f.channel);
     opt("fCategory",o.categories||[],tr("si.category")+": "+tr("si.all"),f.category);
   }
