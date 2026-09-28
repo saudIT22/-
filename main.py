@@ -75,6 +75,54 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type", "X-Admin-Key"],
 )
 
+
+# ═══════════════════════════════════════════════════════════
+#  طبقة معالجة الأخطاء الموحّدة (Error Handling Layer) — Phase 1.5
+#  تُخفي التفاصيل الداخلية عن المستخدم، تسجّلها داخلياً للمطوّر.
+#  لا تكشف: أسماء جداول، مسارات، stack traces، تفاصيل قاعدة البيانات.
+# ═══════════════════════════════════════════════════════════
+import logging as _logging
+_logging.basicConfig(level=_logging.INFO)
+_logger = _logging.getLogger("nabbah")
+
+from fastapi.responses import JSONResponse as _JSONResponse
+from fastapi.exceptions import RequestValidationError as _ReqValidationError
+from starlette.exceptions import HTTPException as _StarletteHTTPException
+
+
+@app.exception_handler(_StarletteHTTPException)
+async def _http_exception_handler(request: Request, exc):
+    """معالج HTTPException — يمرّر الرسائل المقصودة (عربية آمنة) كما هي."""
+    return _JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+    )
+
+
+@app.exception_handler(_ReqValidationError)
+async def _validation_exception_handler(request: Request, exc):
+    """معالج أخطاء التحقق — رسالة عامة بدل تفاصيل Pydantic التقنية."""
+    return _JSONResponse(
+        status_code=422,
+        content={"detail": "البيانات المُرسلة غير صحيحة — تأكّد من صحة الحقول."},
+    )
+
+
+@app.exception_handler(Exception)
+async def _unhandled_exception_handler(request: Request, exc):
+    """معالج الأخطاء غير المتوقّعة — يُخفي التفاصيل عن المستخدم.
+    يسجّل الخطأ كاملاً داخلياً للمطوّر، ويرد رسالة عامة آمنة."""
+    # نسجّل داخلياً (للمطوّر فقط — لا يصل المستخدم)
+    _logger.error(
+        f"خطأ غير متوقّع في {request.method} {request.url.path}: "
+        f"{type(exc).__name__}: {str(exc)[:300]}"
+    )
+    # نرد رسالة عامة آمنة (لا تكشف أي تفصيل داخلي)
+    return _JSONResponse(
+        status_code=500,
+        content={"detail": "حدث خطأ غير متوقّع. حاول مرة أخرى، وإن استمرّ تواصل مع الدعم."},
+    )
+
 class SalesData(BaseModel):
     restaurant: str
     sector: Optional[str] = "restaurant"  # restaurant / cafe / retail
@@ -223,8 +271,8 @@ def log_activity(actor: str, action: str, target_email: str = ""):
         with Session(engine) as s:
             s.add(ActivityLog(actor=actor, action=action, target_email=target_email))
             s.commit()
-    except Exception:
-        pass
+    except Exception as _dbe:
+        _logger.error(f"db op failed (line ~274): {type(_dbe).__name__}: {str(_dbe)[:150]}")
 
 
 # قاعدة البيانات: تستخدم PostgreSQL من Railway تلقائياً، أو SQLite محلياً
@@ -264,6 +312,29 @@ class CompanyDecision(SQLModel, table=True):
     rationale: str = ""              # لماذا اتخذنا هذا القرار؟ (Decision Memory)
     created_at: datetime = Field(default_factory=datetime.now)
     closed_at: Optional[datetime] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 class CompanyMemory(SQLModel, table=True):
@@ -365,10 +436,10 @@ def run_migrations():
                         migrations.append("ALTER TABLE companyentry ADD COLUMN deposited REAL DEFAULT 0")
                     if "extra_data" not in ecols:
                         migrations.append("ALTER TABLE companyentry ADD COLUMN extra_data VARCHAR DEFAULT ''")
-                except Exception:
-                    pass
-        except Exception:
-            pass
+                except Exception as _dbe:
+                    _logger.error(f"db op failed (line ~626): {type(_dbe).__name__}: {str(_dbe)[:150]}")
+        except Exception as _dbe:
+            _logger.error(f"db op failed (line ~628): {type(_dbe).__name__}: {str(_dbe)[:150]}")
 
     for sql in migrations:
         try:
@@ -383,6 +454,7 @@ def run_migrations():
 def auto_sync_columns():
     """مزامنة ذاتية شاملة: تفحص كل موديل مقابل جدوله وتضيف أي عمود ناقص تلقائياً.
     تضمن ألا يتكرر خطأ 'column does not exist' مع أي عمود جديد مستقبلاً."""
+    from sqlalchemy import text  # كان مفقوداً: بدونه تفشل كل الأوامر بصمت
     # خريطة: اسم الجدول → قائمة (اسم العمود, نوع SQL) من الموديل
     TABLE_COLUMNS = {
         "companydecision": [
@@ -410,6 +482,7 @@ def auto_sync_columns():
             ("ip", "VARCHAR DEFAULT ''"),
         ],
     }
+    report = {"added_or_ok": 0, "failed": []}
     for table, cols in TABLE_COLUMNS.items():
         for col_name, col_type in cols:
             sql = f'ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {col_name} {col_type}'
@@ -417,8 +490,15 @@ def auto_sync_columns():
                 with engine.connect() as conn:
                     conn.execute(text(sql))
                     conn.commit()
-            except Exception:
-                pass  # الجدول قد لا يكون موجوداً بعد — يُنشأ من create_all
+                report["added_or_ok"] += 1
+            except Exception as e:
+                # لا نكسر الإقلاع، لكن لا نُخفي السبب أبداً
+                report["failed"].append({"table": table, "column": col_name,
+                                         "error": f"{type(e).__name__}: {str(e)[:200]}"})
+    if report["failed"]:
+        _logger.error(f"auto_sync_columns: فشل {len(report['failed'])} عمود — "
+                      + ", ".join(f"{f['table']}.{f['column']}" for f in report["failed"][:10]))
+    return report
 
 
 run_migrations()
@@ -779,6 +859,12 @@ def page_readiness():
     return FileResponse("company-readiness.html")
 
 
+@app.get("/company-sales-intelligence.html")
+
+
+@app.get("/company-data-center.html")
+
+
 @app.get("/company-whatif.html")
 def page_whatif():
     return FileResponse("company-whatif.html")
@@ -817,6 +903,14 @@ def serve_decision():
         return FileResponse("nabbah-decision.js", media_type="application/javascript")
     from fastapi.responses import Response as _Resp
     return _Resp(content="/* nabbah-decision.js not uploaded yet */", media_type="application/javascript")
+
+
+@app.get("/nabbah-exec-intel.js")
+def serve_exec_intel():
+    import os as _os
+    if _os.path.exists("nabbah-exec-intel.js"):
+        return FileResponse("nabbah-exec-intel.js", media_type="application/javascript")
+    raise HTTPException(404, "not found")
 
 
 @app.get("/nabbah-ask.js")
@@ -1697,14 +1791,52 @@ def score_level(score):
     return ("ضعيف", "#ef4444")
 
 
+_LEGACY_ADAPTER = None
+
+
+def _legacy_adapter():
+    """Loads the central-engine adapter once. Returns None if phase21/phase22 are absent."""
+    global _LEGACY_ADAPTER
+    if _LEGACY_ADAPTER is None:
+        try:
+            import sys as _sys, os as _os
+            _p22 = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "phase22")
+            if _p22 not in _sys.path:
+                _sys.path.insert(0, _p22)
+            try:
+                import legacy_adapters as _la
+            except ModuleNotFoundError:
+                import nabbah_engines  # noqa: F401
+                import legacy_adapters as _la
+            _LEGACY_ADAPTER = _la
+        except Exception as _e:
+            _logger.error(f"legacy adapter unavailable: {type(_e).__name__}: {str(_e)[:120]}")
+            _LEGACY_ADAPTER = False
+    return _LEGACY_ADAPTER or None
+
+
 def compute_company_metrics(sales, invoices, customers, repeat_customers, expenses, prev_sales=None):
-    """يحسب المؤشرات المالية ومؤشر أداء الفرع من المدخلات الخام."""
-    profit = round(sales - expenses, 2)
-    margin = round((profit / sales) * 100, 1) if sales > 0 else 0
-    avg_invoice = round(sales / invoices, 1) if invoices > 0 else 0
-    repeat_rate = round((repeat_customers / customers) * 100, 1) if customers > 0 else 0
-    has_prev = bool(prev_sales and prev_sales > 0)
-    growth = round(((sales - prev_sales) / prev_sales) * 100, 1) if has_prev else 0
+    """يحسب المؤشرات المالية ومؤشر أداء الفرع من المدخلات الخام.
+    Phase 2.2 (Option B): financial fields come from the central engine in
+    LEGACY_COMPATIBLE mode (identical output). The inline block below is the
+    fallback used only if the engine files are unavailable."""
+    _ad = _legacy_adapter()
+    _m = None
+    if _ad:
+        try:
+            _m = _ad.central_company_metrics(sales, invoices, customers, repeat_customers, expenses, prev_sales)
+        except Exception:
+            _m = None
+    if _m is not None:
+        profit, margin, avg_invoice = _m["profit"], _m["margin"], _m["avg_invoice"]
+        repeat_rate, growth, has_prev = _m["repeat_rate"], _m["growth"], _m["has_prev"]
+    else:
+        profit = round(sales - expenses, 2)
+        margin = round((profit / sales) * 100, 1) if sales > 0 else 0
+        avg_invoice = round(sales / invoices, 1) if invoices > 0 else 0
+        repeat_rate = round((repeat_customers / customers) * 100, 1) if customers > 0 else 0
+        has_prev = bool(prev_sales and prev_sales > 0)
+        growth = round(((sales - prev_sales) / prev_sales) * 100, 1) if has_prev else 0
 
     score = 0
     # الهامش (35)
@@ -1949,8 +2081,8 @@ def save_memory(company_id: int, kind: str, title: str, content: str = ""):
                 title=str(title)[:200], content=str(content)[:3000],
             ))
             ms.commit()
-    except Exception:
-        pass
+    except Exception as _dbe:
+        _logger.error(f"db op failed (line ~2289): {type(_dbe).__name__}: {str(_dbe)[:150]}")
 
 
 def log_audit(company_id: int, user_id: int, user_name: str, action: str,
@@ -1964,8 +2096,8 @@ def log_audit(company_id: int, user_id: int, user_name: str, action: str,
                 target=str(target)[:200], details=str(details)[:500], ip=str(ip)[:60],
             ))
             ms.commit()
-    except Exception:
-        pass
+    except Exception as _dbe:
+        _logger.error(f"db op failed (line ~2304): {type(_dbe).__name__}: {str(_dbe)[:150]}")
 
 
 def get_lang(request=None) -> str:
@@ -3192,6 +3324,17 @@ def company_ask(request: Request, data: dict, user: User = Depends(get_current_u
 
 
 # ===== بيانات التقرير التنفيذي (للطباعة) =====
+# ═══════════════════════════════════════════════════════════
+#  Phase 2.2 — تكامل محرّكات الذكاء المركزية
+#  endpoint جديد يستخدم المحرّكات الموحّدة (KPI/Variance/Driver/
+#  RootCause/Impact/AI Gateway). لا يلمس الـendpoints القديمة.
+# ═══════════════════════════════════════════════════════════
+
+
+
+
+
+
 @app.get("/company/financial-overview")
 def company_financial_overview(user: User = Depends(get_current_user)):
     """الوحدة المالية الشاملة (P3 — رؤية أحمد): P&L + النِسب المالية.
@@ -4425,8 +4568,11 @@ def company_module_save(payload: dict, user: User = Depends(get_current_user)):
     data = payload.get("data") or {}
     if not isinstance(data, dict):
         raise HTTPException(400, "البيانات غير صالحة")
-    # نظّف القيم الفارغة
-    cleaned = {k: v for k, v in data.items() if v is not None and str(v).strip() != ""}
+    # ═══ طبقة سلامة البيانات (Phase 1.4): تحقّق قبل الحفظ ═══
+    validation = validate_module_input(data)
+    cleaned = validation["cleaned"]
+    # نزيل القيم الفارغة (كما كان)
+    cleaned = {k: v for k, v in cleaned.items() if v is not None and str(v).strip() != ""}
     with Session(engine) as s:
         company = _module_guard(s, user, module)
         bid = int(branch_id) if branch_id else None
@@ -4444,9 +4590,10 @@ def company_module_save(payload: dict, user: User = Depends(get_current_user)):
             s.refresh(entry)
         except Exception as e:
             s.rollback()
-            raise HTTPException(500, f"تعذّر الحفظ: {str(e)[:160]}")
+            _logger.error(f"فشل حفظ الوحدة: {type(e).__name__}: {str(e)[:200]}"); raise HTTPException(500, "تعذّر حفظ البيانات. حاول مرة أخرى.")
         log_activity(user.name, f"حفظ بيانات وحدة {MODULE_LABEL.get(module, module)} ({period})", user.email)
-        return {"ok": True, "id": entry.id, "period": period, "module": module, "fields": len(cleaned)}
+        return {"ok": True, "id": entry.id, "period": period, "module": module,
+                "fields": len(cleaned), "warnings": validation.get("warnings", [])}
 
 
 @app.get("/company/module/{module}")
@@ -4878,11 +5025,11 @@ def company_predictions(user: User = Depends(get_current_user)):
         base_6m_profit = round(sum(total_profit_proj))
         scenarios = {
             "worst": {"label": "متشائم", "sales": round(base_6m_sales * 0.88), "profit": round(base_6m_profit * 0.80),
-                      "note": "نمو أبطأ + ضغط على الهوامش"},
+                      "note": "افتراض ثابت: −12% مبيعات و−20% ربح (ليس مشتقاً من بياناتك)", "basis": "fixed_assumption"},
             "base": {"label": "أساسي", "sales": base_6m_sales, "profit": base_6m_profit,
                      "note": "استمرار الاتجاه الحالي"},
             "best": {"label": "متفائل", "sales": round(base_6m_sales * 1.12), "profit": round(base_6m_profit * 1.20),
-                     "note": "نمو أقوى + تحسّن الكفاءة"},
+                     "note": "افتراض ثابت: +12% مبيعات و+20% ربح (ليس مشتقاً من بياناتك)", "basis": "fixed_assumption"},
         }
 
         return {
@@ -5319,6 +5466,81 @@ MODULE_KEY_FIELDS = {
 #  حقل مستمر تستخدمه كل الخدمات اللاحقة (صحة، مركز قيادة، تنبؤ...).
 # ═══════════════════════════════════════════════════════════
 QUALITY_THRESHOLD = 60  # عتبة الثقة: أقل منها = confidence_flag
+
+
+# ═══════════════════════════════════════════════════════════
+#  طبقة سلامة البيانات (Data Integrity Layer) — Phase 1.4
+#  تحقّق من المدخلات عند الحفظ: أنواع، حدود، قيم منطقية.
+#  لا ترفض بيانات المستخدم قسراً (تجنّب الكسر) — تنظّف وتُبلّغ.
+# ═══════════════════════════════════════════════════════════
+# حدود منطقية للقيم المالية (سقف معقول لكشف الأخطاء الجسيمة)
+MAX_REASONABLE_VALUE = 10_000_000_000  # 10 مليار — سقف لكشف الأخطاء الكتابية
+# الحقول التي يجب ألا تكون سالبة (قيم مطلقة)
+NON_NEGATIVE_HINTS = ("مبيعات", "sales", "إيراد", "revenue", "عدد", "count",
+                       "عملاء", "customers", "موظف", "employee", "كمية", "quantity",
+                       "مخزون", "inventory", "تكلفة", "cost", "رواتب", "salary")
+
+
+def validate_module_input(data: dict) -> dict:
+    """يتحقق من مدخلات الوحدة قبل الحفظ.
+    يُرجع: {cleaned, warnings, rejected}
+    - cleaned: القيم الصالحة (بعد التنظيف)
+    - warnings: تنبيهات على قيم مشبوهة (لا ترفض)
+    - rejected: قيم رُفضت (نوع خاطئ فقط)
+    آمن: لا يرفض بيانات صالحة، يزيل فقط الفاسد بوضوح."""
+    cleaned = {}
+    warnings = []
+    rejected = []
+    if not isinstance(data, dict):
+        return {"cleaned": {}, "warnings": [], "rejected": ["البيانات ليست كائناً صالحاً"]}
+
+    for k, v in data.items():
+        key = str(k).strip()
+        if not key:
+            continue
+        # القيم النصّية الوصفية (أسباب، ملاحظات) تُقبل كما هي
+        if key.startswith("__") or isinstance(v, str) and not _looks_numeric(v):
+            cleaned[key] = v
+            continue
+        # نحاول تحويل رقمي
+        num = _safe_number(v)
+        if num is None:
+            # قيمة غير رقمية في حقل يُتوقّع أن يكون رقمياً — نقبلها كنص (لا نرفض)
+            cleaned[key] = v
+            continue
+        # فحص ١: قيمة سالبة في حقل يجب أن يكون موجباً
+        kl = key.lower()
+        if num < 0 and any(h in key or h in kl for h in NON_NEGATIVE_HINTS):
+            # لا نرفض (قد تكون مرتجعات) — لكن ننبّه
+            warnings.append(f"قيمة سالبة في «{key}» ({num}) — تأكّد أنها مقصودة")
+            cleaned[key] = num
+        # فحص ٢: قيمة أكبر من المعقول (خطأ كتابي محتمل)
+        elif abs(num) > MAX_REASONABLE_VALUE:
+            warnings.append(f"قيمة كبيرة جداً في «{key}» — تأكّد من عدم وجود خطأ كتابي")
+            cleaned[key] = num
+        else:
+            cleaned[key] = num
+
+    return {"cleaned": cleaned, "warnings": warnings, "rejected": rejected}
+
+
+def _looks_numeric(s):
+    """هل النص يبدو رقماً؟"""
+    try:
+        float(str(s).replace(",", "").replace("%", "").strip())
+        return True
+    except (ValueError, TypeError):
+        return False
+
+
+def _safe_number(v):
+    """يحوّل لرقم بأمان أو None."""
+    if isinstance(v, (int, float)):
+        return v
+    try:
+        return float(str(v).replace(",", "").replace("%", "").strip())
+    except (ValueError, TypeError):
+        return None
 
 
 def check_data_quality_rules(entries):
@@ -7067,7 +7289,7 @@ def parse_excel(data_bytes):
         rows = [[c for c in r] for r in all_rows[hidx+1:] if any(c is not None for c in r)]
         return headers, rows, {"year_hint": year_hint}
     except Exception as e:
-        raise HTTPException(400, f"تعذّر قراءة الملف: {str(e)[:120]}")
+        _logger.error(f"فشل قراءة الملف: {type(e).__name__}: {str(e)[:200]}"); raise HTTPException(400, "تعذّر قراءة الملف. تأكّد أنه Excel أو CSV صالح.")
 
 
 def _to_num(v):
@@ -7517,7 +7739,7 @@ async def company_upload_import(file: UploadFile = File(...), user: User = Depen
         try:
             aggregated = aggregate_transactions(rows, col_map, headers, year_hint=fctx.get("year_hint"))
         except Exception as e:
-            raise HTTPException(400, f"خطأ أثناء تلخيص المعاملات: {type(e).__name__}: {str(e)[:180]}")
+            _logger.error(f"فشل تلخيص المعاملات: {type(e).__name__}: {str(e)[:200]}"); raise HTTPException(400, "تعذّر تحليل المعاملات في الملف. تأكّد من تنسيق البيانات.")
         if not aggregated:
             raise HTTPException(400, "لم نستطع تلخيص المعاملات — تأكد من صحة أعمدة التاريخ والفرع والمبلغ")
         with Session(engine) as s:
@@ -7592,7 +7814,7 @@ async def company_upload_import(file: UploadFile = File(...), user: User = Depen
 
             except Exception as e:
                 s.rollback()
-                raise HTTPException(500, f"خطأ أثناء حفظ الملخّصات: {type(e).__name__}: {str(e)[:180]}")
+                _logger.error(f"فشل حفظ الملخّصات: {type(e).__name__}: {str(e)[:200]}"); raise HTTPException(500, "تعذّر حفظ ملخّص الملف. حاول مرة أخرى.")
             # وحدة المبيعات: مرتجعات آخر فترة لكل فرع (بمصدر pos)
             module_entries = 0
             for bid, (ret_amt, ret_cnt, period) in returns_by_branch.items():
@@ -7915,8 +8137,15 @@ NABBAH_VERSION = "5.2-smart-recognition"
 def version_check():
     """افتح nabbah.up.railway.app/version — لو ما شفت هذي النسخة فالتحديث غير منشور."""
     # النسخة العامة مختصرة عمداً — التفاصيل الكاملة عبر /files-check للأدمن
+    import os as _os
+    _pages = {p: _os.path.exists(p) for p in ("company-actions.html", "company-scenarios.html")}
+    _engines = {d: _os.path.isdir(_os.path.join(_os.path.dirname(_os.path.abspath(__file__)), d))
+                for d in ("phase21", "phase22", "phase23")}
     return {
         "version": NABBAH_VERSION,
+        "build": "phase-2.3",
+        "pages_present": _pages,
+        "engines_present": _engines,
         "status": "ok",
         "features": {
             "pos_transactions_import": True,
@@ -8296,7 +8525,7 @@ def pages_check(_: bool = Depends(verify_admin)):
                 results.append({"file": fname, "status": "⚠️ نسخة قديمة — أعد رفعها"})
                 old_pages.append(fname)
         except Exception as e:
-            results.append({"file": fname, "status": f"خطأ: {str(e)[:40]}"})
+            _logger.error(f"فشل معالجة ملف {fname}: {type(e).__name__}: {str(e)[:150]}"); results.append({"file": fname, "status": "تعذّرت المعالجة"})
     return {
         "summary": "✅ كل الصفحات محدّثة" if not old_pages else f"⚠️ {len(old_pages)} صفحة قديمة أو مفقودة تحتاج إعادة رفع",
         "needs_reupload": old_pages,
