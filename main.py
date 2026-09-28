@@ -14,7 +14,19 @@ import io
 from pydantic import BaseModel
 from typing import Optional
 from sqlmodel import SQLModel, Field, create_engine, Session, select
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+
+
+def _now_naive():
+    """وقت بلا منطقة زمنية — يقبله SQLModel الحديث للتخزين (naive storage)."""
+    return datetime.now()
+
+
+try:
+    from pydantic import NaiveDatetime as _ND
+    _DTCOL = _ND
+except Exception:  # توافق مع إصدارات أقدم
+    _DTCOL = datetime
 
 load_dotenv()
 ai_client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
@@ -150,11 +162,11 @@ class User(SQLModel, table=True):
     plan: str = ""                      # فارغ = ما اشترك بعد | "trial" = في تجربة | "basic/pro/executive" = مشترك
     is_active: int = 0                  # 0 = غير مفعّل، 1 = مفعّل
     trial_used: int = 0                 # 0 = ما استخدم تجربة، 1 = استخدمها
-    subscription_start: Optional[datetime] = None
-    subscription_end: Optional[datetime] = None
+    subscription_start: Optional[_DTCOL] = None
+    subscription_end: Optional[_DTCOL] = None
     company_id: Optional[int] = None            # مرتبط بشركة؟ (للمدراء والموظفين)
     company_role: str = ""                       # owner/manager/staff — فارغ = فرد
-    created_at: datetime = Field(default_factory=datetime.now)
+    created_at: _DTCOL = Field(default_factory=_now_naive)
 
 class Entry(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -186,14 +198,14 @@ class Entry(SQLModel, table=True):
     top_decision: str = ""
     top_opportunity: str = ""
     smart_message: str = ""
-    created_at: datetime = Field(default_factory=datetime.now)
+    created_at: _DTCOL = Field(default_factory=_now_naive)
 
 class ActivityLog(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     actor: str = "النظام"
     action: str = ""
     target_email: str = ""
-    created_at: datetime = Field(default_factory=datetime.now)
+    created_at: _DTCOL = Field(default_factory=_now_naive)
 
 # ===== جداول قسم الشركات (مستقل تماماً عن قسم المطاعم/الأفراد) =====
 class Company(SQLModel, table=True):
@@ -215,7 +227,7 @@ class Company(SQLModel, table=True):
     top_priority: str = "profit"                  # الأولوية القصوى: growth/profit/liquidity/efficiency
     goals_json: str = "{}"                        # أهداف مخصّصة (مبيعات/ربح/عملاء/احتفاظ...) JSON
     alerts_json: str = "{}"                        # تفضيلات التنبيهات JSON
-    created_at: datetime = Field(default_factory=datetime.now)
+    created_at: _DTCOL = Field(default_factory=_now_naive)
 
 class CompanyBranch(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -234,7 +246,7 @@ class CompanyBranch(SQLModel, table=True):
     target_sales: float = 0                      # هدف المبيعات الشهري (اختياري)
     target_customers: int = 0                    # هدف عدد العملاء الشهري (اختياري)
     is_active: int = 1
-    created_at: datetime = Field(default_factory=datetime.now)
+    created_at: _DTCOL = Field(default_factory=_now_naive)
 
 class CompanyEntry(SQLModel, table=True):
     """بيانات دورية لكل فرع — تتراكم لتعطي اتجاهات وتنبؤ."""
@@ -263,7 +275,7 @@ class CompanyEntry(SQLModel, table=True):
     growth: float = 0                             # النمو مقابل الفترة السابقة %
     branch_score: int = 0                         # مؤشر أداء الفرع /100
     smart_message: str = ""                       # تحليل Gemini المحفوظ
-    created_at: datetime = Field(default_factory=datetime.now)
+    created_at: _DTCOL = Field(default_factory=_now_naive)
 
 def log_activity(actor: str, action: str, target_email: str = ""):
     """يسجّل حدثاً في سجل النشاط."""
@@ -289,7 +301,7 @@ class CompanyMember(SQLModel, table=True):
     email: str = ""
     role: str = "staff"                          # manager/accountant/staff (المالك ضمني)
     branch_id: Optional[int] = None              # لمدير فرع معيّن (اختياري)
-    created_at: datetime = Field(default_factory=datetime.now)
+    created_at: _DTCOL = Field(default_factory=_now_naive)
 
 
 class CompanyDecision(SQLModel, table=True):
@@ -310,8 +322,8 @@ class CompanyDecision(SQLModel, table=True):
     approver: str = ""               # المعتمِد (صاحب القرار النهائي) — RACI: Accountable
     reviewer: str = ""               # المراجع (يقيس النتيجة) — RACI: Consulted/Informed
     rationale: str = ""              # لماذا اتخذنا هذا القرار؟ (Decision Memory)
-    created_at: datetime = Field(default_factory=datetime.now)
-    closed_at: Optional[datetime] = None
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+    closed_at: Optional[_DTCOL] = None
 
 
 
@@ -344,7 +356,7 @@ class CompanyMemory(SQLModel, table=True):
     kind: str = Field(index=True)   # analysis / question / upload / goals / decision
     title: str = ""
     content: str = ""               # النص الكامل (تحليل/إجابة...)
-    created_at: datetime = Field(default_factory=datetime.now)
+    created_at: _DTCOL = Field(default_factory=_now_naive)
 
 
 class AuditLog(SQLModel, table=True):
@@ -368,7 +380,7 @@ class CompanyModuleEntry(SQLModel, table=True):
     module: str = Field(index=True)                              # finance / sales / customers / ...
     period: str = ""                                             # YYYY-MM
     data: str = ""                                               # JSON
-    created_at: datetime = Field(default_factory=datetime.now)
+    created_at: _DTCOL = Field(default_factory=_now_naive)
 
 
 SQLModel.metadata.create_all(engine)
