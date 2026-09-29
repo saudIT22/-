@@ -3994,6 +3994,56 @@ def _dataset_json(d, role=None):
     return j
 
 
+def _read_any_table(data, filename, ing):
+    """يقرأ CSV/Excel بشمولية: كل الأوراق، ويختار صف العناوين الحقيقي (قد تسبقه عناوين تقرير)
+    بمطابقة محرك الاستيعاب لكل الأنواع، ويلتقط السنة من العنوان أو اسم الملف."""
+    name = (filename or "").lower()
+    sheets = []
+    if name.endswith(".csv"):
+        for enc in ("utf-8-sig", "utf-8", "cp1256", "latin-1"):
+            try:
+                text = data.decode(enc)
+                break
+            except UnicodeDecodeError:
+                continue
+        else:
+            raise HTTPException(400, "تعذّر قراءة ترميز الملف — احفظه بصيغة UTF-8")
+        sample = text[:5000]
+        delim = ";" if sample.count(";") > sample.count(",") else ("\t" if sample.count("\t") > sample.count(",") else ",")
+        sheets.append(("csv", [r for r in csv.reader(io.StringIO(text), delimiter=delim)]))
+    elif name.endswith((".xlsx", ".xlsm")):
+        try:
+            import openpyxl
+        except ImportError:
+            raise HTTPException(400, "دعم Excel غير متوفّر — احفظ الملف كـ CSV ثم ارفعه")
+        try:
+            wb = openpyxl.load_workbook(io.BytesIO(data), data_only=True, read_only=True)
+            for ws in wb.worksheets:
+                sheets.append((ws.title, [list(r) for r in ws.iter_rows(values_only=True)]))
+        except Exception as e:
+            _logger.error(f"excel read failed: {type(e).__name__}: {str(e)[:150]}")
+            raise HTTPException(400, "تعذّر قراءة ملف Excel. تأكد أنه غير محمي بكلمة مرور وأنه .xlsx")
+    else:
+        raise HTTPException(400, "الصيغ المدعومة: CSV أو Excel (.csv .xlsx .xlsm). ملفات .xls القديمة: احفظها كـ .xlsx")
+    best = None
+    for title, all_rows in sheets:
+        for i, row in enumerate(all_rows[:15]):
+            cells = ["" if c is None else str(c).strip() for c in row]
+            if sum(1 for c in cells if c) < 2:
+                continue
+            score = max((len(ing.map_columns(cells, t)["mapping"]) for t in ing.DATASET_TYPES), default=0)
+            if best is None or score > best[0]:
+                best = (score, title, i, all_rows)
+    if not best:
+        return [], [], None, None
+    _, title, hidx, all_rows = best
+    headers = ["" if c is None else str(c).strip() for c in all_rows[hidx]]
+    rows = [r for r in all_rows[hidx + 1:] if any(c is not None and str(c).strip() != "" for c in r)]
+    above = " ".join(str(c) for r in all_rows[:hidx] for c in r if c is not None)
+    year_hint = ing.year_hint_from(above, title, filename) if hasattr(ing, "year_hint_from") else None
+    return headers, rows, year_hint, title
+
+
 @app.get("/company/datasets")
 def company_datasets(user: User = Depends(get_current_user), dataset_type: str = "", status: str = ""):
     with Session(engine) as s:
@@ -4027,19 +4077,15 @@ async def company_dataset_preview(file: UploadFile = File(...), dataset_type: st
     with Session(engine) as s:
         company, role = _data_scope(s, user, "edit")
         data = await file.read()
-        name = (file.filename or "").lower()
         try:
-            if name.endswith(".csv"):
-                headers, rows, _ = parse_csv(data)
-            elif name.endswith((".xlsx", ".xlsm")):
-                headers, rows, _ = parse_excel(data)
-            else:
-                raise HTTPException(400, "ادعم CSV أو Excel (.csv .xlsx) فقط")
+            headers, rows, year_hint, sheet = _read_any_table(data, file.filename, ing)
         except HTTPException:
             raise
         except Exception as e:
             _logger.error(f"dataset preview read failed: {type(e).__name__}: {str(e)[:150]}")
             raise HTTPException(400, "تعذّر قراءة الملف. تأكد أنه CSV أو Excel صالح.")
+        if not headers or not rows:
+            raise HTTPException(422, "الملف فارغ أو لم نجد فيه صف عناوين وبيانات تحته")
         if len(rows) > MAX_STAGING_ROWS:
             parts = -(-len(rows) // MAX_STAGING_ROWS)
             raise HTTPException(422, f"الملف فيه {len(rows):,} صفاً والحد {MAX_STAGING_ROWS:,} في الرفعة الواحدة — "
@@ -4079,7 +4125,7 @@ async def company_dataset_preview(file: UploadFile = File(...), dataset_type: st
                     "suggested_type": better["type"], "suggestions": ranking[:3]})
         try:
             validation = ing.validate_rows(rows, mapped["mapping"], dataset_type, branch_names=names,
-                                           headers=headers, default_branch_id=single_branch)
+                                           headers=headers, default_branch_id=single_branch, year_hint=year_hint)
         except TypeError:     # محرك أقدم بلا الوسائط الجديدة
             validation = ing.validate_rows(rows, mapped["mapping"], dataset_type, branch_names=names)
         quality = ing.assess_quality(validation, dataset_type)
@@ -4106,6 +4152,7 @@ async def company_dataset_preview(file: UploadFile = File(...), dataset_type: st
                 "detected_label": cm.ENTITIES[dataset_type]["ar"],
                 "default_branch_used": bool(single_branch and "branch_id" in mapped["missing_required"]),
                 "warnings": validation.get("warnings", [])[:20], "warning_count": validation.get("warning_count", 0),
+                "year_hint": year_hint, "sheet": sheet, "skipped_totals": len(validation.get("skipped_totals", [])),
                 "extra_columns": validation.get("extra_columns", [])}
 
 
