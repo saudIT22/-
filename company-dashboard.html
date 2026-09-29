@@ -244,6 +244,7 @@
     <!-- KPIs -->
     <div class="kpis" id="kpis"></div>
     <div id="nbExecIntel"></div>
+    <div id="nbSalesIntel"></div>
 
     <!-- comparison + ranking -->
     <div class="two">
@@ -822,12 +823,50 @@ window.addEventListener("nabbahFilterChange", function(){ init(); });
 </script>
   <script>
 // ═══ إعادة تطبيق الترجمة على المحتوى الديناميكي عند تبديل اللغة ═══
+// apply() نفسها تطلق هذا الحدث — الحارس يمنع الحلقة اللانهائية (Maximum call stack)
+var _nbLangBusy = false;
 window.addEventListener("nabbah:langchange", function(){
-  try { if(typeof loadPulse==="function") loadPulse(); } catch(e){}
-  try { if(window.NabbahI18n) window.NabbahI18n.apply(); } catch(e){}
+  if (_nbLangBusy) return;
+  _nbLangBusy = true;
+  try { if(typeof loadPulse==="function") loadPulse(); } catch(e){ console.error("loadPulse", e); }
+  try { if(window.NabbahI18n) window.NabbahI18n.apply(); } catch(e){ console.error("i18n apply", e); }
+  _nbLangBusy = false;
 });
 </script>
   <script src="i18n.js"></script>
+<script>
+/* بطاقة ذكاء المبيعات في لوحة التحكم — مستقلة: أي عطل هنا لا يؤثر على باقي اللوحة */
+(function(){
+  const box=document.getElementById("nbSalesIntel");if(!box)return;
+  const tok=localStorage.getItem("nabbah_token")||"";if(!tok)return;
+  const ar=!(window.NabbahI18n&&window.NabbahI18n.getLang&&window.NabbahI18n.getLang()==="en");
+  const e=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const n=v=>v==null?"—":Number(v).toLocaleString(ar?"ar-SA":"en-US",{maximumFractionDigits:2});
+  const pc=(v,inv)=>v==null?"":`<span style="color:${(inv?v<=0:v>=0)?"#10b981":"#ef4444"};font-size:12px">${v>0?"+":""}${n(v)}%</span>`;
+  const link=`<a href="company-sales-intelligence.html" style="background:var(--mint,#10b981);color:#062b1c;border-radius:10px;padding:7px 14px;font-weight:800;font-size:13px;text-decoration:none;white-space:nowrap">${ar?"افتح ذكاء المبيعات ←":"Open Sales Intelligence →"}</a>`;
+  const wrap=(inner)=>`<div class="panel" style="margin:16px 0">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+      <h3 style="margin:0">📊 ${ar?"ذكاء المبيعات":"Sales Intelligence"}</h3>${link}</div>${inner}</div>`;
+  fetch("/company/sales-intelligence?grain=month",{headers:{Authorization:"Bearer "+tok}}).then(async r=>{
+    if(r.status===401||r.status===402||r.status===403){box.innerHTML="";return;}   // لا صلاحية = لا بطاقة
+    if(!r.ok){let d="";try{const j=await r.json();d=typeof j.detail==="string"?j.detail:"";}catch(_){}
+      box.innerHTML=wrap(`<div style="color:#ef4444;font-size:13px">${ar?"تعذّر تحميل ذكاء المبيعات":"Could not load sales intelligence"} — HTTP ${r.status}${d?" — "+e(d):""}</div>`);return;}
+    const d=await r.json();
+    if(!d.has_data){box.innerHTML=wrap(`<div style="color:var(--txt-soft,#8ba396);font-size:13px">${e(ar?d.message_ar:d.message_en)} <a href="company-data-center.html" style="color:var(--mint,#10b981)">${ar?"مركز البيانات":"Data Center"}</a></div>`);return;}
+    const k=d.kpis||{},tile=(l,x,inv,suffix)=>`<div style="background:var(--panel2,rgba(255,255,255,.03));border:1px solid var(--line,#1d2c24);border-radius:12px;padding:10px">
+      <div style="font-size:12px;color:var(--txt-soft,#8ba396)">${l}</div><div style="font-size:19px;font-weight:800">${x&&x.current!=null?n(x.current)+(suffix||""):"—"}</div>
+      <div>${x&&x.comparison_available?(x.unit==="percent"?`<span style="font-size:12px;color:var(--txt-soft,#8ba396)">${x.change>0?"+":""}${n(x.change)} ${ar?"نقطة":"pts"}</span>`:pc(x.change_pct,inv)):`<span style="font-size:11px;color:var(--txt-soft,#8ba396)">${ar?"لا مقارنة":"no comparison"}</span>`}</div></div>`;
+    const sig=(d.signals||[]).filter(s=>s.type!=="data_quality").slice(0,2).map(s=>`<div style="border-inline-start:3px solid ${s.type==="risk"?"#ef4444":"#10b981"};padding:4px 10px;margin-top:8px;font-size:13px">
+      <b>${e(ar?s.name_ar:s.name_en)}</b>${s.dimension?` — ${e(s.dimension)}`:""} <span style="color:var(--txt-soft,#8ba396)">${e((s.evidence||[])[0]||"")}</span></div>`).join("");
+    const top=((d.product_insights||{}).top5||[])[0];
+    box.innerHTML=wrap(`<div style="font-size:12px;color:var(--txt-soft,#8ba396);margin-bottom:8px">${ar?"الفترة":"Period"}: ${e(d.period)} · ${ar?"مقارنة بالفترة السابقة":"vs previous period"}</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px">
+        ${tile(ar?"صافي المبيعات":"Net sales",k.net_sales)}${tile(ar?"المعاملات":"Transactions",k.transactions)}
+        ${tile(ar?"متوسط الفاتورة":"AOV",k.aov)}${tile(ar?"نسبة المرتجعات":"Return rate",k.return_rate,true,"%")}</div>
+      ${top?`<div style="font-size:13px;margin-top:10px">${ar?"الأعلى مبيعاً":"Top product"}: <b>${e(top.key)}</b> (${n(top.net_sales.value)})</div>`:""}${sig}`);
+  }).catch(err=>{console.error("sales card",err);box.innerHTML=wrap(`<div style="color:#ef4444;font-size:13px">${ar?"تعذّر الاتصال":"Connection failed"}: ${e(err.message||err)}</div>`);});
+})();
+</script>
 <script src="nabbah-exec-intel.js"></script>
 <script src="nabbah-sidebar.js"></script>
 <script src="nabbah-filters.js"></script>
