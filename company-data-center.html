@@ -169,9 +169,11 @@
     $("result").innerHTML=`
       <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
         <span class="b ${q.gate}">${tr("dc.gate."+q.gate)} · ${q.overall_score}%</span>
-        <span class="muted">${tr("dc.rows")}: ${num(ds.total_rows)} · <span class="ok">${tr("dc.valid")}: ${num(ds.valid_rows)}</span> · <span class="${ds.rejected_rows?"err":""}">${tr("dc.rejected")}: ${num(ds.rejected_rows)}</span></span>
+        <span class="muted">${tr("dc.rows")}: ${num(ds.total_rows)} · <span class="ok">${tr("dc.valid")}: ${num(ds.valid_rows)}${ds.valid_rows>ds.total_rows?(L()==="ar"?" حركة (كل شهر = إيداع + سحب)":" movements (each month = deposit + withdrawal)"):""}</span> · <span class="${ds.rejected_rows?"err":""}">${tr("dc.rejected")}: ${num(ds.rejected_rows)}</span></span>
       </div>
       <div class="muted" style="margin-top:8px">${L()==="ar"?"نوع الملف":"File type"}: <b>${esc(d.detected_label||d.detected_type||"")}</b>${d.auto_detected?(L()==="ar"?" (تعرّف تلقائي)":" (auto-detected)"):""}</div>
+      ${d.sheet&&d.sheet!=="csv"?`<div class="muted">${L()==="ar"?"الورقة":"Sheet"}: ${esc(d.sheet)}${d.year_hint?(L()==="ar"?" · السنة المعتمدة للأشهر: ":" · Year used for months: ")+esc(d.year_hint):""}</div>`:(d.year_hint?`<div class="muted">${L()==="ar"?"السنة المعتمدة للأشهر":"Year used for months"}: ${esc(d.year_hint)}</div>`:"")}
+      ${d.skipped_totals?`<div class="muted">${L()==="ar"?"صفوف «الإجمالي» تم تخطيها (ليست بيانات)":"Total rows skipped (not data)"}: ${d.skipped_totals}</div>`:""}
       ${d.default_branch_used?`<div class="muted">${L()==="ar"?"لا يوجد عمود فرع — نُسبت الصفوف لفرعك الوحيد":"No branch column — rows assigned to your only branch"}</div>`:""}
       ${d.extra_columns&&d.extra_columns.length?`<div class="muted">${L()==="ar"?"أعمدة إضافية محفوظة كما هي (لن تُفقد)":"Extra columns kept as-is (nothing lost)"}: ${d.extra_columns.map(esc).join(", ")}</div>`:""}
       ${d.warning_count?`<div class="muted" style="color:#f5b301">${L()==="ar"?"تنبيهات لا تمنع الاعتماد (بريد/جوال غير صالح، حُفظت القيمة الأصلية)":"Non-blocking warnings (invalid email/phone, original kept)"}: ${d.warning_count}</div>`:""}
@@ -179,7 +181,7 @@
       ${d.unmapped.length&&!(d.extra_columns&&d.extra_columns.length)?`<div class="muted" style="margin-top:6px">${tr("dc.unmapped")}: ${d.unmapped.map(u=>esc(u.header)).join(", ")}</div>`:""}
       <div style="margin-top:12px;font-weight:700">${tr("dc.mapping")}</div>
       <div class="tbl"><table><thead><tr><th>${tr("dc.column")}</th><th>${tr("dc.field")}</th></tr></thead><tbody>${mapRows}</tbody></table></div>
-      ${sample.length?`<div style="margin-top:12px;font-weight:700">${tr("dc.sample")}</div><div class="tbl"><table><thead><tr>${cols.map(c=>`<th>${esc(c)}</th>`).join("")}</tr></thead><tbody>${sample.map(r=>`<tr>${cols.map(c=>`<td>${esc(r[c]??"—")}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`:""}
+      ${sample.length?`<div style="margin-top:12px;font-weight:700">${tr("dc.sample")}</div><div class="tbl"><table><thead><tr>${cols.map(c=>`<th>${esc(c)}</th>`).join("")}</tr></thead><tbody>${sample.map(r=>`<tr>${cols.map(c=>{const v=r[c];return `<td>${v==null?"—":(typeof v==="object"?esc(Object.entries(v).map(([k,x])=>k+": "+x).join(" · ")):esc(v))}</td>`;}).join("")}</tr>`).join("")}</tbody></table></div>`:""}
       ${errRows?`<div style="margin-top:12px;font-weight:700">${tr("dc.errors")}</div><div class="tbl"><table><thead><tr><th>${tr("dc.row")}</th><th>${tr("dc.reason")}</th></tr></thead><tbody>${errRows}</tbody></table></div>`:""}
       <div style="margin-top:14px">
         ${q.gate==="BLOCK"?`<div class="err">${tr("dc.blocked")}</div>`:`<button class="btn" id="impBtn" data-ds="${ds.id}">${tr("dc.import")}</button>`}
