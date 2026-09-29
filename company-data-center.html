@@ -54,7 +54,54 @@
     <div style="font-weight:800;margin-bottom:10px" data-i18n="dc.datasets">الملفات المرفوعة</div>
     <div id="list"><div class="state">…</div></div>
   </div>
+
+  <!-- البيانات الأساسية المعتمدة: العملاء، الموردون، المنتجات، الموظفون، الأقسام -->
+  <div class="panel" style="margin-top:16px" id="mdPanel">
+    <div style="font-weight:800;margin-bottom:10px" id="mdTitle"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+      <select id="mdEntity"></select>
+      <input id="mdQ" style="flex:1;min-width:160px;background:var(--panel2,#0c1511);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:10px;padding:8px">
+      <button class="btn ghost" id="mdPrev">‹</button><span class="muted" id="mdPage"></span><button class="btn ghost" id="mdNext">›</button>
+    </div>
+    <div id="mdList"><div class="state">…</div></div>
+  </div>
 </div>
+<script>
+(function(){
+  const TOKEN=localStorage.getItem("nabbah_token")||"";if(!TOKEN)return;
+  const ar=!(window.NabbahI18n&&window.NabbahI18n.getLang&&window.NabbahI18n.getLang()==="en");
+  const $=id=>document.getElementById(id),e=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const ENT=[["customer",ar?"العملاء":"Customers"],["supplier",ar?"الموردون":"Suppliers"],["product",ar?"المنتجات":"Products"],["employee",ar?"الموظفون":"Employees"],["department",ar?"الأقسام":"Departments"]];
+  const LBL={name:ar?"الاسم":"Name",customer_code:ar?"الرمز":"Code",supplier_code:ar?"الرمز":"Code",employee_code:ar?"الرقم":"No.",sku:"SKU",email:ar?"البريد":"Email",phone:ar?"الجوال":"Phone",
+    city:ar?"المدينة":"City",segment:ar?"الشريحة":"Segment",customer_type:ar?"النوع":"Type",tax_number:ar?"الرقم الضريبي":"VAT no.",credit_limit:ar?"حد الائتمان":"Credit limit",
+    contact_person:ar?"المسؤول":"Contact",payment_terms:ar?"شروط الدفع":"Terms",category:ar?"الفئة":"Category",unit:ar?"الوحدة":"Unit",cost:ar?"التكلفة":"Cost",selling_price:ar?"سعر البيع":"Price",
+    role:ar?"الوظيفة":"Role",employment_status:ar?"الحالة":"Status",hire_date:ar?"التعيين":"Hired",monthly_cost:ar?"التكلفة الشهرية":"Monthly cost",code:ar?"الرمز":"Code",active:ar?"نشط":"Active",notes:ar?"ملاحظات":"Notes"};
+  const COLS={customer:["name","customer_code","email","phone","city","customer_type","tax_number","credit_limit"],supplier:["name","supplier_code","contact_person","email","phone","city","payment_terms","tax_number"],
+    product:["sku","name","category","unit","cost","selling_price","active"],employee:["employee_code","name","role","email","phone","employment_status","hire_date","monthly_cost"],department:["name","code","active"]};
+  let off=0,LIM=50,total=0,tmr=null;
+  $("mdTitle").textContent=ar?"البيانات الأساسية المعتمدة":"Imported master data";
+  $("mdQ").placeholder=ar?"ابحث بالاسم أو البريد أو الجوال أو الرمز…":"Search name, email, phone, code…";
+  $("mdEntity").innerHTML=ENT.map(([k,l])=>`<option value="${k}">${l}</option>`).join("");
+  function load(){
+    const ent=$("mdEntity").value;$("mdList").innerHTML=`<div class="state">…</div>`;
+    fetch(`/company/master-data?entity=${ent}&q=${encodeURIComponent($("mdQ").value)}&offset=${off}&limit=${LIM}`,{headers:{Authorization:"Bearer "+TOKEN}}).then(async r=>{
+      const d=await r.json().catch(()=>({}));
+      if(r.status===403){$("mdPanel").style.display="none";return;}
+      if(!r.ok){$("mdList").innerHTML=`<div class="muted err">${e(typeof d.detail==="string"?d.detail:"HTTP "+r.status)}</div>`;return;}
+      total=d.total??d.count;const cols=COLS[ent];
+      $("mdPage").textContent=total?`${off+1}–${Math.min(off+LIM,total)} / ${total}`:"0";
+      if(!d.items.length){$("mdList").innerHTML=`<div class="state">${ar?"لا توجد بيانات معتمدة بعد — ارفع ملفاً من الأعلى":"Nothing imported yet — upload a file above"}</div>`;return;}
+      $("mdList").innerHTML=`<div style="overflow-x:auto"><table><thead><tr>${cols.map(c=>`<th>${e(LBL[c]||c)}</th>`).join("")}<th>${ar?"إضافي":"Extra"}</th></tr></thead><tbody>`+
+        d.items.map(it=>`<tr>${cols.map(c=>`<td>${it[c]==null||it[c]===""?"—":(it.restricted&&c==="monthly_cost"?"🔒":e(it[c]))}</td>`).join("")}<td class="muted" style="white-space:normal;max-width:280px">${e(Object.entries(it.extra||{}).map(([k,v])=>k+": "+v).join(" · "))}</td></tr>`).join("")+`</tbody></table></div>`;
+    }).catch(err=>{$("mdList").innerHTML=`<div class="muted err">${e(err.message||err)}</div>`;});
+  }
+  $("mdEntity").onchange=()=>{off=0;load();};
+  $("mdQ").oninput=()=>{clearTimeout(tmr);tmr=setTimeout(()=>{off=0;load();},350);};
+  $("mdPrev").onclick=()=>{if(off>0){off=Math.max(0,off-LIM);load();}};
+  $("mdNext").onclick=()=>{if(off+LIM<total){off+=LIM;load();}};
+  load();
+})();
+</script>
 <div class="ov" id="ov"><div class="modal" id="modal"></div></div>
 <script src="i18n.js"></script>
 <script>
@@ -81,7 +128,7 @@
     }).then(d=>{if(d){state=d;render();}}).catch(()=>{$("list").innerHTML=`<div class="state err">${tr("dc.error")}</div>`;});
   }
   function render(){
-    $("dtype").innerHTML=`<option value="">${tr("dc.type")}</option>`+Object.entries(state.types).map(([k,v])=>`<option value="${k}">${esc(L()==="ar"?v.ar:v.en)}</option>`).join("");
+    $("dtype").innerHTML=`<option value="auto" selected>${L()==="ar"?"تلقائي — نبّاه يتعرف على نوع الملف (موصى به)":"Auto — Nabbah detects the file type (recommended)"}</option>`+Object.entries(state.types).map(([k,v])=>`<option value="${k}">${esc(L()==="ar"?v.ar:v.en)}</option>`).join("");
     if(!state.can_upload){$("previewBtn").disabled=true;$("upMsg").textContent=tr("dc.noPermissionUpload");}
     const ds=state.datasets, imported=ds.filter(d=>d.status==="imported"||d.status==="partial").length;
     const avg=ds.length?Math.round(ds.reduce((a,d)=>a+(d.quality_score||0),0)/ds.length):null;
@@ -95,13 +142,20 @@
   }
   $("previewBtn").onclick=()=>{
     const f=$("file").files[0], t=$("dtype").value;
-    if(!t){$("upMsg").className="muted err";$("upMsg").textContent=tr("dc.selectType");return;}
+    if(!t){$("dtype").value="auto";}
     if(!f){$("upMsg").className="muted err";$("upMsg").textContent=tr("dc.choose");return;}
-    const fd=new FormData();fd.append("file",f);fd.append("dataset_type",t);
+    const fd=new FormData();fd.append("file",f);fd.append("dataset_type",t||"auto");
     $("upMsg").className="muted";$("upMsg").textContent=tr("dc.uploading");$("previewBtn").disabled=true;step=2;drawSteps();
     fetch("/company/datasets/preview",{method:"POST",headers:H,body:fd}).then(async r=>{
       const d=await r.json().catch(()=>({}));$("previewBtn").disabled=false;
-      if(!r.ok){$("upMsg").className="muted err";$("upMsg").textContent=(typeof d.detail==="string"?d.detail:tr("dc.error"));step=1;drawSteps();return;}
+      if(!r.ok){
+        const det=d.detail;$("upMsg").className="muted err";step=1;drawSteps();
+        if(det&&typeof det==="object"){
+          $("upMsg").innerHTML=esc(det["message_"+L()]||det.message_ar||tr("dc.error"))+
+            (det.suggested_type?` <button class="btn" id="useSug" style="margin-inline-start:8px">${L()==="ar"?"استخدم النوع المقترح":"Use suggested type"}</button>`:"");
+          const b=$("useSug");if(b)b.onclick=()=>{$("dtype").value=det.suggested_type;$("previewBtn").click();};
+        }else $("upMsg").textContent=(typeof det==="string"?det:tr("dc.error"))+(r.status>=500?` (HTTP ${r.status})`:"");
+        return;}
       $("upMsg").textContent="";showPreview(d);
     }).catch(()=>{$("previewBtn").disabled=false;$("upMsg").className="muted err";$("upMsg").textContent=tr("dc.error");});
   };
@@ -117,8 +171,12 @@
         <span class="b ${q.gate}">${tr("dc.gate."+q.gate)} · ${q.overall_score}%</span>
         <span class="muted">${tr("dc.rows")}: ${num(ds.total_rows)} · <span class="ok">${tr("dc.valid")}: ${num(ds.valid_rows)}</span> · <span class="${ds.rejected_rows?"err":""}">${tr("dc.rejected")}: ${num(ds.rejected_rows)}</span></span>
       </div>
+      <div class="muted" style="margin-top:8px">${L()==="ar"?"نوع الملف":"File type"}: <b>${esc(d.detected_label||d.detected_type||"")}</b>${d.auto_detected?(L()==="ar"?" (تعرّف تلقائي)":" (auto-detected)"):""}</div>
+      ${d.default_branch_used?`<div class="muted">${L()==="ar"?"لا يوجد عمود فرع — نُسبت الصفوف لفرعك الوحيد":"No branch column — rows assigned to your only branch"}</div>`:""}
+      ${d.extra_columns&&d.extra_columns.length?`<div class="muted">${L()==="ar"?"أعمدة إضافية محفوظة كما هي (لن تُفقد)":"Extra columns kept as-is (nothing lost)"}: ${d.extra_columns.map(esc).join(", ")}</div>`:""}
+      ${d.warning_count?`<div class="muted" style="color:#f5b301">${L()==="ar"?"تنبيهات لا تمنع الاعتماد (بريد/جوال غير صالح، حُفظت القيمة الأصلية)":"Non-blocking warnings (invalid email/phone, original kept)"}: ${d.warning_count}</div>`:""}
       ${d.missing_required.length?`<div class="err" style="margin-top:8px">${tr("dc.missingReq")}: ${d.missing_required.map(esc).join(", ")}</div>`:""}
-      ${d.unmapped.length?`<div class="muted" style="margin-top:6px">${tr("dc.unmapped")}: ${d.unmapped.map(u=>esc(u.header)).join(", ")}</div>`:""}
+      ${d.unmapped.length&&!(d.extra_columns&&d.extra_columns.length)?`<div class="muted" style="margin-top:6px">${tr("dc.unmapped")}: ${d.unmapped.map(u=>esc(u.header)).join(", ")}</div>`:""}
       <div style="margin-top:12px;font-weight:700">${tr("dc.mapping")}</div>
       <div class="tbl"><table><thead><tr><th>${tr("dc.column")}</th><th>${tr("dc.field")}</th></tr></thead><tbody>${mapRows}</tbody></table></div>
       ${sample.length?`<div style="margin-top:12px;font-weight:700">${tr("dc.sample")}</div><div class="tbl"><table><thead><tr>${cols.map(c=>`<th>${esc(c)}</th>`).join("")}</tr></thead><tbody>${sample.map(r=>`<tr>${cols.map(c=>`<td>${esc(r[c]??"—")}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`:""}
