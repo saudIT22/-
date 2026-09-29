@@ -424,6 +424,7 @@ class CompanyDepartment(SQLModel, table=True):
     name: str = ""
     code: str = ""
     active: int = 1
+    extra_json: str = ""
     created_at: _DTCOL = Field(default_factory=_now_naive)
 
 
@@ -439,6 +440,9 @@ class CompanyEmployee(SQLModel, table=True):
     hire_date: str = ""
     termination_date: str = ""
     monthly_cost: Optional[float] = None       # حسّاس: يخضع لقواعد الصلاحيات القائمة
+    email: str = ""
+    phone: str = ""
+    extra_json: str = ""                       # أعمدة الملف الإضافية كما هي — لا يُفقد شيء
     dataset_id: Optional[int] = None
     source_row: Optional[int] = None
     created_at: _DTCOL = Field(default_factory=_now_naive)
@@ -454,6 +458,7 @@ class CompanyProduct(SQLModel, table=True):
     cost: Optional[float] = None
     selling_price: Optional[float] = None
     active: int = 1
+    extra_json: str = ""
     dataset_id: Optional[int] = None
     created_at: _DTCOL = Field(default_factory=_now_naive)
 
@@ -462,10 +467,39 @@ class CompanySupplier(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     company_id: int = Field(index=True)
     name: str = ""
+    supplier_code: str = ""
     category: str = ""
     payment_terms: str = ""
+    contact_person: str = ""
+    email: str = ""
+    phone: str = ""
+    city: str = ""
+    tax_number: str = ""
     active: int = 1
+    extra_json: str = ""
     dataset_id: Optional[int] = None
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+class CompanyCustomer(SQLModel, table=True):
+    """العملاء — Phase 2.5. البريد والجوال بيانات تواصل تخضع لعزل الشركة وصلاحيات البيانات."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    branch_id: Optional[int] = Field(default=None, index=True)
+    customer_code: str = Field(default="", index=True)
+    name: str = ""
+    email: str = ""
+    phone: str = ""
+    city: str = ""
+    segment: str = ""
+    customer_type: str = ""
+    tax_number: str = ""
+    credit_limit: Optional[float] = None
+    active: int = 1
+    notes: str = ""
+    extra_json: str = ""
+    dataset_id: Optional[int] = Field(default=None, index=True)
+    source_row: Optional[int] = None
     created_at: _DTCOL = Field(default_factory=_now_naive)
 
 
@@ -487,6 +521,8 @@ class CompanySale(SQLModel, table=True):
     vat: Optional[float] = None
     payment_method: str = ""
     promotion: str = ""                        # الحملة الترويجية (اختياري) — Phase 2.5
+    customer_name: str = ""
+    extra_json: str = ""
     dataset_id: Optional[int] = Field(default=None, index=True)
     source_row: Optional[int] = None
     created_at: _DTCOL = Field(default_factory=_now_naive)
@@ -508,6 +544,7 @@ class CompanyPurchase(SQLModel, table=True):
     total_cost: Optional[float] = None
     vat: Optional[float] = None
     status: str = ""
+    extra_json: str = ""
     dataset_id: Optional[int] = Field(default=None, index=True)
     source_row: Optional[int] = None
     created_at: _DTCOL = Field(default_factory=_now_naive)
@@ -526,6 +563,7 @@ class CompanyInventory(SQLModel, table=True):
     adjustments_qty: Optional[float] = None
     closing_qty: Optional[float] = None
     closing_value: Optional[float] = None
+    extra_json: str = ""
     dataset_id: Optional[int] = Field(default=None, index=True)
     source_row: Optional[int] = None
     created_at: _DTCOL = Field(default_factory=_now_naive)
@@ -543,6 +581,7 @@ class CompanyCashMovement(SQLModel, table=True):
     direction: str = ""                        # in | out
     reference: str = ""
     source: str = ""
+    extra_json: str = ""
     dataset_id: Optional[int] = Field(default=None, index=True)
     source_row: Optional[int] = None
     created_at: _DTCOL = Field(default_factory=_now_naive)
@@ -697,8 +736,22 @@ def auto_sync_columns():
             ("branch_id", "INTEGER"), ("data", "VARCHAR DEFAULT '{}'"),
         ],
         "companysale": [
-            ("promotion", "VARCHAR DEFAULT ''"),
+            ("promotion", "VARCHAR DEFAULT ''"), ("customer_name", "VARCHAR DEFAULT ''"),
+            ("extra_json", "TEXT DEFAULT ''"),
         ],
+        "companysupplier": [
+            ("supplier_code", "VARCHAR DEFAULT ''"), ("contact_person", "VARCHAR DEFAULT ''"),
+            ("email", "VARCHAR DEFAULT ''"), ("phone", "VARCHAR DEFAULT ''"), ("city", "VARCHAR DEFAULT ''"),
+            ("tax_number", "VARCHAR DEFAULT ''"), ("extra_json", "TEXT DEFAULT ''"),
+        ],
+        "companyemployee": [
+            ("email", "VARCHAR DEFAULT ''"), ("phone", "VARCHAR DEFAULT ''"), ("extra_json", "TEXT DEFAULT ''"),
+        ],
+        "companyproduct": [("extra_json", "TEXT DEFAULT ''")],
+        "companydepartment": [("extra_json", "TEXT DEFAULT ''")],
+        "companypurchase": [("extra_json", "TEXT DEFAULT ''")],
+        "companyinventory": [("extra_json", "TEXT DEFAULT ''")],
+        "companycashmovement": [("extra_json", "TEXT DEFAULT ''")],
         '"user"': [
             ("business_name", "VARCHAR DEFAULT ''"), ("phone", "VARCHAR DEFAULT ''"),
             ("plan", "VARCHAR DEFAULT ''"), ("is_active", "INTEGER DEFAULT 0"),
@@ -3885,7 +3938,7 @@ def engines_check(user: User = Depends(get_current_user)):
 # ═══════════════════════════════════════════════════════════
 DATA_ROLES_VIEW = ("owner", "manager", "accountant")
 DATA_ROLES_EDIT = ("owner", "accountant")
-MAX_STAGING_ROWS = 5000
+MAX_STAGING_ROWS = 50000     # كان 5000. الأكبر من ذلك يُقسَّم لعدة ملفات (الرسالة توضّح العدد)
 
 
 def _load_p24(name):
@@ -3969,7 +4022,7 @@ async def company_dataset_preview(file: UploadFile = File(...), dataset_type: st
     ing, cm = _load_p24("ingestion"), _load_p24("canonical_model")
     if ing is None or cm is None:
         raise HTTPException(503, "محرّك استيعاب البيانات غير متاح — " + _p23_diagnostic())
-    if dataset_type not in cm.DATASET_TYPES:
+    if dataset_type != "auto" and dataset_type not in cm.DATASET_TYPES:
         raise HTTPException(422, "نوع بيانات غير مدعوم")
     with Session(engine) as s:
         company, role = _data_scope(s, user, "edit")
@@ -3988,10 +4041,47 @@ async def company_dataset_preview(file: UploadFile = File(...), dataset_type: st
             _logger.error(f"dataset preview read failed: {type(e).__name__}: {str(e)[:150]}")
             raise HTTPException(400, "تعذّر قراءة الملف. تأكد أنه CSV أو Excel صالح.")
         if len(rows) > MAX_STAGING_ROWS:
-            raise HTTPException(422, f"الملف كبير: الحد {MAX_STAGING_ROWS} صف في الرفعة الواحدة")
+            parts = -(-len(rows) // MAX_STAGING_ROWS)
+            raise HTTPException(422, f"الملف فيه {len(rows):,} صفاً والحد {MAX_STAGING_ROWS:,} في الرفعة الواحدة — "
+                                     f"قسّمه إلى {parts} ملفات وارفعها تباعاً (لن يتكرر شيء: المكرر يُكشف تلقائياً)")
         names, ids = _branch_lookup(s, company.id)
+        single_branch = next(iter(ids)) if len(ids) == 1 else None
+        # كشف نوع الملف تلقائياً — ومنع رفع ملف بنوع خاطئ يرفض كل صفوفه
+        ranking = ing.detect_type(headers, branch_default=bool(single_branch)) if hasattr(ing, "detect_type") else []
+        chosen_by_user = dataset_type != "auto"
+        if not chosen_by_user:
+            if ranking and ranking[0].get("needs_branch"):
+                raise HTTPException(422, {
+                    "message_ar": f"هذا ملف «{ranking[0]['ar']}» لكن ينقصه عمود «الفرع»، ولشركتك أكثر من فرع. "
+                                  f"أضف عموداً باسم «الفرع» فيه اسم الفرع كما هو مسجّل في نبّاه ({'، '.join(list(names)[:5])}).",
+                    "message_en": f"This is a {ranking[0]['en']} file but it has no Branch column and your company has "
+                                  "several branches. Add a Branch column.", "suggestions": ranking[:3]})
+            best = next((x for x in ranking if x["complete"]), None)
+            if not best:
+                top = ranking[0] if ranking else {}
+                raise HTTPException(422, {
+                    "message_ar": "لم نتعرف على نوع الملف. أقرب نوع: «" + top.get("ar", "—") + "» وتنقصه الأعمدة: "
+                                  + "، ".join(top.get("missing_required", [])) + ". اختر النوع يدوياً أو أضف الأعمدة الناقصة.",
+                    "message_en": "Could not recognise the file type. Closest: " + top.get("en", "—") + " — missing: "
+                                  + ", ".join(top.get("missing_required", [])),
+                    "suggestions": ranking[:3]})
+            dataset_type = best["type"]
         mapped = ing.map_columns(headers, dataset_type)
-        validation = ing.validate_rows(rows, mapped["mapping"], dataset_type, branch_names=names)
+        missing_now = [f for f in mapped["missing_required"] if not (f == "branch_id" and single_branch)]
+        if chosen_by_user and missing_now:
+            better = next((x for x in ranking if x["complete"] and x["type"] != dataset_type), None)
+            if better:
+                raise HTTPException(422, {
+                    "message_ar": f"هذا الملف يبدو «{better['ar']}» وليس «{cm.ENTITIES[dataset_type]['ar']}» "
+                                  f"(تنقصه: {', '.join(missing_now)}). اختر «{better['ar']}» أو «تلقائي» وأعد الرفع.",
+                    "message_en": f"This file looks like {better['en']}, not {cm.ENTITIES[dataset_type]['en']}. "
+                                  f"Choose {better['en']} or Auto and upload again.",
+                    "suggested_type": better["type"], "suggestions": ranking[:3]})
+        try:
+            validation = ing.validate_rows(rows, mapped["mapping"], dataset_type, branch_names=names,
+                                           headers=headers, default_branch_id=single_branch)
+        except TypeError:     # محرك أقدم بلا الوسائط الجديدة
+            validation = ing.validate_rows(rows, mapped["mapping"], dataset_type, branch_names=names)
         quality = ing.assess_quality(validation, dataset_type)
         periods = sorted({r.get("period") or (r.get("date") or "")[:7] for r in validation["valid"] if r.get("period") or r.get("date")})
         branches = sorted({ids.get(r.get("branch_id"), "") for r in validation["valid"] if r.get("branch_id")})
@@ -4009,10 +4099,14 @@ async def company_dataset_preview(file: UploadFile = File(...), dataset_type: st
                   f"type={dataset_type} rows={validation['total']} valid={validation['valid_count']}")
         return {"dataset": _dataset_json(d, role), "headers": headers,
                 "mapping": {headers[i]: f for i, f in mapped["mapping"].items() if i < len(headers)},
-                "unmapped": mapped["unmapped"], "missing_required": mapped["missing_required"],
+                "unmapped": mapped["unmapped"], "missing_required": missing_now,
                 "fields": mapped["fields"], "required": mapped["required"],
                 "sample": validation["valid"][:10], "rejected_sample": validation["rejected"][:20],
-                "quality": quality}
+                "quality": quality, "detected_type": dataset_type, "auto_detected": not chosen_by_user,
+                "detected_label": cm.ENTITIES[dataset_type]["ar"],
+                "default_branch_used": bool(single_branch and "branch_id" in mapped["missing_required"]),
+                "warnings": validation.get("warnings", [])[:20], "warning_count": validation.get("warning_count", 0),
+                "extra_columns": validation.get("extra_columns", [])}
 
 
 @app.post("/company/datasets/{dataset_id}/validate")
@@ -4047,17 +4141,21 @@ def company_dataset_validate(dataset_id: int, data: dict, user: User = Depends(g
 _IMPORT_TARGETS = {
     "sale": ("CompanySale", ("branch_id", "date", "reference", "channel", "product_sku", "category", "quantity",
                               "gross_sales", "discounts", "returns", "net_sales", "vat", "payment_method",
-                              "promotion")),
+                              "promotion", "customer_name")),
     "purchase": ("CompanyPurchase", ("branch_id", "date", "supplier_name", "reference", "product_sku", "category",
                                       "quantity", "unit_cost", "total_cost", "status", "vat")),
     "inventory": ("CompanyInventory", ("branch_id", "product_sku", "period", "opening_qty", "opening_value",
                                         "purchases_qty", "sold_qty", "adjustments_qty", "closing_qty", "closing_value")),
     "cash_movement": ("CompanyCashMovement", ("branch_id", "date", "movement_type", "category", "amount",
-                                               "direction", "reference", "source")),
+                                               "direction", "reference", "source", "period")),
     "employee": ("CompanyEmployee", ("branch_id", "department_id", "employee_code", "name", "role",
-                                      "employment_status", "hire_date", "termination_date", "monthly_cost")),
+                                      "employment_status", "hire_date", "termination_date", "monthly_cost",
+                                      "email", "phone")),
     "product": ("CompanyProduct", ("sku", "name", "category", "unit", "cost", "selling_price", "active")),
-    "supplier": ("CompanySupplier", ("name", "category", "payment_terms", "active")),
+    "supplier": ("CompanySupplier", ("name", "supplier_code", "category", "payment_terms", "contact_person", "email",
+                                      "phone", "city", "tax_number", "active")),
+    "customer": ("CompanyCustomer", ("name", "customer_code", "email", "phone", "city", "segment", "customer_type",
+                                      "tax_number", "credit_limit", "branch_id", "active", "notes")),
     "department": ("CompanyDepartment", ("name", "branch_id", "code", "active")),
 }
 
@@ -4084,9 +4182,24 @@ def company_dataset_import(dataset_id: int, user: User = Depends(get_current_use
         fields = target[1]
         rows = json.loads(d.staging_json or "[]")
         created = 0
+        _depts = None
         for r in rows:
             payload = {f: r.get(f) for f in fields if f in r}
             payload["company_id"] = company.id
+            extra = dict(r.get("extra") or {})
+            if model is CompanyEmployee and payload.get("department_id") not in (None, "") \
+                    and not str(payload["department_id"]).isdigit():
+                if _depts is None:
+                    _depts = {x.name.strip(): x.id for x in s.exec(select(CompanyDepartment).where(
+                        CompanyDepartment.company_id == company.id)).all()}
+                name_ = str(payload["department_id"]).strip()
+                payload["department_id"] = _depts.get(name_)
+                if payload["department_id"] is None:
+                    extra["department"] = name_          # لا نضع نصاً في عمود رقمي — نحفظه ولا نفقده
+            elif payload.get("department_id") not in (None, ""):
+                payload["department_id"] = int(payload["department_id"])
+            if hasattr(model, "extra_json") and extra:
+                payload["extra_json"] = json.dumps(extra, ensure_ascii=False, default=str)[:20000]
             if hasattr(model, "dataset_id"):
                 payload["dataset_id"] = d.id
             if hasattr(model, "source_row"):
@@ -4094,6 +4207,8 @@ def company_dataset_import(dataset_id: int, user: User = Depends(get_current_use
             if hasattr(model, "period") and not payload.get("period") and r.get("date") and pm:
                 payload["period"] = pm.period_key(r["date"], "month") or ""
             s.add(model(**payload)); created += 1
+            if created % 2000 == 0:          # دفعات: ملفات كبيرة بلا ضغط على الذاكرة
+                s.flush()
         d.status = "imported" if d.rejected_rows == 0 else "partial"
         d.imported_at = datetime.now()
         d.staging_json = "[]"          # لا نحتفظ بالنسخة المؤقتة بعد الاعتماد
@@ -4145,24 +4260,42 @@ def company_periods(user: User = Depends(get_current_user), grain: str = "month"
 
 
 @app.get("/company/master-data")
-def company_master_data(user: User = Depends(get_current_user), entity: str = "product"):
-    """قوائم البيانات الأساسية: المنتجات والموردون والأقسام والموظفون."""
+def company_master_data(user: User = Depends(get_current_user), entity: str = "product",
+                        q: str = "", offset: int = 0, limit: int = 200):
+    """قوائم البيانات الأساسية: المنتجات والموردون والعملاء والأقسام والموظفون — مع بحث وتصفّح."""
+    from sqlalchemy import func as _f, or_ as _or
     with Session(engine) as s:
         company, role = _data_scope(s, user)
-        models = {"product": CompanyProduct, "supplier": CompanySupplier,
+        models = {"product": CompanyProduct, "supplier": CompanySupplier, "customer": CompanyCustomer,
                   "department": CompanyDepartment, "employee": CompanyEmployee}
         model = models.get(entity)
         if not model:
             raise HTTPException(422, "كيان غير مدعوم")
-        rows = s.exec(select(model).where(model.company_id == company.id).limit(500)).all()
+        limit = max(1, min(int(limit or 200), 500))
+        offset = max(0, int(offset or 0))
+        base = select(model).where(model.company_id == company.id)
+        cnt = select(_f.count()).select_from(model).where(model.company_id == company.id)
+        if q.strip():
+            like = f"%{q.strip()[:80]}%"
+            cols = [getattr(model, c) for c in ("name", "email", "phone", "sku", "customer_code", "employee_code",
+                                                 "supplier_code", "city") if hasattr(model, c)]
+            cond = _or(*[c.ilike(like) for c in cols])
+            base, cnt = base.where(cond), cnt.where(cond)
+        total = s.exec(cnt).one()
+        rows = s.exec(base.order_by(model.id).offset(offset).limit(limit)).all()
         out = []
         for r in rows:
             item = {c: getattr(r, c) for c in r.__fields__ if c not in ("company_id",)}
+            if "extra_json" in item:
+                try:
+                    item["extra"] = json.loads(item.pop("extra_json") or "{}")
+                except (TypeError, ValueError):
+                    item["extra"] = {}
             if entity == "employee" and not can_see_sensitive_financials(role):
                 item["monthly_cost"] = None     # حقل حسّاس: يخضع للقواعد القائمة
                 item["restricted"] = True
             out.append(item)
-        return {"entity": entity, "items": out, "count": len(out)}
+        return {"entity": entity, "items": out, "count": len(out), "total": total, "offset": offset, "limit": limit}
 
 
 @app.get("/company/metrics-registry")
