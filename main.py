@@ -569,6 +569,20 @@ class CompanyInventory(SQLModel, table=True):
     created_at: _DTCOL = Field(default_factory=_now_naive)
 
 
+class CompanyInventoryParam(SQLModel, table=True):
+    """معاملات إعادة الطلب لكل صنف (يدوية أو من ملف) — Phase 2.6. branch_id فارغ = لكل الفروع."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    product_sku: str = Field(default="", index=True)
+    branch_id: Optional[int] = Field(default=None, index=True)
+    lead_time_days: Optional[float] = None
+    safety_stock: Optional[float] = None
+    min_order_qty: Optional[float] = None
+    reorder_point: Optional[float] = None
+    updated_by: str = ""
+    updated_at: _DTCOL = Field(default_factory=_now_naive)
+
+
 class CompanyCashMovement(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     company_id: int = Field(index=True)
@@ -1120,6 +1134,11 @@ def page_fin_overview():
 @app.get("/company-ops-analytics.html")
 def page_ops_analytics():
     return FileResponse("company-ops-analytics.html")
+
+
+@app.get("/company-inventory-intelligence.html")
+def page_inventory_intelligence():
+    return FileResponse("company-inventory-intelligence.html")
 
 
 @app.get("/company-inventory-analytics.html")
@@ -3945,7 +3964,7 @@ def _load_p24(name):
     """يحمّل محركات 2.4 من المجلد أو من حزمة nabbah_engines."""
     try:
         import sys as _sys, os as _os, importlib
-        for _d in ("phase21", "phase22", "phase23", "phase24"):
+        for _d in ("phase21", "phase22", "phase23", "phase24", "phase25", "phase26"):
             _p = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), _d)
             if _p not in _sys.path:
                 _sys.path.insert(0, _p)
@@ -4530,6 +4549,255 @@ def company_sales_to_decision(data: dict, user: User = Depends(get_current_user)
         return {"ok": True, "decision_id": d.id, "action_ids": [act.id]}
 
 
+# ═══════════════════════════════════════════════════════════
+#  Phase 2.6 — Inventory Intelligence (يبني على بيانات 2.4 ومبيعات 2.5)
+# ═══════════════════════════════════════════════════════════
+def _inventory_scope(s, user, need="view"):
+    _ensure_data_tables()
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    company = s.get(Company, user.company_id)
+    role = get_user_role(s, user) if company else None
+    if not company or not (role == "owner" or check_permission(role, "inventory", "view")
+                           or check_permission(role, "finance", "view")):
+        raise HTTPException(403, "غير مصرّح")
+    if company.is_active != 1:
+        raise HTTPException(402, "شركتك قيد التفعيل")
+    if need == "edit" and not (role == "owner" or check_permission(role, "inventory", "edit") or role in DATA_ROLES_EDIT):
+        raise HTTPException(403, "غير مصرّح — تعديل المخزون للمالك ومن لديه صلاحية المخزون")
+    return company, role
+
+
+def _int_or_none(v, label="الفرع"):
+    try:
+        return int(v) if v not in (None, "") else None
+    except (TypeError, ValueError):
+        raise HTTPException(400, f"معرّف {label} غير صالح")
+
+
+def _inventory_result(s, company, *, period=None, branch_id=None, category="", product="", status=""):
+    ie = _load_p24("inventory_engine")
+    if ie is None:
+        raise HTTPException(503, "محرّك المخزون غير متاح — " + _p23_diagnostic())
+    names = {b.id: b.name for b in s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company.id)).all()}
+    prods = {p.sku: {"name": p.name, "category": p.category, "cost": p.cost, "unit": p.unit}
+             for p in s.exec(select(CompanyProduct).where(CompanyProduct.company_id == company.id)).all() if p.sku}
+    inv = s.exec(select(CompanyInventory).where(CompanyInventory.company_id == company.id).limit(100000)).all()
+    sales = _sales_rows(s, company.id, {branch_id} if branch_id else None)
+    sale_cat = {}
+    for r in sales:
+        if r.get("product_sku") and r.get("category"):
+            sale_cat.setdefault(r["product_sku"], r["category"])
+    cat_of = lambda sku: (prods.get(sku) or {}).get("category") or sale_cat.get(sku) or "غير مصنّف"
+    snaps_all = [{"period": r.period, "branch_id": r.branch_id,
+                  "branch_name": names.get(r.branch_id) or (f"#{r.branch_id}" if r.branch_id else "—"),
+                  "product_sku": r.product_sku, "opening_qty": r.opening_qty, "opening_value": r.opening_value,
+                  "purchases_qty": r.purchases_qty, "sold_qty": r.sold_qty, "adjustments_qty": r.adjustments_qty,
+                  "closing_qty": r.closing_qty, "closing_value": r.closing_value} for r in inv]
+    flt = lambda x: ((not branch_id or x.get("branch_id") == branch_id)
+                     and (not category or cat_of(x.get("product_sku")) == category)
+                     and (not product or x.get("product_sku") == product))
+    snaps = [x for x in snaps_all if flt(x)]
+    sales_f = [r for r in sales if (not category or cat_of(r.get("product_sku")) == category)
+               and (not product or r.get("product_sku") == product)]
+    params = {}
+    for pr in s.exec(select(CompanyInventoryParam).where(CompanyInventoryParam.company_id == company.id)).all():
+        params[(pr.product_sku, names.get(pr.branch_id) if pr.branch_id else None)] = {
+            "lead_time_days": pr.lead_time_days, "safety_stock": pr.safety_stock,
+            "min_order_qty": pr.min_order_qty, "reorder_point": pr.reorder_point}
+    res = ie.analyze_inventory(snaps, sales_f, prods, params, period=period, status_filter=status,
+                               currency=getattr(company, "currency", None) or "SAR")
+    res["filters"] = {"period": res.get("period"), "branch_id": branch_id, "category": category,
+                      "product": product, "status": status}
+    skus = sorted({x["product_sku"] for x in snaps_all if x.get("product_sku")})
+    res["options"] = {"branch_list": [{"id": k, "name": v} for k, v in names.items()],
+                      "categories": sorted({cat_of(k) for k in skus}),
+                      "products": [{"sku": k, "name": (prods.get(k) or {}).get("name") or k} for k in skus
+                                   if not category or cat_of(k) == category][:500],
+                      "statuses": ["healthy", "watch", "low", "stockout", "slow", "obsolete"]}
+    return res
+
+
+@app.get("/company/inventory-intelligence")
+def company_inventory_intelligence(user: User = Depends(get_current_user), period: str = "", branch_id: str = "",
+                                   category: str = "", product: str = "", status: str = ""):
+    with Session(engine) as s:
+        company, role = _inventory_scope(s, user)
+        res = _inventory_result(s, company, period=period or None, branch_id=_int_or_none(branch_id),
+                                category=category, product=product, status=status)
+        res["can_edit"] = role == "owner" or role in DATA_ROLES_EDIT or check_permission(role, "inventory", "edit")
+        return res
+
+
+@app.post("/company/inventory/manual")
+def company_inventory_manual(data: dict, user: User = Depends(get_current_user)):
+    """إدخال أو تحديث رصيد صنف يدوياً (بديل عن رفع ملف). لا يُنشئ بيانات ناقصة بصمت."""
+    with Session(engine) as s:
+        company, role = _inventory_scope(s, user, need="edit")
+        period = str(data.get("period") or "").strip()[:7]
+        sku = str(data.get("product_sku") or "").strip()[:100]
+        bid = _int_or_none(data.get("branch_id"))
+        if not re.match(r"^\d{4}-\d{2}$", period):
+            raise HTTPException(422, "الفترة مطلوبة بصيغة YYYY-MM")
+        if not sku:
+            raise HTTPException(422, "المنتج مطلوب")
+        if bid is None or (s.get(CompanyBranch, bid) or CompanyBranch(company_id=-1)).company_id != company.id:
+            raise HTTPException(422, "اختر فرعاً من فروع شركتك")
+
+        def num(k):
+            v = data.get(k)
+            if v in (None, ""):
+                return None
+            try:
+                x = float(str(v).replace(",", ""))
+            except ValueError:
+                raise HTTPException(422, f"قيمة غير رقمية في {k}")
+            if x < 0 and k != "adjustments_qty":
+                raise HTTPException(422, f"قيمة سالبة غير مقبولة في {k}")
+            return x
+        qty = num("closing_qty")
+        if qty is None:
+            raise HTTPException(422, "الكمية الحالية مطلوبة")
+        unit_cost, value = num("unit_cost"), num("closing_value")
+        if value is None and unit_cost is not None:
+            value = round(qty * unit_cost, 2)
+        row = s.exec(select(CompanyInventory).where(CompanyInventory.company_id == company.id,
+                                                    CompanyInventory.branch_id == bid,
+                                                    CompanyInventory.product_sku == sku,
+                                                    CompanyInventory.period == period)).first()
+        created = row is None
+        row = row or CompanyInventory(company_id=company.id, branch_id=bid, product_sku=sku, period=period)
+        row.closing_qty, row.closing_value = qty, value
+        for k in ("opening_qty", "purchases_qty", "sold_qty", "adjustments_qty"):
+            v = num(k)
+            if v is not None:
+                setattr(row, k, v)
+        s.add(row)
+        if unit_cost is not None:
+            pr = s.exec(select(CompanyProduct).where(CompanyProduct.company_id == company.id,
+                                                     CompanyProduct.sku == sku)).first()
+            if pr is None:
+                s.add(CompanyProduct(company_id=company.id, sku=sku, name=str(data.get("name") or sku)[:200],
+                                     category=str(data.get("category") or "")[:100], cost=unit_cost))
+            elif pr.cost is None:
+                pr.cost = unit_cost; s.add(pr)
+        s.commit()
+        log_audit(company.id, user.id, user.name, "inventory_manual_" + ("create" if created else "update"),
+                  f"inventory:{sku}", f"period={period} branch={bid} qty={qty}")
+        return {"ok": True, "created": created}
+
+
+@app.get("/company/inventory/params")
+def company_inventory_params(user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role = _inventory_scope(s, user)
+        rows = s.exec(select(CompanyInventoryParam).where(CompanyInventoryParam.company_id == company.id)).all()
+        return {"items": [{"product_sku": r.product_sku, "branch_id": r.branch_id, "lead_time_days": r.lead_time_days,
+                           "safety_stock": r.safety_stock, "min_order_qty": r.min_order_qty,
+                           "reorder_point": r.reorder_point} for r in rows]}
+
+
+@app.post("/company/inventory/params")
+def company_inventory_params_save(data: dict, user: User = Depends(get_current_user)):
+    """حفظ مدة التوريد ومخزون الأمان والحد الأدنى للطلب (ونقطة إعادة الطلب اليدوية إن رغبت) لصنف."""
+    with Session(engine) as s:
+        company, role = _inventory_scope(s, user, need="edit")
+        sku = str(data.get("product_sku") or "").strip()[:100]
+        if not sku:
+            raise HTTPException(422, "المنتج مطلوب")
+        bid = _int_or_none(data.get("branch_id"))
+        if bid is not None and (s.get(CompanyBranch, bid) or CompanyBranch(company_id=-1)).company_id != company.id:
+            raise HTTPException(422, "الفرع غير صالح")
+        vals = {}
+        for k in ("lead_time_days", "safety_stock", "min_order_qty", "reorder_point"):
+            v = data.get(k)
+            if v in (None, ""):
+                vals[k] = None; continue
+            try:
+                vals[k] = float(str(v).replace(",", ""))
+            except ValueError:
+                raise HTTPException(422, f"قيمة غير رقمية في {k}")
+            if vals[k] < 0:
+                raise HTTPException(422, f"قيمة سالبة غير مقبولة في {k}")
+        if all(v is None for v in vals.values()):
+            raise HTTPException(422, "أدخل قيمة واحدة على الأقل")
+        row = s.exec(select(CompanyInventoryParam).where(CompanyInventoryParam.company_id == company.id,
+                                                         CompanyInventoryParam.product_sku == sku,
+                                                         CompanyInventoryParam.branch_id == bid)).first()
+        row = row or CompanyInventoryParam(company_id=company.id, product_sku=sku, branch_id=bid)
+        for k, v in vals.items():
+            setattr(row, k, v)
+        row.updated_by, row.updated_at = (user.name or user.email)[:100], datetime.now()
+        s.add(row); s.commit()
+        log_audit(company.id, user.id, user.name, "inventory_params", f"inventory:{sku}", json.dumps(vals))
+        return {"ok": True}
+
+
+@app.post("/company/inventory/to-decision")
+def company_inventory_to_decision(data: dict, user: User = Depends(get_current_user)):
+    """يحوّل إشارة مخزون إلى قرار ومهمة — تُعاد الإشارة حسابياً في الخادم بنفس الفلاتر."""
+    with Session(engine) as s:
+        company, role = _exec_scope(s, user, need="edit")
+        res = _inventory_result(s, company, period=data.get("period") or None,
+                                branch_id=_int_or_none(data.get("branch_id")),
+                                category=str(data.get("category") or ""), product=str(data.get("product") or ""))
+        sig = next((x for x in res.get("signals", []) if x["id"] == str(data.get("signal_id") or "")), None)
+        if not sig:
+            raise HTTPException(404, "الإشارة غير موجودة أو لم تعد قائمة لهذه الفترة")
+        impact = (sig.get("estimated_impact") or {}).get("value")
+        metric = {"stockout_risk": "stockout_rate", "stockouts_now": "stockout_rate",
+                  "excess_inventory": "dio", "high_turnover_category": "inventory_turnover"}.get(sig["code"], "inventory")
+        d = CompanyDecision(
+            company_id=company.id, title=str(data.get("title") or sig["name_ar"])[:200],
+            detail=" · ".join(sig.get("evidence", []))[:1000], owner=str(data.get("owner") or "")[:100],
+            due_date=str(data.get("due_date") or "")[:20], kpi=metric, status="open",
+            baseline_sales=_company_total_sales(s, company.id),
+            expected_impact=(f"{impact} {res['currency']} (تقديري)" if impact is not None else "غير قابل للتقدير")[:200],
+            linked_to=f"inventory_signal:{sig['id']}", rationale=sig.get("suggested_action_ar", "")[:500],
+            metric_id=metric, expected_impact_value=impact, impact_status="expected", source_signal=sig["id"],
+            problem_type=sig["code"], decision_type="inventory", outcome_status="pending_measurement",
+            created_by=user.name or user.email, data_source="companyinventory", updated_at=datetime.now())
+        s.add(d); s.commit(); s.refresh(d)
+        act = CompanyAction(company_id=company.id, decision_id=d.id, title=sig.get("suggested_action_ar", "")[:200],
+                            owner=d.owner, priority="P1" if sig["severity"] in ("high", "critical") else "P2",
+                            due_date=d.due_date, start_date=datetime.now().strftime("%Y-%m-%d"),
+                            updated_at=datetime.now())
+        s.add(act); s.commit(); s.refresh(act)
+        log_audit(company.id, user.id, user.name, "decision_from_inventory_signal", f"decision:{d.id}",
+                  f"signal={sig['id']} code={sig['code']}")
+        return {"ok": True, "decision_id": d.id, "action_ids": [act.id]}
+
+
+@app.post("/company/inventory/ai-insights")
+def company_inventory_ai_insights(data: dict, request: Request, user: User = Depends(get_current_user)):
+    """AI يشرح أرقام محرك المخزون المتحقَّق منها فقط — لا يحسب ولا يخترع رقماً."""
+    with Session(engine) as s:
+        company, role = _inventory_scope(s, user)
+        res = _inventory_result(s, company, period=data.get("period") or None,
+                                branch_id=_int_or_none(data.get("branch_id")),
+                                category=str(data.get("category") or ""), product=str(data.get("product") or ""))
+    if not res.get("has_data"):
+        raise HTTPException(422, res.get("message_ar") or "لا توجد بيانات مخزون")
+    gw = _load_p24("ai_gateway")
+    if gw is None:
+        raise HTTPException(503, "بوابة الذكاء الاصطناعي غير متاحة — " + _p23_diagnostic())
+    dq = [x for x in res.get("signals", []) if x["type"] == "data_quality"]
+    trust = {"overall_score": 85 if not dq else 65, "status": "pass" if not dq else "warning", "has_critical_fail": False,
+             "main_causes": [{"explanation": e, "fix": ""} for x in dq for e in x.get("evidence", [])][:3]}
+    ctx = {"period": res.get("period"), "currency": res.get("currency"), "filters": res.get("filters"),
+           "verified_kpis": {k: {"current": v.get("current"), "previous": v.get("previous"), "unit": v.get("unit")}
+                             for k, v in res.get("kpis", {}).items()},
+           "status_counts": res.get("status_counts"), "by_branch": res.get("by_branch", [])[:10],
+           "signals": [{"type": x["type"], "name": x["name_ar"], "dimension": x.get("dimension"),
+                        "evidence": x.get("evidence")} for x in res.get("signals", [])[:8]],
+           "rules": res.get("rules")}
+    out = gw.request_ai_analysis(gw.GeminiProvider(company_gemini), ctx,
+                                 "اشرح وضع المخزون: الأدلة، ثم الأثر، ثم التوصية. لا تحسب أي رقم جديد.",
+                                 trust_report=trust, lang=get_lang(request), company=company)
+    log_audit(company.id, user.id, user.name, "inventory_ai_insights", "inventory", f"period={res.get('period')}")
+    return {"period": res.get("period"), "ai": out}
+
+
 @app.get("/company/executive-intelligence")
 def company_executive_intelligence(request: Request, user: User = Depends(get_current_user),
                                    period: Optional[str] = None, ai: int = 0):
@@ -4543,6 +4811,13 @@ def company_executive_intelligence(request: Request, user: User = Depends(get_cu
                 result["module_signals"] = {"sales": _sales.get("signals", [])[:6]}
                 result["risks"] = result["risks"] + [x for x in _sales.get("signals", []) if x["type"] == "risk"][:3]
                 result["opportunities"] = result["opportunities"] + [x for x in _sales.get("signals", []) if x["type"] == "opportunity"][:2]
+            try:   # إشارات المخزون 2.6 (لا تُنشأ إن لم توجد بيانات مخزون)
+                _inv = _inventory_result(s, company)
+                if _inv.get("has_data"):
+                    result.setdefault("module_signals", {})["inventory"] = _inv.get("signals", [])[:6]
+                    result["risks"] = result["risks"] + [x for x in _inv.get("signals", []) if x["type"] == "risk"][:2]
+            except HTTPException:
+                pass
         except HTTPException:
             pass
         except Exception as _e:
@@ -9860,7 +10135,7 @@ ENGINE_MODULES = ("nabbah_finance", "nabbah_trust", "semantic_layer", "kpi_engin
                   "ai_gateway", "period_aggregation", "legacy_adapters", "platform_bridge",
                   "intelligence_engine", "forecast_engine", "scenario_engine", "decision_memory",
                   "rule_catalog", "canonical_model", "period_model", "metric_registry", "ingestion",
-                  "sales_engine")
+                  "sales_engine", "inventory_engine")
 
 
 def _runtime_health():
