@@ -775,8 +775,16 @@
     if (navBtn) navBtn.textContent = lang === "ar" ? "EN" : "عربي";
 
     // حدث مخصّص للصفحات اللي تبي تتفاعل (مثل إعادة رسم الشارت بلغة ثانية)
-    window.dispatchEvent(new CustomEvent("nabbah:langchange", { detail: { lang: lang } }));
+    // حارس ضد الحلقة: 12 صفحة تستدعي apply() داخل مستمع هذا الحدث نفسه
+    if (_dispatching) return;
+    _dispatching = true;
+    try {
+      window.dispatchEvent(new CustomEvent("nabbah:langchange", { detail: { lang: lang } }));
+    } finally {
+      _dispatching = false;
+    }
   }
+  var _dispatching = false;
 
   function toggle() {
     apply(getLang() === "ar" ? "en" : "ar");
