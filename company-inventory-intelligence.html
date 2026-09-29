@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>نبّاه · ذكاء المخزون</title>
+<link href="nabbah-design.css" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{background:var(--bg,#070b09);color:var(--txt,#e8f1ec);font-family:Tajawal,Tahoma,Arial,sans-serif;margin:0}
+  .wrap{max-width:1180px;margin:0 auto;padding:70px 16px 60px}
+  h1{margin:0 0 4px;font-size:24px}.sub{color:var(--txt-soft,#8ba396);margin:0 0 16px;font-size:14px}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+  select{background:var(--panel,#101a15);color:var(--txt,#e8f1ec);border:1px solid var(--line,#1d2c24);border-radius:10px;padding:8px 10px;font:inherit;font-size:13px;max-width:190px}
+  .crumbs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;min-height:4px}
+  .chip{background:rgba(16,185,129,.12);color:var(--mint,#10b981);border:1px solid rgba(16,185,129,.35);border-radius:20px;padding:3px 10px;font-size:12px;cursor:pointer}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+  .tile,.panel{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:14px;padding:14px}
+  .tile .l{font-size:12px;color:var(--txt-soft,#8ba396)}.tile .v{font-size:21px;font-weight:800;margin-top:4px}
+  .tile .c{font-size:12px;margin-top:4px}
+  .panel{margin-bottom:14px;min-width:0}.panel h2{margin:0 0 10px;font-size:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .panel h3{margin:12px 0 6px;font-size:13px;color:var(--txt-soft,#8ba396)}
+  .num{font-size:11px;color:var(--txt-soft,#8ba396);font-weight:600;border:1px solid var(--line,#1d2c24);border-radius:8px;padding:1px 6px}
+  .grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+  table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px;border-bottom:1px solid var(--line,#1d2c24);text-align:start;white-space:nowrap}
+  th{color:var(--txt-soft,#8ba396);font-weight:600}.tbl{overflow-x:auto}
+  tr.drill{cursor:pointer}tr.drill:hover td{background:rgba(16,185,129,.06)}
+  .barrow{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:13px}
+  .barrow.drill{cursor:pointer}.barrow.drill:hover{background:rgba(16,185,129,.06);border-radius:6px}
+  .barrow .t{flex:0 0 120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .barrow .g{flex:1;height:10px;background:var(--line,#1d2c24);border-radius:6px;overflow:hidden}
+  .barrow .g i{display:block;height:100%;background:var(--mint,#10b981)}
+  .pos{color:#10b981}.neg{color:#ef4444}.muted{color:var(--txt-soft,#8ba396);font-size:12px}
+  .b{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700;display:inline-block}
+  .high{background:rgba(234,88,12,.16);color:#ea580c}.medium{background:rgba(245,179,1,.15);color:#f5b301}
+  .low{background:rgba(16,185,129,.15);color:#10b981}.critical{background:rgba(239,68,68,.16);color:#ef4444}
+  .est{background:rgba(168,85,247,.15);color:#a855f7}
+  .sig{border-inline-start:4px solid var(--line,#1d2c24);padding:10px 12px;margin:8px 0;background:rgba(255,255,255,.02);border-radius:8px}
+  .sig.risk{border-color:#ef4444}.sig.opportunity{border-color:#10b981}.sig.data_quality{border-color:#f5b301}
+  .btn{background:var(--mint,#10b981);color:#062b1c;border:0;border-radius:10px;padding:7px 13px;font-weight:800;cursor:pointer;font:inherit;font-size:12px;text-decoration:none;display:inline-block}
+  .btn.ghost{background:transparent;color:var(--txt-soft,#8ba396);border:1px solid var(--line,#1d2c24);font-weight:600}
+  .btn:disabled{opacity:.5;cursor:default}
+  .state{padding:36px 16px;text-align:center;color:var(--txt-soft,#8ba396);border:1px dashed var(--line,#1d2c24);border-radius:14px}
+  .na{color:var(--txt-soft,#8ba396);font-size:13px;padding:10px;border:1px dashed var(--line,#1d2c24);border-radius:10px}
+  svg.ch{width:100%;height:170px;display:block}
+  .legend{display:flex;gap:14px;font-size:12px;color:var(--txt-soft,#8ba396);margin-top:6px;flex-wrap:wrap}
+  .legend i{display:inline-block;width:14px;height:3px;vertical-align:middle;margin-inline-end:4px}
+  .ai-sec{margin:8px 0}.ai-sec b{display:block;font-size:13px;margin-bottom:4px}.ai-sec li{font-size:13px;margin:3px 0}
+  input.f{flex:1;min-width:120px;background:var(--panel,#101a15);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:8px;padding:6px}
+  .st{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700;display:inline-block;white-space:nowrap}
+  .st.healthy{background:rgba(16,185,129,.15);color:#10b981}.st.watch{background:rgba(245,179,1,.15);color:#f5b301}
+  .st.low{background:rgba(234,88,12,.16);color:#ea580c}.st.stockout{background:rgba(239,68,68,.16);color:#ef4444}
+  .st.slow{background:rgba(59,130,246,.15);color:#60a5fa}.st.obsolete{background:rgba(148,163,184,.18);color:#cbd5e1}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}.schip{cursor:pointer;border:1px solid var(--line,#1d2c24);border-radius:12px;padding:8px 12px;min-width:120px}
+  .schip b{display:block;font-size:18px}.schip:hover{border-color:var(--mint,#10b981)}
+  .eq{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:13px}.eq .box{border:1px solid var(--line,#1d2c24);border-radius:10px;padding:8px 10px;text-align:center;min-width:90px}
+  .eq .box b{display:block;font-size:16px}
+  .ov{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:50;padding:14px}
+  .ov.on{display:flex}.modal{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:16px;padding:18px;width:min(560px,100%);max-height:90vh;overflow:auto}
+  .fg{display:grid;grid-template-columns:1fr 1fr;gap:10px}.fg label{font-size:12px;color:var(--txt-soft,#8ba396);display:flex;flex-direction:column;gap:4px}
+  .fg input,.fg select{background:var(--bg,#070b09);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:9px;padding:8px;font:inherit;max-width:none}
+  .cta{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  @media(max-width:760px){.fg{grid-template-columns:1fr}.tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.tile{padding:10px}.tile .v{font-size:17px}.grid2,.grid3{grid-template-columns:minmax(0,1fr)}h1{font-size:20px}select{max-width:47%}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1 id="ttl"></h1>
+  <p class="sub" id="subttl"></p>
+  <div class="bar">
+    <select id="fPeriod"></select><select id="fBranch"></select><select id="fCategory"></select>
+    <select id="fProduct"></select><select id="fStatus"></select>
+    <button class="btn ghost" id="reset"></button>
+    <button class="btn" id="btnManual" style="display:none"></button>
+    <button class="btn ghost" id="btnParams" style="display:none"></button>
+  </div>
+  <div class="crumbs" id="crumbs"></div>
+  <div id="content"><div class="state">…</div></div>
+</div>
+<div class="ov" id="ov"><div class="modal" id="modal"></div></div>
+<script src="i18n.js"></script>
+<script>
+(function(){
+  const TOKEN=localStorage.getItem("nabbah_token")||"";if(!TOKEN){location.href="login.html";return;}
+  const L=()=>(window.NabbahI18n&&window.NabbahI18n.getLang)?window.NabbahI18n.getLang():"ar";
+  const AR={title:"ذكاء المخزون",sub:"كم أملك؟ أين؟ ماذا يتحرك وماذا لا يتحرك؟ ما الذي سينفد؟ وكم رأس المال المجمّد؟",
+    period:"الفترة",branch:"الفرع",category:"الفئة",product:"المنتج",status:"الحالة",all:"الكل",reset:"إعادة الضبط",manual:"＋ إدخال يدوي",params:"⚙ إعدادات إعادة الطلب",
+    inventory_value:"قيمة المخزون",inventory_turnover:"معدل الدوران",dio:"أيام المخزون",stockout_rate:"نسبة النفاد",slow_moving_value:"بطيء الحركة",obsolete_value:"متقادم",inventory_accuracy:"دقة المخزون",
+    prev:"السابق",noPrev:"لا فترة سابقة",days:"يوم",unavailable:"غير متاح",
+    s1:"المؤشرات الرئيسية",s2:"اتجاه قيمة المخزون",s3:"المخزون حسب الفرع",s4:"المخزون حسب الفئة",s5:"حالة الأصناف",s6:"حركة المخزون",s7:"تقادم المخزون",s8:"الأرصدة الحالية",s9:"بطيء الحركة والمتقادم",s10:"ذكاء إعادة الطلب",s11:"ذكاء النفاد",s12:"إشارات المخزون",s13:"رؤى الذكاء الاصطناعي",s14:"البيانات المتاحة وما ينقص",
+    value:"القيمة",units:"الوحدات",share:"الحصة",items:"أصناف",turnover:"الدوران",slow:"بطيء",obsolete:"متقادم",qty:"الكمية",unitCost:"تكلفة الوحدة",cover:"التغطية",lastMove:"آخر حركة",daysSince:"أيام بلا حركة",
+    avgDemand:"متوسط الطلب/يوم",rop:"نقطة إعادة الطلب",suggest:"الكمية المقترحة",leadTime:"مدة التوريد (يوم)",safety:"مخزون الأمان",moq:"الحد الأدنى للطلب",
+    opening:"أول المدة",purchases:"المشتريات",sold:"المباع/المصروف",adjust:"التسويات",closing:"آخر المدة",
+    st:{healthy:"سليم",watch:"مراقبة",low:"منخفض",stockout:"نافد",slow:"بطيء الحركة",obsolete:"متقادم"},
+    events:"مرات النفاد",lastOut:"آخر نفاد",outNow:"نافد الآن",drill:"اضغط أي صف للتعمق",rule:"القاعدة",
+    risk:"مخاطر",opportunity:"فرص",data_quality:"جودة البيانات",evidence:"الدليل",rec:"التوصية",estimate:"تقديري",toDecision:"إنشاء قرار + إجراء",owner:"المسؤول",create:"إنشاء",created:"تم إنشاء القرار والإجراء ✓",
+    aiBtn:"اشرح لي بالذكاء الاصطناعي",aiNote:"الذكاء الاصطناعي يشرح الأرقام المحسوبة فقط، ولا يحسب أي رقم.",aiWait:"جارٍ التحليل…",
+    FACTS:"الحقائق",INTERPRETATION:"القراءة",HYPOTHESES:"فرضيات غير مؤكدة",RECOMMENDATIONS:"التوصيات",DATA_GAPS:"بيانات ناقصة",
+    upload:"ارفع ملف المخزون",enterManual:"أدخل الأرصدة يدوياً",setParams:"أدخل مدة التوريد",save:"حفظ",cancel:"إلغاء",saved:"تم الحفظ ✓",
+    required:"المطلوب",recommended:"مستحسن",optional:"اختياري",error:"تعذّر تحميل ذكاء المخزون.",denied:"ليست لديك صلاحية لهذه الصفحة.",noData:"لا توجد بيانات",
+    avail:{valuation:"تقييم المخزون",turnover:"الدوران وأيام المخزون",reorder:"إعادة الطلب",accuracy:"دقة المخزون",sales_link:"الربط بالمبيعات"},
+    availOk:"متاح",availNo:"غير متاح",allBranches:"كل الفروع",notComputable:"لا يمكن الحساب",window:"الفترة المحسوبة",gap:"فرق الحركة",noDim:"لا توجد بيانات"};
+  const t=k=>AR[k]!==undefined?AR[k]:k;
+  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const n=(v,d=2)=>v==null?"—":Number(v).toLocaleString("ar-SA",{maximumFractionDigits:d});
+  const mv=m=>m&&m.value!=null?n(m.value,0):"—";
+  const H={Authorization:"Bearer "+TOKEN,"Content-Type":"application/json"},$=id=>document.getElementById(id);
+  let D=null;
+  $("ttl").textContent=t("title");$("subttl").textContent=t("sub");$("reset").textContent=t("reset");
+  $("btnManual").textContent=t("manual");$("btnParams").textContent=t("params");document.title="نبّاه · "+t("title");
+  function F(){const f={};[["period","fPeriod"],["branch_id","fBranch"],["category","fCategory"],["product","fProduct"],["status","fStatus"]].forEach(([k,id])=>{const v=$(id).value;if(v)f[k]=v;});return f;}
+  function showErr(msg){$("content").innerHTML=`<div class="state neg">${t("error")}<div class="muted" style="margin-top:8px;word-break:break-word">${esc(msg||"")}</div></div>`;}
+  function load(){
+    $("content").innerHTML=`<div class="state">…</div>`;
+    fetch("/company/inventory-intelligence?"+new URLSearchParams(F()),{headers:H}).then(async r=>{
+      if(r.status===401){location.href="login.html";return null;}
+      if(r.status===403||r.status===402){$("content").innerHTML=`<div class="state">${t("denied")}</div>`;return null;}
+      if(!r.ok){let d="";try{const j=await r.json();d=typeof j.detail==="string"?j.detail:JSON.stringify(j.detail||j);}catch(_){}showErr(`HTTP ${r.status}${d?" — "+d:""}`);return null;}
+      return r.json();
+    }).then(d=>{if(!d)return;D=d;
+      $("btnManual").style.display=$("btnParams").style.display=d.can_edit?"":"none";
+      try{filters(d);}catch(e){console.error(e);}
+      try{render(d);}catch(e){console.error(e);showErr("render: "+(e&&e.message||e));}
+    }).catch(e=>showErr("network: "+(e&&e.message||e)));
+  }
+  function opts(id,list,label,cur,val=x=>x,txt=x=>x){$(id).innerHTML=`<option value="">${esc(label)}: ${t("all")}</option>`+list.map(x=>`<option value="${esc(val(x))}" ${String(cur??"")===String(val(x))?"selected":""}>${esc(txt(x))}</option>`).join("");}
+  function filters(d){
+    const o=d.options||{},f=d.filters||{};
+    $("fPeriod").innerHTML=(d.periods||[]).slice().reverse().map(p=>`<option value="${esc(p)}" ${f.period===p?"selected":""}>${esc(p)}</option>`).join("")||`<option value="">${t("period")}</option>`;
+    opts("fBranch",o.branch_list||[],t("branch"),f.branch_id,b=>b.id,b=>b.name);
+    opts("fCategory",o.categories||[],t("category"),f.category);
+    opts("fProduct",o.products||[],t("product"),f.product,p=>p.sku,p=>p.name);
+    opts("fStatus",o.statuses||[],t("status"),f.status,x=>x,x=>t("st")[x]||x);
+    const c=[];if(f.branch_id){const b=(o.branch_list||[]).find(x=>String(x.id)===String(f.branch_id));c.push(["fBranch",t("branch")+": "+(b?b.name:f.branch_id)]);}
+    if(f.category)c.push(["fCategory",t("category")+": "+f.category]);if(f.product)c.push(["fProduct",t("product")+": "+f.product]);if(f.status)c.push(["fStatus",t("status")+": "+(t("st")[f.status]||f.status)]);
+    $("crumbs").innerHTML=c.map(([id,l])=>`<span class="chip" data-clear="${id}">${esc(l)} ✕</span>`).join("");
+    $("crumbs").querySelectorAll("[data-clear]").forEach(x=>x.onclick=()=>{$(x.dataset.clear).value="";load();});
+  }
+  function drill(sel,val){const s=$(sel);if(![...s.options].some(o=>o.value===String(val))){const o=document.createElement("option");o.value=val;o.textContent=val;s.appendChild(o);}s.value=String(val);window.scrollTo({top:0,behavior:"smooth"});load();}
+  const panel=(num,title,body)=>`<div class="panel"><h2><span class="num">${num}</span>${title}</h2>${body}</div>`;
+  const na=msg=>`<div class="na">${esc(msg)}</div>`;
+  const stb=s=>`<span class="st ${esc(s)}">${esc(t("st")[s]||s)}</span>`;
+  function chart(labels,series){
+    if(!labels.length)return na(t("noDim"));
+    const W=640,Hh=160,all=series.flatMap(s=>s.values.filter(v=>v!=null));
+    if(!all.length)return na(t("noDim"));
+    const max=Math.max(...all),min=Math.min(...all,0),rng=(max-min)||1;
+    const x=i=>labels.length<2?W/2:(i/(labels.length-1))*(W-20)+10,y=v=>Hh-12-((v-min)/rng)*(Hh-30);
+    const lines=series.map(s=>{let seg=[],out="";const flush=()=>{if(seg.length)out+=`<polyline points="${seg.join(" ")}" fill="none" stroke="${s.color}" stroke-width="2" ${s.dash?'stroke-dasharray="5 4"':""}/>`;seg=[];};
+      s.values.forEach((v,i)=>{if(v==null)flush();else seg.push(`${x(i).toFixed(1)},${y(v).toFixed(1)}`);});flush();
+      out+=s.values.map((v,i)=>v==null?"":`<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="2.6" fill="${s.color}"><title>${esc(labels[i])}: ${n(v)}</title></circle>`).join("");return out;}).join("");
+    return `<svg class="ch" viewBox="0 0 ${W} ${Hh}" preserveAspectRatio="none">${lines}</svg>
+      <div class="legend"><span>${esc(labels[0])} → ${esc(labels[labels.length-1])}</span>${series.map(s=>`<span><i style="background:${s.color}"></i>${esc(s.label)}</span>`).join("")}</div>`;
+  }
+  function ctas(kind){if(!D||!D.can_edit)return"";return `<div class="cta"><a class="btn ghost" href="company-data-center.html">${t("upload")}</a>${kind==="params"?`<button class="btn" data-act="params">${t("setParams")}</button>`:`<button class="btn" data-act="manual">${t("enterManual")}</button>`}</div>`;}
+  function kpis(k){
+    const tile=(code,fmt,lowerBetter)=>{const x=k[code]||{};let v,c;
+      if(x.current==null){v=`<span class="muted" style="font-size:14px">${t("unavailable")}</span>`;c=`<span class="muted">${esc(x.reason_ar||"")}</span>`;}
+      else{v=fmt(x.current);c=x.comparison_available?`<span class="${(lowerBetter?x.change<=0:x.change>=0)?"pos":"neg"}">${x.change>0?"+":""}${n(x.change)}</span> <span class="muted">${t("prev")}: ${fmt(x.previous)}</span>`:(x.rule?`<span class="muted">${esc(x.rule)}</span>`:`<span class="muted">${t("noPrev")}</span>`);}
+      return `<div class="tile"><div class="l">${t(code)}</div><div class="v">${v}</div><div class="c">${c}</div></div>`;};
+    return `<div class="tiles">${tile("inventory_value",v=>n(v,0))}${tile("inventory_turnover",v=>n(v)+"x")}${tile("dio",v=>n(v,0)+" "+t("days"),true)}${tile("stockout_rate",v=>n(v)+"%",true)}${tile("slow_moving_value",v=>n(v,0))}${tile("obsolete_value",v=>n(v,0))}${tile("inventory_accuracy",v=>n(v)+"%")}</div>
+      ${k.inventory_turnover&&k.inventory_turnover.window?`<div class="muted" style="margin-top:8px">${t("window")}: ${esc(k.inventory_turnover.window)} · ${esc(k.inventory_value.valuation||"")}${k.inventory_value.incomplete_items?` · <span class="neg">${n(k.inventory_value.incomplete_items,0)} صنف بلا تكلفة</span>`:""}</div>`:""}`;
+  }
+  function byDim(list,sel,label){
+    if(!list.length)return na(t("noData"));
+    return `<div class="tbl"><table><thead><tr><th>${label}</th><th>${t("value")}</th><th>${t("share")}</th><th>${t("units")}</th><th>${t("turnover")}</th><th>${t("dio")}</th><th>${t("stockout_rate")}</th><th>${t("slow")}</th><th>${t("obsolete")}</th></tr></thead><tbody>`+
+      list.map(x=>{const v=sel==="fBranch"?((D.options.branch_list||[]).find(b=>b.name===x.key)||{}).id:x.key;return `<tr class="drill" data-sel="${sel}" data-val="${esc(v??"")}"><td><b>${esc(x.key)}</b></td><td>${mv(x.value)}</td><td>${x.share_pct==null?"—":n(x.share_pct)+"%"}</td><td>${n(x.qty,0)}</td><td>${x.turnover==null?"—":n(x.turnover)+"x"}</td><td>${x.dio==null?"—":n(x.dio,0)}</td><td>${x.stockout_rate==null?"—":n(x.stockout_rate)+"%"}</td><td>${mv(x.slow_value)}</td><td>${mv(x.obsolete_value)}</td></tr>`;}).join("")+
+      `</tbody></table></div><div class="muted">${t("drill")}</div>`;
+  }
+  function statuses(d){
+    const cn=d.status_counts||{},vl=d.status_values||{};
+    return `<div class="chips">${["healthy","watch","low","stockout","slow","obsolete"].map(s=>`<div class="schip" data-status="${s}">${stb(s)}<b>${n(cn[s],0)}</b><span class="muted">${mv(vl[s])}</span></div>`).join("")}</div>
+      <details style="margin-top:10px"><summary class="muted" style="cursor:pointer">${t("rule")}</summary><ul class="muted">${Object.values(d.rules||{}).map(r=>`<li>${esc(r)}</li>`).join("")}</ul></details>`;
+  }
+  function movement(m){
+    const b=(l,v)=>`<div class="box"><span class="muted">${l}</span><b>${v==null?"—":n(v,0)}</b></div>`;
+    return `<div class="eq">${b(t("opening"),m.opening_qty)}<b>+</b>${b(t("purchases"),m.purchases_qty)}<b>−</b>${b(t("sold"),m.sold_qty)}<b>±</b>${b(t("adjust"),m.adjustments_qty)}<b>=</b>${b(t("closing"),m.closing_qty)}</div>
+      ${m.note_ar?`<div class="${m.reconciliation_gap?"neg":"pos"}" style="margin-top:8px;font-size:13px">${esc(m.note_ar)}${m.reconciliation_gap?` (${t("gap")}: ${n(m.reconciliation_gap)})`:""}</div>`:`<div class="muted" style="margin-top:8px">لا تتوفر أرصدة أول المدة والمشتريات لموازنة الحركة</div>`}`;
+  }
+  function aging(a){const max=Math.max(...a.map(x=>x.value?x.value.value:0),1);
+    return a.map(x=>`<div class="barrow"><span class="t">${esc(x.bucket)} ${t("days")}</span><span class="g"><i style="width:${((x.value?x.value.value:0)/max*100).toFixed(1)}%"></i></span><span>${mv(x.value)}</span><span class="muted">${n(x.items,0)} ${t("items")}</span></div>`).join("")+`<div class="muted">${esc(D.aging_basis_ar||"")}</div>`;}
+  function positions(list,total){
+    if(!list.length)return na(t("noData"));
+    return `<div class="tbl"><table><thead><tr><th>${t("product")}</th><th>${t("branch")}</th><th>${t("qty")}</th><th>${t("unitCost")}</th><th>${t("value")}</th><th>${t("cover")}</th><th>${t("lastMove")}</th><th>${t("status")}</th>${D.can_edit?"<th></th>":""}</tr></thead><tbody>`+
+      list.slice(0,200).map(p=>`<tr><td class="drill" data-sel="fProduct" data-val="${esc(p.product_sku)}" style="cursor:pointer"><b>${esc(p.name)}</b>${p.name!==p.product_sku?`<div class="muted">${esc(p.product_sku)}</div>`:""}</td><td>${esc(p.branch)}</td><td>${n(p.qty)}</td><td>${p.unit_cost?n(p.unit_cost.value):`<span class="neg">${t("unavailable")}</span>`}</td><td>${mv(p.value)}</td><td>${p.coverage_days==null?"—":n(p.coverage_days,1)+" "+t("days")}</td><td>${esc(p.last_movement||"—")}</td><td>${stb(p.status)}</td>${D.can_edit?`<td><button class="btn ghost" data-edit="${esc(p.product_sku)}|${esc(p.branch)}">✎</button></td>`:""}</tr>`).join("")+
+      `</tbody></table></div>${total>200?`<div class="muted">200 / ${n(total,0)}</div>`:""}`;
+  }
+  function slowList(list){if(!list.length)return na("لا توجد أصناف بطيئة أو متقادمة وفق القواعد");
+    return `<div class="tbl"><table><thead><tr><th>${t("product")}</th><th>${t("branch")}</th><th>${t("qty")}</th><th>${t("value")}</th><th>${t("daysSince")}</th><th>${t("status")}</th></tr></thead><tbody>`+
+      list.slice(0,50).map(p=>`<tr><td><b>${esc(p.name)}</b></td><td>${esc(p.branch)}</td><td>${n(p.qty)}</td><td>${mv(p.value)}</td><td>${n(p.days_since_movement,0)}</td><td>${stb(p.status)}</td></tr>`).join("")+`</tbody></table></div>`;}
+  function reorder(list){if(!list.length)return na("لا توجد أصناف تحتاج إعادة طلب الآن");
+    return `<div class="tbl"><table><thead><tr><th>${t("product")}</th><th>${t("branch")}</th><th>${t("qty")}</th><th>${t("avgDemand")}</th><th>${t("cover")}</th><th>${t("rop")}</th><th>${t("suggest")}</th><th>${t("status")}</th></tr></thead><tbody>`+
+      list.slice(0,50).map(p=>`<tr><td><b>${esc(p.name)}</b></td><td>${esc(p.branch)}</td><td>${n(p.qty)}</td><td>${n(p.avg_daily_demand,2)}</td><td>${p.coverage_days==null?"—":n(p.coverage_days,1)}</td><td>${p.reorder_point==null?`<span class="muted" title="${esc(p.reorder_point_reason||"")}">${t("notComputable")}</span>${D.can_edit?` <button class="btn ghost" data-param="${esc(p.product_sku)}|${esc(p.branch)}">＋</button>`:""}`:n(p.reorder_point)+(p.reorder_point_source==="manual"?" ✎":"")}</td><td>${p.suggested_qty!=null?`<b>${n(p.suggested_qty,0)}</b> <span class="b est">${t("estimate")}</span>`:`<span class="muted">${esc(p.suggested_reason||"—")}</span>`}</td><td>${stb(p.status)}</td></tr>`).join("")+`</tbody></table></div>`;}
+  function stockouts(list){if(!list.length)return na("لم يُسجَّل نفاد في البيانات المتاحة");
+    return list.slice(0,30).map(s=>`<div class="sig ${s.out_now?"risk":"data_quality"}"><b>${esc(s.name)}</b> — ${esc(s.branch)} ${s.out_now?`<span class="st stockout">${t("outNow")}</span>`:""}
+      <div class="muted">${t("events")}: ${n(s.events,0)} · ${t("lastOut")}: ${esc(s.last_stockout)}</div>${s.sales_impact?`<div class="neg" style="font-size:13px">المبيعات: ${n(s.sales_impact.sales_qty_prev,0)} ← ${n(s.sales_impact.sales_qty_cur,0)} (${n(s.sales_impact.change_pct)}%) — ${esc(s.sales_impact.note_ar)}</div>`:""}</div>`).join("");}
+  function signals(list){if(!list.length)return"";
+    return panel("12",t("s12"),["risk","opportunity","data_quality"].map(type=>{const it=list.filter(s=>s.type===type);if(!it.length)return"";
+      return `<h3>${type==="risk"?"🔴":type==="opportunity"?"🟢":"🟡"} ${t(type)}</h3>`+it.map(s=>`<div class="sig ${type}"><b>${esc(s.name_ar)}</b> ${s.dimension?"— "+esc(s.dimension):""} <span class="b ${esc(s.severity)}">${esc(s.severity)}</span>
+        <div class="muted">${t("evidence")}: ${(s.evidence||[]).map(esc).join(" · ")}</div>${s.estimated_impact?`<div>${t("value")}: ${mv(s.estimated_impact)} <span class="b est">${t("estimate")}</span></div>`:""}
+        <div>${t("rec")}: ${esc(s.suggested_action_ar)}</div><button class="btn" data-sig="${esc(s.id)}" style="margin-top:6px">${t("toDecision")}</button><div class="frm"></div></div>`).join("");}).join(""));}
+  function availability(a){return panel("14",t("s14"),Object.entries(a||{}).map(([k,v])=>`<div class="barrow"><span class="t">${esc(t("avail")[k]||k)}</span><span class="${v.available?"pos":"neg"}">${v.available?t("availOk"):t("availNo")}</span><span class="muted">${v.available?"":esc(v.how_ar||"")}</span></div>`).join("")+ctas("manual"));}
+  function empty(d){const r=d.required||{};
+    $("content").innerHTML=`<div class="state"><div style="font-size:16px;margin-bottom:10px">${esc(d.message_ar)}</div>
+      <div class="muted">${t("required")}: ${(r.required||[]).map(esc).join("، ")}</div><div class="muted">${t("recommended")}: ${(r.recommended||[]).map(esc).join("، ")}</div><div class="muted">${t("optional")}: ${(r.optional||[]).map(esc).join("، ")}</div>
+      <div class="cta" style="justify-content:center"><a class="btn ghost" href="company-data-center.html">${t("upload")}</a>${d.can_edit?`<button class="btn" data-act="manual">${t("enterManual")}</button>`:""}</div></div>`;bind();}
+  function render(d){
+    if(!d.has_data)return empty(d);
+    $("content").innerHTML=panel("1",t("s1"),kpis(d.kpis||{}))+
+      panel("2",t("s2"),chart((d.timeline||[]).map(x=>x.period),[{label:t("inventory_value"),values:(d.timeline||[]).map(x=>x.value?x.value.value:null),color:"#10b981"}]))+
+      `<div class="grid2">${panel("3",t("s3"),byDim(d.by_branch||[],"fBranch",t("branch")))}${panel("4",t("s4"),byDim(d.by_category||[],"fCategory",t("category")))}</div>`+
+      panel("5",t("s5"),statuses(d))+`<div class="grid2">${panel("6",t("s6")+" · "+esc(d.period),movement(d.movement||{}))}${panel("7",t("s7"),aging(d.aging||[]))}</div>`+
+      panel("10",t("s10"),reorder(d.reorder||[])+((d.availability||{}).reorder&&!d.availability.reorder.available?ctas("params"):""))+
+      panel("11",t("s11"),stockouts(d.stockouts||[]))+panel("9",t("s9"),slowList(d.slow_obsolete||[]))+
+      panel("8",`${t("s8")} <span class="muted">(${n(d.positions_total,0)})</span>`,positions(d.positions||[],d.positions_total))+
+      signals(d.signals||[])+panel("13",t("s13"),`<div class="muted" style="margin-bottom:8px">${t("aiNote")}</div><button class="btn" id="aiBtn">${t("aiBtn")}</button><div id="aiOut" style="margin-top:10px"></div>`)+
+      availability(d.availability);
+    bind();
+  }
+  function bind(){
+    document.querySelectorAll("#content [data-sel]").forEach(el=>el.onclick=()=>{if(el.dataset.val)drill(el.dataset.sel,el.dataset.val);});
+    document.querySelectorAll("#content [data-status]").forEach(el=>el.onclick=()=>{$("fStatus").value=el.dataset.status;load();});
+    document.querySelectorAll("#content [data-sig]").forEach(b=>b.onclick=()=>decision(b));
+    document.querySelectorAll("[data-act='manual']").forEach(b=>b.onclick=()=>manual());
+    document.querySelectorAll("[data-act='params']").forEach(b=>b.onclick=()=>paramsForm());
+    document.querySelectorAll("#content [data-edit]").forEach(b=>b.onclick=()=>{const[s,br]=b.dataset.edit.split("|");manual(s,br);});
+    document.querySelectorAll("#content [data-param]").forEach(b=>b.onclick=()=>{const[s,br]=b.dataset.param.split("|");paramsForm(s,br);});
+    const ab=$("aiBtn");if(ab)ab.onclick=runAI;
+  }
+  function decision(btn){const box=btn.nextElementSibling;
+    box.innerHTML=`<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap"><input class="f o" placeholder="${t("owner")}"><input class="f d" type="date"><button class="btn c">${t("create")}</button></div><div class="m muted"></div>`;
+    box.querySelector(".c").onclick=()=>fetch("/company/inventory/to-decision",{method:"POST",headers:H,body:JSON.stringify(Object.assign({},F(),{signal_id:btn.dataset.sig,owner:box.querySelector(".o").value,due_date:box.querySelector(".d").value,period:D.period}))}).then(async r=>{
+      const j=await r.json().catch(()=>({}));box.querySelector(".m").textContent=r.ok?t("created"):(typeof j.detail==="string"?j.detail:"HTTP "+r.status);if(r.ok)btn.disabled=true;});}
+  function runAI(){const b=$("aiBtn"),out=$("aiOut");b.disabled=true;out.innerHTML=`<div class="muted">${t("aiWait")}</div>`;
+    fetch("/company/inventory/ai-insights",{method:"POST",headers:H,body:JSON.stringify(Object.assign({},F(),{period:D.period}))}).then(async r=>{const j=await r.json().catch(()=>({}));b.disabled=false;
+      if(!r.ok){out.innerHTML=`<div class="neg">${esc(typeof j.detail==="string"?j.detail:"HTTP "+r.status)}</div>`;return;}
+      const a=j.ai||{},resp=a.response||{};
+      out.innerHTML=(a.message?`<div class="na">${esc(a.message)}</div>`:"")+["FACTS","INTERPRETATION","HYPOTHESES","RECOMMENDATIONS","DATA_GAPS"].map(k=>resp[k]&&resp[k].length?`<div class="ai-sec"><b>${t(k)}</b><ul style="margin:0;padding-inline-start:18px">${resp[k].map(x=>`<li>${esc(typeof x==="string"?x:JSON.stringify(x))}</li>`).join("")}</ul></div>`:"").join("");
+    }).catch(e=>{b.disabled=false;out.innerHTML=`<div class="neg">${esc(e.message||e)}</div>`;});}
+  function modal(html,onSave){$("modal").innerHTML=html+`<div class="cta"><button class="btn" id="mSave">${t("save")}</button><button class="btn ghost" id="mCancel">${t("cancel")}</button><span id="mMsg" class="muted"></span></div>`;
+    $("ov").classList.add("on");$("mCancel").onclick=()=>$("ov").classList.remove("on");
+    $("mSave").onclick=()=>{const body={};$("modal").querySelectorAll("[name]").forEach(i=>{if(i.value!=="")body[i.name]=i.value;});
+      if(body.period&&body.period.length>7)body.period=body.period.slice(0,7);
+      $("mSave").disabled=true;onSave(body).then(async r=>{const j=await r.json().catch(()=>({}));$("mSave").disabled=false;
+        if(r.ok){$("mMsg").className="pos";$("mMsg").textContent=t("saved");setTimeout(()=>{$("ov").classList.remove("on");load();},500);}
+        else{$("mMsg").className="neg";$("mMsg").textContent=typeof j.detail==="string"?j.detail:"HTTP "+r.status;}}).catch(e=>{$("mSave").disabled=false;$("mMsg").textContent=e.message;});};}
+  const brOpts=(sel,allowAll)=>(allowAll?`<option value="">${t("allBranches")}</option>`:"")+((D&&D.options&&D.options.branch_list)||[]).map(b=>`<option value="${b.id}" ${b.name===sel?"selected":""}>${esc(b.name)}</option>`).join("");
+  const prodList=()=>`<datalist id="plist">${((D&&D.options&&D.options.products)||[]).map(p=>`<option value="${esc(p.sku)}">${esc(p.name)}</option>`).join("")}</datalist>`;
+  function manual(sku,br){const cur=(D&&D.period)||new Date().toISOString().slice(0,7);
+    modal(`<h3 style="margin-top:0">${t("enterManual")}</h3>${prodList()}<div class="fg">
+      <label>${t("period")}<input type="month" name="period" value="${esc(cur)}"></label><label>${t("branch")}<select name="branch_id">${brOpts(br)}</select></label>
+      <label>${t("product")} (SKU)<input name="product_sku" list="plist" value="${esc(sku||"")}"></label><label>اسم المنتج<input name="name"></label>
+      <label>${t("category")}<input name="category"></label><label>${t("closing")} — ${t("qty")} *<input name="closing_qty" inputmode="decimal"></label>
+      <label>${t("unitCost")}<input name="unit_cost" inputmode="decimal"></label><label>أو ${t("value")} الإجمالية<input name="closing_value" inputmode="decimal"></label>
+      <label>${t("opening")}<input name="opening_qty" inputmode="decimal"></label><label>${t("purchases")}<input name="purchases_qty" inputmode="decimal"></label>
+      <label>${t("sold")}<input name="sold_qty" inputmode="decimal"></label><label>${t("adjust")}<input name="adjustments_qty" inputmode="decimal"></label></div>
+      <div class="muted" style="margin-top:8px">الحقول الفارغة لا تُحفظ صفراً — تبقى «غير متاحة».</div>`,
+      body=>fetch("/company/inventory/manual",{method:"POST",headers:H,body:JSON.stringify(body)}));}
+  function paramsForm(sku,br){
+    modal(`<h3 style="margin-top:0">${t("params")}</h3>${prodList()}<div class="fg">
+      <label>${t("product")} (SKU)<input name="product_sku" list="plist" value="${esc(sku||"")}"></label><label>${t("branch")}<select name="branch_id">${brOpts(br,true)}</select></label>
+      <label>${t("leadTime")}<input name="lead_time_days" inputmode="decimal"></label><label>${t("safety")}<input name="safety_stock" inputmode="decimal"></label>
+      <label>${t("moq")}<input name="min_order_qty" inputmode="decimal"></label><label>${t("rop")} (يدوي، اختياري)<input name="reorder_point" inputmode="decimal"></label></div>
+      <div class="muted" style="margin-top:8px">${esc((D&&D.rules&&D.rules.reorder_point)||"")}</div>`,
+      body=>fetch("/company/inventory/params",{method:"POST",headers:H,body:JSON.stringify(body)}));}
+  $("btnManual").onclick=()=>manual();$("btnParams").onclick=()=>paramsForm();
+  $("ov").onclick=e=>{if(e.target===$("ov"))$("ov").classList.remove("on");};
+  ["fPeriod","fBranch","fProduct","fStatus"].forEach(id=>$(id).addEventListener("change",load));
+  $("fCategory").addEventListener("change",()=>{$("fProduct").value="";load();});
+  $("reset").onclick=()=>{["fPeriod","fBranch","fCategory","fProduct","fStatus"].forEach(id=>$(id).value="");load();};
+  load();
+})();
+</script>
+<script src="nabbah-sidebar.js"></script>
+</body></html>
