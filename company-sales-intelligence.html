@@ -9,17 +9,24 @@
   body{background:var(--bg,#070b09);color:var(--txt,#e8f1ec);font-family:Tajawal,Tahoma,Arial,sans-serif;margin:0}
   .wrap{max-width:1180px;margin:0 auto;padding:70px 16px 60px}
   h1{margin:0 0 4px;font-size:24px}.sub{color:var(--txt-soft,#8ba396);margin:0 0 16px;font-size:14px}
-  .bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
-  select{background:var(--panel,#101a15);color:var(--txt,#e8f1ec);border:1px solid var(--line,#1d2c24);border-radius:10px;padding:8px 10px;font:inherit;font-size:13px}
-  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:14px}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+  select{background:var(--panel,#101a15);color:var(--txt,#e8f1ec);border:1px solid var(--line,#1d2c24);border-radius:10px;padding:8px 10px;font:inherit;font-size:13px;max-width:190px}
+  .crumbs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;min-height:4px}
+  .chip{background:rgba(16,185,129,.12);color:var(--mint,#10b981);border:1px solid rgba(16,185,129,.35);border-radius:20px;padding:3px 10px;font-size:12px;cursor:pointer}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
   .tile,.panel{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:14px;padding:14px}
-  .tile .l{font-size:12px;color:var(--txt-soft,#8ba396)}.tile .v{font-size:22px;font-weight:800;margin-top:4px}
-  .panel{margin-bottom:14px}.panel h2{margin:0 0 10px;font-size:16px}
-  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-  table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px;border-bottom:1px solid var(--line,#1d2c24);text-align:start}
+  .tile .l{font-size:12px;color:var(--txt-soft,#8ba396)}.tile .v{font-size:21px;font-weight:800;margin-top:4px}
+  .tile .c{font-size:12px;margin-top:4px}
+  .panel{margin-bottom:14px;min-width:0}.panel h2{margin:0 0 10px;font-size:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .panel h3{margin:12px 0 6px;font-size:13px;color:var(--txt-soft,#8ba396)}
+  .num{font-size:11px;color:var(--txt-soft,#8ba396);font-weight:600;border:1px solid var(--line,#1d2c24);border-radius:8px;padding:1px 6px}
+  .grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+  table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px;border-bottom:1px solid var(--line,#1d2c24);text-align:start;white-space:nowrap}
   th{color:var(--txt-soft,#8ba396);font-weight:600}.tbl{overflow-x:auto}
+  tr.drill{cursor:pointer}tr.drill:hover td{background:rgba(16,185,129,.06)}
   .barrow{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:13px}
-  .barrow .t{flex:0 0 110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .barrow.drill{cursor:pointer}.barrow.drill:hover{background:rgba(16,185,129,.06);border-radius:6px}
+  .barrow .t{flex:0 0 120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .barrow .g{flex:1;height:10px;background:var(--line,#1d2c24);border-radius:6px;overflow:hidden}
   .barrow .g i{display:block;height:100%;background:var(--mint,#10b981)}
   .pos{color:#10b981}.neg{color:#ef4444}.muted{color:var(--txt-soft,#8ba396);font-size:12px}
@@ -27,160 +34,308 @@
   .high{background:rgba(234,88,12,.16);color:#ea580c}.medium{background:rgba(245,179,1,.15);color:#f5b301}
   .low{background:rgba(16,185,129,.15);color:#10b981}.critical{background:rgba(239,68,68,.16);color:#ef4444}
   .est{background:rgba(168,85,247,.15);color:#a855f7}
-  .sig{border-inline-start:4px solid var(--line,#1d2c24);padding:8px 10px;margin:8px 0;background:rgba(255,255,255,.02);border-radius:8px}
-  .btn{background:var(--mint,#10b981);color:#062b1c;border:0;border-radius:10px;padding:7px 13px;font-weight:800;cursor:pointer;font:inherit;font-size:12px}
+  .sig{border-inline-start:4px solid var(--line,#1d2c24);padding:10px 12px;margin:8px 0;background:rgba(255,255,255,.02);border-radius:8px}
+  .sig.risk{border-color:#ef4444}.sig.opportunity{border-color:#10b981}.sig.data_quality{border-color:#f5b301}
+  .btn{background:var(--mint,#10b981);color:#062b1c;border:0;border-radius:10px;padding:7px 13px;font-weight:800;cursor:pointer;font:inherit;font-size:12px;text-decoration:none;display:inline-block}
   .btn.ghost{background:transparent;color:var(--txt-soft,#8ba396);border:1px solid var(--line,#1d2c24);font-weight:600}
+  .btn:disabled{opacity:.5;cursor:default}
   .state{padding:36px 16px;text-align:center;color:var(--txt-soft,#8ba396);border:1px dashed var(--line,#1d2c24);border-radius:14px}
-  svg{width:100%;height:150px}
-  @media(max-width:760px){.grid2{grid-template-columns:1fr}h1{font-size:20px}}
+  .na{color:var(--txt-soft,#8ba396);font-size:13px;padding:10px;border:1px dashed var(--line,#1d2c24);border-radius:10px}
+  svg.ch{width:100%;height:170px;display:block}
+  .legend{display:flex;gap:14px;font-size:12px;color:var(--txt-soft,#8ba396);margin-top:6px;flex-wrap:wrap}
+  .legend i{display:inline-block;width:14px;height:3px;vertical-align:middle;margin-inline-end:4px}
+  .ai-sec{margin:8px 0}.ai-sec b{display:block;font-size:13px;margin-bottom:4px}.ai-sec li{font-size:13px;margin:3px 0}
+  input.f{flex:1;min-width:120px;background:var(--panel,#101a15);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:8px;padding:6px}
+  @media(max-width:760px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.tile{padding:10px}.tile .v{font-size:17px}.grid2,.grid3{grid-template-columns:minmax(0,1fr)}h1{font-size:20px}select{max-width:47%}}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1 data-i18n="si.title">ذكاء المبيعات</h1>
-  <p class="sub"></p>
+  <h1 id="ttl">ذكاء المبيعات</h1>
+  <p class="sub" id="subttl"></p>
   <div class="bar">
     <select id="fPeriod"></select><select id="fGrain"></select><select id="fBranch"></select>
-    <select id="fChannel"></select><select id="fCategory"></select>
+    <select id="fChannel"></select><select id="fCategory"></select><select id="fProduct"></select>
+    <button class="btn ghost" id="reset"></button>
   </div>
+  <div class="crumbs" id="crumbs"></div>
   <div id="content"><div class="state">…</div></div>
 </div>
 <script src="i18n.js"></script>
 <script>
 (function(){
   const TOKEN=localStorage.getItem("nabbah_token")||"";if(!TOKEN){location.href="login.html";return;}
-  const I=()=>window.NabbahI18n,L=()=>(I()&&I().getLang)?I().getLang():"ar";
-  const tr=(k,fb)=>{const v=I()&&I().t?I().t(k,L()):k;return(v&&v!==k)?v:(fb||k);};
+  const L=()=>(window.NabbahI18n&&window.NabbahI18n.getLang)?window.NabbahI18n.getLang():"ar";
+  const T={
+    ar:{title:"ذكاء المبيعات",sub:"كم بعنا؟ أين؟ ماذا؟ متى تغيّرت المبيعات؟ ومن أين جاء التغيير؟",period:"الفترة",branch:"الفرع",channel:"القناة",category:"الفئة",product:"المنتج",all:"الكل",reset:"إعادة الضبط",
+      day:"يومي",week:"أسبوعي",month:"شهري",quarter:"ربع سنوي",year:"سنوي",
+      net:"صافي المبيعات",gross:"إجمالي المبيعات",tx:"عدد المعاملات",aov:"متوسط الفاتورة",qty:"الكمية",discounts:"الخصومات",discount_rate:"نسبة الخصم",returns:"المرتجعات",return_rate:"نسبة المرتجعات",
+      noPrev:"لا توجد فترة سابقة للمقارنة",pts:"نقطة",
+      s1:"المؤشرات الرئيسية",s2:"اتجاه المبيعات",s3:"أداء الفروع",s4:"أداء القنوات",s5:"الفئات",s6:"ذكاء المنتجات",s7:"ذكاء الخصومات",s8:"فعالية الحملات",s9:"ذكاء المرتجعات",s10:"توقع المبيعات",s11:"إشارات المبيعات",s12:"رؤى الذكاء الاصطناعي",s16:"جودة البيانات",
+      prev:"الفترة السابقة",yoy:"نفس الفترة من العام الماضي",growth:"النمو",share:"الحصة",drillHint:"اضغط أي صف للتعمق",
+      top5:"الأعلى مبيعاً (Top 5)",growing:"منتجات تنمو",declining:"منتجات تتراجع",allProducts:"كل المنتجات",
+      byBranch:"حسب الفرع",byProduct:"حسب المنتج",trendOf:"الاتجاه",withDisc:"مبيعات بخصم",withoutDisc:"مبيعات بدون خصم",
+      promo:"الحملة",days:"الأيام",before:"قبل",during:"أثناء",after:"بعد",cost:"تكلفة الخصم",
+      actual:"فعلي",forecast:"متوقع",best:"متفائل",worst:"متشائم",conf:"الثقة",confL:{low:"منخفضة",medium:"متوسطة",high:"عالية"},assump:"الافتراضات",missingMonths:"أشهر ناقصة",
+      risk:"مخاطر",opportunity:"فرص",data_quality:"جودة البيانات",evidence:"الدليل",rule:"القاعدة",impact:"الأثر",rec:"التوصية",estimate:"تقديري",
+      toDecision:"إنشاء قرار + إجراء",owner:"المسؤول",create:"إنشاء",created:"تم إنشاء القرار والإجراء ✓",onlyOwner:"إنشاء القرارات للمالك فقط",
+      aiBtn:"اشرح لي بالذكاء الاصطناعي",aiNote:"الذكاء الاصطناعي يشرح الأرقام المحسوبة فقط، ولا يحسب أي رقم بنفسه.",aiWait:"جارٍ التحليل…",
+      FACTS:"الحقائق",INTERPRETATION:"القراءة",HYPOTHESES:"فرضيات غير مؤكدة",RECOMMENDATIONS:"التوصيات",DATA_GAPS:"بيانات ناقصة",
+      gate:"بوابة الجودة",records:"سجل",missing:"ناقص",field:{date:"التاريخ",branch_name:"الفرع",reference:"رقم الفاتورة",channel:"القناة",category:"الفئة",product_sku:"المنتج"},
+      empty:"لا توجد بيانات مبيعات تفصيلية. ارفع ملف المبيعات من مركز البيانات.",error:"تعذّر تحميل ذكاء المبيعات.",denied:"ليست لديك صلاحية لهذه الصفحة.",noDim:"لا توجد بيانات لهذا البُعد",
+      toData:"مركز البيانات",undated:"سجل بلا تاريخ"},
+    en:{title:"Sales Intelligence",sub:"How much, where, what, when did it change — and where did the change come from?",period:"Period",branch:"Branch",channel:"Channel",category:"Category",product:"Product",all:"All",reset:"Reset",
+      day:"Daily",week:"Weekly",month:"Monthly",quarter:"Quarterly",year:"Yearly",
+      net:"Net sales",gross:"Gross sales",tx:"Transactions",aov:"Avg order value",qty:"Quantity",discounts:"Discounts",discount_rate:"Discount rate",returns:"Returns",return_rate:"Return rate",
+      noPrev:"No previous period to compare",pts:"pts",
+      s1:"Key metrics",s2:"Sales trend",s3:"Branch performance",s4:"Channel performance",s5:"Categories",s6:"Product intelligence",s7:"Discount intelligence",s8:"Promotion effectiveness",s9:"Returns intelligence",s10:"Sales forecast",s11:"Sales signals",s12:"AI sales insights",s16:"Data quality",
+      prev:"Previous period",yoy:"Same period last year",growth:"Growth",share:"Share",drillHint:"Click any row to drill down",
+      top5:"Top 5 best-selling",growing:"Growing products",declining:"Declining products",allProducts:"All products",
+      byBranch:"By branch",byProduct:"By product",trendOf:"Trend",withDisc:"Sales with discount",withoutDisc:"Sales without discount",
+      promo:"Promotion",days:"Days",before:"Before",during:"During",after:"After",cost:"Discount cost",
+      actual:"Actual",forecast:"Forecast",best:"Best",worst:"Worst",conf:"Confidence",confL:{low:"Low",medium:"Medium",high:"High"},assump:"Assumptions",missingMonths:"Missing months",
+      risk:"Risks",opportunity:"Opportunities",data_quality:"Data quality",evidence:"Evidence",rule:"Rule",impact:"Impact",rec:"Recommendation",estimate:"estimate",
+      toDecision:"Create decision + action",owner:"Owner",create:"Create",created:"Decision and action created ✓",onlyOwner:"Only the owner can create decisions",
+      aiBtn:"Explain with AI",aiNote:"AI only explains the computed numbers; it never calculates a number itself.",aiWait:"Analyzing…",
+      FACTS:"Facts",INTERPRETATION:"Interpretation",HYPOTHESES:"Unconfirmed hypotheses",RECOMMENDATIONS:"Recommendations",DATA_GAPS:"Data gaps",
+      gate:"Quality gate",records:"records",missing:"missing",field:{date:"Date",branch_name:"Branch",reference:"Invoice no.",channel:"Channel",category:"Category",product_sku:"Product"},
+      empty:"No detailed sales data. Upload a sales file from the Data Center.",error:"Could not load sales intelligence.",denied:"You don't have permission for this page.",noDim:"No data for this dimension",
+      toData:"Data Center",undated:"records without date"}
+  };
+  const t=k=>{const d=T[L()]||T.ar;return d[k]!==undefined?d[k]:(T.ar[k]!==undefined?T.ar[k]:k);};
   const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const n=v=>v==null?"—":Number(v).toLocaleString(L()==="ar"?"ar-SA":"en-US",{maximumFractionDigits:2});
   const mv=m=>m&&m.value!=null?n(m.value):"—";
-  const pct=v=>v==null?"—":`<span class="${v>=0?"pos":"neg"}">${n(v)}%</span>`;
+  const pct=(v,inv)=>v==null?"—":`<span class="${(inv?v<=0:v>=0)?"pos":"neg"}">${v>0?"+":""}${n(v)}%</span>`;
   const H={Authorization:"Bearer "+TOKEN,"Content-Type":"application/json"},$=id=>document.getElementById(id);
-  let D=null;
-  document.querySelector(".sub").textContent=tr("si.subtitle");
   const GR=["day","week","month","quarter","year"];
-  function qs(){const p=new URLSearchParams();
-    const g=$("fGrain").value||"month";p.set("grain",g);
-    [["period","fPeriod"],["branch_id","fBranch"],["channel","fChannel"],["category","fCategory"]].forEach(([k,id])=>{const v=$(id).value;if(v)p.set(k,v)});
-    return p.toString();}
-  function showErr(msg){
-    $("content").innerHTML=`<div class="state neg">${tr("si.error")}<div class="muted" style="margin-top:8px;font-size:12px;direction:auto;word-break:break-word">${esc(msg||"")}</div></div>`;
-  }
+  let D=null,BR={};   // BR: اسم الفرع -> رقمه (للتعمق من جدول الفروع)
+
+  $("ttl").textContent=t("title");$("subttl").textContent=t("sub");$("reset").textContent=t("reset");
+  document.title="نبّاه · "+t("title");
+
+  function F(){const f={grain:$("fGrain").value||"month"};
+    [["period","fPeriod"],["branch_id","fBranch"],["channel","fChannel"],["category","fCategory"],["product","fProduct"]].forEach(([k,id])=>{const v=$(id).value;if(v)f[k]=v;});return f;}
+  function showErr(msg){$("content").innerHTML=`<div class="state neg">${t("error")}<div class="muted" style="margin-top:8px;word-break:break-word">${esc(msg||"")}</div></div>`;}
+
   function load(){
     $("content").innerHTML=`<div class="state">…</div>`;
-    fetch("/company/sales-intelligence?"+qs(),{headers:H}).then(async r=>{
+    fetch("/company/sales-intelligence?"+new URLSearchParams(F()).toString(),{headers:H}).then(async r=>{
       if(r.status===401){location.href="login.html";return null;}
-      if(r.status===403||r.status===402){$("content").innerHTML=`<div class="state">${tr("si.denied")}</div>`;return null;}
-      if(!r.ok){
-        let detail="";
-        try{const j=await r.json();detail=typeof j.detail==="string"?j.detail:JSON.stringify(j.detail||j);}
-        catch(_){try{detail=(await r.text()).slice(0,300);}catch(__){}}
-        showErr(`HTTP ${r.status}${detail?" — "+detail:""}`);return null;
-      }
+      if(r.status===403||r.status===402){$("content").innerHTML=`<div class="state">${t("denied")}</div>`;return null;}
+      if(!r.ok){let d="";try{const j=await r.json();d=typeof j.detail==="string"?j.detail:JSON.stringify(j.detail||j);}catch(_){}
+        showErr(`HTTP ${r.status}${d?" — "+d:""}`);return null;}
       return r.json();
-    }).then(d=>{
-      if(!d)return;
-      D=d;
-      try{filters(d);}catch(e){console.error("sales filters",e);}
-      try{render(d);}catch(e){console.error("sales render",e);showErr("render: "+(e&&e.message||e));}
-    }).catch(e=>{console.error("sales load",e);showErr("network: "+(e&&e.message||e));});
+    }).then(d=>{if(!d)return;D=d;
+      try{filters(d);}catch(e){console.error("filters",e);}
+      try{render(d);}catch(e){console.error("render",e);showErr("render: "+(e&&e.message||e));}
+    }).catch(e=>{console.error(e);showErr("network: "+(e&&e.message||e));});
   }
-  function opt(sel,list,label,cur){
-    $(sel).innerHTML=`<option value="">${label}</option>`+list.map(x=>`<option value="${esc(x)}" ${String(cur)===String(x)?"selected":""}>${esc(x)}</option>`).join("");
+  function opts(id,list,label,cur,val=x=>x,txt=x=>x){
+    $(id).innerHTML=`<option value="">${esc(label)}: ${t("all")}</option>`+list.map(x=>`<option value="${esc(val(x))}" ${String(cur??"")===String(val(x))?"selected":""}>${esc(txt(x))}</option>`).join("");
   }
   function filters(d){
     const o=d.options||{},f=d.filters||{};
-    opt("fPeriod",o.periods||[],tr("si.period"),f.period);
-    $("fGrain").innerHTML=GR.map(g=>`<option value="${g}" ${f.grain===g?"selected":""}>${tr("si.grain."+g)}</option>`).join("");
-    const bl=o.branch_list||[];   // [{id,name}] من الخادم — بدونها لا نعرض فلتراً لا يعمل
-    $("fBranch").innerHTML=`<option value="">${tr("si.branch")}: ${tr("si.all")}</option>`+bl.map(b=>`<option value="${esc(b.id)}" ${String(f.branch_id)===String(b.id)?"selected":""}>${esc(b.name)}</option>`).join("");
-    $("fBranch").style.display=bl.length?"":"none";
-    opt("fChannel",o.channels||[],tr("si.channel")+": "+tr("si.all"),f.channel);
-    opt("fCategory",o.categories||[],tr("si.category")+": "+tr("si.all"),f.category);
+    const per=(o.periods||[]).slice().reverse();
+    $("fPeriod").innerHTML=per.length?per.map(p=>`<option value="${esc(p)}" ${f.period===p?"selected":""}>${esc(p)}</option>`).join(""):`<option value="">${t("period")}</option>`;
+    $("fGrain").innerHTML=GR.map(g=>`<option value="${g}" ${f.grain===g?"selected":""}>${t(g)}</option>`).join("");
+    const bl=o.branch_list||[];BR={};bl.forEach(b=>{BR[b.name]=b.id;});
+    opts("fBranch",bl,t("branch"),f.branch_id,b=>b.id,b=>b.name);$("fBranch").style.display=bl.length?"":"none";
+    opts("fChannel",o.channels||[],t("channel"),f.channel);
+    opts("fCategory",o.categories||[],t("category"),f.category);
+    opts("fProduct",o.products||[],t("product"),f.product);
+    crumbs(d);
   }
-  function tiles(o,cmp){
-    const t=(l,v,x="")=>`<div class="tile"><div class="l">${l}</div><div class="v">${v}</div>${x?`<div class="muted">${x}</div>`:""}</div>`;
-    return `<div class="tiles">
-      ${t(tr("si.net"),mv(o.net_sales),o.net_sales.currency||"")}
-      ${t(tr("si.growth"),cmp.previous&&cmp.previous.growth_pct!=null?pct(cmp.previous.growth_pct):tr("si.unavailable"))}
-      ${t(tr("si.tx"),n(o.transactions.value))}
-      ${t(tr("si.aov"),mv(o.aov))}
-      ${t(tr("si.returns"),mv(o.returns),tr("si.rate")+" "+(o.return_rate.value==null?"—":n(o.return_rate.value)+"%"))}
-      ${t(tr("si.discounts"),mv(o.discounts),tr("si.rate")+" "+(o.discount_rate.value==null?"—":n(o.discount_rate.value)+"%"))}
-    </div>`;
+  function crumbs(d){
+    const f=d.filters||{},c=[];
+    if(f.branch_id){const b=((d.options||{}).branch_list||[]).find(x=>String(x.id)===String(f.branch_id));c.push(["fBranch",t("branch")+": "+(b?b.name:f.branch_id)]);}
+    if(f.channel)c.push(["fChannel",t("channel")+": "+f.channel]);
+    if(f.category)c.push(["fCategory",t("category")+": "+f.category]);
+    if(f.product)c.push(["fProduct",t("product")+": "+f.product]);
+    $("crumbs").innerHTML=c.map(([id,l])=>`<span class="chip" data-clear="${id}">${esc(l)} ✕</span>`).join("");
+    $("crumbs").querySelectorAll("[data-clear]").forEach(x=>x.onclick=()=>{$(x.dataset.clear).value="";if(x.dataset.clear==="fCategory")$("fProduct").value="";load();});
   }
-  function trend(t){
-    if(!t.available)return "";
-    const s=t.series,max=Math.max(...s.map(x=>x.net_sales.value||0))||1,W=600,Hh=140;
-    const pts=s.map((x,i)=>`${(i/(Math.max(s.length-1,1)))*W},${Hh-((x.net_sales.value||0)/max)*(Hh-20)}`).join(" ");
-    return `<div class="panel"><h2>${tr("si.trend")}</h2>
-      <svg viewBox="0 0 ${W} ${Hh}" preserveAspectRatio="none"><polyline points="${pts}" fill="none" stroke="var(--mint,#10b981)" stroke-width="2"/></svg>
-      <div class="muted">${esc(s[0].period)} → ${esc(s[s.length-1].period)}${t.undated_records?` · ${t.undated_records} ${L()==="ar"?"سجل بلا تاريخ":"records without date"}`:""}</div></div>`;
+  function drill(sel,val){const s=$(sel);if(!s)return;
+    if(![...s.options].some(o=>o.value===String(val))){const o=document.createElement("option");o.value=val;o.textContent=val;s.appendChild(o);}
+    s.value=String(val);if(sel==="fCategory")$("fProduct").value="";window.scrollTo({top:0,behavior:"smooth"});load();}
+
+  const panel=(num,title,body)=>`<div class="panel"><h2><span class="num">${num}</span>${title}</h2>${body}</div>`;
+  const na=msg=>`<div class="na">${esc(msg)}</div>`;
+
+  // 1 — المؤشرات: الحالي ← المقارنة ← التغيّر
+  function kpis(k){
+    const one=(code,label)=>{const x=k[code];if(!x)return"";
+      const isPct=x.unit==="percent",cur=x.current==null?"—":(isPct?n(x.current)+"%":n(x.current));
+      const lowerIsBetter=["discount_rate","return_rate","discounts","returns"].includes(code);
+      let ch;
+      if(!x.comparison_available)ch=`<span class="muted">${t("noPrev")}</span>`;
+      else if(isPct)ch=`<span class="${(lowerIsBetter?x.change<=0:x.change>=0)?"pos":"neg"}">${x.change>0?"+":""}${n(x.change)} ${t("pts")}</span> <span class="muted">${t("prev")}: ${n(x.previous)}%</span>`;
+      else ch=`${pct(x.change_pct,lowerIsBetter)} <span class="muted">${t("prev")}: ${n(x.previous)}</span>`;
+      return `<div class="tile"><div class="l">${label}</div><div class="v">${cur}</div><div class="c">${ch}</div></div>`;};
+    return `<div class="tiles">${one("net_sales",t("net"))}${one("gross_sales",t("gross"))}${one("transactions",t("tx"))}${one("aov",t("aov"))}${one("discounts",t("discounts"))}${one("discount_rate",t("discount_rate"))}${one("returns",t("returns"))}${one("return_rate",t("return_rate"))}</div>`;
   }
-  function bars(title,g){
-    if(!g.available)return `<div class="panel"><h2>${title}</h2><div class="muted">${esc(g.unavailable_reason_ar&&L()==="ar"?g.unavailable_reason_ar:tr("si.noDimension"))}</div></div>`;
+  // رسم خطي SVG بمحور مشترك — القيم الناقصة تقطع الخط (لا تُرسم صفراً)
+  function chart(labels,series){
+    if(!labels.length)return na(t("noDim"));
+    const W=640,Hh=160,all=series.flatMap(s=>s.values.filter(v=>v!=null));
+    if(!all.length)return na(t("noDim"));
+    const max=Math.max(...all),min=Math.min(...all,0),rng=(max-min)||1;
+    const x=i=>labels.length<2?W/2:(i/(labels.length-1))*(W-20)+10,y=v=>Hh-12-((v-min)/rng)*(Hh-30);
+    const lines=series.map(s=>{let seg=[],out="";const flush=()=>{if(seg.length)out+=`<polyline points="${seg.join(" ")}" fill="none" stroke="${s.color}" stroke-width="2" ${s.dash?'stroke-dasharray="5 4"':""}/>`;seg=[];};
+      s.values.forEach((v,i)=>{if(v==null)flush();else seg.push(`${x(i).toFixed(1)},${y(v).toFixed(1)}`);});flush();
+      out+=s.values.map((v,i)=>v==null?"":`<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="2.6" fill="${s.color}"><title>${esc(labels[i])}: ${n(v)}</title></circle>`).join("");return out;}).join("");
+    return `<svg class="ch" viewBox="0 0 ${W} ${Hh}" preserveAspectRatio="none">${lines}</svg>
+      <div class="legend"><span>${esc(labels[0])} → ${esc(labels[labels.length-1])}</span>${series.map(s=>`<span><i style="background:${s.color}"></i>${esc(s.label)}</span>`).join("")}</div>`;
+  }
+  // 2 — الاتجاه + المقارنة
+  function trend(d){
+    const tr_=d.trend||{},c=d.comparison||{};
+    const cmp=(l,x)=>!x?"":(x.available===false?`<div class="barrow"><span class="t">${l}</span><span class="muted">${t("noPrev")} — ${esc(x.period)}</span></div>`
+      :`<div class="barrow"><span class="t">${l}</span><span>${n(x.value)} ${pct(x.growth_pct)}</span></div>`);
+    const body=(tr_.available?chart(tr_.series.map(s=>s.period),[{label:t("net"),values:tr_.series.map(s=>s.net_sales.value),color:"#10b981"}]):na(t("noDim")))+
+      (tr_.undated_records?`<div class="muted">${tr_.undated_records} ${t("undated")}</div>`:"")+
+      `<h3>${esc(c.current_period)}: <b>${mv(c.current)}</b></h3>${cmp(t("prev"),c.previous)}${cmp(t("yoy"),c.same_period_last_year)}`;
+    return panel("2",t("s2"),body);
+  }
+  function dimTable(g,sel,cols){
+    if(!g||!g.available)return na(g&&g.unavailable_reason_ar&&L()==="ar"?g.unavailable_reason_ar:t("noDim"));
+    return `<div class="tbl"><table><thead><tr>${cols.map(c=>`<th>${c[0]}</th>`).join("")}</tr></thead><tbody>`+
+      g.items.map(i=>{const v=sel==="fBranch"?(BR[i.key]??""):i.key;return `<tr class="drill" data-sel="${sel}" data-val="${esc(v)}">${cols.map(c=>`<td>${c[1](i)}</td>`).join("")}</tr>`;}).join("")+
+      `</tbody></table></div>${g.note_ar?`<div class="muted">${esc(L()==="ar"?g.note_ar:g.note_en)}</div>`:""}<div class="muted">${t("drillHint")}</div>`;
+  }
+  const C={name:[t("branch"),i=>`<b>${esc(i.key)}</b>`],net:[t("net"),i=>mv(i.net_sales)],gr:[t("growth"),i=>pct(i.growth_pct)],tx:[t("tx"),i=>n(i.transactions)],
+    aov:[t("aov"),i=>mv(i.aov)],sh:[t("share"),i=>i.contribution_pct==null?"—":n(i.contribution_pct)+"%"],ret:[t("returns"),i=>mv(i.returns)],disc:[t("discounts"),i=>mv(i.discounts)],qty:[t("qty"),i=>n(i.quantity)]};
+  function bars(g,sel){
+    if(!g||!g.available)return na(t("noDim"));
     const max=Math.max(...g.items.map(i=>i.net_sales.value||0))||1;
-    return `<div class="panel"><h2>${title}</h2>${g.items.slice(0,8).map(i=>`
-      <div class="barrow"><span class="t">${esc(i.key)}</span><span class="g"><i style="width:${((i.net_sales.value||0)/max*100).toFixed(1)}%"></i></span>
-      <span>${mv(i.net_sales)}</span><span>${i.growth_pct==null?"":pct(i.growth_pct)}</span></div>`).join("")}
-      ${g.note_ar?`<div class="muted">${esc(L()==="ar"?g.note_ar:g.note_en)}</div>`:""}</div>`;
+    return g.items.slice(0,12).map(i=>`<div class="barrow drill" data-sel="${sel}" data-val="${esc(i.key)}"><span class="t">${esc(i.key)}</span><span class="g"><i style="width:${((i.net_sales.value||0)/max*100).toFixed(1)}%"></i></span><span>${mv(i.net_sales)}</span><span class="muted">${i.contribution_pct==null?"":n(i.contribution_pct)+"%"}</span><span>${pct(i.growth_pct)}</span></div>`).join("")+
+      (g.note_ar?`<div class="muted">${esc(L()==="ar"?g.note_ar:g.note_en)}</div>`:"")+`<div class="muted">${t("drillHint")}</div>`;
   }
-  function ptable(title,g){
-    if(!g.available)return `<div class="panel"><h2>${title}</h2><div class="muted">${tr("si.noDimension")}</div></div>`;
-    return `<div class="panel"><h2>${title}</h2><div class="tbl"><table><thead><tr><th>${tr("si.product")}</th><th>${tr("si.net")}</th><th>${tr("si.qty")}</th><th>${tr("si.growth")}</th><th>${tr("si.share")}</th></tr></thead><tbody>`+
-      g.items.slice(0,12).map(i=>`<tr><td>${esc(i.key)}</td><td>${mv(i.net_sales)}</td><td>${n(i.quantity)}</td><td>${i.growth_pct==null?"—":pct(i.growth_pct)}</td><td>${i.contribution_pct==null?"—":n(i.contribution_pct)+"%"}</td></tr>`).join("")+
-      `</tbody></table></div>${g.note_ar?`<div class="muted">${esc(L()==="ar"?g.note_ar:g.note_en)}</div>`:""}</div>`;
+  // 6 — المنتجات
+  function products(d){
+    const pi=d.product_insights||{};
+    if(!pi.available)return panel("6",t("s6"),na(t("noDim")));
+    const none=L()==="ar"?"لا توجد منتجات في هذه القائمة لهذه الفترة":"No products in this list for this period";
+    const list=arr=>arr&&arr.length?arr.map((p,i)=>`<div class="barrow drill" data-sel="fProduct" data-val="${esc(p.key)}"><span class="t">#${i+1} ${esc(p.key)}</span><span>${mv(p.net_sales)}</span><span>${pct(p.growth_pct)}</span></div>`).join(""):`<div class="muted">${esc(pi.comparison_available?none:(L()==="ar"?(pi.note_ar||none):(pi.note_en||none)))}</div>`;
+    return panel("6",t("s6"),`<div class="grid3"><div><h3>${t("top5")}</h3>${list(pi.top5)}</div><div><h3>${t("growing")}</h3>${list(pi.growing)}</div><div><h3>${t("declining")}</h3>${list(pi.declining)}</div></div>
+      <h3>${t("allProducts")}</h3>${dimTable(d.products,"fProduct",[[t("product"),i=>`<b>${esc(i.key)}</b>`],C.net,C.qty,C.gr,C.sh,C.ret])}`);
   }
-  function cmpPanel(c){
-    const row=(l,x)=>`<div class="barrow"><span class="t">${l}</span><span>${x&&x.available===false?`<span class="muted">${tr("si.unavailable")} — ${esc(L()==="ar"?x.reason_ar:x.reason_en)}</span>`:`${n(x.value)} ${x.growth_pct!=null?pct(x.growth_pct):""}`}</span></div>`;
-    return `<div class="panel"><h2>${tr("si.compare")}</h2>
-      <div class="barrow"><span class="t">${esc(c.current_period)}</span><span><b>${n(c.current.value)}</b></span></div>
-      ${row(tr("si.prev"),c.previous)}${row(tr("si.yoy"),c.same_period_last_year)}</div>`;
+  const rank=(arr,valFn,rateFn)=>arr&&arr.length?arr.map(x=>`<div class="barrow"><span class="t">${esc(x.key)}</span><span>${valFn(x)}</span><span class="muted">${rateFn(x)}</span></div>`).join(""):`<div class="muted">—</div>`;
+  const rt=v=>v==null?"":n(v)+"%";
+  // 7 — الخصومات
+  function discounts(d){
+    const x=d.discounts||{};
+    return panel("7",t("s7"),`<div class="grid2"><div>
+      <div class="barrow"><span class="t">${t("gross")}</span><span>${mv(x.gross_sales)}</span></div>
+      <div class="barrow"><span class="t">${t("discounts")}</span><span>${mv(x.discounts)}</span></div>
+      <div class="barrow"><span class="t">${t("discount_rate")}</span><span>${x.discount_rate_pct==null?"—":n(x.discount_rate_pct)+"%"}</span></div>
+      <div class="barrow"><span class="t">${t("net")}</span><span>${mv((d.overview||{}).net_sales)}</span></div>
+      <div class="barrow"><span class="t">${t("withDisc")}</span><span>${mv(x.sales_with_discount)}</span></div>
+      <div class="barrow"><span class="t">${t("withoutDisc")}</span><span>${mv(x.sales_without_discount)}</span></div></div>
+      <div><h3>${t("trendOf")}</h3>${chart((x.trend||[]).map(p=>p.period),[{label:t("discount_rate")+" %",values:(x.trend||[]).map(p=>p.rate_pct),color:"#f5b301"}])}</div></div>
+      <div class="grid2"><div><h3>${t("byBranch")}</h3>${rank(x.by_branch,y=>mv(y.discounts),y=>rt(y.discount_rate_pct))}</div>
+      <div><h3>${t("byProduct")}</h3>${rank(x.by_product,y=>mv(y.discounts),y=>rt(y.discount_rate_pct))}</div></div>
+      <div class="muted">${esc(L()==="ar"?x.note_ar:x.note_en)}</div>`);
   }
-  function signals(list,canEdit){
+  // 8 — الحملات
+  function promotions(d){
+    const p=d.promotions||{};
+    if(!p.available)return panel("8",t("s8"),na(L()==="ar"?(p.reason_ar||t("noDim")):(p.reason_en||t("noDim"))));
+    return panel("8",t("s8"),`<div class="tbl"><table><thead><tr><th>${t("promo")}</th><th>${t("days")}</th><th>${t("before")}</th><th>${t("during")}</th><th>${t("after")}</th><th>${t("cost")}</th></tr></thead><tbody>`+
+      p.items.map(i=>`<tr><td><b>${esc(i.promotion)}</b><div class="muted">${esc(i.start||"")} → ${esc(i.end||"")}</div></td><td>${n(i.days)}</td><td>${i.before?mv(i.before):"—"}</td><td>${mv(i.during)}</td><td>${i.after?mv(i.after):"—"}</td><td>${mv(i.discount_cost)}</td></tr>`).join("")+
+      `</tbody></table></div><div class="muted">${esc(L()==="ar"?p.note_ar:p.note_en)}</div>`);
+  }
+  // 9 — المرتجعات
+  function returns(d){
+    const x=d.returns||{};
+    return panel("9",t("s9"),`<div class="grid2"><div>
+      <div class="barrow"><span class="t">${t("returns")}</span><span>${mv(x.return_value)}</span></div>
+      <div class="barrow"><span class="t">${t("return_rate")}</span><span>${x.return_rate_pct==null?"—":n(x.return_rate_pct)+"%"}</span></div></div>
+      <div><h3>${t("trendOf")}</h3>${chart((x.trend||[]).map(p=>p.period),[{label:t("return_rate")+" %",values:(x.trend||[]).map(p=>p.rate_pct),color:"#ef4444"}])}</div></div>
+      <div class="grid2"><div><h3>${t("byBranch")}</h3>${rank(x.by_branch,y=>mv(y.returns),y=>rt(y.return_rate_pct))}</div>
+      <div><h3>${t("byProduct")}</h3>${rank(x.by_product,y=>mv(y.returns),y=>rt(y.return_rate_pct))}</div></div>`);
+  }
+  // 10 — التوقع (نفس محرك 2.3)
+  function txtOf(x){if(!x)return"";if(typeof x==="string")return x;const o=x[L()]||x.ar||x.en;if(!o)return"";if(typeof o==="string")return o;
+    return [o.title,o.description,o.action].filter(Boolean).join(" — ");}
+  function forecast(d){
+    const f=d.forecast||{},act=f.actual_series||[];
+    if(f.status!=="ok"){
+      return panel("10",t("s10"),na(txtOf(f.texts)||f.reason||t("noDim"))+
+        (f.missing_months&&f.missing_months.length?`<div class="muted" style="margin-top:6px">${t("missingMonths")}: ${f.missing_months.map(esc).join("، ")}</div>`:""));
+    }
+    const labels=act.map(a=>a.period).concat([f.forecast_period]);
+    const actual=act.map(a=>a.net_sales.value).concat([null]);
+    const fc=act.map((a,i)=>i===act.length-1?a.net_sales.value:null).concat([f.base.value]);
+    const warn=(f.warnings||[]).map(w=>`<div class="muted">⚠ ${esc(txtOf(w.texts)||w.note||"")}</div>`).join("");
+    const as=(f.assumptions_texts&&f.assumptions_texts[L()])||f.assumptions||[];
+    const cl=t("confL")||{};
+    return panel("10",t("s10"),chart(labels,[{label:t("actual"),values:actual,color:"#10b981"},{label:t("forecast"),values:fc,color:"#a855f7",dash:1}])+
+      `<div class="grid3" style="margin-top:10px"><div class="tile"><div class="l">${t("worst")}</div><div class="v">${mv(f.worst)}</div></div>
+      <div class="tile"><div class="l">${t("forecast")} · ${esc(f.forecast_period)}</div><div class="v">${mv(f.base)}</div><div class="c"><span class="b est">${t("estimate")}</span> ${t("conf")}: ${esc(cl[f.confidence]||f.confidence)}</div></div>
+      <div class="tile"><div class="l">${t("best")}</div><div class="v">${mv(f.best)}</div></div></div>
+      ${warn}<h3>${t("assump")}</h3><ul class="muted" style="margin:0;padding-inline-start:18px">${as.map(a=>`<li>${esc(a)}</li>`).join("")}</ul>`);
+  }
+  // 11 — الإشارات: مخاطر / فرص / جودة بيانات
+  function signals(list){
     if(!list.length)return "";
-    return `<div class="panel"><h2>${tr("si.signals")}</h2>`+list.map(s=>`
-      <div class="sig" style="border-color:${s.severity==="critical"?"#ef4444":s.severity==="high"?"#ea580c":s.severity==="medium"?"#f5b301":"#10b981"}">
-        <b>${esc(L()==="ar"?s.name_ar:s.name_en)}</b> ${s.dimension?`— ${esc(s.dimension)}`:""} <span class="b ${s.severity}">${esc(s.severity)}</span>
-        <div class="muted">${tr("si.evidence")}: ${(s.evidence||[]).map(esc).join(" · ")}</div>
-        <div class="muted">${tr("si.rule")}: ${esc(s.method)}</div>
-        ${s.estimated_impact?`<div>${tr("si.impact")}: ${n(s.estimated_impact.value)} <span class="b est">${tr("si.estimate")}</span></div>`:""}
-        <div>${esc(L()==="ar"?s.suggested_action_ar:s.suggested_action_en)}</div>
-        <button class="btn" data-sig="${esc(s.id)}" style="margin-top:6px">${tr("si.toDecision")}</button><div class="frm"></div>
-      </div>`).join("")+`</div>`;
+    const grp=["risk","opportunity","data_quality"].map(type=>{const items=list.filter(s=>s.type===type);if(!items.length)return"";
+      return `<h3>${type==="risk"?"🔴":type==="opportunity"?"🟢":"🟡"} ${t(type)}</h3>`+items.map(s=>`
+      <div class="sig ${type}"><b>${esc(L()==="ar"?s.name_ar:s.name_en)}</b> ${s.dimension?`— ${esc(s.dimension)}`:""} <span class="b ${esc(s.severity)}">${esc(s.severity)}</span>
+        <div class="muted">${t("evidence")}: ${(s.evidence||[]).map(esc).join(" · ")}</div>
+        <div class="muted">${t("rule")}: ${esc(s.method)}</div>
+        ${s.estimated_impact?`<div>${t("impact")}: ${n(s.estimated_impact.value)} <span class="b est">${t("estimate")}</span></div>`:""}
+        <div>${t("rec")}: ${esc(L()==="ar"?s.suggested_action_ar:s.suggested_action_en)}</div>
+        <button class="btn" data-sig="${esc(s.id)}" style="margin-top:6px">${t("toDecision")}</button><div class="frm"></div></div>`).join("");}).join("");
+    return panel("11",t("s11"),grp);
   }
+  // 12 — الذكاء الاصطناعي (يشرح ولا يحسب)
+  function ai(){return panel("12",t("s12"),`<div class="muted" style="margin-bottom:8px">${t("aiNote")}</div><button class="btn" id="aiBtn">${t("aiBtn")}</button><div id="aiOut" style="margin-top:10px"></div>`);}
+  function runAI(){
+    const b=$("aiBtn"),out=$("aiOut");b.disabled=true;out.innerHTML=`<div class="muted">${t("aiWait")}</div>`;
+    fetch("/company/sales/ai-insights",{method:"POST",headers:H,body:JSON.stringify(F())}).then(async r=>{
+      const j=await r.json().catch(()=>({}));b.disabled=false;
+      if(!r.ok){out.innerHTML=`<div class="neg">${esc(typeof j.detail==="string"?j.detail:"HTTP "+r.status)}</div>`;return;}
+      const a=j.ai||{},resp=a.response||{};
+      const secs=["FACTS","INTERPRETATION","HYPOTHESES","RECOMMENDATIONS","DATA_GAPS"].map(k=>(resp[k]&&resp[k].length)?`<div class="ai-sec"><b>${t(k)}</b><ul style="margin:0;padding-inline-start:18px">${resp[k].map(x=>`<li>${esc(typeof x==="string"?x:JSON.stringify(x))}</li>`).join("")}</ul></div>`:"").join("");
+      out.innerHTML=(a.message?`<div class="na">${esc(a.message)}</div>`:"")+(a.gate&&a.gate.status&&a.gate.status!=="ALLOW"?`<div class="muted">${t("gate")}: ${esc(a.gate.status)} — ${esc(a.gate.qualification||a.gate.reason||"")}</div>`:"")+(secs||`<div class="muted">—</div>`);
+    }).catch(e=>{b.disabled=false;out.innerHTML=`<div class="neg">${esc(e.message||e)}</div>`;});
+  }
+  // 16 — جودة البيانات
+  function quality(d){
+    const q=d.data_quality||{},cm=(d.completeness||{}).fields||{},fl=t("field");
+    return panel("16",t("s16"),`<div class="barrow"><span class="t">${t("gate")}</span><span><b>${esc(q.gate||"—")}</b>${q.score!=null?` · ${n(q.score)}%`:""}${q.source_file?` · <span class="muted">${esc(q.source_file)}</span>`:""}</span></div>
+      ${q.reason_ar&&L()==="ar"?`<div class="muted">${esc(q.reason_ar)}</div>`:""}
+      <div class="tbl"><table><thead><tr><th></th><th>${t("missing")}</th><th>%</th></tr></thead><tbody>${Object.keys(cm).map(k=>`<tr><td>${esc(fl[k]||k)}</td><td>${n(cm[k].missing)}</td><td class="${cm[k].missing?"neg":"pos"}">${cm[k].missing_pct==null?"—":n(cm[k].missing_pct)+"%"}</td></tr>`).join("")}</tbody></table></div>
+      <div class="muted">${n((d.completeness||{}).records)} ${t("records")}</div>`);
+  }
+
   function render(d){
-    if(!d.has_data){$("content").innerHTML=`<div class="state">${esc(L()==="ar"?d.message_ar:d.message_en)||tr("si.empty")}</div>`;return;}
-    const o=d.overview,q=d.data_quality||{};
-    $("content").innerHTML=tiles(o,d.comparison)+
-      `<div class="muted" style="margin-bottom:10px">${tr("si.quality")}: ${esc(q.gate||"—")}${q.score!=null?` (${q.score}%)`:""}${q.source_file?` · ${esc(q.source_file)}`:""}</div>`+
-      trend(d.trend)+cmpPanel(d.comparison)+
-      `<div class="grid2">${bars(tr("si.byBranch"),d.branches)}${bars(tr("si.byChannel"),d.channels)}</div>`+
-      ptable(tr("si.products"),d.products)+bars(tr("si.categories"),d.categories)+
-      `<div class="grid2">
-        <div class="panel"><h2>${tr("si.discountAnalysis")}</h2>
-          <div class="barrow"><span class="t">${tr("si.gross")}</span><span>${mv(d.discounts.gross_sales)}</span></div>
-          <div class="barrow"><span class="t">${tr("si.discounts")}</span><span>${mv(d.discounts.discounts)} (${d.discounts.discount_rate_pct==null?"—":n(d.discounts.discount_rate_pct)+"%"})</span></div>
-          <div class="barrow"><span class="t">${tr("si.withDiscount")}</span><span>${mv(d.discounts.sales_with_discount)}</span></div>
-          <div class="barrow"><span class="t">${tr("si.withoutDiscount")}</span><span>${mv(d.discounts.sales_without_discount)}</span></div>
-          <div class="muted">${esc(L()==="ar"?d.discounts.note_ar:d.discounts.note_en)}</div></div>
-        <div class="panel"><h2>${tr("si.returnsAnalysis")}</h2>
-          <div class="barrow"><span class="t">${tr("si.returns")}</span><span>${mv(d.returns.return_value)} (${d.returns.return_rate_pct==null?"—":n(d.returns.return_rate_pct)+"%"})</span></div>
-          <div class="muted">${tr("si.topBranches")}: ${(d.returns.by_branch||[]).map(b=>esc(b.key)+" "+mv(b.net_sales)).join(" · ")||"—"}</div>
-          <div class="muted">${tr("si.topProducts")}: ${(d.returns.by_product||[]).map(b=>esc(b.key)).join(" · ")||"—"}</div></div>
-      </div>`+
-      signals(d.signals||[]);
-    document.querySelectorAll("[data-sig]").forEach(b=>b.onclick=()=>form(b));
+    if(!d.has_data){$("content").innerHTML=`<div class="state">${esc(L()==="ar"?(d.message_ar||t("empty")):(d.message_en||t("empty")))}<div style="margin-top:12px"><a class="btn" href="company-data-center.html">${t("toData")}</a></div></div>`;return;}
+    $("content").innerHTML=
+      panel("1",t("s1"),kpis(d.kpis||{}))+trend(d)+
+      `<div class="grid2">${panel("3",t("s3"),dimTable(d.branches,"fBranch",[C.name,C.net,C.gr,C.tx,C.aov,C.sh,C.disc,C.ret]))}${panel("4",t("s4"),dimTable(d.channels,"fChannel",[[t("channel"),i=>`<b>${esc(i.key)}</b>`],C.net,C.tx,C.aov,C.gr,C.sh]))}</div>`+
+      panel("5",t("s5"),bars(d.categories,"fCategory"))+products(d)+discounts(d)+promotions(d)+returns(d)+forecast(d)+
+      signals(d.signals||[])+ai()+quality(d);
+    document.querySelectorAll("#content [data-sel]").forEach(el=>el.onclick=()=>{if(el.dataset.val!=="")drill(el.dataset.sel,el.dataset.val);});
+    document.querySelectorAll("#content [data-sig]").forEach(b=>b.onclick=()=>form(b));
+    const ab=$("aiBtn");if(ab)ab.onclick=runAI;
   }
   function form(btn){
     const box=btn.nextElementSibling;
-    box.innerHTML=`<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap"><input class="o" placeholder="${tr("si.owner")}" style="flex:1;background:var(--panel,#101a15);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:8px;padding:6px"><input class="d" type="date" style="background:var(--panel,#101a15);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:8px;padding:6px"><button class="btn c">${tr("si.create")}</button></div><div class="m muted"></div>`;
+    box.innerHTML=`<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap"><input class="f o" placeholder="${t("owner")}"><input class="f d" type="date"><button class="btn c">${t("create")}</button></div><div class="m muted"></div>`;
     box.querySelector(".c").onclick=()=>{
-      fetch("/company/sales/to-decision",{method:"POST",headers:H,body:JSON.stringify({signal_id:btn.dataset.sig,owner:box.querySelector(".o").value,due_date:box.querySelector(".d").value,period:(D.filters||{}).period,grain:(D.filters||{}).grain})})
-        .then(r=>{box.querySelector(".m").textContent=r.ok?tr("si.created"):(r.status===403?tr("si.onlyOwner"):tr("si.error"));});
+      const body=Object.assign({},F(),{signal_id:btn.dataset.sig,owner:box.querySelector(".o").value,due_date:box.querySelector(".d").value,period:(D&&D.filters||{}).period});
+      fetch("/company/sales/to-decision",{method:"POST",headers:H,body:JSON.stringify(body)}).then(async r=>{
+        const j=await r.json().catch(()=>({}));
+        box.querySelector(".m").textContent=r.ok?t("created"):(r.status===403?t("onlyOwner"):(typeof j.detail==="string"?j.detail:"HTTP "+r.status));
+        if(r.ok)btn.disabled=true;});
     };
   }
-  ["fPeriod","fGrain","fBranch","fChannel","fCategory"].forEach(id=>$(id).addEventListener("change",load));
+  ["fPeriod","fBranch","fChannel","fProduct"].forEach(id=>$(id).addEventListener("change",load));
+  $("fCategory").addEventListener("change",()=>{$("fProduct").value="";load();});
+  $("fGrain").addEventListener("change",()=>{$("fPeriod").value="";load();});
+  $("reset").onclick=()=>{["fPeriod","fBranch","fChannel","fCategory","fProduct"].forEach(id=>{$(id).value="";});$("fGrain").value="month";load();};
   load();
 })();
 </script>
