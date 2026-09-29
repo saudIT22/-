@@ -10,17 +10,23 @@ ENTITIES = {
  "employee": {"ar": "الموظفون", "en": "Employees", "table": "companyemployee",
    "fields": {"employee_code": REQUIRED, "name": REQUIRED, "branch_id": OPTIONAL, "department_id": OPTIONAL,
               "role": OPTIONAL, "employment_status": OPTIONAL, "hire_date": OPTIONAL,
-              "termination_date": OPTIONAL, "monthly_cost": SENSITIVE}},
+              "termination_date": OPTIONAL, "monthly_cost": SENSITIVE, "email": OPTIONAL, "phone": OPTIONAL}},
  "product": {"ar": "المنتجات", "en": "Products", "table": "companyproduct",
    "fields": {"sku": REQUIRED, "name": REQUIRED, "category": OPTIONAL, "unit": OPTIONAL,
               "cost": OPTIONAL, "selling_price": OPTIONAL, "active": OPTIONAL}},
  "supplier": {"ar": "الموردون", "en": "Suppliers", "table": "companysupplier",
-   "fields": {"name": REQUIRED, "category": OPTIONAL, "payment_terms": OPTIONAL, "active": OPTIONAL}},
+   "fields": {"name": REQUIRED, "supplier_code": OPTIONAL, "category": OPTIONAL, "payment_terms": OPTIONAL,
+              "contact_person": OPTIONAL, "email": OPTIONAL, "phone": OPTIONAL, "city": OPTIONAL,
+              "tax_number": OPTIONAL, "active": OPTIONAL}},
+ "customer": {"ar": "العملاء", "en": "Customers", "table": "companycustomer",
+   "fields": {"name": REQUIRED, "customer_code": OPTIONAL, "email": OPTIONAL, "phone": OPTIONAL, "city": OPTIONAL,
+              "segment": OPTIONAL, "customer_type": OPTIONAL, "tax_number": OPTIONAL, "credit_limit": OPTIONAL,
+              "branch_id": OPTIONAL, "active": OPTIONAL, "notes": OPTIONAL}},
  "sale": {"ar": "المبيعات التفصيلية", "en": "Sales", "table": "companysale",
    "fields": {"date": REQUIRED, "branch_id": REQUIRED, "reference": OPTIONAL, "channel": OPTIONAL,
               "product_sku": OPTIONAL, "category": OPTIONAL, "quantity": OPTIONAL, "gross_sales": REQUIRED,
               "discounts": OPTIONAL, "returns": OPTIONAL, "net_sales": OPTIONAL, "vat": OPTIONAL,
-              "payment_method": OPTIONAL, "promotion": OPTIONAL}},
+              "payment_method": OPTIONAL, "promotion": OPTIONAL, "customer_name": OPTIONAL}},
  "purchase": {"ar": "المشتريات", "en": "Purchases", "table": "companypurchase",
    "fields": {"date": REQUIRED, "branch_id": REQUIRED, "supplier_name": OPTIONAL, "reference": OPTIONAL,
               "product_sku": OPTIONAL, "category": OPTIONAL, "quantity": OPTIONAL, "unit_cost": OPTIONAL,
@@ -31,12 +37,14 @@ ENTITIES = {
               "adjustments_qty": OPTIONAL, "closing_qty": REQUIRED, "closing_value": OPTIONAL}},
  "cash_movement": {"ar": "الحركات النقدية", "en": "Cash movements", "table": "companycashmovement",
    "fields": {"date": REQUIRED, "branch_id": OPTIONAL, "movement_type": OPTIONAL, "category": OPTIONAL,
-              "amount": REQUIRED, "direction": REQUIRED, "reference": OPTIONAL, "source": OPTIONAL}},
+              "amount": REQUIRED, "direction": REQUIRED, "reference": OPTIONAL, "source": OPTIONAL,
+              # ملخصات شهرية (كشف بنك): الشهر + الإيداعات + السحوبات تتحوّل تلقائياً إلى حركتين
+              "period": OPTIONAL, "inflow": OPTIONAL, "outflow": OPTIONAL}},
 }
 DATASET_TYPES = tuple(ENTITIES)
 NUMERIC = {"quantity", "gross_sales", "discounts", "returns", "net_sales", "vat", "unit_cost", "total_cost",
            "opening_qty", "opening_value", "purchases_qty", "sold_qty", "adjustments_qty", "closing_qty",
-           "closing_value", "amount", "cost", "selling_price", "monthly_cost"}
+           "closing_value", "amount", "cost", "selling_price", "monthly_cost", "credit_limit", "inflow", "outflow"}
 DATE_FIELDS = {"date", "hire_date", "termination_date"}
 PERIOD_FIELDS = {"period"}
 # مفاتيح كشف التكرار لكل نوع
@@ -45,6 +53,7 @@ DUP_KEYS = {"sale": ("date", "branch_id", "reference", "product_sku"),
             "inventory": ("period", "branch_id", "product_sku"),
             "cash_movement": ("date", "branch_id", "reference", "amount"),
             "employee": ("employee_code",), "product": ("sku",), "supplier": ("name",),
+            "customer": ("name", "phone", "email"),
             "department": ("name", "branch_id")}
 DIRECTIONS = {"in", "out"}
 
