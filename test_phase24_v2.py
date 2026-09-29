@@ -85,5 +85,38 @@ ct("employees file", detect_type(["رقم الموظف", "اسم الموظف", 
 ct("products file", detect_type(["رمز المنتج", "اسم المنتج", "سعر البيع", "الفئة"])[0]["type"] == "product")
 ct("bank summary still cash", detect_type(H)[0]["type"] == "cash_movement")
 
+print("[GROUP] real-world month/date formats (bank statement regression)")
+from datetime import date as _d
+from ingestion import parse_any_date, year_hint_from
+M = {"يناير": ("2024-01", 2024), "Jan-24": ("2024-01", None), "يناير-24": ("2024-01", None), "2024M03": ("2024-03", None),
+     "January, 2024": ("2024-01", None), "2024 فبراير": ("2024-02", None), "مارس ٢٠٢٤م": ("2024-03", None),
+     "2024-01-01 00:00:00": ("2024-01", None), "45306": ("2024-01", None), "3": ("2024-03", 2024),
+     "كانون الثاني 2024": ("2024-01", None), "رمضان 1445": ("2024-03", None), "1445-09": ("2024-03", None)}
+for raw, (exp, yh) in M.items():
+    ct(f"parse_month({raw!r}, year_hint={yh})", parse_month(raw, yh) == exp)
+ct("Excel datetime cell", parse_month(datetime(2024, 5, 1)) == "2024-05")
+ct("Excel serial number cell", parse_month(45292) == "2024-01")
+ct("month name without any year -> None (no silent guess)", parse_month("يناير") is None)
+ct("year from file name", year_hint_from("كشف_بنكي_2024.xlsx") == 2024 and year_hint_from("sales.xlsx") is None)
+ct("date: datetime cell → date", parse_any_date(datetime(2024, 1, 15, 9, 30)) == _d(2024, 1, 15))
+ct("date: Excel serial", parse_any_date(45306) == _d(2024, 1, 15))
+ct("date: US MM/DD when day > 12", parse_any_date("01/15/2024") == _d(2024, 1, 15))
+ct("date: Saudi DD/MM", parse_any_date("15/01/2024") == _d(2024, 1, 15))
+ct("date: 'Jan 15, 2024'", parse_any_date("Jan 15, 2024") == _d(2024, 1, 15))
+ct("date: '15 يناير 2024'", parse_any_date("15 يناير 2024") == _d(2024, 1, 15))
+ct("numbers: '1,250.50 ر.س'", parse_value("amount", "1,250.50 ر.س") == (1250.5, None))
+ct("numbers: Arabic digits '١٢٥٠٫٥'", parse_value("amount", "١٢٥٠٫٥") == (1250.5, None))
+ct("numbers: accounting negative '(300)'", parse_value("discounts", "(300)") == (-300.0, None))
+MH = ["الشهر", "إجمالي الإيداعات (SAR)", "إجمالي السحوبات (SAR)"]
+mm = map_columns(MH, "cash_movement")["mapping"]
+bad = validate_rows([["يناير", 100, 50], ["فبراير", 200, 70]], mm, "cash_movement", headers=MH)
+ct("month-only rows without year: each row rejected ONCE (not twice)", bad["rejected_count"] == 2 and bad["valid_count"] == 0)
+ct("…with a reason that says what to do", "بلا سنة" in bad["rejected"][0]["errors"][0]["error"])
+good = validate_rows([["يناير", 100, 50], ["فبراير", 200, 70]], mm, "cash_movement", headers=MH, year_hint=2024)
+ct("same rows with year from the file title → 4 movements", good["valid_count"] == 4 and good["valid"][0]["date"] == "2024-01-01")
+
+tot = validate_rows([["يناير", 100, 50], ["الإجمالي", 100, 50]], mm, "cash_movement", headers=MH, year_hint=2024)
+ct("'الإجمالي' row skipped (not imported, not counted as rejected)", tot["valid_count"] == 2 and tot["rejected_count"] == 0 and tot["skipped_totals"] == [3])
+
 print(f"\nTOTAL: {P+F} | PASSED: {P} | FAILED: {F}")
 sys.exit(0 if F == 0 else 1)
