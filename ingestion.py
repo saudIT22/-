@@ -6,6 +6,7 @@ through the EXISTING phase21 Data Trust layer (no second quality system).
 Nothing is ever imported silently: rows are marked valid or rejected with reasons.
 """
 import os, re, sys
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 _H = os.path.dirname(os.path.abspath(__file__))
 for _d in ("..", "../phase21", "../phase22"):
@@ -103,30 +104,131 @@ _MONTHS = {"يناير": 1, "كانون الثاني": 1, "فبراير": 2, "ش
            "october": 10, "oct": 10, "november": 11, "nov": 11, "december": 12, "dec": 12}
 
 
-def parse_month(raw):
-    """«2026-01» «01/2026» «يناير 2026» «Jan 2026» «٢٠٢٦-٠١» أو تاريخ كامل → YYYY-MM. غير ذلك None."""
+_HIJRI_MONTHS = {"محرم": 1, "صفر": 2, "ربيع الاول": 3, "ربيع اول": 3, "ربيع الاخر": 4, "ربيع الثاني": 4, "ربيع ثاني": 4,
+                 "جمادي الاولي": 5, "جمادي الاول": 5, "جمادي الاخره": 6, "جمادي الثانيه": 6, "جمادي الاخر": 6,
+                 "رجب": 7, "شعبان": 8, "رمضان": 9, "شوال": 10, "ذو القعده": 11, "ذي القعده": 11,
+                 "ذو الحجه": 12, "ذي الحجه": 12}
+_EXCEL_EPOCH = date(1899, 12, 30)
+
+
+def _hijri_to_gregorian(y, m, d=15):
+    """تحويل هجري (التقويم الجدولي) → ميلادي. دقة ±يوم إلى يومين — كافية لتحديد الشهر عند منتصفه."""
+    import math
+    jd = d + math.ceil(29.5 * (m - 1)) + (y - 1) * 354 + (3 + 11 * y) // 30 + 1948440 - 1
+    a = jd + 32044
+    b = (4 * a + 3) // 146097
+    c = a - 146097 * b // 4
+    dd = (4 * c + 3) // 1461
+    e = c - 1461 * dd // 4
+    mm = (5 * e + 2) // 153
+    return date(100 * b + dd - 4800 + mm // 10, mm + 3 - 12 * (mm // 10), e - (153 * mm + 2) // 5 + 1)
+
+
+def parse_any_date(raw):
+    """تاريخ من أي صيغة شائعة في ملفات الشركات: كائن Excel، رقم Excel التسلسلي، نص بصيغ متعددة. غير ذلك None."""
     if raw is None:
         return None
-    if hasattr(raw, "year") and hasattr(raw, "month"):
-        return f"{raw.year:04d}-{raw.month:02d}"
+    if isinstance(raw, datetime):
+        return raw.date()
+    if isinstance(raw, date):
+        return raw
+    if isinstance(raw, (int, float)) and not isinstance(raw, bool):
+        return _EXCEL_EPOCH + timedelta(days=int(raw)) if 20000 <= raw <= 80000 else None
     s = str(raw).strip().translate(_AR_DIGITS)
     if not s:
         return None
-    m = re.match(r"^(\d{4})[-/.](\d{1,2})$", s) or None
+    if re.fullmatch(r"\d{5}(\.0+)?", s) and 20000 <= float(s) <= 80000:
+        return _EXCEL_EPOCH + timedelta(days=int(float(s)))
+    s = re.sub(r"\s*(م|مـ|ميلادي)$", "", s)
+    s = re.sub(r"[T ]\d{1,2}:\d{2}(:\d{2})?(\.\d+)?$", "", s)
+    d = parse_date(s)
+    if isinstance(d, datetime):
+        d = d.date()
+    if d:
+        return d
+    m = re.fullmatch(r"(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4})", s)          # MM/DD/YYYY (نظام أمريكي)
+    if m and int(m.group(2)) > 12 and 1 <= int(m.group(1)) <= 12:
+        try:
+            return date(int(m.group(3)), int(m.group(1)), int(m.group(2)))
+        except ValueError:
+            return None
+    n = _norm(s).replace(",", " ")
+    y = re.search(r"\b(\d{4})\b", n)
+    dd = re.search(r"\b(\d{1,2})\b", re.sub(r"\b\d{4}\b", "", n))
+    mon = _month_word(n)
+    if y and dd and mon:
+        try:
+            return date(int(y.group(1)), mon, int(dd.group(1)))
+        except ValueError:
+            return None
+    return None
+
+
+def _month_word(n):
+    for name in sorted(_MONTHS, key=len, reverse=True):
+        k = _norm(name)
+        if re.search(r"(^|[\s\-/])" + re.escape(k) + r"($|[\s\-/,])", n):
+            return _MONTHS[name]
+    return None
+
+
+def parse_month(raw, year_hint=None):
+    """الشهر من أي صيغة: «2026-01» «01/2026» «يناير 2026» «Jan-24» «2024M01» تاريخ كامل، كائن أو رقم Excel،
+    «محرم 1446» (يُحوَّل للميلادي)، أو اسم شهر وحده مع سنة معروفة من عنوان الملف أو اسمه (year_hint).
+    لا تخمين: اسم شهر بلا سنة وبلا year_hint → None."""
+    if raw is None:
+        return None
+    if isinstance(raw, (datetime, date)) or (isinstance(raw, (int, float)) and not isinstance(raw, bool) and raw >= 20000):
+        d = parse_any_date(raw)
+        return f"{d.year:04d}-{d.month:02d}" if d else None
+    s = str(raw).strip().translate(_AR_DIGITS)
+    s = re.sub(r"\s*(م|مـ|ميلادي)$", "", s)
+    if not s:
+        return None
+    m = re.fullmatch(r"(\d{4})\s*[-/.mM]\s*(\d{1,2})", s)
+    if m and 1 <= int(m.group(2)) <= 12 and int(m.group(1)) < 1600:
+        g = _hijri_to_gregorian(int(m.group(1)), int(m.group(2)))
+        return f"{g.year:04d}-{g.month:02d}"
     if m and 1 <= int(m.group(2)) <= 12:
         return f"{int(m.group(1)):04d}-{int(m.group(2)):02d}"
-    m = re.match(r"^(\d{1,2})[-/.](\d{4})$", s)
+    m = re.fullmatch(r"(\d{1,2})\s*[-/.]\s*(\d{4})", s)
     if m and 1 <= int(m.group(1)) <= 12:
         return f"{int(m.group(2)):04d}-{int(m.group(1)):02d}"
-    n = _norm(s)
-    y = re.search(r"(\d{4})", n)
-    if y:
-        word = _norm(n.replace(y.group(1), "")).strip()
-        for name in sorted(_MONTHS, key=len, reverse=True):
-            if word == _norm(name) or word.startswith(_norm(name) + " ") or word.endswith(" " + _norm(name)):
-                return f"{int(y.group(1)):04d}-{_MONTHS[name]:02d}"
-    k = period_key(s, "month")
-    return k or None
+    d = parse_any_date(s)
+    if d:
+        return f"{d.year:04d}-{d.month:02d}"
+    n = _norm(s).replace(",", " ").replace("هـ", " هـ")
+    for name in sorted(_HIJRI_MONTHS, key=len, reverse=True):          # هجري
+        if _norm(name) in n:
+            y = re.search(r"(1[34]\d{2})", n)
+            if y:
+                g = _hijri_to_gregorian(int(y.group(1)), _HIJRI_MONTHS[name])
+                return f"{g.year:04d}-{g.month:02d}"
+            return None
+    mon = _month_word(n)
+    if mon:
+        y4 = re.search(r"\b(\d{4})\b", n)
+        if y4:
+            return f"{int(y4.group(1)):04d}-{mon:02d}"
+        y2 = re.search(r"\b(\d{2})\b", n)                              # Jan-24 / يناير-24
+        if y2:
+            return f"{2000 + int(y2.group(1)):04d}-{mon:02d}"
+        if year_hint:
+            return f"{int(year_hint):04d}-{mon:02d}"
+        return None
+    m = re.fullmatch(r"(\d{1,2})", s)                                    # رقم الشهر وحده + سنة معروفة
+    if m and year_hint and 1 <= int(m.group(1)) <= 12:
+        return f"{int(year_hint):04d}-{int(m.group(1)):02d}"
+    return None
+
+
+def year_hint_from(*texts):
+    """سنة من عنوان الملف/اسمه («كشف_بنكي_2024.xlsx» → 2024). غير ذلك None."""
+    for t in texts:
+        m = re.search(r"(?<!\d)(20\d{2})(?!\d)", str(t or "").translate(_AR_DIGITS))
+        if m:
+            return int(m.group(1))
+    return None
 
 
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
@@ -163,19 +265,31 @@ def map_columns(headers, dataset_type):
             "fields": fields, "required": required_fields(dataset_type)}
 
 
-def parse_value(field, raw):
+def parse_value(field, raw, year_hint=None):
     """يحوّل القيمة حسب نوع الحقل. يُرجع (value, error) — لا تخمين صامت."""
     if raw is None or str(raw).strip() == "":
         return None, None
     if field in NUMERIC:
-        v = to_decimal(str(raw).replace("ر.س", "").replace("SAR", ""))
+        if isinstance(raw, (int, float)) and not isinstance(raw, bool):
+            return float(raw), None
+        t = str(raw).translate(_AR_DIGITS).replace("٫", ".").replace("٬", ",")
+        t = re.sub(r"(ر\.?\s?س\.?|ريال|SAR|SR|﷼)", "", t, flags=re.I).strip()
+        neg = t.startswith("(") and t.endswith(")")
+        t = t.strip("()").replace(" ", "")
+        v = to_decimal(t)
+        if v is not None and neg:
+            v = -v
         return (float(v), None) if v is not None else (None, "قيمة غير رقمية")
     if field in DATE_FIELDS:
-        d = parse_date(raw)
-        return (d.isoformat(), None) if d else (None, "تاريخ غير صالح")
+        d = parse_any_date(raw)
+        return (d.isoformat(), None) if d else (None, f"تاريخ غير مفهوم «{str(raw)[:25]}»")
     if field in PERIOD_FIELDS:
-        k = parse_month(raw)
-        return (k, None) if k else (None, "فترة غير صالحة")
+        k = parse_month(raw, year_hint)
+        if k:
+            return k, None
+        if _month_word(_norm(str(raw))) and not year_hint:
+            return None, f"«{str(raw)[:20]}» شهر بلا سنة — اكتب السنة في العمود أو في عنوان الملف"
+        return None, f"شهر غير مفهوم «{str(raw)[:25]}»"
     if field == "active":
         s = _norm(raw)
         if s in ("1", "نعم", "yes", "y", "true", "active", "نشط", "فعال", "مفعل", "ساري"):
@@ -199,11 +313,13 @@ def parse_value(field, raw):
     return str(raw).strip(), None
 
 
+_TOTAL_WORDS = {_n for _n in ("الاجمالي", "اجمالي", "المجموع", "المجموع الكلي", "الاجمالي العام", "الاجمالي الكلي",
+                              "total", "grand total", "totals", "sum")}
 SOFT_FIELDS = {"email", "phone"}   # خطأ في بيانات التواصل لا يرفض الصف: يُحفظ الأصل في extra مع تنبيه
 
 
 def validate_rows(rows, mapping, dataset_type, *, branch_names=None, existing_keys=None,
-                  headers=None, default_branch_id=None):
+                  headers=None, default_branch_id=None, year_hint=None):
     """يحوّل الصفوف ويتحقق منها. لا يستورد شيئاً: يُرجع الصالح والمرفوض مع الأسباب.
     الأعمدة غير المطابقة لا تُهمل: تُحفظ كما هي في extra لكل صف."""
     req = required_fields(dataset_type)
@@ -214,12 +330,16 @@ def validate_rows(rows, mapping, dataset_type, *, branch_names=None, existing_ke
                   if i not in mapping and str(h or "").strip() not in ("", "#", "م", "no", "No")]
     summary_cash = dataset_type == "cash_movement" and bool(set(mapping.values()) & {"inflow", "outflow"})
     warnings = []
+    skipped_totals = []
     for n, row in enumerate(rows, start=2):  # 2 = أول صف بعد العناوين
+        if any(_norm(c) in _TOTAL_WORDS for c in row if isinstance(c, str)):
+            skipped_totals.append(n)          # صف «الإجمالي» في آخر الكشف: ليس بيانات — لا يُستورد ولا يُعدّ مرفوضاً
+            continue
         rec, errors = {}, []
         extra = {}
         for idx, field in mapping.items():
             raw = row[idx] if idx < len(row) else None
-            val, err = parse_value(field, raw)
+            val, err = parse_value(field, raw, year_hint)
             if err and field in SOFT_FIELDS:
                 extra[field + "_raw"] = str(raw)[:120]
                 warnings.append({"row": n, "field": field, "value": str(raw)[:40], "warning": err})
@@ -247,6 +367,9 @@ def validate_rows(rows, mapping, dataset_type, *, branch_names=None, existing_ke
             else:
                 rec["branch_id"] = bid
         subs = [rec]
+        if summary_cash and errors:            # خطأ في الصف نفسه: يُرفض مرة واحدة لا مرتين
+            rejected.append({"row": n, "record": rec, "errors": errors})
+            continue
         if summary_cash:
             base = {k: v for k, v in rec.items() if k not in ("inflow", "outflow")}
             subs = []
@@ -284,7 +407,7 @@ def validate_rows(rows, mapping, dataset_type, *, branch_names=None, existing_ke
                 valid.append(sub)
     return {"valid": valid, "rejected": rejected, "total": len(rows),
             "valid_count": len(valid), "rejected_count": len(rejected), "duplicate_keys": list(dup_key),
-            "warnings": warnings[:500], "warning_count": len(warnings),
+            "warnings": warnings[:500], "warning_count": len(warnings), "skipped_totals": skipped_totals,
             "extra_columns": [h for _, h in extra_cols]}
 
 
