@@ -189,11 +189,18 @@ def analyze_purchases(all_rows, *, period=None, grain="month", sales_rows=None, 
                       "current": kpis["spend"]["change_pct"], "yoy_pct": kpis["spend"]["yoy_pct"],
                       "reason_ar": None if kpis["spend"]["change_pct"] is not None else "لا توجد فترة سابقة للمقارنة"}
 
-    trend = []
+    trend, _prev_sp = [], None
     for key in keys[-24:]:
         rs = [r for r in rows_all if pk(r) == key]
-        trend.append({"period": key, "spend": _money(sum((s for s in (_spend(r) for r in rs) if s is not None), D0)),
-                      "pos": len({r["reference"] for r in rs if r.get("reference")}) or None})
+        sp_k = sum((s for s in (_spend(r) for r in rs) if s is not None), D0)
+        by_s = {}
+        for r in rs:
+            if r.get("supplier_name") and _spend(r) is not None:
+                by_s[r["supplier_name"]] = by_s.get(r["supplier_name"], D0) + _spend(r)
+        trend.append({"period": key, "spend": _money(sp_k), "growth_pct": _pct(sp_k - _prev_sp, _prev_sp) if _prev_sp else None,
+                      "pos": len({r["reference"] for r in rs if r.get("reference")}) or None,
+                      "top_supplier": max(by_s, key=by_s.get) if by_s else None})
+        _prev_sp = sp_k
 
     by_cat, by_br, by_sup = _group(rows, "category", tot), _group(rows, "branch_name", tot), _group(rows, "supplier_name", tot)
 
@@ -232,6 +239,8 @@ def analyze_purchases(all_rows, *, period=None, grain="month", sales_rows=None, 
     suppliers.sort(key=lambda x: -x["spend"]["value"])
     top_share = suppliers[0]["share_pct"] if suppliers else None
     concentration = {"top_supplier": suppliers[0]["supplier"] if suppliers else None, "top_share_pct": top_share,
+                     "top2_share_pct": _pct(sum((Decimal(str(x["spend"]["value"])) for x in suppliers[:2]), D0), tot) if tot and suppliers else None,
+                     "top2": [x["supplier"] for x in suppliers[:2]],
                      "top3_share_pct": _pct(sum((Decimal(str(x["spend"]["value"])) for x in suppliers[:3]), D0), tot) if tot and suppliers else None,
                      "threshold_pct": R["concentration_pct"],
                      "rule_ar": f"تركّز مرتفع إذا تجاوزت حصة مورد واحد {R['concentration_pct']}% من الإنفاق",
@@ -263,7 +272,10 @@ def analyze_purchases(all_rows, *, period=None, grain="month", sales_rows=None, 
                          "variance_pct": var, "realized_saving": _money(saving),
                          "cheapest_supplier": best[0] if best else None, "cheapest_unit_cost": _num(best[1]) if best else None,
                          "potential_saving": _money(potential) if potential else None,
-                         "suppliers": sorted(s_by), "cost_trend": [{"period": p, "avg_unit_cost": _num(sum(v, D0) / len(v))}
+                         "suppliers": sorted(s_by),
+                         "supplier_prices": sorted([{"supplier": k2, "avg_unit_cost": _num(v)} for k2, v in s_by.items()],
+                                                   key=lambda x: x["avg_unit_cost"]),
+                         "cost_trend": [{"period": p, "avg_unit_cost": _num(sum(v, D0) / len(v))}
                                                                     for p, v in sorted(trend_p.items())][-12:]})
     products.sort(key=lambda x: -x["spend"]["value"])
     realized = sum((Decimal(str(p["realized_saving"]["value"])) for p in products if p["realized_saving"]), D0)
@@ -343,6 +355,86 @@ def analyze_purchases(all_rows, *, period=None, grain="month", sales_rows=None, 
                                              "on_time_pct": (o["delivery"] or {}).get("on_time_pct"),
                                              "acceptance_pct": (o["quality"] or {}).get("acceptance_pct")} for o in opts]})
 
+    # ── مؤشر أسعار الشراء: نفس الأصناف في الفترتين فقط (سعر مقابل سعر، لا متوسط أصناف مختلفة)
+    def wavg(rs):
+        out = {}
+        for r in rs:
+            u, q, sku = _ucost(r), _d(r.get("quantity")), r.get("product_sku")
+            if u is None or not q or not sku:
+                continue
+            a = out.setdefault(sku, [D0, D0]); a[0] += u * q; a[1] += q
+        return {k2: (v[0] / v[1], v[1]) for k2, v in out.items() if v[1]}
+    cw, pw = wavg(rows), wavg(prows)
+    comp = [k2 for k2 in cw if k2 in pw]
+    price_index = None
+    if comp:
+        num = sum((cw[k2][0] * cw[k2][1] for k2 in comp), D0)
+        den = sum((pw[k2][0] * cw[k2][1] for k2 in comp), D0)
+        effect = num - den
+        price_index = {"change_pct": _pct(num - den, den) if den else None, "price_effect": _money(effect),
+                       "comparable_products": len(comp), "basis_ar": "نفس الأصناف في الفترتين بكميات الفترة الحالية"}
+    # ── لماذا تغيّر الإنفاق؟ تفكيك حتمي (يعرضه AI ولا يحسبه)
+    drivers = None
+    if ptot is not None:
+        def deltas(field):
+            a, b = {}, {}
+            for r in rows:
+                if r.get(field) and _spend(r) is not None:
+                    a[r[field]] = a.get(r[field], D0) + _spend(r)
+            for r in prows:
+                if r.get(field) and _spend(r) is not None:
+                    b[r[field]] = b.get(r[field], D0) + _spend(r)
+            out = [{"key": k2, "delta": _money(a.get(k2, D0) - b.get(k2, D0)),
+                    "change_pct": _pct(a.get(k2, D0) - b.get(k2, D0), b[k2]) if b.get(k2) else None} for k2 in set(a) | set(b)]
+            out.sort(key=lambda x: -abs(x["delta"]["value"]))
+            return out[:5]
+        drivers = {"total_delta": _money(tot - ptot), "change_pct": kpis["spend"]["change_pct"],
+                   "po_delta": (len(pos) - len(ppos)) if pos or ppos else None,
+                   "by_category": deltas("category"), "by_branch": deltas("branch_name"), "by_supplier": deltas("supplier_name"),
+                   "price_effect": price_index["price_effect"] if price_index else None,
+                   "price_note_ar": None if price_index else "لم يُحتسب أثر السعر لعدم توفر نفس الأصناف بسعر وحدة في الفترتين"}
+    # ── التدفق بين الوحدات (مستوى الشركة)
+    s_cur = sales_sum(lambda r: True, cur) if sales_rows else None
+    s_prev = sales_sum(lambda r: True, prev) if sales_rows else None
+    i_cur, i_prev = inv_val(lambda x: True, cur), inv_val(lambda x: True, prev)
+    flow = {"sales_change_pct": chg(s_cur, s_prev), "inventory_change_pct": chg(i_cur, i_prev),
+            "purchases_change_pct": kpis["spend"]["change_pct"],
+            "price_change_pct": price_index["change_pct"] if price_index else None,
+            "note_ar": "تسلسل زمني متزامن للمؤشرات — لا يُثبت أن أحدها سبب الآخر"}
+    # ── دورة حياة أمر الشراء: فقط المراحل المسجّلة فعلاً في البيانات
+    for e in pos_out:
+        e["lifecycle"] = [{"step": "created", "ar": "إنشاء الأمر", "date": e["date"]},
+                          {"step": "expected", "ar": "الموعد المتوقع", "date": e["expected_date"]},
+                          {"step": "received", "ar": "الاستلام", "date": e["received_date"]}]
+        e["unrecorded_ar"] = "مراحل الاعتماد والإرسال غير مسجّلة في بياناتك"
+    # ── Supplier 360: أكثر الأصناف، تغيّر أسعاره، الأوامر المتأخرة
+    for sp_ in suppliers:
+        srs_all = [r for r in rows_all if r.get("supplier_name") == sp_["supplier"]]
+        srs = [r for r in srs_all if pk(r) == cur]
+        prod_sp = {}
+        for r in srs:
+            if r.get("product_sku") and _spend(r) is not None:
+                prod_sp[r["product_sku"]] = prod_sp.get(r["product_sku"], D0) + _spend(r)
+        sp_["top_products"] = [{"product_sku": k2, "spend": _money(v)} for k2, v in sorted(prod_sp.items(), key=lambda x: -x[1])[:8]]
+        changes = []
+        for sku in prod_sp:
+            cu = [_ucost(r) for r in srs if r.get("product_sku") == sku and _ucost(r) is not None]
+            hi = [_ucost(r) for r in srs_all if r.get("product_sku") == sku and pk(r) < cur and _ucost(r) is not None]
+            if cu and hi:
+                a_, b_ = sum(cu, D0) / len(cu), sum(hi, D0) / len(hi)
+                changes.append({"product_sku": sku, "current": _num(a_), "baseline": _num(b_), "change_pct": _pct(a_ - b_, b_)})
+        sp_["price_changes"] = sorted(changes, key=lambda x: -(x["change_pct"] or 0))
+        top_sku = sp_["top_products"][0]["product_sku"] if sp_["top_products"] else None
+        pt = {}
+        for r in srs_all:
+            if top_sku and r.get("product_sku") == top_sku and _ucost(r) is not None:
+                pt.setdefault(pk(r), []).append(_ucost(r))
+        sp_["price_trend"] = {"product_sku": top_sku,
+                              "points": [{"period": k2, "avg_unit_cost": _num(sum(v, D0) / len(v))} for k2, v in sorted(pt.items())][-12:]}
+        sp_["late_pos"] = len({r.get("reference") for r in srs if _date(r.get("expected_date")) and _date(r.get("received_date"))
+                               and _date(r.get("received_date")) > _date(r.get("expected_date")) and r.get("reference")})
+        sp_["branch_names"] = sorted({r.get("branch_name") for r in srs if r.get("branch_name")})
+
     # ── جودة البيانات
     n = len(rows) or 1
     dq = {"lines": len(rows),
@@ -363,6 +455,14 @@ def analyze_purchases(all_rows, *, period=None, grain="month", sales_rows=None, 
         "cross_module": {"available": bool(sales_rows or inventory_snaps), "how_ar": "ارفع ملفات المبيعات والمخزون"},
     }
     signals = _signals(concentration, suppliers, products, cyc, cross_cat, dq, R, cur, currency, reorder_options)
+    sev = {"critical": 0, "high": 1, "medium": 2, "low": 3}
+    signals.sort(key=lambda x: (0 if x["type"] == "risk" else (1 if x["type"] == "opportunity" else 2),
+                                sev.get(x["severity"], 4), -((x.get("estimated_impact") or {}).get("value") or 0)))
+    risks = [x for x in signals if x["type"] == "risk"]
+    health = {"status": "critical" if any(x["severity"] == "high" for x in risks) else ("attention" if risks else "stable"),
+              "risks": len(risks), "opportunities": sum(1 for x in signals if x["type"] == "opportunity"),
+              "attention": sum(1 for x in signals if x["type"] == "data_quality"),
+              "rule_ar": "حرجة: إشارة خطر عالية واحدة على الأقل · تحتاج انتباه: أي إشارة خطر · مستقرة: لا إشارات خطر"}
     return {"has_data": True, "version": f"purchases-v{PURCHASES_VERSION}", "period": cur, "previous_period": prev,
             "grain": grain, "periods": keys, "currency": currency, "rules": R, "kpis": kpis, "trend": trend,
             "by_category": by_cat, "by_branch": by_br, "by_supplier": by_sup[:50], "suppliers": suppliers[:100],
@@ -371,7 +471,8 @@ def analyze_purchases(all_rows, *, period=None, grain="month", sales_rows=None, 
                    "open_value": kpis["open_pos"]["open_value"], "list": pos_out},
             "cross": {"by_category": cross_cat, "by_branch": cross_br,
                       "note_ar": "المقارنة تُظهر اتجاهات متزامنة فقط ولا تثبت سبباً"},
-            "reorder_options": reorder_options, "data_quality": dq, "availability": availability, "signals": signals}
+            "reorder_options": reorder_options, "data_quality": dq, "health": health, "drivers": drivers,
+            "price_index": price_index, "flow": flow, "availability": availability, "signals": signals}
 
 
 def _signals(conc, suppliers, products, cyc, cross_cat, dq, R, period, currency, reorder_options):
@@ -389,14 +490,19 @@ def _signals(conc, suppliers, products, cyc, cross_cat, dq, R, period, currency,
                                    conc["rule_ar"]], "قيّم موردين بديلين للأصناف الأساسية لتقليل الاعتماد")
     for p in sorted([p for p in products if p["variance_pct"] is not None and p["variance_pct"] >= R["price_variance_pct"]],
                     key=lambda x: -x["variance_pct"])[:5]:
-        add("risk", "cost_increase", "ارتفاع تكلفة الشراء", "medium", p["product_sku"],
-            [f"متوسط السعر الحالي {p['avg_unit_cost']} مقابل {p['baseline_unit_cost']} تاريخياً ({p['variance_pct']:+}%)"],
-            "راجع الأسعار مع المورد أو قارن بموردين آخرين", metric="unit_cost")
+        imp = (Decimal(str(p["avg_unit_cost"])) - Decimal(str(p["baseline_unit_cost"]))) * Decimal(str(p["qty"] or 0))
+        add("risk", "cost_increase", "ارتفاع تكلفة الشراء", "high" if p["variance_pct"] >= 2 * R["price_variance_pct"] else "medium",
+            p["product_sku"],
+            [f"متوسط السعر الحالي {p['avg_unit_cost']} مقابل {p['baseline_unit_cost']} تاريخياً ({p['variance_pct']:+}%)",
+             f"الكمية المشتراة في الفترة: {p['qty']}"],
+            "راجع السعر مع المورد الحالي وقارن عروض الموردين البديلين", impact=_money(imp) if imp > 0 else None,
+            metric="unit_cost")
     for s in suppliers:
         d = s["delivery"]
         if d and d["late_pct"] is not None and d["late_pct"] >= R["late_pct"] and d["evaluated_lines"] >= R["min_lines_for_score"]:
             add("risk", "delivery_risk", "تأخر المورد في التسليم", "medium", s["supplier"],
-                [f"{d['late_pct']}% من التسليمات متأخرة بمتوسط {d['avg_delay_days']} يوم ({d['evaluated_lines']} تسليم)"],
+                [f"{d['late_pct']}% من التسليمات متأخرة بمتوسط {d['avg_delay_days']} يوم ({d['evaluated_lines']} تسليم)",
+                 f"أوامر متأخرة في الفترة: {s.get('late_pos', 0)}"],
                 "ناقش الالتزام بالمواعيد مع المورد أو زد مدة التوريد في إعدادات إعادة الطلب", metric="on_time_pct")
         q = s["quality"]
         if q and q["acceptance_pct"] is not None and q["acceptance_pct"] < 95 and q["evaluated_lines"] >= R["min_lines_for_score"]:
