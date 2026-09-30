@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>نبّاه · ذكاء التدفق النقدي</title>
+<link href="nabbah-design.css" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{background:var(--bg,#070b09);color:var(--txt,#e8f1ec);font-family:Tajawal,Tahoma,Arial,sans-serif;margin:0}
+  .wrap{max-width:1180px;margin:0 auto;padding:70px 16px 60px}
+  h1{margin:0 0 4px;font-size:24px}.sub{color:var(--txt-soft,#8ba396);margin:0 0 16px;font-size:14px}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+  select{background:var(--panel,#101a15);color:var(--txt,#e8f1ec);border:1px solid var(--line,#1d2c24);border-radius:10px;padding:8px 10px;font:inherit;font-size:13px;max-width:190px}
+  .crumbs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;min-height:4px}
+  .chip{background:rgba(16,185,129,.12);color:var(--mint,#10b981);border:1px solid rgba(16,185,129,.35);border-radius:20px;padding:3px 10px;font-size:12px;cursor:pointer}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+  .tile,.panel{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:14px;padding:14px}
+  .tile .l{font-size:12px;color:var(--txt-soft,#8ba396)}.tile .v{font-size:21px;font-weight:800;margin-top:4px}
+  .tile .c{font-size:12px;margin-top:4px}
+  .panel{margin-bottom:14px;min-width:0}.panel h2{margin:0 0 10px;font-size:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .panel h3{margin:12px 0 6px;font-size:13px;color:var(--txt-soft,#8ba396)}
+  .num{font-size:11px;color:var(--txt-soft,#8ba396);font-weight:600;border:1px solid var(--line,#1d2c24);border-radius:8px;padding:1px 6px}
+  .grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+  table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px;border-bottom:1px solid var(--line,#1d2c24);text-align:start;white-space:nowrap}
+  th{color:var(--txt-soft,#8ba396);font-weight:600}.tbl{overflow-x:auto}
+  tr.drill{cursor:pointer}tr.drill:hover td{background:rgba(16,185,129,.06)}
+  .barrow{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:13px}
+  .barrow.drill{cursor:pointer}.barrow.drill:hover{background:rgba(16,185,129,.06);border-radius:6px}
+  .barrow .t{flex:0 0 120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .barrow .g{flex:1;height:10px;background:var(--line,#1d2c24);border-radius:6px;overflow:hidden}
+  .barrow .g i{display:block;height:100%;background:var(--mint,#10b981)}
+  .pos{color:#10b981}.neg{color:#ef4444}.muted{color:var(--txt-soft,#8ba396);font-size:12px}
+  .b{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700;display:inline-block}
+  .high{background:rgba(234,88,12,.16);color:#ea580c}.medium{background:rgba(245,179,1,.15);color:#f5b301}
+  .low{background:rgba(16,185,129,.15);color:#10b981}.critical{background:rgba(239,68,68,.16);color:#ef4444}
+  .est{background:rgba(168,85,247,.15);color:#a855f7}
+  .sig{border-inline-start:4px solid var(--line,#1d2c24);padding:10px 12px;margin:8px 0;background:rgba(255,255,255,.02);border-radius:8px}
+  .sig.risk{border-color:#ef4444}.sig.opportunity{border-color:#10b981}.sig.data_quality{border-color:#f5b301}
+  .btn{background:var(--mint,#10b981);color:#062b1c;border:0;border-radius:10px;padding:7px 13px;font-weight:800;cursor:pointer;font:inherit;font-size:12px;text-decoration:none;display:inline-block}
+  .btn.ghost{background:transparent;color:var(--txt-soft,#8ba396);border:1px solid var(--line,#1d2c24);font-weight:600}
+  .btn:disabled{opacity:.5;cursor:default}
+  .state{padding:36px 16px;text-align:center;color:var(--txt-soft,#8ba396);border:1px dashed var(--line,#1d2c24);border-radius:14px}
+  .na{color:var(--txt-soft,#8ba396);font-size:13px;padding:10px;border:1px dashed var(--line,#1d2c24);border-radius:10px}
+  svg.ch{width:100%;height:170px;display:block}
+  .legend{display:flex;gap:14px;font-size:12px;color:var(--txt-soft,#8ba396);margin-top:6px;flex-wrap:wrap}
+  .legend i{display:inline-block;width:14px;height:3px;vertical-align:middle;margin-inline-end:4px}
+  .ai-sec{margin:8px 0}.ai-sec b{display:block;font-size:13px;margin-bottom:4px}.ai-sec li{font-size:13px;margin:3px 0}
+  input.f{flex:1;min-width:120px;background:var(--panel,#101a15);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:8px;padding:6px}
+  .st{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700;display:inline-block;white-space:nowrap}
+  .st.healthy{background:rgba(16,185,129,.15);color:#10b981}.st.watch{background:rgba(245,179,1,.15);color:#f5b301}
+  .st.low{background:rgba(234,88,12,.16);color:#ea580c}.st.stockout{background:rgba(239,68,68,.16);color:#ef4444}
+  .st.slow{background:rgba(59,130,246,.15);color:#60a5fa}.st.obsolete{background:rgba(148,163,184,.18);color:#cbd5e1}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}.schip{cursor:pointer;border:1px solid var(--line,#1d2c24);border-radius:12px;padding:8px 12px;min-width:120px}
+  .schip b{display:block;font-size:18px}.schip:hover{border-color:var(--mint,#10b981)}
+  .eq{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:13px}.eq .box{border:1px solid var(--line,#1d2c24);border-radius:10px;padding:8px 10px;text-align:center;min-width:90px}
+  .eq .box b{display:block;font-size:16px}
+  .ov{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:50;padding:14px}
+  .ov.on{display:flex}.modal{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:16px;padding:18px;width:min(560px,100%);max-height:90vh;overflow:auto}
+  .fg{display:grid;grid-template-columns:1fr 1fr;gap:10px}.fg label{font-size:12px;color:var(--txt-soft,#8ba396);display:flex;flex-direction:column;gap:4px}
+  .fg input,.fg select{background:var(--bg,#070b09);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:9px;padding:8px;font:inherit;max-width:none}
+  .cta{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  @media(max-width:760px){.fg{grid-template-columns:1fr}.tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.tile{padding:10px}.tile .v{font-size:17px}.grid2,.grid3{grid-template-columns:minmax(0,1fr)}h1{font-size:20px}select{max-width:47%}}
+</style>
+<style>
+  .tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--line,#1d2c24);margin:6px 0 16px}
+  .tab{background:none;border:0;color:var(--txt-soft,#8ba396);padding:10px 14px;font:inherit;font-size:14px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+  .tab.on{color:var(--txt,#e8f1ec);border-color:var(--mint,#10b981);font-weight:800}
+  .hero{display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr;gap:12px;margin-bottom:14px}
+  .hcard{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:16px;padding:16px;cursor:default}
+  .hcard.click{cursor:pointer}.hcard.click:hover{border-color:var(--mint,#10b981)}
+  .hcard .big{font-size:30px;font-weight:900;margin:6px 0}.hstat{font-size:22px;font-weight:900}
+  .hs-stable{color:#10b981}.hs-attention{color:#f5b301}.hs-critical{color:#ef4444}
+  .event{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-inline-start:4px solid #ef4444;border-radius:12px;padding:14px;margin-bottom:10px}
+  .event.opportunity{border-inline-start-color:#10b981}.event.data_quality{border-inline-start-color:#f5b301}
+  .event h4{margin:0 0 6px;font-size:15px}.acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .rec{display:grid;grid-template-columns:110px 1fr;gap:6px 12px;font-size:13px;margin-top:8px}.rec b{color:var(--txt-soft,#8ba396);font-weight:600}
+  .flow{display:flex;align-items:stretch;gap:8px;flex-wrap:wrap;justify-content:center}
+  .fnode{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:14px;padding:14px 18px;text-align:center;min-width:140px}
+  .fnode .big{font-size:22px;font-weight:900}.farrow{align-self:center;font-size:22px;color:var(--txt-soft,#8ba396)}
+  .ptip{background:var(--bg,#070b09);border:1px solid var(--mint,#10b981);border-radius:12px;padding:12px;margin-top:8px;font-size:13px}
+  .search{flex:1;min-width:180px;background:var(--panel,#101a15);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:10px;padding:9px 12px;font:inherit}
+  .perf{display:grid;grid-template-columns:70px 1fr 50px;gap:8px;align-items:center;font-size:13px;margin:8px 0}
+  .perf .g{height:10px;background:var(--line,#1d2c24);border-radius:6px;overflow:hidden}.perf .g i{display:block;height:100%}
+  .life{display:flex;gap:0;align-items:center;flex-wrap:wrap;margin:10px 0}.lstep{text-align:center;min-width:110px}
+  .ldot{width:16px;height:16px;border-radius:50%;margin:0 auto 6px;background:var(--line,#1d2c24)}.ldot.on{background:var(--mint,#10b981)}
+  .lline{flex:1;min-width:30px;height:2px;background:var(--line,#1d2c24);margin-bottom:22px}
+  .back{background:none;border:0;color:var(--mint,#10b981);cursor:pointer;font:inherit;padding:0;margin-bottom:10px}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-inline-end:6px}
+  @media(max-width:900px){.hero{grid-template-columns:1fr 1fr}}
+  @media(max-width:560px){.hero{grid-template-columns:1fr}.tab{padding:8px 10px;font-size:13px}.rec{grid-template-columns:1fr}}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <h1>ذكاء التدفق النقدي</h1>
+  <p class="sub">كم لدينا الآن؟ ماذا يدخل ويخرج؟ ماذا سيحدث؟ أين المخاطر؟ وما الإجراء المطلوب؟</p>
+  <div class="bar"><select id="fPeriod"></select><select id="fBranch"></select><button class="btn ghost" id="reset">إعادة الضبط</button><button class="btn ghost" id="btnSet" style="display:none">⚙ مدخلات السيولة</button></div>
+  <div class="crumbs" id="crumbs"></div>
+  <nav class="tabs" id="tabs"></nav>
+  <div id="content"><div class="state">…</div></div>
+</div>
+<div class="ov" id="ov"><div class="modal" id="modal"></div></div>
+<script src="i18n.js"></script>
+<script>
+(function(){
+  const TOKEN=localStorage.getItem("nabbah_token")||"";if(!TOKEN){location.href="login.html";return;}
+  const TABS=[["overview","نظرة عامة"],["position","المركز النقدي"],["movement","الحركة والمحركات"],["forecast","التوقع النقدي"],["liquidity","السيولة والمؤشرات"],["collections","التحصيل والذمم"],["branches","الفروع"],["variance","الانحراف"],["risks","المخاطر والإجراءات"],["links","الربط"]];
+  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const n=(v,d=0)=>v==null?"—":Number(v).toLocaleString("ar-SA",{maximumFractionDigits:d});
+  const mv=m=>m&&m.value!=null?n(m.value):"—";
+  const sg=m=>m&&m.value!=null?`<span class="${m.value>=0?"pos":"neg"}">${m.value>0?"+":""}${n(m.value)}</span>`:"—";
+  const pct=(v,inv)=>v==null?"—":`<span class="${(inv?v<=0:v>=0)?"pos":"neg"}">${v>0?"+":""}${n(v,2)}%</span>`;
+  const t=k=>({noDim:"لا توجد بيانات"})[k]||k;
+  const H={Authorization:"Bearer "+TOKEN,"Content-Type":"application/json"},$=id=>document.getElementById(id);
+  const SEV={high:"عالٍ",medium:"متوسط",low:"منخفض"},HEALTH={stable:["مستقرة","🟢"],attention:["تحتاج انتباه","🟠"],critical:["حرجة","🔴"]},CONF={high:"عالية",medium:"متوسطة",low:"منخفضة"};
+  let D=null;
+  function F(){const f={};if($("fPeriod").value)f.period=$("fPeriod").value;if($("fBranch").value)f.branch_id=$("fBranch").value;return f;}
+  const route=()=>{const h=decodeURIComponent(location.hash.slice(1)||"overview");const i=h.indexOf("/");return i<0?[h,""]:[h.slice(0,i),h.slice(i+1)];};
+  const go=(v,arg)=>{location.hash=arg?`${v}/${encodeURIComponent(arg)}`:v;};
+  window.addEventListener("hashchange",()=>{if(D)render();});
+  function load(){$("content").innerHTML=`<div class="state">…</div>`;
+    fetch("/company/cashflow-intelligence?"+new URLSearchParams(F()),{headers:H}).then(async r=>{
+      if(r.status===401){location.href="login.html";return null;}
+      if(r.status===403||r.status===402){let d="";try{d=(await r.json()).detail;}catch(_){}$("content").innerHTML=`<div class="state">${esc(d||"ليست لديك صلاحية لهذه الصفحة.")}</div>`;return null;}
+      if(!r.ok){let d="";try{const j=await r.json();d=typeof j.detail==="string"?j.detail:JSON.stringify(j.detail||j);}catch(_){}err(`HTTP ${r.status}${d?" — "+d:""}`);return null;}
+      return r.json();}).then(d=>{if(!d)return;D=d;$("btnSet").style.display=d.can_edit?"":"none";try{filters(d);}catch(e){console.error(e);}try{render();}catch(e){console.error(e);err("render: "+(e&&e.message||e));}}).catch(e=>err("network: "+(e&&e.message||e)));}
+  function err(m){$("content").innerHTML=`<div class="state neg">تعذّر تحميل ذكاء التدفق النقدي.<div class="muted" style="margin-top:8px">${esc(m)}</div></div>`;}
+  function filters(d){const f=d.filters||{};
+    $("fPeriod").innerHTML=(d.periods||[]).slice().reverse().map(p=>`<option value="${esc(p)}" ${f.period===p?"selected":""}>${esc(p)}</option>`).join("")||`<option value="">الفترة</option>`;
+    $("fBranch").innerHTML=`<option value="">الفرع: الكل</option>`+((d.options||{}).branch_list||[]).map(b=>`<option value="${b.id}" ${String(f.branch_id)===String(b.id)?"selected":""}>${esc(b.name)}</option>`).join("");
+    const b=((d.options||{}).branch_list||[]).find(x=>String(x.id)===String(f.branch_id));
+    $("crumbs").innerHTML=b?`<span class="chip" id="clrB">الفرع: ${esc(b.name)} ✕</span>`:"";if(b)$("clrB").onclick=()=>{$("fBranch").value="";load();};}
+  const panel=(title,body,extra="")=>`<div class="panel"><h2>${title}${extra}</h2>${body}</div>`;
+  const na=m=>`<div class="na">${esc(m)}</div>`;
+  const btn=(label,act,arg,ghost)=>`<button class="btn${ghost?" ghost":""}" data-act="${act}" data-arg="${esc(arg??"")}">${label}</button>`;
+  const tile=(l,v,c)=>`<div class="tile"><div class="l">${l}</div><div class="v">${v}</div><div class="c">${c||""}</div></div>`;
+  const unav=r=>`<span class="muted" style="font-size:14px">غير متاح</span>`;
+  function chart(labels,series){
+    if(!labels.length)return na(t("noDim"));
+    const W=640,Hh=160,all=series.flatMap(s=>s.values.filter(v=>v!=null));
+    if(!all.length)return na(t("noDim"));
+    const max=Math.max(...all),min=Math.min(...all,0),rng=(max-min)||1;
+    const x=i=>labels.length<2?W/2:(i/(labels.length-1))*(W-20)+10,y=v=>Hh-12-((v-min)/rng)*(Hh-30);
+    const lines=series.map(s=>{let seg=[],out="";const flush=()=>{if(seg.length)out+=`<polyline points="${seg.join(" ")}" fill="none" stroke="${s.color}" stroke-width="2" ${s.dash?'stroke-dasharray="5 4"':""}/>`;seg=[];};
+      s.values.forEach((v,i)=>{if(v==null)flush();else seg.push(`${x(i).toFixed(1)},${y(v).toFixed(1)}`);});flush();
+      out+=s.values.map((v,i)=>v==null?"":`<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="2.6" fill="${s.color}"><title>${esc(labels[i])}: ${n(v)}</title></circle>`).join("");return out;}).join("");
+    return `<svg class="ch" viewBox="0 0 ${W} ${Hh}" preserveAspectRatio="none">${lines}</svg>
+      <div class="legend"><span>${esc(labels[0])} → ${esc(labels[labels.length-1])}</span>${series.map(s=>`<span><i style="background:${s.color}"></i>${esc(s.label)}</span>`).join("")}</div>`;
+  }
+  // أعمدة الداخل/الخارج + خط الصافي
+  function flowChart(rows){if(!rows.length)return na("لا توجد حركات");
+    const W=640,Hh=190,max=Math.max(...rows.flatMap(r=>[r.inflow?r.inflow.value:0,r.outflow?r.outflow.value:0]),1),bw=Math.max(4,(W-40)/rows.length/2.6);
+    const x=i=>20+(i+.5)*(W-40)/rows.length,y=v=>Hh-20-(v/max)*(Hh-40);
+    return `<svg class="ch" viewBox="0 0 ${W} ${Hh}" preserveAspectRatio="none" style="height:200px">${rows.map((r,i)=>`<rect x="${(x(i)-bw).toFixed(1)}" y="${y(r.inflow?r.inflow.value:0).toFixed(1)}" width="${bw.toFixed(1)}" height="${(Hh-20-y(r.inflow?r.inflow.value:0)).toFixed(1)}" rx="3" fill="#10b981"><title>${esc(r.period)} داخل ${n(r.inflow&&r.inflow.value)}</title></rect><rect x="${x(i).toFixed(1)}" y="${y(r.outflow?r.outflow.value:0).toFixed(1)}" width="${bw.toFixed(1)}" height="${(Hh-20-y(r.outflow?r.outflow.value:0)).toFixed(1)}" rx="3" fill="#ef4444" opacity=".8"><title>${esc(r.period)} خارج ${n(r.outflow&&r.outflow.value)}</title></rect>`).join("")}</svg>
+      <div class="legend"><span><i style="background:#10b981"></i>داخل</span><span><i style="background:#ef4444"></i>خارج</span><span>${esc(rows[0].period)} → ${esc(rows[rows.length-1].period)}</span></div>`;}
+  function eventCard(s,i){return `<div class="event ${esc(s.type)}" id="sig-${esc(s.id)}"><h4>${i!=null?(i+1)+". ":""}${s.type==="risk"?"🔴":s.type==="opportunity"?"🟢":"🟡"} ${esc(s.name_ar)}${s.dimension?` — ${esc(s.dimension)}`:""} <span class="b ${esc(s.severity)}">${SEV[s.severity]||s.severity}</span></h4>
+      <div class="rec"><b>الدليل</b><span>${(s.evidence||[]).map(esc).join(" · ")}</span>${s.cause_ar?`<b>السبب/الطريقة</b><span>${esc(s.cause_ar)}</span>`:""}<b>الأثر</b><span>${s.estimated_impact?`<b>${mv(s.estimated_impact)}</b> <span class="b est">تقديري</span>`:"غير قابل للتقدير من البيانات"}</span><b>الفترة</b><span>${esc(s.period)}</span><b>الإجراء</b><span>${esc(s.suggested_action_ar)}</span></div>
+      <div class="acts"><button class="btn" data-sig="${esc(s.id)}">إنشاء قرار + مهمة</button>${s.code==="dso_rising"||s.code==="collect_overdue"||s.code==="dso_improving"?btn("فتح التحصيل","collections","",1):""}${s.code==="branch_negative"?btn("فتح الفرع","branch",s.dimension,1):""}${s.code==="forecast_gap"||s.code==="cash_pressure"?btn("فتح التوقع","forecast","",1):""}${s.code==="supplier_terms"?`<a class="btn ghost" href="company-purchases-intelligence.html#suppliers">الموردون ←</a>`:""}${s.code==="outflow_spike"?btn("فتح المحركات","movement","",1):""}${s.code==="no_balance"||s.code==="short_runway"?btn("مدخلات السيولة","settings","",1):""}</div><div class="frm"></div></div>`;}
+  // ═══ نظرة عامة
+  function overview(){const d=D,p=d.position,f=d.flows,st=d.status,[hl,hi]=HEALTH[st.status]||["—",""],lq=Object.fromEntries(d.liquidity.map(x=>[x.code,x])),c=d.collections,hg=d.highlights||{};
+    const top=d.signals.filter(s=>s.type!=="data_quality").slice(0,3);
+    return `<div class="hero"><div class="hcard"><div class="muted">حالة السيولة · ${esc(d.period)}</div><div class="hstat hs-${esc(st.status)}">${hl} ${hi}</div><div>صافي التدفق ${sg(f.net)}</div><div class="muted" style="font-size:11px;margin-top:6px">${esc(st.rule_ar)}</div></div>
+      <div class="hcard click" data-act="risks"><div class="muted">🔴 مخاطر</div><div class="big hs-critical">${n(st.risks)}</div></div><div class="hcard click" data-act="risks"><div class="muted">🟢 فرص</div><div class="big hs-stable">${n(st.opportunities)}</div></div><div class="hcard click" data-act="risks"><div class="muted">📊 بيانات تحتاج انتباه</div><div class="big hs-attention">${n(st.attention)}</div></div></div>
+      <div class="tiles" style="grid-template-columns:repeat(3,minmax(0,1fr))">${tile("الرصيد النقدي",p.balance?n(p.balance.value)+` <span class="muted" style="font-size:12px">${esc(d.currency)}</span>`:unav(),p.balance?(p.change?`${sg(p.change)} ${pct(p.change_pct)} عن الشهر السابق`:""):`<span class="muted">${esc(p.balance_reason_ar)}</span>`)}
+        ${tile("صافي التدفق",sg(f.net),f.previous.net?`السابق ${sg(f.previous.net)}`:"")}${tile("مدة السيولة",lq.runway.value!=null?n(lq.runway.value,1)+" شهر":unav(),`<span class="muted">${esc(lq.runway.value!=null?lq.runway.method_ar:lq.runway.needs_ar)}</span>`)}
+        ${tile("التدفقات الداخلة",mv(f.inflow),pct(f.inflow_change_pct))}${tile("التدفقات الخارجة",mv(f.outflow),pct(f.outflow_change_pct,true))}${tile("DSO",c&&c.dso!=null?n(c.dso)+" يوم":unav(),c&&c.dso_change!=null?`<span class="${c.dso_change<=0?"pos":"neg"}">${c.dso_change>0?"+":""}${n(c.dso_change)} يوم</span>`:`<span class="muted">${c?"":"يحتاج ملف الذمم"}</span>`)}</div>
+      ${panel("أهم الأحداث والقرارات",(top.length?top.map((s,i)=>eventCard(s,i)).join(""):na("لا مخاطر أو فرص وفق القواعد في هذه الفترة"))+`<div class="grid2" style="margin-top:6px"><div class="tile"><div class="l">أكبر تدفق داخل</div><div class="v" style="font-size:17px">${hg.biggest_inflow?mv(hg.biggest_inflow.amount):"—"}</div><div class="c muted">${hg.biggest_inflow?esc(hg.biggest_inflow.description)+" · "+esc(hg.biggest_inflow.date):""}</div></div><div class="tile"><div class="l">أكبر تدفق خارج</div><div class="v" style="font-size:17px">${hg.biggest_outflow?mv(hg.biggest_outflow.amount):"—"}</div><div class="c muted">${hg.biggest_outflow?esc(hg.biggest_outflow.description)+" · "+esc(hg.biggest_outflow.date):""}</div></div></div>`)}
+      <div class="grid2">${panel("حركة النقد",flowChart(d.movement.slice(-12)),` <button class="back" data-act="movement" style="margin-inline-start:auto">التفاصيل ←</button>`)}${panel("التوقع (معاينة)",d.forecast.available?chart([d.period].concat(d.forecast.points.map(x=>x.period)),[{label:"الرصيد المتوقع",values:[p.balance?p.balance.value:null].concat(d.forecast.points.map(x=>x.balance?x.balance.value:null)),color:"#a855f7",dash:1}])+`<div class="muted">الثقة: ${CONF[d.forecast.confidence]} · ${esc(d.forecast.balance_note_ar||"")}</div>`:na(d.forecast.reason_ar),` <button class="back" data-act="forecast" style="margin-inline-start:auto">التفاصيل ←</button>`)}</div>
+      ${panel("لماذا تغيّر النقد؟",why()+`<div class="acts"><button class="btn" id="aiBtn">شرح تنفيذي بالذكاء الاصطناعي</button></div><div class="muted" style="margin-top:6px">الذكاء الاصطناعي يصيغ هذه الأدلة فقط، ولا يحسب أي رقم.</div><div id="aiOut" style="margin-top:10px"></div>`)}
+      ${panel("المبيعات ← المشتريات ← المخزون ← النقد",chain())}`;}
+  function why(){const v=D.variance;if(!v)return na("لا توجد فترة سابقة للمقارنة");
+    return `<div>صافي التدفق ${sg(v.net_current)} مقابل ${sg(v.net_previous)} في الفترة السابقة (الفرق ${sg(v.delta)}).</div><div style="margin:6px 0"><b>${esc(v.main_cause_ar||"")}</b></div>
+      <ul style="margin:6px 0;padding-inline-start:20px;font-size:13px">${v.contributions.slice(0,5).map(c=>`<li>${esc(c.label)}: <span class="${c.effect_on_net>=0?"pos":"neg"}">${c.effect_on_net>0?"+":""}${n(c.effect_on_net)}</span> على الصافي</li>`).join("")}</ul>`;}
+  function chain(){const c=D.cross||{},node=(l,v,href,val)=>`<div class="fnode"><div class="muted">${l}</div><div class="big">${val!=null?val:(v==null?`<span class="muted" style="font-size:14px">غير متاح</span>`:pct(v))}</div>${href?`<a class="muted" href="${href}">فتح ←</a>`:""}</div>`;
+    return `<div class="flow">${node("المبيعات",c.sales_change_pct,"company-sales-intelligence.html")}<div class="farrow">←</div>${node("المشتريات",c.purchases_change_pct,"company-purchases-intelligence.html")}<div class="farrow">←</div>${node("المخزون",c.inventory_change_pct,"company-inventory-intelligence.html")}<div class="farrow">←</div>${node("صافي النقد",null,null,sg(c.net_cash))}</div><div class="muted" style="text-align:center;margin-top:8px">${esc(c.note_ar||"")}</div>`;}
+  // ═══ المركز النقدي
+  function position(){const p=D.position;
+    return `<div class="tiles">${tile("الرصيد الحالي",p.balance?n(p.balance.value):unav(),`<span class="muted">${p.balance_source==="reported"?"من رصيد الكشف البنكي":p.balance_source==="opening_plus_net"?"الرصيد الافتتاحي + صافي الحركات":esc(p.balance_reason_ar)}</span>`)}${tile("الشهر السابق",mv(p.previous),p.change?`التغير ${sg(p.change)} ${pct(p.change_pct)}`:"")}${tile("نفس الشهر من العام الماضي",mv(p.yoy),p.yoy?"":`<span class="muted">لا توجد بيانات</span>`)}${tile("النقد المتاح",p.available_cash?n(p.available_cash.value):unav(),p.restricted_cash?`المقيد ${mv(p.restricted_cash)}`:`<span class="muted">أدخل النقد المقيد إن وجد</span>`)}</div>
+      ${panel("النقد حسب الحساب",p.by_account.length?`<div class="tbl"><table><thead><tr><th>الحساب</th><th>الرصيد</th><th>آخر رصيد مُبلّغ</th></tr></thead><tbody>${p.by_account.map(a=>`<tr><td><b>${esc(a.account)}</b></td><td>${a.balance?n(a.balance.value):`<span class="muted">غير مُبلّغ</span>`}</td><td>${esc(a.as_of||"—")}</td></tr>`).join("")}</tbody></table></div>`:na("لا توجد حسابات"))}
+      ${panel("الرصيد في نهاية كل شهر",chart(D.movement.map(x=>x.period),[{label:"الرصيد",values:D.movement.map(x=>x.balance_end?x.balance_end.value:null),color:"#10b981"}]))}`;}
+  // ═══ الحركة والمحركات
+  function movement(){const dr=D.drivers,side=s=>dr.filter(d=>d.direction===s);
+    const row=d=>`<tr class="drill" data-go="driver" data-arg="${esc(d.key)}"><td><b>${esc(d.label)}</b></td><td>${mv(d.amount)}</td><td>${d.share_pct==null?"—":n(d.share_pct,1)+"%"}</td><td>${d.previous?mv(d.previous):"—"}</td><td>${d.delta?sg(d.delta):"—"}</td><td>${pct(d.change_pct,d.direction==="out")}</td></tr>`;
+    const tb=(l,list)=>`<h3>${l}</h3><div class="tbl"><table><thead><tr><th>البند</th><th>الفترة</th><th>الحصة</th><th>السابق</th><th>التغير</th><th>%</th></tr></thead><tbody>${list.map(row).join("")||`<tr><td colspan="6" class="muted">لا حركات</td></tr>`}</tbody></table></div>`;
+    return `<div class="tiles">${tile("التدفقات الداخلة",mv(D.flows.inflow),pct(D.flows.inflow_change_pct))}${tile("التدفقات الخارجة",mv(D.flows.outflow),pct(D.flows.outflow_change_pct,true))}${tile("صافي التدفق",sg(D.flows.net),"")}</div>
+      ${panel("محرّكات التدفق — "+esc(D.period),tb("🟢 التدفقات الداخلة",side("in"))+tb("🔴 التدفقات الخارجة",side("out"))+`<div class="muted">${esc(D.driver_rule_ar)} · اضغط أي بند لرؤية الحركات الأصلية.</div>`)}
+      ${panel("الحركة الشهرية",flowChart(D.movement.slice(-12)))}`;}
+  function driver360(key){const d=D.drivers.find(x=>x.key===key);if(!d)return `<button class="back" data-go="movement">→ الحركة والمحركات</button>`+na("البند غير موجود في هذه الفترة");
+    return `<button class="back" data-go="movement">→ الحركة والمحركات</button><div class="panel"><h2 style="font-size:20px">${esc(d.label)}</h2><div class="tiles">${tile("الفترة",mv(d.amount),"")}${tile("السابق",d.previous?mv(d.previous):"—","")}${tile("التغير",d.delta?sg(d.delta):"—",pct(d.change_pct,d.direction==="out"))}</div></div>
+      ${panel("أكبر الحركات (البيانات الأصلية)",d.top_items.length?`<div class="tbl"><table><thead><tr><th>التاريخ</th><th>الوصف</th><th>الطرف</th><th>الفرع</th><th>المبلغ</th></tr></thead><tbody>${d.top_items.map(m=>`<tr><td>${esc(m.date)}</td><td>${esc(m.description)}</td><td>${esc(m.counterparty||"—")}</td><td>${esc(m.branch||"—")}</td><td>${mv(m.amount)}</td></tr>`).join("")}</tbody></table></div>`:na("لا حركات"))}`;}
+  // ═══ التوقع
+  function forecast(){const f=D.forecast,p=D.position;if(!f.available)return panel("التوقع النقدي 12 شهراً",na(f.reason_ar)+`<div class="acts"><a class="btn ghost" href="company-data-center.html">ارفع الحركات النقدية</a></div>`);
+    const st=D.short_term;
+    return `<div class="tiles">${tile("صافي متوقع شهرياً",sg(f.expected_net_monthly),f.trend==="up"?"اتجاه صاعد":f.trend==="down"?"اتجاه هابط":"مستقر")}${tile("أدنى نقطة نقدية",f.min_cash_point?mv(f.min_cash_point.balance):unav(),f.min_cash_point?esc(f.min_cash_point.period):`<span class="muted">${esc(f.balance_note_ar||"")}</span>`)}${tile("أشهر الضغط",n(f.pressure_months.length),f.pressure_months.length?esc(f.pressure_months.join("، ")):"لا يوجد")}${tile("الثقة / كفاية البيانات",CONF[f.confidence],`كفاية البيانات: ${esc(f.sufficiency)}`)}</div>
+      ${panel("فعلي + متوقع",chart(D.movement.map(x=>x.period).concat(f.points.map(x=>x.period)),[{label:"الرصيد الفعلي",values:D.movement.map(x=>x.balance_end?x.balance_end.value:null).concat(f.points.map(()=>null)),color:"#10b981"},{label:"الرصيد المتوقع",values:D.movement.map((x,i)=>i===D.movement.length-1&&p.balance?p.balance.value:null).concat(f.points.map(x=>x.balance?x.balance.value:null)),color:"#a855f7",dash:1}])+`<div class="muted">${esc(f.method_ar)} · الأشهر الأساسية: ${esc(f.basis_months.join("، "))} <span class="b est">تقديري</span></div>`)}
+      ${panel("الأشهر القادمة",`<div class="tbl"><table><thead><tr><th>الشهر</th><th>داخل متوقع</th><th>خارج متوقع</th><th>صافي</th><th>الرصيد المتوقع</th></tr></thead><tbody>${f.points.map(x=>`<tr class="${f.pressure_months.includes(x.period)?"neg":""}"><td>${esc(x.period)}</td><td>${mv(x.inflow)}</td><td>${mv(x.outflow)}</td><td>${sg(x.net)}</td><td>${mv(x.balance)}</td></tr>`).join("")}</tbody></table></div>`)}
+      ${panel(`الأفق القريب — ${st.days} يوماً`,`<div class="tiles">${tile("دخول متوقع",mv(st.expected_inflow),"")}${tile("خروج متوقع",mv(st.expected_outflow),"")}${tile("الرصيد المتوقع",st.projected_balance?mv(st.projected_balance):unav(),"")}</div><div class="muted">${esc(st.basis_ar)} <span class="b est">تقديري</span></div>`)}`;}
+  // ═══ السيولة
+  function liquidity(){const U={x:"x",months:" شهر",currency:"",percent:"%"};
+    return panel("مؤشرات السيولة",`<div class="tiles">${D.liquidity.map(x=>tile(esc(x.name_ar),x.value!=null?n(x.value,x.unit==="currency"?0:2)+U[x.unit]:unav(),`<div class="muted">${esc(x.method_ar)}</div><div class="muted">الفترة: ${esc(x.period)}${x.value==null?` · <span class="neg">${esc(x.needs_ar)}</span>`:""}</div>`)).join("")}</div>`+(D.can_edit?`<div class="acts">${btn("إدخال الالتزامات المتداولة والحد الأدنى","settings","",1)}</div>`:""));}
+  // ═══ التحصيل
+  function collections(){const c=D.collections;if(!c)return panel("التحصيل والذمم",na("لا توجد بيانات ذمم — ارفع ملف الذمم المدينة (رقم الفاتورة، العميل، تاريخ الفاتورة، الاستحقاق، المبلغ، المحصّل، تاريخ التحصيل)")+`<div class="acts"><a class="btn" href="company-data-center.html">ارفع ملف الذمم</a></div>`);
+    const mx=Math.max(...c.aging.map(a=>a.amount.value),1);
+    return `<div class="tiles">${tile("إجمالي الذمم",mv(c.total_receivables),`${n(c.open_invoices)} فاتورة مفتوحة`)}${tile("المتأخرات",mv(c.overdue),c.overdue_share_pct!=null?`${n(c.overdue_share_pct,1)}% من الذمم`:"")}${tile("DSO",c.dso!=null?n(c.dso)+" يوم":unav(),c.dso_change!=null?`<span class="${c.dso_change<=0?"pos":"neg"}">${c.dso_change>0?"+":""}${n(c.dso_change)} يوم عن الشهر السابق</span>`:"")}${tile("المحصّل في الفترة",mv(c.collected_this_period),`مستحق خلال ${D.short_term.days} يوماً: ${mv(c.due_next_days)}`)}</div>
+      <div class="grid2">${panel("تقادم الذمم",c.aging.map(a=>`<div class="barrow"><span class="t">${esc(a.bucket)}</span><span class="g"><i style="width:${(a.amount.value/mx*100).toFixed(1)}%;background:${a.bucket==="+90"?"#ef4444":a.bucket==="غير مستحقة"?"#10b981":"#f5b301"}"></i></span><span>${mv(a.amount)}</span><span class="muted">${n(a.count)}</span></div>`).join("")+`<div class="muted">${esc(c.dso_method_ar)}</div>`)}
+      ${panel("أكبر العملاء المتأخرين",c.top_overdue_customers.length?c.top_overdue_customers.map(x=>`<div class="barrow"><span class="t">${esc(x.customer)}</span><span>${mv(x.amount)}</span></div>`).join(""):na("لا متأخرات"))}</div>`;}
+  // ═══ الفروع
+  function branches(){const b=D.branches;if(!b.length)return panel("التدفق حسب الفرع",na("الحركات غير مسندة لفروع — أضف عمود «الفرع» في الكشف. لا نوزّع المبالغ بالتقدير."));
+    const mx=Math.max(...b.map(x=>Math.abs(x.net?x.net.value:0)),1);
+    return panel("صافي التدفق حسب الفرع — "+esc(D.period),b.map(x=>`<div class="barrow drill" data-go="branch" data-arg="${esc(x.branch)}"><span class="t">${esc(x.branch)}</span><span class="g"><i style="width:${(Math.abs(x.net?x.net.value:0)/mx*100).toFixed(1)}%;background:${x.net&&x.net.value<0?"#ef4444":"#10b981"}"></i></span>${sg(x.net)}<span class="muted">${x.net_change?"التغير "+(x.net_change.value>0?"+":"")+n(x.net_change.value):""}</span></div>`).join("")+
+      (D.unassigned.net?`<div class="barrow"><span class="t muted">غير مسند لفرع</span><span></span>${sg(D.unassigned.net)}</div>`:"")+`<div class="muted">اضغط فرعاً للتفاصيل · تُعرض فقط الحركات المسندة للفرع.</div>`);}
+  function branch360(name){const x=D.branches.find(b=>b.branch===name);if(!x)return `<button class="back" data-go="branches">→ الفروع</button>`+na("الفرع غير موجود");
+    const risks=D.signals.filter(s=>s.dimension===name);
+    return `<button class="back" data-go="branches">→ الفروع</button><div class="panel"><h2 style="font-size:20px">${esc(x.branch)}</h2><div class="tiles">${tile("داخل",mv(x.inflow),"")}${tile("خارج",mv(x.outflow),"")}${tile("صافي",sg(x.net),x.net_previous?`السابق ${sg(x.net_previous)}`:"")}</div></div>
+      <div class="grid2">${panel("البنود",x.drivers.map(d=>`<div class="barrow"><span class="t">${esc(d.label)}</span><span>${mv(d.amount)}</span></div>`).join("")||na("—"))}${panel("اتجاه الصافي",chart(x.trend.map(t=>t.period),[{label:"الصافي",values:x.trend.map(t=>t.net?t.net.value:null),color:"#10b981"}]))}</div>
+      ${risks.length?panel("المخاطر",risks.map(s=>eventCard(s)).join("")):""}`;}
+  // ═══ الانحراف
+  function variance(){const v=D.variance;if(!v)return panel("تحليل الانحراف",na("لا توجد فترة سابقة للمقارنة"));const mx=Math.max(...v.contributions.map(c=>Math.abs(c.effect_on_net)),1);
+    return `<div class="tiles">${tile("صافي الفترة",sg(v.net_current),"")}${tile("صافي السابق",sg(v.net_previous),"")}${tile("الانحراف",sg(v.delta),"")}${tile("مقابل الميزانية",unav(),`<span class="muted">${esc(v.budget.reason_ar)}</span>`)}</div>
+      ${panel("مساهمة كل بند في الانحراف",`<div style="margin-bottom:8px"><b>${esc(v.main_cause_ar||"")}</b></div>`+v.contributions.map(c=>`<div class="barrow"><span class="t">${esc(c.label)}</span><span class="g"><i style="width:${(Math.abs(c.effect_on_net)/mx*100).toFixed(1)}%;background:${c.effect_on_net>=0?"#10b981":"#ef4444"}"></i></span><span class="${c.effect_on_net>=0?"pos":"neg"}">${c.effect_on_net>0?"+":""}${n(c.effect_on_net)}</span></div>`).join(""))}`;}
+  function risks(){const r=D.signals.filter(s=>s.type==="risk"),o=D.signals.filter(s=>s.type==="opportunity"),q=D.signals.filter(s=>s.type==="data_quality");
+    return panel(`🔴 ${n(r.length)} مخاطر سيولة — إجراءات مطلوبة`,r.length?r.map((s,i)=>eventCard(s,i)).join(""):na("لا مخاطر وفق القواعد"))+panel(`🟢 ${n(o.length)} فرص`,o.length?o.map((s,i)=>eventCard(s,i)).join(""):na("لا فرص مكتشفة"))+panel(`🟡 ${n(q.length)} جودة البيانات`,q.length?q.map(s=>eventCard(s)).join(""):na("لا ملاحظات"));}
+  function links(){const c=D.cross;return panel("الربط بين الوحدات",chain()+`<div class="acts" style="justify-content:center"><a class="btn ghost" href="company-sales-intelligence.html">المبيعات</a><a class="btn ghost" href="company-purchases-intelligence.html">المشتريات</a><a class="btn ghost" href="company-inventory-intelligence.html">المخزون</a></div>`)+panel("ما تشرحه كل وحدة",`<div class="rec"><b>المبيعات</b><span>النشاط، والتحصيل عبر «تحويل المبيعات إلى نقد» (${esc(((D.liquidity.find(x=>x.code==="cash_conversion")||{}).value??"غير متاح"))}${(D.liquidity.find(x=>x.code==="cash_conversion")||{}).value!=null?"%":""})</span><b>المشتريات</b><span>الالتزامات وأوامر الشراء المفتوحة المحسوبة في الأفق القريب</span><b>المخزون</b><span>الأموال المرتبطة بالمخزون (تدخل في النسبة المتداولة)</span><b>التدفق النقدي</b><span>الحركة الفعلية للنقد فقط</span></div>`);}
+  // ═══ الموجّه
+  function render(){const d=D;
+    if(!d.has_data){$("tabs").innerHTML="";const r=d.required||{};$("content").innerHTML=`<div class="state"><div style="font-size:16px;margin-bottom:10px">${esc(d.message_ar)}</div><div class="muted">المطلوب: ${(r.required||[]).map(esc).join("، ")}</div><div class="muted">مستحسن: ${(r.recommended||[]).map(esc).join("، ")}</div><div class="muted">اختياري: ${(r.optional||[]).map(esc).join("، ")}</div><div class="cta" style="justify-content:center"><a class="btn" href="company-data-center.html">ارفع الكشف البنكي</a>${d.can_edit?`<button class="btn ghost" data-act="settings">أدخل الرصيد الافتتاحي</button>`:""}</div></div>`;bind(document);return;}
+    const [v,arg]=route(),tabOf={driver:"movement",branch:"branches"}[v]||v;
+    $("tabs").innerHTML=TABS.map(([k,l])=>`<button class="tab ${k===tabOf?"on":""}" data-go="${k}">${l}${k==="risks"&&d.status.risks?` <span class="b high">${d.status.risks}</span>`:""}</button>`).join("");
+    const view={overview,position,movement,forecast,liquidity,collections,branches,variance,risks,links}[v];
+    $("content").innerHTML=v==="driver"?driver360(arg):v==="branch"?branch360(arg):(view?view():overview());
+    bind(document);if(v==="risks"&&arg){const el=document.getElementById("sig-"+arg);if(el)el.scrollIntoView({block:"center"});}else window.scrollTo(0,0);}
+  function bind(root){root.querySelectorAll("[data-act]").forEach(el=>el.onclick=e=>{e.stopPropagation();const a=el.dataset.act,g=el.dataset.arg;if(a==="settings")settings();else if(a==="branch")go("branch",g);else go(a,g||null);});
+    root.querySelectorAll("[data-go]").forEach(el=>el.onclick=()=>go(el.dataset.go,el.dataset.arg||null));
+    root.querySelectorAll("[data-sig]").forEach(b=>b.onclick=()=>decision(b));const ab=$("aiBtn");if(ab)ab.onclick=runAI;}
+  function settings(){const s=D.settings||{},f=(k,l,h)=>`<label>${l}<input name="${k}" inputmode="decimal" value="${s[k]??""}"><span class="muted" style="font-size:11px">${h}</span></label>`;
+    $("modal").innerHTML=`<h3 style="margin-top:0">مدخلات السيولة (يدوية)</h3><div class="fg">${f("opening_balance","الرصيد الافتتاحي","يُستخدم إن لم يحتوِ الكشف على عمود الرصيد")}${f("current_liabilities","الالتزامات المتداولة","للنسبة المتداولة والسريعة")}${f("min_cash","الحد الأدنى للنقد","تنبيه الضغط النقدي عند النزول تحته")}${f("restricted_cash","النقد المقيد","يُطرح لحساب النقد المتاح")}</div><div class="muted" style="margin-top:8px">اترك الحقل فارغاً = غير متاح (لا يُحسب صفراً).</div><div class="cta"><button class="btn" id="mSave">حفظ</button><button class="btn ghost" id="mCancel">إلغاء</button><span id="mMsg" class="muted"></span></div>`;
+    $("ov").classList.add("on");$("mCancel").onclick=()=>$("ov").classList.remove("on");
+    $("mSave").onclick=()=>{const body={};$("modal").querySelectorAll("[name]").forEach(i=>body[i.name]=i.value);fetch("/company/cashflow/settings",{method:"POST",headers:H,body:JSON.stringify(body)}).then(async r=>{const j=await r.json().catch(()=>({}));if(r.ok){$("ov").classList.remove("on");load();}else{$("mMsg").className="neg";$("mMsg").textContent=typeof j.detail==="string"?j.detail:"HTTP "+r.status;}});};}
+  function decision(b){const box=b.closest(".event").querySelector(".frm");
+    box.innerHTML=`<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap"><input class="f o" placeholder="المسؤول (مثلاً المدير المالي)"><input class="f d" type="date"><button class="btn c">إنشاء</button></div><div class="m muted"></div>`;
+    box.querySelector(".c").onclick=()=>fetch("/company/cashflow/to-decision",{method:"POST",headers:H,body:JSON.stringify(Object.assign({},F(),{signal_id:b.dataset.sig,owner:box.querySelector(".o").value,due_date:box.querySelector(".d").value,period:D.period}))}).then(async r=>{const j=await r.json().catch(()=>({}));box.querySelector(".m").textContent=r.ok?"تم إنشاء القرار والمهمة ✓ (الحالة: قيد التنفيذ)":(typeof j.detail==="string"?j.detail:"HTTP "+r.status);if(r.ok)b.disabled=true;});}
+  function runAI(){const b=$("aiBtn"),out=$("aiOut");b.disabled=true;out.innerHTML=`<div class="muted">جارٍ الصياغة…</div>`;
+    fetch("/company/cashflow/ai-insights",{method:"POST",headers:H,body:JSON.stringify(Object.assign({},F(),{period:D.period}))}).then(async r=>{const j=await r.json().catch(()=>({}));b.disabled=false;
+      if(!r.ok){out.innerHTML=`<div class="neg">${esc(typeof j.detail==="string"?j.detail:"HTTP "+r.status)}</div>`;return;}
+      const a=j.ai||{},resp=a.response||{},L={FACTS:"الدليل",INTERPRETATION:"القراءة",HYPOTHESES:"فرضيات غير مؤكدة",RECOMMENDATIONS:"التوصية والإجراء",DATA_GAPS:"ما لم يُحتسب لنقص البيانات"};
+      out.innerHTML=(a.message?`<div class="na">${esc(a.message)}</div>`:"")+Object.keys(L).map(k=>resp[k]&&resp[k].length?`<div class="ai-sec"><b>${L[k]}</b><ul style="margin:0;padding-inline-start:18px">${resp[k].map(x=>`<li>${esc(typeof x==="string"?x:JSON.stringify(x))}</li>`).join("")}</ul></div>`:"").join("");}).catch(e=>{b.disabled=false;out.innerHTML=`<div class="neg">${esc(e.message||e)}</div>`;});}
+  $("ov").onclick=e=>{if(e.target===$("ov"))$("ov").classList.remove("on");};
+  $("btnSet").onclick=()=>settings();["fPeriod","fBranch"].forEach(id=>$(id).addEventListener("change",load));
+  $("reset").onclick=()=>{$("fPeriod").value="";$("fBranch").value="";load();};
+  load();
+})();
+</script>
+<script src="nabbah-sidebar.js"></script>
+</body></html>
