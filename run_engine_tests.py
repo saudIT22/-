@@ -6,7 +6,7 @@
 import base64, glob, os, re, shutil, subprocess, sys, tempfile
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
-PHASES = ["phase21", "phase22", "phase23", "phase24", "phase25", "phase26", "phase27"]
+PHASES = ["phase21", "phase22", "phase23", "phase24", "phase25", "phase26", "phase27", "phase28"]
 SKIP = {"test_api_integration.py"}  # pytest فارغ قديم — استُبدل بـ test_api_security.py
 
 
