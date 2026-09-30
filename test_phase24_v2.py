@@ -18,15 +18,15 @@ d = detect_type(H)
 ct("detected as cash movements, not sales", d[0]["type"] == "cash_movement" and d[0]["complete"])
 ct("sales flagged incomplete for this file", next(x for x in d if x["type"] == "sale")["complete"] is False)
 m = map_columns(H, "cash_movement")
-ct("month → period, deposits → inflow, withdrawals → outflow",
-   set(m["mapping"].values()) == {"period", "inflow", "outflow"} and not m["missing_required"])
+ct("month → period, deposits → inflow, withdrawals → outflow, closing balance → balance",
+   set(m["mapping"].values()) == {"period", "inflow", "outflow", "balance"} and not m["missing_required"])
 v = validate_rows(R, m["mapping"], "cash_movement", headers=H)
 ct("3 months → 4 movements (zero sides skipped)", v["valid_count"] == 4 and v["rejected_count"] == 0)
 jan_in = next(x for x in v["valid"] if x["date"] == "2026-01-01" and x["direction"] == "in")
 ct("deposit becomes an 'in' movement dated the 1st", jan_in["amount"] == 150000.0 and jan_in["period"] == "2026-01")
 ct("withdrawal becomes an 'out' movement", any(x["direction"] == "out" and x["amount"] == 90000.0 for x in v["valid"]))
 ct("summary movements are labelled as such", jan_in["source"] == "bank_summary" and jan_in["movement_type"])
-ct("unmapped columns kept, not dropped", jan_in["extra"]["الرصيد الختامي (SAR)"] == 500000 and "عدد المعاملات" in jan_in["extra"])
+ct("closing balance now mapped (2.8) + unmapped columns kept", jan_in["balance"] == 500000.0 and "عدد المعاملات" in jan_in["extra"])
 ct("'#' index column ignored", "#" not in jan_in["extra"])
 ct("extra columns reported", "صافي الحركة (SAR)" in v["extra_columns"])
 
@@ -117,6 +117,10 @@ ct("same rows with year from the file title → 4 movements", good["valid_count"
 
 tot = validate_rows([["يناير", 100, 50], ["الإجمالي", 100, 50]], mm, "cash_movement", headers=MH, year_hint=2024)
 ct("'الإجمالي' row skipped (not imported, not counted as rejected)", tot["valid_count"] == 2 and tot["rejected_count"] == 0 and tot["skipped_totals"] == [3])
+
+print("[GROUP] 2.8 file types")
+ct("receivables file detected as receivables (not sales)", detect_type(["رقم الفاتورة", "العميل", "الفرع", "تاريخ الفاتورة", "تاريخ الاستحقاق", "المبلغ", "المبلغ المحصل", "تاريخ التحصيل"])[0]["type"] == "receivable")
+ct("bank statement with debit/credit/balance → cash movements", detect_type(["التاريخ", "الوصف", "الفرع", "الطرف", "مدين", "دائن", "الرصيد", "الحساب"])[0]["type"] == "cash_movement")
 
 print(f"\nTOTAL: {P+F} | PASSED: {P} | FAILED: {F}")
 sys.exit(0 if F == 0 else 1)
