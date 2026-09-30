@@ -30,7 +30,9 @@ ENTITIES = {
  "purchase": {"ar": "المشتريات", "en": "Purchases", "table": "companypurchase",
    "fields": {"date": REQUIRED, "branch_id": REQUIRED, "supplier_name": OPTIONAL, "reference": OPTIONAL,
               "product_sku": OPTIONAL, "category": OPTIONAL, "quantity": OPTIONAL, "unit_cost": OPTIONAL,
-              "total_cost": REQUIRED, "status": OPTIONAL, "vat": OPTIONAL}},
+              "total_cost": REQUIRED, "status": OPTIONAL, "vat": OPTIONAL,
+              # Phase 2.7: الأداء والتسليم والجودة (اختيارية — غيابها يعني «غير متاح» لا صفر)
+              "expected_date": OPTIONAL, "received_date": OPTIONAL, "received_qty": OPTIONAL, "rejected_qty": OPTIONAL}},
  "inventory": {"ar": "المخزون", "en": "Inventory", "table": "companyinventory",
    "fields": {"period": REQUIRED, "branch_id": REQUIRED, "product_sku": REQUIRED, "opening_qty": OPTIONAL,
               "opening_value": OPTIONAL, "purchases_qty": OPTIONAL, "sold_qty": OPTIONAL,
@@ -44,8 +46,8 @@ ENTITIES = {
 DATASET_TYPES = tuple(ENTITIES)
 NUMERIC = {"quantity", "gross_sales", "discounts", "returns", "net_sales", "vat", "unit_cost", "total_cost",
            "opening_qty", "opening_value", "purchases_qty", "sold_qty", "adjustments_qty", "closing_qty",
-           "closing_value", "amount", "cost", "selling_price", "monthly_cost", "credit_limit", "inflow", "outflow"}
-DATE_FIELDS = {"date", "hire_date", "termination_date"}
+           "closing_value", "amount", "cost", "selling_price", "monthly_cost", "credit_limit", "inflow", "outflow", "received_qty", "rejected_qty"}
+DATE_FIELDS = {"date", "hire_date", "termination_date", "expected_date", "received_date"}
 PERIOD_FIELDS = {"period"}
 # مفاتيح كشف التكرار لكل نوع
 DUP_KEYS = {"sale": ("date", "branch_id", "reference", "product_sku"),
