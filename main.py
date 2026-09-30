@@ -573,6 +573,36 @@ class CompanyInventory(SQLModel, table=True):
     created_at: _DTCOL = Field(default_factory=_now_naive)
 
 
+class CompanyReceivable(SQLModel, table=True):
+    """الذمم المدينة — Phase 2.8 (التحصيل وDSO والتقادم). تستخدم نفس الفروع والعملاء."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    branch_id: Optional[int] = Field(default=None, index=True)
+    customer_name: str = ""
+    reference: str = ""
+    invoice_date: str = Field(default="", index=True)
+    due_date: str = ""
+    amount: Optional[float] = None
+    paid_amount: Optional[float] = None
+    paid_date: str = ""
+    extra_json: str = ""
+    dataset_id: Optional[int] = Field(default=None, index=True)
+    source_row: Optional[int] = None
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+class CompanyCashSetting(SQLModel, table=True):
+    """مدخلات يدوية للسيولة لا توجد في الملفات: الرصيد الافتتاحي، الالتزامات المتداولة، الحد الأدنى، النقد المقيد."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    opening_balance: Optional[float] = None
+    current_liabilities: Optional[float] = None
+    min_cash: Optional[float] = None
+    restricted_cash: Optional[float] = None
+    updated_by: str = ""
+    updated_at: _DTCOL = Field(default_factory=_now_naive)
+
+
 class CompanyInventoryParam(SQLModel, table=True):
     """معاملات إعادة الطلب لكل صنف (يدوية أو من ملف) — Phase 2.6. branch_id فارغ = لكل الفروع."""
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -599,6 +629,9 @@ class CompanyCashMovement(SQLModel, table=True):
     direction: str = ""                        # in | out
     reference: str = ""
     source: str = ""
+    account: str = ""                          # Phase 2.8 — الحساب/البنك
+    counterparty: str = ""                     # الطرف المقابل (عميل/مورد/جهة)
+    balance: Optional[float] = None            # الرصيد المُبلّغ بعد الحركة (كشف البنك)
     extra_json: str = ""
     dataset_id: Optional[int] = Field(default=None, index=True)
     source_row: Optional[int] = None
@@ -771,7 +804,8 @@ def auto_sync_columns():
                             ("received_date", "VARCHAR DEFAULT ''"), ("received_qty", "DOUBLE PRECISION"),
                             ("rejected_qty", "DOUBLE PRECISION")],
         "companyinventory": [("extra_json", "TEXT DEFAULT ''")],
-        "companycashmovement": [("extra_json", "TEXT DEFAULT ''")],
+        "companycashmovement": [("extra_json", "TEXT DEFAULT ''"), ("account", "VARCHAR DEFAULT ''"),
+                                ("counterparty", "VARCHAR DEFAULT ''"), ("balance", "DOUBLE PRECISION")],
         '"user"': [
             ("business_name", "VARCHAR DEFAULT ''"), ("phone", "VARCHAR DEFAULT ''"),
             ("plan", "VARCHAR DEFAULT ''"), ("is_active", "INTEGER DEFAULT 0"),
@@ -1140,6 +1174,11 @@ def page_fin_overview():
 @app.get("/company-ops-analytics.html")
 def page_ops_analytics():
     return FileResponse("company-ops-analytics.html")
+
+
+@app.get("/company-cashflow-intelligence.html")
+def page_cashflow_intelligence():
+    return FileResponse("company-cashflow-intelligence.html")
 
 
 @app.get("/company-purchases-intelligence.html")
@@ -3975,7 +4014,7 @@ def _load_p24(name):
     """يحمّل محركات 2.4 من المجلد أو من حزمة nabbah_engines."""
     try:
         import sys as _sys, os as _os, importlib
-        for _d in ("phase21", "phase22", "phase23", "phase24", "phase25", "phase26", "phase27"):
+        for _d in ("phase21", "phase22", "phase23", "phase24", "phase25", "phase26", "phase27", "phase28"):
             _p = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), _d)
             if _p not in _sys.path:
                 _sys.path.insert(0, _p)
@@ -4225,7 +4264,10 @@ _IMPORT_TARGETS = {
     "inventory": ("CompanyInventory", ("branch_id", "product_sku", "period", "opening_qty", "opening_value",
                                         "purchases_qty", "sold_qty", "adjustments_qty", "closing_qty", "closing_value")),
     "cash_movement": ("CompanyCashMovement", ("branch_id", "date", "movement_type", "category", "amount",
-                                               "direction", "reference", "source", "period")),
+                                               "direction", "reference", "source", "period", "account",
+                                               "counterparty", "balance")),
+    "receivable": ("CompanyReceivable", ("branch_id", "customer_name", "reference", "invoice_date", "due_date",
+                                         "amount", "paid_amount", "paid_date")),
     "employee": ("CompanyEmployee", ("branch_id", "department_id", "employee_code", "name", "role",
                                       "employment_status", "hire_date", "termination_date", "monthly_cost",
                                       "email", "phone")),
@@ -4950,6 +4992,166 @@ def company_purchases_ai_insights(data: dict, request: Request, user: User = Dep
     return {"period": res.get("period"), "ai": out}
 
 
+# ═══════════════════════════════════════════════════════════
+#  Phase 2.8 — Cash Flow Intelligence (النقد من الحركات النقدية فقط؛ الوحدات الأخرى للربط)
+# ═══════════════════════════════════════════════════════════
+def _cash_scope(s, user, need="view"):
+    _ensure_data_tables()
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    company = s.get(Company, user.company_id)
+    role = get_user_role(s, user) if company else None
+    if not company or not (role == "owner" or check_permission(role, "finance", "view")):
+        raise HTTPException(403, "غير مصرّح — التدفق النقدي للمالك ومن لديه صلاحية المالية")
+    if company.is_active != 1:
+        raise HTTPException(402, "شركتك قيد التفعيل")
+    if need == "edit" and not (role == "owner" or check_permission(role, "finance", "edit")):
+        raise HTTPException(403, "غير مصرّح — تعديل إعدادات السيولة للمالك والمحاسب")
+    return company, role
+
+
+def _cash_settings(s, company_id):
+    r = s.exec(select(CompanyCashSetting).where(CompanyCashSetting.company_id == company_id)).first()
+    return {} if not r else {"opening_balance": r.opening_balance, "current_liabilities": r.current_liabilities,
+                             "min_cash": r.min_cash, "restricted_cash": r.restricted_cash}
+
+
+def _cashflow_result(s, company, *, period=None, branch_id=None):
+    ce = _load_p24("cashflow_engine")
+    if ce is None:
+        raise HTTPException(503, "محرّك التدفق النقدي غير متاح — " + _p23_diagnostic())
+    names = {b.id: b.name for b in s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company.id)).all()}
+    mv = [{"date": r.date, "direction": r.direction, "amount": r.amount, "movement_type": r.movement_type,
+           "category": r.category, "counterparty": getattr(r, "counterparty", "") or None,
+           "account": getattr(r, "account", "") or None, "balance": getattr(r, "balance", None),
+           "source": r.source, "branch_name": names.get(r.branch_id) if r.branch_id else None, "branch_id": r.branch_id}
+          for r in s.exec(select(CompanyCashMovement).where(CompanyCashMovement.company_id == company.id).limit(200000)).all()]
+    ar = [{"invoice_date": r.invoice_date, "due_date": r.due_date, "amount": r.amount, "paid_amount": r.paid_amount,
+           "paid_date": r.paid_date, "customer_name": r.customer_name, "reference": r.reference,
+           "branch_name": names.get(r.branch_id) if r.branch_id else None, "branch_id": r.branch_id}
+          for r in s.exec(select(CompanyReceivable).where(CompanyReceivable.company_id == company.id).limit(100000)).all()]
+    if branch_id:
+        mv = [m for m in mv if m["branch_id"] == branch_id]
+        ar = [a for a in ar if a["branch_id"] == branch_id]
+    sales = _sales_rows(s, company.id, {branch_id} if branch_id else None)
+    inv_by_p = {}
+    for r in s.exec(select(CompanyInventory).where(CompanyInventory.company_id == company.id).limit(100000)).all():
+        if (not branch_id or r.branch_id == branch_id) and r.closing_value is not None:
+            inv_by_p[r.period] = inv_by_p.get(r.period, 0) + r.closing_value
+    ip = sorted(inv_by_p)
+    pur_chg, open_po = None, None
+    try:
+        _p = _purchases_result(s, company, branch_id=branch_id)
+        if _p.get("has_data"):
+            pur_chg = _p["kpis"]["spend"].get("change_pct")
+            open_po = (_p["kpis"]["open_pos"].get("open_value") or {}).get("value")
+    except HTTPException:
+        pass
+    res = ce.analyze_cashflow(mv, receivables=ar, period=period, settings=_cash_settings(s, company.id), sales_rows=sales,
+                              inventory_value=inv_by_p[ip[-1]] if ip else None,
+                              inventory_value_prev=inv_by_p[ip[-2]] if len(ip) > 1 else None,
+                              purchases_change_pct=pur_chg, open_po_value=open_po,
+                              currency=getattr(company, "currency", None) or "SAR")
+    res["filters"] = {"period": res.get("period"), "branch_id": branch_id}
+    res["options"] = {"branch_list": [{"id": k, "name": v} for k, v in names.items()]}
+    res["settings"] = _cash_settings(s, company.id)
+    return res
+
+
+@app.get("/company/cashflow-intelligence")
+def company_cashflow_intelligence(user: User = Depends(get_current_user), period: str = "", branch_id: str = ""):
+    with Session(engine) as s:
+        company, role = _cash_scope(s, user)
+        res = _cashflow_result(s, company, period=period or None, branch_id=_int_or_none(branch_id))
+        res["can_edit"] = role == "owner" or check_permission(role, "finance", "edit")
+        return res
+
+
+@app.post("/company/cashflow/settings")
+def company_cashflow_settings(data: dict, user: User = Depends(get_current_user)):
+    """إدخال يدوي: الرصيد الافتتاحي، الالتزامات المتداولة، الحد الأدنى للنقد، النقد المقيد. الفارغ = غير متاح."""
+    with Session(engine) as s:
+        company, role = _cash_scope(s, user, need="edit")
+        row = s.exec(select(CompanyCashSetting).where(CompanyCashSetting.company_id == company.id)).first() \
+            or CompanyCashSetting(company_id=company.id)
+        for k in ("opening_balance", "current_liabilities", "min_cash", "restricted_cash"):
+            if k in data:
+                v = data.get(k)
+                if v in (None, ""):
+                    setattr(row, k, None); continue
+                try:
+                    x = float(str(v).replace(",", ""))
+                except ValueError:
+                    raise HTTPException(422, f"قيمة غير رقمية في {k}")
+                if x < 0 and k != "opening_balance":
+                    raise HTTPException(422, f"قيمة سالبة غير مقبولة في {k}")
+                setattr(row, k, x)
+        row.updated_by, row.updated_at = (user.name or user.email)[:100], datetime.now()
+        s.add(row); s.commit()
+        log_audit(company.id, user.id, user.name, "cash_settings", "cashflow", json.dumps(
+            {k: getattr(row, k) for k in ("opening_balance", "current_liabilities", "min_cash", "restricted_cash")}))
+        return {"ok": True}
+
+
+@app.post("/company/cashflow/to-decision")
+def company_cashflow_to_decision(data: dict, user: User = Depends(get_current_user)):
+    """يحوّل إشارة سيولة إلى قرار ومهمة — تُعاد الإشارة حسابياً في الخادم."""
+    with Session(engine) as s:
+        company, role = _exec_scope(s, user, need="edit")
+        res = _cashflow_result(s, company, period=data.get("period") or None, branch_id=_int_or_none(data.get("branch_id")))
+        sig = next((x for x in res.get("signals", []) if x["id"] == str(data.get("signal_id") or "")), None)
+        if not sig:
+            raise HTTPException(404, "الإشارة غير موجودة أو لم تعد قائمة لهذه الفترة")
+        impact = (sig.get("estimated_impact") or {}).get("value")
+        d = CompanyDecision(
+            company_id=company.id, title=str(data.get("title") or sig["name_ar"])[:200],
+            detail=" · ".join(sig.get("evidence", []))[:1000], owner=str(data.get("owner") or "")[:100],
+            due_date=str(data.get("due_date") or "")[:20], kpi=sig.get("metric_id") or "net_cash_flow", status="open",
+            baseline_sales=_company_total_sales(s, company.id),
+            expected_impact=(f"{impact} {res['currency']} (تقديري)" if impact is not None else "غير قابل للتقدير")[:200],
+            linked_to=f"cashflow_signal:{sig['id']}", rationale=sig.get("suggested_action_ar", "")[:500],
+            metric_id=sig.get("metric_id") or "net_cash_flow", expected_impact_value=impact, impact_status="expected",
+            source_signal=sig["id"], problem_type=sig["code"], decision_type="cashflow",
+            outcome_status="pending_measurement", created_by=user.name or user.email,
+            data_source="companycashmovement", updated_at=datetime.now())
+        s.add(d); s.commit(); s.refresh(d)
+        act = CompanyAction(company_id=company.id, decision_id=d.id, title=sig.get("suggested_action_ar", "")[:200],
+                            owner=d.owner, priority="P1" if sig["severity"] == "high" else "P2", due_date=d.due_date,
+                            start_date=datetime.now().strftime("%Y-%m-%d"), updated_at=datetime.now())
+        s.add(act); s.commit(); s.refresh(act)
+        log_audit(company.id, user.id, user.name, "decision_from_cashflow_signal", f"decision:{d.id}",
+                  f"signal={sig['id']} code={sig['code']}")
+        return {"ok": True, "decision_id": d.id, "action_ids": [act.id]}
+
+
+@app.post("/company/cashflow/ai-insights")
+def company_cashflow_ai_insights(data: dict, request: Request, user: User = Depends(get_current_user)):
+    """AI يشرح أرقام محرك التدفق النقدي المتحقَّق منها فقط — لا يحسب ولا يخترع رقماً."""
+    with Session(engine) as s:
+        company, role = _cash_scope(s, user)
+        res = _cashflow_result(s, company, period=data.get("period") or None, branch_id=_int_or_none(data.get("branch_id")))
+    if not res.get("has_data"):
+        raise HTTPException(422, res.get("message_ar") or "لا توجد حركات نقدية")
+    gw = _load_p24("ai_gateway")
+    if gw is None:
+        raise HTTPException(503, "بوابة الذكاء الاصطناعي غير متاحة — " + _p23_diagnostic())
+    dq = [x for x in res.get("signals", []) if x["type"] == "data_quality"]
+    trust = {"overall_score": 85 if not dq else 65, "status": "pass" if not dq else "warning", "has_critical_fail": False,
+             "main_causes": [{"explanation": e, "fix": ""} for x in dq for e in x.get("evidence", [])][:3]}
+    ctx = {"period": res.get("period"), "currency": res.get("currency"), "position": res.get("position"),
+           "flows": res.get("flows"), "variance": res.get("variance"),
+           "drivers": [{"label": d["label"], "direction": d["direction"], "amount": d["amount"], "delta": d["delta"]}
+                       for d in res.get("drivers", [])],
+           "short_term": res.get("short_term"), "liquidity": res.get("liquidity"),
+           "collections": {k: v for k, v in (res.get("collections") or {}).items() if k != "aging"},
+           "signals": [{"type": x["type"], "name": x["name_ar"], "evidence": x.get("evidence")} for x in res.get("signals", [])[:8]]}
+    out = gw.request_ai_analysis(gw.GeminiProvider(company_gemini), ctx,
+                                 "اشرح لماذا تغيّر النقد: الأدلة، ثم الأثر، ثم التوصية، ثم الإجراء. لا تحسب أي رقم جديد.",
+                                 trust_report=trust, lang=get_lang(request), company=company)
+    log_audit(company.id, user.id, user.name, "cashflow_ai_insights", "cashflow", f"period={res.get('period')}")
+    return {"period": res.get("period"), "ai": out}
+
+
 @app.get("/company/executive-intelligence")
 def company_executive_intelligence(request: Request, user: User = Depends(get_current_user),
                                    period: Optional[str] = None, ai: int = 0):
@@ -4968,6 +5170,13 @@ def company_executive_intelligence(request: Request, user: User = Depends(get_cu
                 if _inv.get("has_data"):
                     result.setdefault("module_signals", {})["inventory"] = _inv.get("signals", [])[:6]
                     result["risks"] = result["risks"] + [x for x in _inv.get("signals", []) if x["type"] == "risk"][:2]
+            except HTTPException:
+                pass
+            try:   # إشارات التدفق النقدي 2.8
+                _cf = _cashflow_result(s, company)
+                if _cf.get("has_data"):
+                    result.setdefault("module_signals", {})["cashflow"] = _cf.get("signals", [])[:6]
+                    result["risks"] = result["risks"] + [x for x in _cf.get("signals", []) if x["type"] == "risk"][:2]
             except HTTPException:
                 pass
             try:   # إشارات المشتريات 2.7
@@ -10295,7 +10504,7 @@ ENGINE_MODULES = ("nabbah_finance", "nabbah_trust", "semantic_layer", "kpi_engin
                   "ai_gateway", "period_aggregation", "legacy_adapters", "platform_bridge",
                   "intelligence_engine", "forecast_engine", "scenario_engine", "decision_memory",
                   "rule_catalog", "canonical_model", "period_model", "metric_registry", "ingestion",
-                  "sales_engine", "inventory_engine", "purchases_engine")
+                  "sales_engine", "inventory_engine", "purchases_engine", "cashflow_engine")
 
 
 def _runtime_health():
