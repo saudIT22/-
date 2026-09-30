@@ -22,10 +22,10 @@ INGEST_VERSION = "1.0"
 
 # مرادفات الأعمدة: عربية وإنجليزية -> الحقل المرجعي
 SYNONYMS = {
- "date": ["التاريخ", "تاريخ", "date", "day", "trx date", "invoice date", "تاريخ الفاتورة"],
+ "date": ["التاريخ", "تاريخ", "date", "day", "trx date", "invoice date", "تاريخ الفاتورة", "تاريخ الطلب", "تاريخ أمر الشراء", "تاريخ الشراء", "order date", "po date", "purchase date"],
  "period": ["الفترة", "الشهر", "period", "month"],
  "branch_id": ["الفرع", "اسم الفرع", "branch", "branch name", "location", "الموقع"],
- "reference": ["رقم الفاتورة", "الفاتورة", "المرجع", "invoice", "invoice no", "reference", "ref", "order", "رقم الطلب", "po", "رقم أمر الشراء"],
+ "reference": ["رقم الفاتورة", "الفاتورة", "المرجع", "invoice", "invoice no", "reference", "ref", "order", "رقم الطلب", "po", "رقم أمر الشراء", "رقم أمر الشراء", "أمر الشراء", "po", "po number", "po no"],
  "channel": ["القناة", "channel", "قناة البيع", "sales channel"],
  "product_sku": ["رمز المنتج", "الصنف", "sku", "product", "product code", "item", "المنتج", "كود الصنف"],
  "category": ["التصنيف", "الفئة", "category", "group", "المجموعة"],
@@ -52,6 +52,12 @@ SYNONYMS = {
             "total deposits", "credit", "دائن", "المقبوضات", "التحصيلات", "cash in", "inflow"],
  "outflow": ["السحوبات", "إجمالي السحوبات", "اجمالي السحوبات", "سحب", "withdrawals", "withdrawal", "total withdrawals",
              "debit", "مدين", "المدفوعات", "cash out", "outflow"],
+ "expected_date": ["تاريخ التسليم المتوقع", "التسليم المتوقع", "موعد التسليم", "تاريخ الاستحقاق", "expected date",
+                   "expected delivery", "due date", "promised date"],
+ "received_date": ["تاريخ الاستلام", "تاريخ التسليم الفعلي", "تاريخ الاستلام الفعلي", "received date", "delivery date",
+                   "receipt date", "actual delivery"],
+ "received_qty": ["الكمية المستلمة", "المستلم", "received qty", "qty received", "received quantity"],
+ "rejected_qty": ["الكمية المرفوضة", "المرفوض", "المعيب", "rejected qty", "rejected", "defective", "rejected quantity"],
  "promotion": ["الحملة", "العرض الترويجي", "الحملة الترويجية", "promotion", "promo", "campaign"],
  "supplier_name": ["المورد", "اسم المورد", "supplier", "vendor"],
  "unit_cost": ["سعر الوحدة", "تكلفة الوحدة", "unit cost", "unit price", "price"],
@@ -255,6 +261,8 @@ def map_columns(headers, dataset_type):
         else:
             unmapped.append({"index": i, "header": h})
     missing = [f for f in required_fields(dataset_type) if f not in mapping.values()]
+    if dataset_type == "purchase" and {"quantity", "unit_cost"} <= set(mapping.values()):
+        missing = [f for f in missing if f != "total_cost"]      # الإجمالي يُشتق = الكمية × سعر الوحدة
     if dataset_type == "cash_movement":
         vals = set(mapping.values())
         if vals & {"inflow", "outflow"}:          # ملخص: المبلغ والاتجاه يُشتقّان
@@ -366,6 +374,10 @@ def validate_rows(rows, mapping, dataset_type, *, branch_names=None, existing_ke
                 errors.append({"field": "branch_id", "value": str(rec["branch_id"])[:40], "error": "فرع غير معروف"})
             else:
                 rec["branch_id"] = bid
+        if (dataset_type == "purchase" and rec.get("total_cost") is None
+                and rec.get("quantity") is not None and rec.get("unit_cost") is not None):
+            rec["total_cost"] = round(float(rec["quantity"]) * float(rec["unit_cost"]), 2)
+            rec["total_cost_derived"] = True
         subs = [rec]
         if summary_cash and errors:            # خطأ في الصف نفسه: يُرفض مرة واحدة لا مرتين
             rejected.append({"row": n, "record": rec, "errors": errors})
