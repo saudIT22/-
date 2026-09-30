@@ -10,7 +10,7 @@ def ct(n, c):
     else: F += 1; print(f"FAIL: {n}")
 
 print("[GROUP] canonical model")
-ct("9 entities defined (customers added in 2.5)", len(cm.DATASET_TYPES) == 9 and "customer" in cm.DATASET_TYPES)
+ct("9 entities defined (customers added in 2.5)", len(cm.DATASET_TYPES) == 10 and "receivable" in cm.DATASET_TYPES)
 ct("sale required fields", set(cm.required_fields("sale")) == {"date", "branch_id", "gross_sales"})
 ct("payroll marked sensitive", cm.sensitive_fields("employee") == ["monthly_cost"])
 ct("every entity has a table + duplicate key", all(cm.ENTITIES[t].get("table") and t in cm.DUP_KEYS for t in cm.DATASET_TYPES))
