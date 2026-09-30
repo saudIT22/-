@@ -544,6 +544,10 @@ class CompanyPurchase(SQLModel, table=True):
     total_cost: Optional[float] = None
     vat: Optional[float] = None
     status: str = ""
+    expected_date: str = ""                    # Phase 2.7 — التسليم والجودة
+    received_date: str = ""
+    received_qty: Optional[float] = None
+    rejected_qty: Optional[float] = None
     extra_json: str = ""
     dataset_id: Optional[int] = Field(default=None, index=True)
     source_row: Optional[int] = None
@@ -763,7 +767,9 @@ def auto_sync_columns():
         ],
         "companyproduct": [("extra_json", "TEXT DEFAULT ''")],
         "companydepartment": [("extra_json", "TEXT DEFAULT ''")],
-        "companypurchase": [("extra_json", "TEXT DEFAULT ''")],
+        "companypurchase": [("extra_json", "TEXT DEFAULT ''"), ("expected_date", "VARCHAR DEFAULT ''"),
+                            ("received_date", "VARCHAR DEFAULT ''"), ("received_qty", "DOUBLE PRECISION"),
+                            ("rejected_qty", "DOUBLE PRECISION")],
         "companyinventory": [("extra_json", "TEXT DEFAULT ''")],
         "companycashmovement": [("extra_json", "TEXT DEFAULT ''")],
         '"user"': [
@@ -1134,6 +1140,11 @@ def page_fin_overview():
 @app.get("/company-ops-analytics.html")
 def page_ops_analytics():
     return FileResponse("company-ops-analytics.html")
+
+
+@app.get("/company-purchases-intelligence.html")
+def page_purchases_intelligence():
+    return FileResponse("company-purchases-intelligence.html")
 
 
 @app.get("/company-inventory-intelligence.html")
@@ -3964,7 +3975,7 @@ def _load_p24(name):
     """يحمّل محركات 2.4 من المجلد أو من حزمة nabbah_engines."""
     try:
         import sys as _sys, os as _os, importlib
-        for _d in ("phase21", "phase22", "phase23", "phase24", "phase25", "phase26"):
+        for _d in ("phase21", "phase22", "phase23", "phase24", "phase25", "phase26", "phase27"):
             _p = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), _d)
             if _p not in _sys.path:
                 _sys.path.insert(0, _p)
@@ -4209,7 +4220,8 @@ _IMPORT_TARGETS = {
                               "gross_sales", "discounts", "returns", "net_sales", "vat", "payment_method",
                               "promotion", "customer_name")),
     "purchase": ("CompanyPurchase", ("branch_id", "date", "supplier_name", "reference", "product_sku", "category",
-                                      "quantity", "unit_cost", "total_cost", "status", "vat")),
+                                      "quantity", "unit_cost", "total_cost", "status", "vat", "expected_date",
+                                      "received_date", "received_qty", "rejected_qty")),
     "inventory": ("CompanyInventory", ("branch_id", "product_sku", "period", "opening_qty", "opening_value",
                                         "purchases_qty", "sold_qty", "adjustments_qty", "closing_qty", "closing_value")),
     "cash_movement": ("CompanyCashMovement", ("branch_id", "date", "movement_type", "category", "amount",
@@ -4798,6 +4810,146 @@ def company_inventory_ai_insights(data: dict, request: Request, user: User = Dep
     return {"period": res.get("period"), "ai": out}
 
 
+# ═══════════════════════════════════════════════════════════
+#  Phase 2.7 — Purchases Intelligence (نفس مصدر البيانات: مركز البيانات → الجداول الموحّدة)
+# ═══════════════════════════════════════════════════════════
+def _purchases_scope(s, user):
+    _ensure_data_tables()
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    company = s.get(Company, user.company_id)
+    role = get_user_role(s, user) if company else None
+    if not company or not (role == "owner" or check_permission(role, "procurement", "view")
+                           or check_permission(role, "finance", "view")):
+        raise HTTPException(403, "غير مصرّح")
+    if company.is_active != 1:
+        raise HTTPException(402, "شركتك قيد التفعيل")
+    return company, role
+
+
+def _purchases_result(s, company, *, period=None, grain="month", branch_id=None, category="", product="",
+                      supplier="", status=""):
+    pe = _load_p24("purchases_engine")
+    if pe is None:
+        raise HTTPException(503, "محرّك المشتريات غير متاح — " + _p23_diagnostic())
+    names = {b.id: b.name for b in s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company.id)).all()}
+    rows_all = []
+    for r in s.exec(select(CompanyPurchase).where(CompanyPurchase.company_id == company.id).limit(100000)).all():
+        rows_all.append({"date": r.date, "branch_id": r.branch_id, "branch_name": names.get(r.branch_id) or "—",
+                         "supplier_name": r.supplier_name or None, "reference": r.reference or None,
+                         "product_sku": r.product_sku or None, "category": r.category or None, "quantity": r.quantity,
+                         "unit_cost": r.unit_cost, "total_cost": r.total_cost, "status": r.status or None,
+                         "expected_date": getattr(r, "expected_date", "") or None,
+                         "received_date": getattr(r, "received_date", "") or None,
+                         "received_qty": getattr(r, "received_qty", None), "rejected_qty": getattr(r, "rejected_qty", None)})
+    f = lambda r: ((not branch_id or r.get("branch_id") == branch_id) and (not category or r.get("category") == category)
+                   and (not product or r.get("product_sku") == product) and (not supplier or r.get("supplier_name") == supplier)
+                   and (not status or (r.get("status") or "") == status))
+    rows = [r for r in rows_all if f(r)]
+    sales = [r for r in _sales_rows(s, company.id, {branch_id} if branch_id else None)
+             if (not product or r.get("product_sku") == product)]
+    inv = [{"period": r.period, "branch_name": names.get(r.branch_id) or "—", "product_sku": r.product_sku,
+            "closing_value": r.closing_value}
+           for r in s.exec(select(CompanyInventory).where(CompanyInventory.company_id == company.id).limit(100000)).all()
+           if (not branch_id or r.branch_id == branch_id) and (not product or r.product_sku == product)]
+    needs = []
+    try:     # 2.6 → 2.7: أصناف تحتاج إعادة طلب تُعرض مع خيارات الموردين
+        _inv = _inventory_result(s, company, branch_id=branch_id, product=product)
+        needs = [{"product_sku": p["product_sku"], "branch": p["branch"], "status": p["status"]}
+                 for p in (_inv.get("reorder") or []) if p["status"] in ("low", "stockout")]
+    except HTTPException:
+        pass
+    res = pe.analyze_purchases(rows, period=period, grain=grain, sales_rows=sales, inventory_snaps=inv,
+                               reorder_needs=needs, currency=getattr(company, "currency", None) or "SAR")
+    res["filters"] = {"period": res.get("period"), "grain": grain, "branch_id": branch_id, "category": category,
+                      "product": product, "supplier": supplier, "status": status}
+    res["options"] = {"branch_list": [{"id": k, "name": v} for k, v in names.items()],
+                      "categories": sorted({r["category"] for r in rows_all if r.get("category")}),
+                      "products": sorted({r["product_sku"] for r in rows_all if r.get("product_sku")
+                                          and (not category or r.get("category") == category)})[:500],
+                      "suppliers": sorted({r["supplier_name"] for r in rows_all if r.get("supplier_name")})[:500],
+                      "statuses": sorted({r["status"] for r in rows_all if r.get("status")})}
+    return res
+
+
+@app.get("/company/purchases-intelligence")
+def company_purchases_intelligence(user: User = Depends(get_current_user), period: str = "", grain: str = "month",
+                                   branch_id: str = "", category: str = "", product: str = "", supplier: str = "",
+                                   status: str = ""):
+    if grain not in ("day", "week", "month", "quarter", "year"):
+        raise HTTPException(422, "التجميع غير صالح")
+    with Session(engine) as s:
+        company, role = _purchases_scope(s, user)
+        return _purchases_result(s, company, period=period or None, grain=grain, branch_id=_int_or_none(branch_id),
+                                 category=category, product=product, supplier=supplier, status=status)
+
+
+@app.post("/company/purchases/to-decision")
+def company_purchases_to_decision(data: dict, user: User = Depends(get_current_user)):
+    """يحوّل إشارة مشتريات إلى قرار ومهمة — تُعاد الإشارة حسابياً في الخادم بنفس الفلاتر."""
+    with Session(engine) as s:
+        company, role = _exec_scope(s, user, need="edit")
+        res = _purchases_result(s, company, period=data.get("period") or None, grain=data.get("grain") or "month",
+                                branch_id=_int_or_none(data.get("branch_id")), category=str(data.get("category") or ""),
+                                product=str(data.get("product") or ""), supplier=str(data.get("supplier") or ""),
+                                status=str(data.get("status") or ""))
+        sig = next((x for x in res.get("signals", []) if x["id"] == str(data.get("signal_id") or "")), None)
+        if not sig:
+            raise HTTPException(404, "الإشارة غير موجودة أو لم تعد قائمة لهذه الفترة")
+        impact = (sig.get("estimated_impact") or {}).get("value")
+        d = CompanyDecision(
+            company_id=company.id, title=str(data.get("title") or sig["name_ar"])[:200],
+            detail=" · ".join(sig.get("evidence", []))[:1000], owner=str(data.get("owner") or "")[:100],
+            due_date=str(data.get("due_date") or "")[:20], kpi=sig.get("metric_id") or "purchase_spend", status="open",
+            baseline_sales=_company_total_sales(s, company.id),
+            expected_impact=(f"{impact} {res['currency']} (تقديري)" if impact is not None else "غير قابل للتقدير")[:200],
+            linked_to=f"purchases_signal:{sig['id']}", rationale=sig.get("suggested_action_ar", "")[:500],
+            metric_id=sig.get("metric_id") or "purchase_spend", expected_impact_value=impact, impact_status="expected",
+            source_signal=sig["id"], problem_type=sig["code"], decision_type="purchases",
+            outcome_status="pending_measurement", created_by=user.name or user.email,
+            data_source="companypurchase", updated_at=datetime.now())
+        s.add(d); s.commit(); s.refresh(d)
+        act = CompanyAction(company_id=company.id, decision_id=d.id, title=sig.get("suggested_action_ar", "")[:200],
+                            owner=d.owner, priority="P1" if sig["severity"] in ("high", "critical") else "P2",
+                            due_date=d.due_date, start_date=datetime.now().strftime("%Y-%m-%d"), updated_at=datetime.now())
+        s.add(act); s.commit(); s.refresh(act)
+        log_audit(company.id, user.id, user.name, "decision_from_purchases_signal", f"decision:{d.id}",
+                  f"signal={sig['id']} code={sig['code']}")
+        return {"ok": True, "decision_id": d.id, "action_ids": [act.id]}
+
+
+@app.post("/company/purchases/ai-insights")
+def company_purchases_ai_insights(data: dict, request: Request, user: User = Depends(get_current_user)):
+    """AI يشرح أرقام محرك المشتريات المتحقَّق منها فقط — لا يحسب ولا يخترع رقماً."""
+    with Session(engine) as s:
+        company, role = _purchases_scope(s, user)
+        res = _purchases_result(s, company, period=data.get("period") or None, grain=data.get("grain") or "month",
+                                branch_id=_int_or_none(data.get("branch_id")), category=str(data.get("category") or ""),
+                                product=str(data.get("product") or ""), supplier=str(data.get("supplier") or ""))
+    if not res.get("has_data"):
+        raise HTTPException(422, res.get("message_ar") or "لا توجد بيانات مشتريات")
+    gw = _load_p24("ai_gateway")
+    if gw is None:
+        raise HTTPException(503, "بوابة الذكاء الاصطناعي غير متاحة — " + _p23_diagnostic())
+    dq = [x for x in res.get("signals", []) if x["type"] == "data_quality"]
+    trust = {"overall_score": 85 if not dq else 65, "status": "pass" if not dq else "warning", "has_critical_fail": False,
+             "main_causes": [{"explanation": e, "fix": ""} for x in dq for e in x.get("evidence", [])][:3]}
+    ctx = {"period": res.get("period"), "currency": res.get("currency"), "filters": res.get("filters"),
+           "verified_kpis": {k: {"current": v.get("current"), "previous": v.get("previous"), "change_pct": v.get("change_pct")}
+                             for k, v in res.get("kpis", {}).items()},
+           "concentration": res.get("concentration"),
+           "top_suppliers": [{"supplier": x["supplier"], "share_pct": x["share_pct"], "delivery": x["delivery"],
+                              "quality": x["quality"], "price": x["price"]} for x in res.get("top5", [])],
+           "cross_module": res.get("cross"), "savings": res.get("savings"),
+           "signals": [{"type": x["type"], "name": x["name_ar"], "dimension": x.get("dimension"),
+                        "evidence": x.get("evidence")} for x in res.get("signals", [])[:8]]}
+    out = gw.request_ai_analysis(gw.GeminiProvider(company_gemini), ctx,
+                                 "اشرح وضع المشتريات والموردين: الأدلة، ثم الأثر، ثم التوصية. لا تحسب أي رقم جديد.",
+                                 trust_report=trust, lang=get_lang(request), company=company)
+    log_audit(company.id, user.id, user.name, "purchases_ai_insights", "purchases", f"period={res.get('period')}")
+    return {"period": res.get("period"), "ai": out}
+
+
 @app.get("/company/executive-intelligence")
 def company_executive_intelligence(request: Request, user: User = Depends(get_current_user),
                                    period: Optional[str] = None, ai: int = 0):
@@ -4816,6 +4968,14 @@ def company_executive_intelligence(request: Request, user: User = Depends(get_cu
                 if _inv.get("has_data"):
                     result.setdefault("module_signals", {})["inventory"] = _inv.get("signals", [])[:6]
                     result["risks"] = result["risks"] + [x for x in _inv.get("signals", []) if x["type"] == "risk"][:2]
+            except HTTPException:
+                pass
+            try:   # إشارات المشتريات 2.7
+                _pur = _purchases_result(s, company)
+                if _pur.get("has_data"):
+                    result.setdefault("module_signals", {})["purchases"] = _pur.get("signals", [])[:6]
+                    result["risks"] = result["risks"] + [x for x in _pur.get("signals", []) if x["type"] == "risk"][:2]
+                    result["opportunities"] = result["opportunities"] + [x for x in _pur.get("signals", []) if x["type"] == "opportunity"][:1]
             except HTTPException:
                 pass
         except HTTPException:
@@ -10135,7 +10295,7 @@ ENGINE_MODULES = ("nabbah_finance", "nabbah_trust", "semantic_layer", "kpi_engin
                   "ai_gateway", "period_aggregation", "legacy_adapters", "platform_bridge",
                   "intelligence_engine", "forecast_engine", "scenario_engine", "decision_memory",
                   "rule_catalog", "canonical_model", "period_model", "metric_registry", "ingestion",
-                  "sales_engine", "inventory_engine")
+                  "sales_engine", "inventory_engine", "purchases_engine")
 
 
 def _runtime_health():
