@@ -72,7 +72,14 @@ SYNONYMS = {
  "closing_value": ["قيمة آخر المدة", "قيمة المخزون", "closing value", "inventory value"],
  "amount": ["المبلغ", "القيمة", "amount", "value"],
  "direction": ["الاتجاه", "نوع الحركة", "direction", "in/out", "type"],
- "movement_type": ["نوع الحركة", "التصنيف النقدي", "movement type", "cash type"],
+ "movement_type": ["التصنيف النقدي", "الوصف", "البيان", "التفاصيل", "movement type", "cash type", "description", "narration", "details"],
+ "account": ["الحساب", "اسم الحساب", "الحساب البنكي", "البنك", "الصندوق", "account", "bank account", "cash account"],
+ "counterparty": ["الطرف", "الطرف المقابل", "المستفيد", "الجهة", "counterparty", "beneficiary", "payee", "payer"],
+ "balance": ["الرصيد", "الرصيد بعد الحركة", "الرصيد الختامي", "balance", "running balance", "closing balance"],
+ "invoice_date": ["تاريخ الفاتورة", "تاريخ الذمة", "invoice date", "bill date"],
+ "due_date": ["تاريخ الاستحقاق", "الاستحقاق", "due date", "maturity date"],
+ "paid_amount": ["المبلغ المحصل", "المحصل", "المسدد", "paid", "paid amount", "collected", "amount paid"],
+ "paid_date": ["تاريخ التحصيل", "تاريخ السداد", "paid date", "payment date", "collection date"],
  "source": ["المصدر", "source"],
  "employee_code": ["رقم الموظف", "الرقم الوظيفي", "employee code", "employee id", "staff id"],
  "name": ["الاسم", "اسم", "name", "full name", "اسم المنتج", "اسم المورد", "اسم القسم", "اسم الموظف",
@@ -433,7 +440,8 @@ TYPE_HINTS = {
     "sale": ("مبيعات", "المبيعات", "sales", "فاتوره", "invoice"),
     "purchase": ("مشتريات", "شراء", "purchase", "po"),
     "inventory": ("مخزون", "رصيد", "inventory", "stock"),
-    "cash_movement": ("ايداع", "سحب", "نقد", "بنك", "deposit", "withdraw", "cash", "bank"),
+    "cash_movement": ("ايداع", "سحب", "نقد", "بنك", "deposit", "withdraw", "cash", "bank", "مدين", "دائن", "الرصيد"),
+    "receivable": ("ذمم", "ذمه", "استحقاق", "محصل", "تحصيل", "مستحق", "receivable", "due", "collected", "outstanding"),
 }
 
 
