@@ -41,13 +41,18 @@ ENTITIES = {
    "fields": {"date": REQUIRED, "branch_id": OPTIONAL, "movement_type": OPTIONAL, "category": OPTIONAL,
               "amount": REQUIRED, "direction": REQUIRED, "reference": OPTIONAL, "source": OPTIONAL,
               # ملخصات شهرية (كشف بنك): الشهر + الإيداعات + السحوبات تتحوّل تلقائياً إلى حركتين
-              "period": OPTIONAL, "inflow": OPTIONAL, "outflow": OPTIONAL}},
+              "period": OPTIONAL, "inflow": OPTIONAL, "outflow": OPTIONAL,
+              # Phase 2.8: الحساب والطرف المقابل والرصيد المُبلّغ (كشف البنك)
+              "account": OPTIONAL, "counterparty": OPTIONAL, "balance": OPTIONAL}},
+ "receivable": {"ar": "الذمم المدينة", "en": "Receivables", "table": "companyreceivable",
+   "fields": {"invoice_date": REQUIRED, "amount": REQUIRED, "customer_name": OPTIONAL, "reference": OPTIONAL,
+              "due_date": OPTIONAL, "paid_amount": OPTIONAL, "paid_date": OPTIONAL, "branch_id": OPTIONAL}},
 }
 DATASET_TYPES = tuple(ENTITIES)
 NUMERIC = {"quantity", "gross_sales", "discounts", "returns", "net_sales", "vat", "unit_cost", "total_cost",
            "opening_qty", "opening_value", "purchases_qty", "sold_qty", "adjustments_qty", "closing_qty",
-           "closing_value", "amount", "cost", "selling_price", "monthly_cost", "credit_limit", "inflow", "outflow", "received_qty", "rejected_qty"}
-DATE_FIELDS = {"date", "hire_date", "termination_date", "expected_date", "received_date"}
+           "closing_value", "amount", "cost", "selling_price", "monthly_cost", "credit_limit", "inflow", "outflow", "received_qty", "rejected_qty", "balance", "paid_amount"}
+DATE_FIELDS = {"date", "hire_date", "termination_date", "expected_date", "received_date", "invoice_date", "due_date", "paid_date"}
 PERIOD_FIELDS = {"period"}
 # مفاتيح كشف التكرار لكل نوع
 DUP_KEYS = {"sale": ("date", "branch_id", "reference", "product_sku"),
@@ -56,6 +61,7 @@ DUP_KEYS = {"sale": ("date", "branch_id", "reference", "product_sku"),
             "cash_movement": ("date", "branch_id", "reference", "amount"),
             "employee": ("employee_code",), "product": ("sku",), "supplier": ("name",),
             "customer": ("name", "phone", "email"),
+            "receivable": ("reference", "customer_name", "invoice_date", "amount"),
             "department": ("name", "branch_id")}
 DIRECTIONS = {"in", "out"}
 
