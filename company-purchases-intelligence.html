@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>نبّاه · ذكاء المشتريات</title>
+<link href="nabbah-design.css" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{background:var(--bg,#070b09);color:var(--txt,#e8f1ec);font-family:Tajawal,Tahoma,Arial,sans-serif;margin:0}
+  .wrap{max-width:1180px;margin:0 auto;padding:70px 16px 60px}
+  h1{margin:0 0 4px;font-size:24px}.sub{color:var(--txt-soft,#8ba396);margin:0 0 16px;font-size:14px}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+  select{background:var(--panel,#101a15);color:var(--txt,#e8f1ec);border:1px solid var(--line,#1d2c24);border-radius:10px;padding:8px 10px;font:inherit;font-size:13px;max-width:190px}
+  .crumbs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;min-height:4px}
+  .chip{background:rgba(16,185,129,.12);color:var(--mint,#10b981);border:1px solid rgba(16,185,129,.35);border-radius:20px;padding:3px 10px;font-size:12px;cursor:pointer}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+  .tile,.panel{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:14px;padding:14px}
+  .tile .l{font-size:12px;color:var(--txt-soft,#8ba396)}.tile .v{font-size:21px;font-weight:800;margin-top:4px}
+  .tile .c{font-size:12px;margin-top:4px}
+  .panel{margin-bottom:14px;min-width:0}.panel h2{margin:0 0 10px;font-size:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .panel h3{margin:12px 0 6px;font-size:13px;color:var(--txt-soft,#8ba396)}
+  .num{font-size:11px;color:var(--txt-soft,#8ba396);font-weight:600;border:1px solid var(--line,#1d2c24);border-radius:8px;padding:1px 6px}
+  .grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+  table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px;border-bottom:1px solid var(--line,#1d2c24);text-align:start;white-space:nowrap}
+  th{color:var(--txt-soft,#8ba396);font-weight:600}.tbl{overflow-x:auto}
+  tr.drill{cursor:pointer}tr.drill:hover td{background:rgba(16,185,129,.06)}
+  .barrow{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:13px}
+  .barrow.drill{cursor:pointer}.barrow.drill:hover{background:rgba(16,185,129,.06);border-radius:6px}
+  .barrow .t{flex:0 0 120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .barrow .g{flex:1;height:10px;background:var(--line,#1d2c24);border-radius:6px;overflow:hidden}
+  .barrow .g i{display:block;height:100%;background:var(--mint,#10b981)}
+  .pos{color:#10b981}.neg{color:#ef4444}.muted{color:var(--txt-soft,#8ba396);font-size:12px}
+  .b{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700;display:inline-block}
+  .high{background:rgba(234,88,12,.16);color:#ea580c}.medium{background:rgba(245,179,1,.15);color:#f5b301}
+  .low{background:rgba(16,185,129,.15);color:#10b981}.critical{background:rgba(239,68,68,.16);color:#ef4444}
+  .est{background:rgba(168,85,247,.15);color:#a855f7}
+  .sig{border-inline-start:4px solid var(--line,#1d2c24);padding:10px 12px;margin:8px 0;background:rgba(255,255,255,.02);border-radius:8px}
+  .sig.risk{border-color:#ef4444}.sig.opportunity{border-color:#10b981}.sig.data_quality{border-color:#f5b301}
+  .btn{background:var(--mint,#10b981);color:#062b1c;border:0;border-radius:10px;padding:7px 13px;font-weight:800;cursor:pointer;font:inherit;font-size:12px;text-decoration:none;display:inline-block}
+  .btn.ghost{background:transparent;color:var(--txt-soft,#8ba396);border:1px solid var(--line,#1d2c24);font-weight:600}
+  .btn:disabled{opacity:.5;cursor:default}
+  .state{padding:36px 16px;text-align:center;color:var(--txt-soft,#8ba396);border:1px dashed var(--line,#1d2c24);border-radius:14px}
+  .na{color:var(--txt-soft,#8ba396);font-size:13px;padding:10px;border:1px dashed var(--line,#1d2c24);border-radius:10px}
+  svg.ch{width:100%;height:170px;display:block}
+  .legend{display:flex;gap:14px;font-size:12px;color:var(--txt-soft,#8ba396);margin-top:6px;flex-wrap:wrap}
+  .legend i{display:inline-block;width:14px;height:3px;vertical-align:middle;margin-inline-end:4px}
+  .ai-sec{margin:8px 0}.ai-sec b{display:block;font-size:13px;margin-bottom:4px}.ai-sec li{font-size:13px;margin:3px 0}
+  input.f{flex:1;min-width:120px;background:var(--panel,#101a15);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:8px;padding:6px}
+  .st{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700;display:inline-block;white-space:nowrap}
+  .st.healthy{background:rgba(16,185,129,.15);color:#10b981}.st.watch{background:rgba(245,179,1,.15);color:#f5b301}
+  .st.low{background:rgba(234,88,12,.16);color:#ea580c}.st.stockout{background:rgba(239,68,68,.16);color:#ef4444}
+  .st.slow{background:rgba(59,130,246,.15);color:#60a5fa}.st.obsolete{background:rgba(148,163,184,.18);color:#cbd5e1}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}.schip{cursor:pointer;border:1px solid var(--line,#1d2c24);border-radius:12px;padding:8px 12px;min-width:120px}
+  .schip b{display:block;font-size:18px}.schip:hover{border-color:var(--mint,#10b981)}
+  .eq{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:13px}.eq .box{border:1px solid var(--line,#1d2c24);border-radius:10px;padding:8px 10px;text-align:center;min-width:90px}
+  .eq .box b{display:block;font-size:16px}
+  .ov{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:50;padding:14px}
+  .ov.on{display:flex}.modal{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:16px;padding:18px;width:min(560px,100%);max-height:90vh;overflow:auto}
+  .fg{display:grid;grid-template-columns:1fr 1fr;gap:10px}.fg label{font-size:12px;color:var(--txt-soft,#8ba396);display:flex;flex-direction:column;gap:4px}
+  .fg input,.fg select{background:var(--bg,#070b09);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:9px;padding:8px;font:inherit;max-width:none}
+  .cta{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  @media(max-width:760px){.fg{grid-template-columns:1fr}.tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.tile{padding:10px}.tile .v{font-size:17px}.grid2,.grid3{grid-template-columns:minmax(0,1fr)}h1{font-size:20px}select{max-width:47%}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1 id="ttl"></h1><p class="sub" id="subttl"></p>
+  <div class="bar">
+    <select id="fPeriod"></select><select id="fGrain"></select><select id="fBranch"></select><select id="fCategory"></select>
+    <select id="fProduct"></select><select id="fSupplier"></select><select id="fStatus"></select>
+    <button class="btn ghost" id="reset"></button>
+  </div>
+  <div class="crumbs" id="crumbs"></div>
+  <div id="content"><div class="state">…</div></div>
+</div>
+<div class="ov" id="ov"><div class="modal" id="modal"></div></div>
+<script src="i18n.js"></script>
+<script>
+(function(){
+  const TOKEN=localStorage.getItem("nabbah_token")||"";if(!TOKEN){location.href="login.html";return;}
+  const AR={title:"ذكاء المشتريات",sub:"كم اشترينا؟ من مَن؟ بأي سعر؟ هل المورد يلتزم بالجودة والموعد؟ وهل الشراء يتناسب مع المبيعات والمخزون؟",
+    period:"الفترة",branch:"الفرع",category:"الفئة",product:"الصنف",supplier:"المورد",status:"الحالة",all:"الكل",reset:"إعادة الضبط",
+    day:"يومي",week:"أسبوعي",month:"شهري",quarter:"ربع سنوي",year:"سنوي",
+    spend:"إجمالي المشتريات",growth:"نمو المشتريات",po_count:"أوامر الشراء",avg_po:"متوسط أمر الشراء",suppliers:"الموردون النشطون",open_pos:"أوامر مفتوحة",
+    prev:"السابق",noPrev:"لا فترة سابقة",yoy:"عن العام الماضي",unavailable:"غير متاح",days:"يوم",
+    s1:"المؤشرات الرئيسية",s2:"اتجاه الإنفاق",s3:"الإنفاق حسب الفئة",s4:"الإنفاق حسب الفرع",s5:"أكبر 5 موردين",s6:"بطاقة أداء الموردين",s7:"تركّز الموردين",
+    s8:"ذكاء أوامر الشراء",s9:"التكلفة وتغيّر الأسعار",s10:"تتبّع الوفورات",s11:"المشتريات ↔ المخزون ↔ المبيعات",s12:"أصناف تحتاج شراء (من ذكاء المخزون)",s13:"إشارات المشتريات",s14:"رؤى الذكاء الاصطناعي",s15:"جودة البيانات وما ينقص",
+    share:"الحصة",pos:"الأوامر",price:"السعر",quality:"الجودة",delivery:"التسليم",onTime:"في الموعد",late:"متأخر",delay:"متوسط التأخير",accept:"القبول",
+    cycle:"متوسط دورة أمر الشراء",openValue:"قيمة المفتوح",avgCost:"متوسط السعر",baseline:"السعر التاريخي",variance:"التغير",cheapest:"أقل سعر مماثل",
+    realized:"وفورات محققة",potential:"وفورات ممكنة",purchases:"المشتريات",sales:"المبيعات",inventory:"المخزون",drill:"اضغط أي صف للتفاصيل",
+    risk:"مخاطر",opportunity:"فرص",data_quality:"جودة البيانات",evidence:"الدليل",rec:"التوصية",estimate:"تقديري",toDecision:"إنشاء قرار + إجراء",owner:"المسؤول",create:"إنشاء",created:"تم إنشاء القرار والإجراء ✓",
+    aiBtn:"اشرح لي بالذكاء الاصطناعي",aiNote:"الذكاء الاصطناعي يشرح الأرقام المحسوبة فقط، ولا يحسب أي رقم.",aiWait:"جارٍ التحليل…",
+    FACTS:"الحقائق",INTERPRETATION:"القراءة",HYPOTHESES:"فرضيات غير مؤكدة",RECOMMENDATIONS:"التوصيات",DATA_GAPS:"بيانات ناقصة",
+    upload:"ارفع ملف المشتريات",error:"تعذّر تحميل ذكاء المشتريات.",denied:"ليست لديك صلاحية لهذه الصفحة.",noData:"لا توجد بيانات",noDim:"لا توجد بيانات",
+    required:"المطلوب",recommended:"مستحسن",optional:"اختياري",close:"إغلاق",lines:"أسطر",branches:"فروع",categories:"فئات",products:"أصناف",
+    expected:"المتوقع",received:"المستلم",rejected:"المرفوض",qty:"الكمية",unitCost:"سعر الوحدة",total:"الإجمالي",date:"التاريخ",trendOf:"الاتجاه",
+    avail:{suppliers:"تحليل الموردين",po:"أوامر الشراء",price:"أداء السعر",delivery:"أداء التسليم",quality:"أداء الجودة",cycle:"دورة أمر الشراء",status:"حالات الأوامر",savings:"الوفورات",cross_module:"الربط بالمبيعات والمخزون"},
+    availOk:"متاح",availNo:"غير متاح",options:"الخيارات"};
+  const t=k=>AR[k]!==undefined?AR[k]:k;
+  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const n=(v,d=2)=>v==null?"—":Number(v).toLocaleString("ar-SA",{maximumFractionDigits:d});
+  const mv=m=>m&&m.value!=null?n(m.value,0):"—";
+  const pct=(v,inv)=>v==null?"—":`<span class="${(inv?v<=0:v>=0)?"pos":"neg"}">${v>0?"+":""}${n(v)}%</span>`;
+  const H={Authorization:"Bearer "+TOKEN,"Content-Type":"application/json"},$=id=>document.getElementById(id);
+  let D=null;
+  $("ttl").textContent=t("title");$("subttl").textContent=t("sub");$("reset").textContent=t("reset");document.title="نبّاه · "+t("title");
+  const FL=[["period","fPeriod"],["grain","fGrain"],["branch_id","fBranch"],["category","fCategory"],["product","fProduct"],["supplier","fSupplier"],["status","fStatus"]];
+  function F(){const f={};FL.forEach(([k,id])=>{const v=$(id).value;if(v)f[k]=v;});return f;}
+  function showErr(msg){$("content").innerHTML=`<div class="state neg">${t("error")}<div class="muted" style="margin-top:8px;word-break:break-word">${esc(msg||"")}</div></div>`;}
+  function load(){$("content").innerHTML=`<div class="state">…</div>`;
+    fetch("/company/purchases-intelligence?"+new URLSearchParams(F()),{headers:H}).then(async r=>{
+      if(r.status===401){location.href="login.html";return null;}
+      if(r.status===403||r.status===402){$("content").innerHTML=`<div class="state">${t("denied")}</div>`;return null;}
+      if(!r.ok){let d="";try{const j=await r.json();d=typeof j.detail==="string"?j.detail:JSON.stringify(j.detail||j);}catch(_){}showErr(`HTTP ${r.status}${d?" — "+d:""}`);return null;}
+      return r.json();
+    }).then(d=>{if(!d)return;D=d;try{filters(d);}catch(e){console.error(e);}try{render(d);}catch(e){console.error(e);showErr("render: "+(e&&e.message||e));}}).catch(e=>showErr("network: "+(e&&e.message||e)));}
+  function opts(id,list,label,cur,val=x=>x,txt=x=>x){$(id).innerHTML=`<option value="">${esc(label)}: ${t("all")}</option>`+list.map(x=>`<option value="${esc(val(x))}" ${String(cur??"")===String(val(x))?"selected":""}>${esc(txt(x))}</option>`).join("");}
+  function filters(d){const o=d.options||{},f=d.filters||{};
+    $("fPeriod").innerHTML=(d.periods||[]).slice().reverse().map(p=>`<option value="${esc(p)}" ${f.period===p?"selected":""}>${esc(p)}</option>`).join("")||`<option value="">${t("period")}</option>`;
+    $("fGrain").innerHTML=["day","week","month","quarter","year"].map(g=>`<option value="${g}" ${(f.grain||"month")===g?"selected":""}>${t(g)}</option>`).join("");
+    opts("fBranch",o.branch_list||[],t("branch"),f.branch_id,b=>b.id,b=>b.name);opts("fCategory",o.categories||[],t("category"),f.category);
+    opts("fProduct",o.products||[],t("product"),f.product);opts("fSupplier",o.suppliers||[],t("supplier"),f.supplier);
+    opts("fStatus",o.statuses||[],t("status"),f.status);$("fStatus").style.display=(o.statuses||[]).length?"":"none";
+    const c=[];[["fBranch","branch_id","branch"],["fCategory","category","category"],["fProduct","product","product"],["fSupplier","supplier","supplier"],["fStatus","status","status"]].forEach(([id,k,l])=>{if(f[k]){let v=f[k];if(k==="branch_id"){const b=(o.branch_list||[]).find(x=>String(x.id)===String(v));v=b?b.name:v;}c.push([id,t(l)+": "+v]);}});
+    $("crumbs").innerHTML=c.map(([id,l])=>`<span class="chip" data-clear="${id}">${esc(l)} ✕</span>`).join("");
+    $("crumbs").querySelectorAll("[data-clear]").forEach(x=>x.onclick=()=>{$(x.dataset.clear).value="";load();});}
+  function drill(sel,val){const s=$(sel);if(![...s.options].some(o=>o.value===String(val))){const o=document.createElement("option");o.value=val;o.textContent=val;s.appendChild(o);}s.value=String(val);window.scrollTo({top:0,behavior:"smooth"});load();}
+  const panel=(num,title,body)=>`<div class="panel"><h2><span class="num">${num}</span>${title}</h2>${body}</div>`;
+  const na=msg=>`<div class="na">${esc(msg)}</div>`;
+  function chart(labels,series){
+    if(!labels.length)return na(t("noDim"));
+    const W=640,Hh=160,all=series.flatMap(s=>s.values.filter(v=>v!=null));
+    if(!all.length)return na(t("noDim"));
+    const max=Math.max(...all),min=Math.min(...all,0),rng=(max-min)||1;
+    const x=i=>labels.length<2?W/2:(i/(labels.length-1))*(W-20)+10,y=v=>Hh-12-((v-min)/rng)*(Hh-30);
+    const lines=series.map(s=>{let seg=[],out="";const flush=()=>{if(seg.length)out+=`<polyline points="${seg.join(" ")}" fill="none" stroke="${s.color}" stroke-width="2" ${s.dash?'stroke-dasharray="5 4"':""}/>`;seg=[];};
+      s.values.forEach((v,i)=>{if(v==null)flush();else seg.push(`${x(i).toFixed(1)},${y(v).toFixed(1)}`);});flush();
+      out+=s.values.map((v,i)=>v==null?"":`<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="2.6" fill="${s.color}"><title>${esc(labels[i])}: ${n(v)}</title></circle>`).join("");return out;}).join("");
+    return `<svg class="ch" viewBox="0 0 ${W} ${Hh}" preserveAspectRatio="none">${lines}</svg>
+      <div class="legend"><span>${esc(labels[0])} → ${esc(labels[labels.length-1])}</span>${series.map(s=>`<span><i style="background:${s.color}"></i>${esc(s.label)}</span>`).join("")}</div>`;
+  }
+  const bar=(v,col)=>v==null?`<span class="muted">${t("unavailable")}</span>`:`<span style="display:inline-flex;align-items:center;gap:6px"><span class="g" style="display:inline-block;width:80px;height:8px;background:var(--line,#1d2c24);border-radius:6px;overflow:hidden"><i style="display:block;height:100%;width:${Math.max(0,Math.min(100,v))}%;background:${col}"></i></span>${n(v,0)}</span>`;
+  function kpis(k){const tile=(code,fmt,x=k[code]||{})=>{let v,c;
+      if(x.current==null){v=`<span class="muted" style="font-size:14px">${t("unavailable")}</span>`;c=`<span class="muted">${esc(x.reason_ar||"")}</span>`;}
+      else{v=fmt(x.current);c=code==="growth"?(x.yoy_pct!=null?`<span class="muted">${t("yoy")}: </span>${pct(x.yoy_pct)}`:""):code==="open_pos"?`<span class="muted">${t("openValue")}: ${mv(x.open_value)}</span>`:(x.comparison_available?`${pct(x.change_pct)} <span class="muted">${t("prev")}: ${fmt(x.previous)}</span>`:`<span class="muted">${t("noPrev")}</span>`);}
+      return `<div class="tile"><div class="l">${t(code)}</div><div class="v">${v}</div><div class="c">${c}</div></div>`;};
+    return `<div class="tiles">${tile("spend",v=>n(v,0))}${tile("growth",v=>`${pct(v)}`)}${tile("po_count",v=>n(v,0))}${tile("avg_po",v=>n(v,0))}${tile("suppliers",v=>n(v,0))}${tile("open_pos",v=>n(v,0))}</div>
+      ${k.spend&&k.spend.missing_cost_lines?`<div class="muted" style="margin-top:8px">${n(k.spend.missing_cost_lines,0)} سطر بلا تكلفة — غير محسوب في الإجمالي</div>`:""}`;}
+  function spendBars(list,sel){if(!list.length)return na(t("noData"));const max=Math.max(...list.map(x=>x.spend.value))||1;
+    return list.slice(0,12).map(x=>{const v=sel==="fBranch"?(((D.options.branch_list||[]).find(b=>b.name===x.key))||{}).id:x.key;return `<div class="barrow drill" data-sel="${sel}" data-val="${esc(v??"")}"><span class="t">${esc(x.key)}</span><span class="g"><i style="width:${(x.spend.value/max*100).toFixed(1)}%"></i></span><span>${mv(x.spend)}</span><span class="muted">${x.share_pct==null?"":n(x.share_pct)+"%"}</span></div>`;}).join("")+`<div class="muted">${t("drill")}</div>`;}
+  function supRow(s){return `<tr class="drill" data-sup="${esc(s.supplier)}"><td><b>${esc(s.supplier)}</b></td><td>${mv(s.spend)}</td><td>${s.share_pct==null?"—":n(s.share_pct)+"%"}</td><td>${n(s.pos,0)}</td><td>${bar(s.price&&s.price.score,"#60a5fa")}</td><td>${bar(s.quality&&s.quality.acceptance_pct,"#10b981")}</td><td>${bar(s.delivery&&s.delivery.on_time_pct,"#f5b301")}</td></tr>`;}
+  const supHead=()=>`<thead><tr><th>${t("supplier")}</th><th>${t("spend")}</th><th>${t("share")}</th><th>${t("pos")}</th><th>${t("price")}</th><th>${t("quality")}</th><th>${t("delivery")}</th></tr></thead>`;
+  function concentration(c){if(c.top_share_pct==null)return na(t("noData"));
+    return `<div class="barrow"><span class="t">${esc(c.top_supplier)}</span><span class="g"><i style="width:${c.top_share_pct}%;background:${c.at_risk?"#ef4444":"#10b981"}"></i></span><b class="${c.at_risk?"neg":"pos"}">${n(c.top_share_pct)}%</b></div>
+      <div class="barrow"><span class="t">أكبر 3 موردين</span><span class="g"><i style="width:${c.top3_share_pct||0}%;background:#f5b301"></i></span><span>${n(c.top3_share_pct)}%</span></div><div class="muted">${esc(c.rule_ar)}</div>`;}
+  function po(p){const st=Object.entries(p.statuses||{});
+    return `<div class="tiles"><div class="tile"><div class="l">${t("cycle")}</div><div class="v">${p.cycle?n(p.cycle.avg_days,1)+" "+t("days"):`<span class="muted" style="font-size:14px">${t("unavailable")}</span>`}</div><div class="c muted">${p.cycle?"":esc(D.availability.cycle.how_ar)}</div></div>
+      <div class="tile"><div class="l">${t("open_pos")}</div><div class="v">${p.open_count==null?`<span class="muted" style="font-size:14px">${t("unavailable")}</span>`:n(p.open_count,0)}</div><div class="c muted">${t("openValue")}: ${mv(p.open_value)}</div></div></div>
+      ${st.length?`<div class="chips" style="margin-top:10px">${st.map(([k,v])=>`<div class="schip" data-status="${esc(k)}"><span class="muted">${esc(k)}</span><b>${n(v,0)}</b></div>`).join("")}</div>`:""}
+      ${(p.list||[]).length?`<h3>آخر أوامر الشراء</h3><div class="tbl"><table><thead><tr><th>PO</th><th>${t("supplier")}</th><th>${t("branch")}</th><th>${t("date")}</th><th>${t("total")}</th><th>${t("delay")}</th><th>${t("status")}</th></tr></thead><tbody>${p.list.slice(0,25).map(x=>`<tr class="drill" data-po="${esc(x.po)}"><td><b>${esc(x.po)}</b></td><td>${esc(x.supplier||"—")}</td><td>${esc(x.branch||"—")}</td><td>${esc(x.date)}</td><td>${mv(x.total)}</td><td>${x.delay_days==null?"—":`<span class="${x.delay_days>0?"neg":"pos"}">${n(x.delay_days,0)}</span>`}</td><td>${esc(x.status||"—")}</td></tr>`).join("")}</tbody></table></div>`:""}`;}
+  function costs(list){if(!list.length)return na(t("noData"));
+    return `<div class="tbl"><table><thead><tr><th>${t("product")}</th><th>${t("spend")}</th><th>${t("qty")}</th><th>${t("avgCost")}</th><th>${t("baseline")}</th><th>${t("variance")}</th><th>${t("cheapest")}</th></tr></thead><tbody>${list.slice(0,40).map(p=>`<tr class="drill" data-prod="${esc(p.product_sku)}"><td><b>${esc(p.product_sku)}</b></td><td>${mv(p.spend)}</td><td>${n(p.qty,0)}</td><td>${n(p.avg_unit_cost)}</td><td>${n(p.baseline_unit_cost)}</td><td>${pct(p.variance_pct,true)}</td><td>${p.cheapest_supplier?esc(p.cheapest_supplier)+" · "+n(p.cheapest_unit_cost):"—"}</td></tr>`).join("")}</tbody></table></div><div class="muted">${t("drill")}</div>`;}
+  function savings(s){return s.available?`<div class="tiles"><div class="tile"><div class="l">${t("realized")}</div><div class="v pos">${mv(s.realized)}</div></div><div class="tile"><div class="l">${t("potential")}</div><div class="v">${mv(s.potential)}</div><div class="c"><span class="b est">${t("estimate")}</span></div></div></div><div class="muted" style="margin-top:8px">${esc(s.basis_ar)}</div>`:na(s.reason_ar)+(s.potential?`<div style="margin-top:8px">${t("potential")}: <b>${mv(s.potential)}</b> <span class="b est">${t("estimate")}</span></div>`:"");}
+  function cross(c){const tb=(list,label)=>!list.length?"":`<div class="tbl"><table><thead><tr><th>${label}</th><th>${t("purchases")}</th><th>Δ</th><th>${t("sales")}</th><th>Δ</th><th>${t("inventory")}</th><th>Δ</th></tr></thead><tbody>${list.map(x=>`<tr><td><b>${esc(x.key)}</b></td><td>${mv(x.purchases)}</td><td>${pct(x.purchases_change_pct)}</td><td>${mv(x.sales)}</td><td>${pct(x.sales_change_pct)}</td><td>${mv(x.inventory_value)}</td><td>${pct(x.inventory_change_pct)}</td></tr>`).join("")}</tbody></table></div>`;
+    return (D.availability.cross_module.available?"":na(D.availability.cross_module.how_ar))+tb(c.by_category,t("category"))+tb(c.by_branch,t("branch"))+`<div class="muted">${esc(c.note_ar)}</div>`;}
+  function reorder(list){if(!list.length)return na("لا توجد أصناف منخفضة أو نافدة في ذكاء المخزون حالياً");
+    return list.map(r=>`<div class="sig ${r.inventory_status==="stockout"?"risk":"data_quality"}"><b>${esc(r.product_sku)}</b> — ${esc(r.branch||"")} <span class="st ${esc(r.inventory_status)}">${r.inventory_status==="stockout"?"نافد":"منخفض"}</span>
+      ${r.options.length?`<div class="tbl"><table><thead><tr><th>${t("supplier")}</th><th>${t("avgCost")}</th><th>${t("onTime")}</th><th>${t("accept")}</th></tr></thead><tbody>${r.options.map(o=>`<tr><td>${esc(o.supplier)}</td><td>${n(o.avg_unit_cost)}</td><td>${o.on_time_pct==null?"—":n(o.on_time_pct)+"%"}</td><td>${o.acceptance_pct==null?"—":n(o.acceptance_pct)+"%"}</td></tr>`).join("")}</tbody></table></div>`:`<div class="muted">لا يوجد مورد سابق لهذا الصنف في الفترة</div>`}</div>`).join("");}
+  function signals(list){if(!list.length)return"";return panel("13",t("s13"),["risk","opportunity","data_quality"].map(type=>{const it=list.filter(s=>s.type===type);if(!it.length)return"";
+    return `<h3>${type==="risk"?"🔴":type==="opportunity"?"🟢":"🟡"} ${t(type)}</h3>`+it.map(s=>`<div class="sig ${type}"><b>${esc(s.name_ar)}</b> ${s.dimension?"— "+esc(s.dimension):""} <span class="b ${esc(s.severity)}">${esc(s.severity)}</span>
+      <div class="muted">${t("evidence")}: ${(s.evidence||[]).map(esc).join(" · ")}</div>${s.estimated_impact?`<div>${mv(s.estimated_impact)} <span class="b est">${t("estimate")}</span></div>`:""}
+      <div>${t("rec")}: ${esc(s.suggested_action_ar)}</div><button class="btn" data-sig="${esc(s.id)}" style="margin-top:6px">${t("toDecision")}</button><div class="frm"></div></div>`).join("");}).join(""));}
+  function quality(d){const q=d.data_quality||{},a=d.availability||{};
+    return `<div class="tbl"><table><tbody>${[["بلا مورد",q.missing_supplier_pct],["بلا سعر وحدة",q.missing_cost_pct],["بلا رقم أمر شراء",q.missing_po_pct],["بلا صنف",q.missing_product_pct],["بتواريخ تسليم",q.delivery_dates_pct]].map(([l,v])=>`<tr><td>${l}</td><td>${v==null?"—":n(v)+"%"}</td></tr>`).join("")}</tbody></table></div>
+      ${Object.entries(a).map(([k,v])=>`<div class="barrow"><span class="t">${esc(t("avail")[k]||k)}</span><span class="${v.available?"pos":"neg"}">${v.available?t("availOk"):t("availNo")}</span><span class="muted">${v.available?"":esc(v.how_ar)}</span></div>`).join("")}
+      <div class="cta"><a class="btn ghost" href="company-data-center.html">${t("upload")}</a></div>`;}
+  function modal(html){$("modal").innerHTML=html+`<div class="cta"><button class="btn ghost" id="mClose">${t("close")}</button></div>`;$("ov").classList.add("on");$("mClose").onclick=()=>$("ov").classList.remove("on");}
+  function supDeep(name){const s=(D.suppliers||[]).find(x=>x.supplier===name);if(!s)return;
+    modal(`<h3 style="margin-top:0">${esc(s.supplier)}</h3><div class="tiles"><div class="tile"><div class="l">${t("spend")}</div><div class="v">${mv(s.spend)}</div><div class="c muted">${n(s.share_pct)}%</div></div><div class="tile"><div class="l">${t("pos")}</div><div class="v">${n(s.pos,0)}</div><div class="c muted">${n(s.lines,0)} ${t("lines")} · ${n(s.branches,0)} ${t("branches")} · ${n(s.categories,0)} ${t("categories")}</div></div></div>
+      <h3>${t("price")}</h3>${s.price?`${bar(s.price.score,"#60a5fa")} <div class="muted">${esc(s.price.basis_ar)} (${n(s.price.comparable_products,0)} ${t("products")})</div>`:na("لا يوجد صنف مشترك مع موردين آخرين للمقارنة")}
+      <h3>${t("quality")}</h3>${s.quality?`${bar(s.quality.acceptance_pct,"#10b981")} <div class="muted">${t("rejected")}: ${n(s.quality.rejected_qty,0)} · ${n(s.quality.evaluated_lines,0)} ${t("lines")}</div>`:na(D.availability.quality.how_ar)}
+      <h3>${t("delivery")}</h3>${s.delivery?`${bar(s.delivery.on_time_pct,"#f5b301")} <div class="muted">${t("late")}: ${n(s.delivery.late_pct)}% · ${t("delay")}: ${n(s.delivery.avg_delay_days,1)} ${t("days")}</div>`:na(D.availability.delivery.how_ar)}
+      <h3>${t("cycle")}</h3>${s.cycle?n(s.cycle.avg_days,1)+" "+t("days"):na(D.availability.cycle.how_ar)}
+      <h3>${t("trendOf")}</h3>${chart(s.spend_trend.map(x=>x.period),[{label:t("spend"),values:s.spend_trend.map(x=>x.spend.value),color:"#10b981"}])}
+      <div class="muted">${t("products")}: ${s.products.map(esc).join("، ")}</div><div class="cta"><button class="btn" id="filterSup">عرض الصفحة لهذا المورد</button></div>`);
+    $("filterSup").onclick=()=>{$("ov").classList.remove("on");drill("fSupplier",name);};}
+  function poDeep(id){const p=(D.po.list||[]).find(x=>x.po===id);if(!p)return;
+    modal(`<h3 style="margin-top:0">PO ${esc(p.po)}</h3><div class="muted">${t("supplier")}: ${esc(p.supplier||"—")} · ${t("branch")}: ${esc(p.branch||"—")} · ${t("status")}: ${esc(p.status||"—")}</div>
+      <div class="muted">${t("date")}: ${esc(p.date)} · ${t("expected")}: ${esc(p.expected_date||"—")} · ${t("received")}: ${esc(p.received_date||"—")} ${p.delay_days!=null?`· ${t("delay")}: <b class="${p.delay_days>0?"neg":"pos"}">${n(p.delay_days,0)} ${t("days")}</b>`:""}</div>
+      <div class="tbl"><table><thead><tr><th>${t("product")}</th><th>${t("qty")}</th><th>${t("unitCost")}</th><th>${t("total")}</th><th>${t("received")}</th><th>${t("rejected")}</th></tr></thead><tbody>${p.lines.map(l=>`<tr><td>${esc(l.product_sku||"—")}</td><td>${n(l.qty)}</td><td>${n(l.unit_cost)}</td><td>${mv(l.total)}</td><td>${n(l.received_qty)}</td><td>${n(l.rejected_qty)}</td></tr>`).join("")}</tbody></table></div><div style="margin-top:8px">${t("total")}: <b>${mv(p.total)}</b></div>`);}
+  function prodDeep(sku){const p=(D.products||[]).find(x=>x.product_sku===sku);if(!p)return;
+    modal(`<h3 style="margin-top:0">${esc(p.product_sku)}</h3><div class="tiles"><div class="tile"><div class="l">${t("spend")}</div><div class="v">${mv(p.spend)}</div><div class="c muted">${t("qty")}: ${n(p.qty,0)}</div></div><div class="tile"><div class="l">${t("avgCost")}</div><div class="v">${n(p.avg_unit_cost)}</div><div class="c">${t("baseline")}: ${n(p.baseline_unit_cost)} ${pct(p.variance_pct,true)}</div></div></div>
+      <h3>${t("trendOf")} — ${t("unitCost")}</h3>${chart(p.cost_trend.map(x=>x.period),[{label:t("avgCost"),values:p.cost_trend.map(x=>x.avg_unit_cost),color:"#60a5fa"}])}
+      <div class="muted">${t("supplier")}: ${p.suppliers.map(esc).join("، ")||"—"}</div>${p.potential_saving?`<div>${t("potential")}: <b>${mv(p.potential_saving)}</b> (${esc(p.cheapest_supplier)})</div>`:""}
+      <div class="cta"><button class="btn" id="filterProd">عرض الصفحة لهذا الصنف</button><a class="btn ghost" href="company-inventory-intelligence.html">ذكاء المخزون</a><a class="btn ghost" href="company-sales-intelligence.html">ذكاء المبيعات</a></div>`);
+    $("filterProd").onclick=()=>{$("ov").classList.remove("on");drill("fProduct",sku);};}
+  function empty(d){const r=d.required||{};$("content").innerHTML=`<div class="state"><div style="font-size:16px;margin-bottom:10px">${esc(d.message_ar)}</div>
+    <div class="muted">${t("required")}: ${(r.required||[]).map(esc).join("، ")}</div><div class="muted">${t("recommended")}: ${(r.recommended||[]).map(esc).join("، ")}</div><div class="muted">${t("optional")}: ${(r.optional||[]).map(esc).join("، ")}</div>
+    <div class="cta" style="justify-content:center"><a class="btn" href="company-data-center.html">${t("upload")}</a></div></div>`;}
+  function render(d){if(!d.has_data)return empty(d);
+    $("content").innerHTML=panel("1",t("s1"),kpis(d.kpis||{}))+panel("2",t("s2"),chart((d.trend||[]).map(x=>x.period),[{label:t("spend"),values:(d.trend||[]).map(x=>x.spend.value),color:"#10b981"}]))+
+      `<div class="grid2">${panel("3",t("s3"),spendBars(d.by_category||[],"fCategory"))}${panel("4",t("s4"),spendBars(d.by_branch||[],"fBranch"))}</div>`+
+      `<div class="grid2">${panel("5",t("s5"),(d.top5||[]).length?`<div class="tbl"><table>${supHead()}<tbody>${d.top5.map(supRow).join("")}</tbody></table></div><div class="muted">${t("drill")}</div>`:na(d.availability.suppliers.how_ar))}${panel("7",t("s7"),concentration(d.concentration||{}))}</div>`+
+      panel("6",t("s6"),(d.suppliers||[]).length?`<div class="tbl"><table>${supHead()}<tbody>${d.suppliers.map(supRow).join("")}</tbody></table></div><div class="muted">السعر: أقل سعر مماثل ÷ سعر المورد · الجودة: نسبة القبول · التسليم: نسبة التسليم في الموعد. «غير متاح» = لا توجد بيانات، وليس صفراً.</div>`:na(d.availability.suppliers.how_ar))+
+      panel("8",t("s8"),po(d.po||{}))+panel("9",t("s9"),costs(d.products||[]))+panel("10",t("s10"),savings(d.savings||{}))+
+      panel("11",t("s11"),cross(d.cross||{by_category:[],by_branch:[]}))+panel("12",t("s12"),reorder(d.reorder_options||[]))+signals(d.signals||[])+
+      panel("14",t("s14"),`<div class="muted" style="margin-bottom:8px">${t("aiNote")}</div><button class="btn" id="aiBtn">${t("aiBtn")}</button><div id="aiOut" style="margin-top:10px"></div>`)+panel("15",t("s15"),quality(d));
+    document.querySelectorAll("#content [data-sel]").forEach(el=>el.onclick=()=>{if(el.dataset.val)drill(el.dataset.sel,el.dataset.val);});
+    document.querySelectorAll("#content [data-sup]").forEach(el=>el.onclick=()=>supDeep(el.dataset.sup));
+    document.querySelectorAll("#content [data-po]").forEach(el=>el.onclick=()=>poDeep(el.dataset.po));
+    document.querySelectorAll("#content [data-prod]").forEach(el=>el.onclick=()=>prodDeep(el.dataset.prod));
+    document.querySelectorAll("#content [data-status]").forEach(el=>el.onclick=()=>drill("fStatus",el.dataset.status));
+    document.querySelectorAll("#content [data-sig]").forEach(b=>b.onclick=()=>decision(b));
+    const ab=$("aiBtn");if(ab)ab.onclick=runAI;}
+  function decision(btn){const box=btn.nextElementSibling;
+    box.innerHTML=`<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap"><input class="f o" placeholder="${t("owner")}"><input class="f d" type="date"><button class="btn c">${t("create")}</button></div><div class="m muted"></div>`;
+    box.querySelector(".c").onclick=()=>fetch("/company/purchases/to-decision",{method:"POST",headers:H,body:JSON.stringify(Object.assign({},F(),{signal_id:btn.dataset.sig,owner:box.querySelector(".o").value,due_date:box.querySelector(".d").value,period:D.period}))}).then(async r=>{
+      const j=await r.json().catch(()=>({}));box.querySelector(".m").textContent=r.ok?t("created"):(typeof j.detail==="string"?j.detail:"HTTP "+r.status);if(r.ok)btn.disabled=true;});}
+  function runAI(){const b=$("aiBtn"),out=$("aiOut");b.disabled=true;out.innerHTML=`<div class="muted">${t("aiWait")}</div>`;
+    fetch("/company/purchases/ai-insights",{method:"POST",headers:H,body:JSON.stringify(Object.assign({},F(),{period:D.period}))}).then(async r=>{const j=await r.json().catch(()=>({}));b.disabled=false;
+      if(!r.ok){out.innerHTML=`<div class="neg">${esc(typeof j.detail==="string"?j.detail:"HTTP "+r.status)}</div>`;return;}
+      const a=j.ai||{},resp=a.response||{};out.innerHTML=(a.message?`<div class="na">${esc(a.message)}</div>`:"")+["FACTS","INTERPRETATION","HYPOTHESES","RECOMMENDATIONS","DATA_GAPS"].map(k=>resp[k]&&resp[k].length?`<div class="ai-sec"><b>${t(k)}</b><ul style="margin:0;padding-inline-start:18px">${resp[k].map(x=>`<li>${esc(typeof x==="string"?x:JSON.stringify(x))}</li>`).join("")}</ul></div>`:"").join("");
+    }).catch(e=>{b.disabled=false;out.innerHTML=`<div class="neg">${esc(e.message||e)}</div>`;});}
+  $("ov").onclick=e=>{if(e.target===$("ov"))$("ov").classList.remove("on");};
+  FL.forEach(([k,id])=>$(id).addEventListener("change",()=>{if(id==="fGrain")$("fPeriod").value="";if(id==="fCategory")$("fProduct").value="";load();}));
+  $("reset").onclick=()=>{FL.forEach(([k,id])=>{$(id).value="";});$("fGrain").value="month";load();};
+  load();
+})();
+</script>
+<script src="nabbah-sidebar.js"></script>
+</body></html>
