@@ -20,7 +20,7 @@
       { label: "عرض مجلس الإدارة", href: "company-board.html" },
     ]},
     { icon: "💰", label: "المالية", items: [
-      { label: "الوحدة المالية", href: "company-financial-overview.html" },
+      { label: "الوحدة المالية", href: "company-financial-intelligence.html" },
       { label: "إدخال البيانات المالية", href: "company-finance.html" },
       { label: "الخزينة والسيولة", href: "company-treasury.html" },
       { label: "التدفق النقدي", href: "company-cashflow.html" },
@@ -83,6 +83,7 @@
       { label: "ذكاء المشتريات", href: "company-purchases-intelligence.html" },
       { label: "ذكاء التدفق النقدي", href: "company-cashflow-intelligence.html" },
       { label: "ذكاء الموارد البشرية", href: "company-hr-intelligence.html" },
+      { label: "ذكاء العمليات", href: "company-operations-intelligence.html" },
       { label: "مركز البيانات", href: "company-data-center.html" },
     ]},
   ];
