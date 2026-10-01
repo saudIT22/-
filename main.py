@@ -442,6 +442,20 @@ class CompanyEmployee(SQLModel, table=True):
     monthly_cost: Optional[float] = None       # حسّاس: يخضع لقواعد الصلاحيات القائمة
     email: str = ""
     phone: str = ""
+    # Phase 2.9 — ذكاء الموارد البشرية (كلها اختيارية)
+    employment_type: str = ""
+    manager: str = ""
+    termination_type: str = ""
+    basic_salary: Optional[float] = None       # حسّاس
+    allowances: Optional[float] = None         # حسّاس
+    benefits: Optional[float] = None           # حسّاس
+    performance_rating: Optional[float] = None
+    last_promotion_date: str = ""
+    training_hours: Optional[float] = None
+    absence_days: Optional[float] = None
+    overtime_hours: Optional[float] = None
+    critical_role: Optional[int] = None
+    successors: Optional[float] = None
     extra_json: str = ""                       # أعمدة الملف الإضافية كما هي — لا يُفقد شيء
     dataset_id: Optional[int] = None
     source_row: Optional[int] = None
@@ -585,6 +599,27 @@ class CompanyReceivable(SQLModel, table=True):
     amount: Optional[float] = None
     paid_amount: Optional[float] = None
     paid_date: str = ""
+    extra_json: str = ""
+    dataset_id: Optional[int] = Field(default=None, index=True)
+    source_row: Optional[int] = None
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+class CompanyJobOpening(SQLModel, table=True):
+    """الوظائف الشاغرة ومسار التوظيف — Phase 2.9."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    branch_id: Optional[int] = Field(default=None, index=True)
+    department_id: Optional[int] = None
+    title: str = ""
+    opened_date: str = ""
+    filled_date: str = ""
+    status: str = ""
+    applicants: Optional[float] = None
+    interviews: Optional[float] = None
+    offers: Optional[float] = None
+    hires: Optional[float] = None
+    hiring_cost: Optional[float] = None
     extra_json: str = ""
     dataset_id: Optional[int] = Field(default=None, index=True)
     source_row: Optional[int] = None
@@ -797,6 +832,12 @@ def auto_sync_columns():
         ],
         "companyemployee": [
             ("email", "VARCHAR DEFAULT ''"), ("phone", "VARCHAR DEFAULT ''"), ("extra_json", "TEXT DEFAULT ''"),
+            ("employment_type", "VARCHAR DEFAULT ''"), ("manager", "VARCHAR DEFAULT ''"),
+            ("termination_type", "VARCHAR DEFAULT ''"), ("basic_salary", "DOUBLE PRECISION"),
+            ("allowances", "DOUBLE PRECISION"), ("benefits", "DOUBLE PRECISION"),
+            ("performance_rating", "DOUBLE PRECISION"), ("last_promotion_date", "VARCHAR DEFAULT ''"),
+            ("training_hours", "DOUBLE PRECISION"), ("absence_days", "DOUBLE PRECISION"),
+            ("overtime_hours", "DOUBLE PRECISION"), ("critical_role", "INTEGER"), ("successors", "DOUBLE PRECISION"),
         ],
         "companyproduct": [("extra_json", "TEXT DEFAULT ''")],
         "companydepartment": [("extra_json", "TEXT DEFAULT ''")],
@@ -1174,6 +1215,11 @@ def page_fin_overview():
 @app.get("/company-ops-analytics.html")
 def page_ops_analytics():
     return FileResponse("company-ops-analytics.html")
+
+
+@app.get("/company-hr-intelligence.html")
+def page_hr_intelligence():
+    return FileResponse("company-hr-intelligence.html")
 
 
 @app.get("/company-cashflow-intelligence.html")
@@ -4014,7 +4060,7 @@ def _load_p24(name):
     """يحمّل محركات 2.4 من المجلد أو من حزمة nabbah_engines."""
     try:
         import sys as _sys, os as _os, importlib
-        for _d in ("phase21", "phase22", "phase23", "phase24", "phase25", "phase26", "phase27", "phase28"):
+        for _d in ("phase21", "phase22", "phase23", "phase24", "phase25", "phase26", "phase27", "phase28", "phase29"):
             _p = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), _d)
             if _p not in _sys.path:
                 _sys.path.insert(0, _p)
@@ -4254,6 +4300,10 @@ def company_dataset_validate(dataset_id: int, data: dict, user: User = Depends(g
                 "note": "أعد رفع الملف لتطبيق ربط مختلف على الصفوف المرفوضة."}
 
 
+# مفاتيح البيانات الأساسية: إعادة رفع نفس الموظف/المنتج/المورد/العميل/القسم تُحدّثه ولا تكرره
+_MASTER_KEYS = {"CompanyEmployee": ("employee_code",), "CompanyProduct": ("sku",), "CompanySupplier": ("name",),
+                "CompanyCustomer": ("name",), "CompanyDepartment": ("name",)}
+
 _IMPORT_TARGETS = {
     "sale": ("CompanySale", ("branch_id", "date", "reference", "channel", "product_sku", "category", "quantity",
                               "gross_sales", "discounts", "returns", "net_sales", "vat", "payment_method",
@@ -4270,7 +4320,12 @@ _IMPORT_TARGETS = {
                                          "amount", "paid_amount", "paid_date")),
     "employee": ("CompanyEmployee", ("branch_id", "department_id", "employee_code", "name", "role",
                                       "employment_status", "hire_date", "termination_date", "monthly_cost",
-                                      "email", "phone")),
+                                      "email", "phone", "employment_type", "manager", "termination_type",
+                                      "basic_salary", "allowances", "benefits", "performance_rating",
+                                      "last_promotion_date", "training_hours", "absence_days", "overtime_hours",
+                                      "critical_role", "successors")),
+    "job_opening": ("CompanyJobOpening", ("branch_id", "department_id", "title", "opened_date", "filled_date", "status",
+                                          "applicants", "interviews", "offers", "hires", "hiring_cost")),
     "product": ("CompanyProduct", ("sku", "name", "category", "unit", "cost", "selling_price", "active")),
     "supplier": ("CompanySupplier", ("name", "supplier_code", "category", "payment_terms", "contact_person", "email",
                                       "phone", "city", "tax_number", "active")),
@@ -4301,13 +4356,13 @@ def company_dataset_import(dataset_id: int, user: User = Depends(get_current_use
         model = globals()[target[0]]
         fields = target[1]
         rows = json.loads(d.staging_json or "[]")
-        created = 0
+        created = updated = 0
         _depts = None
         for r in rows:
             payload = {f: r.get(f) for f in fields if f in r}
             payload["company_id"] = company.id
             extra = dict(r.get("extra") or {})
-            if model is CompanyEmployee and payload.get("department_id") not in (None, "") \
+            if model in (CompanyEmployee, CompanyJobOpening) and payload.get("department_id") not in (None, "") \
                     and not str(payload["department_id"]).isdigit():
                 if _depts is None:
                     _depts = {x.name.strip(): x.id for x in s.exec(select(CompanyDepartment).where(
@@ -4326,6 +4381,19 @@ def company_dataset_import(dataset_id: int, user: User = Depends(get_current_use
                 payload["source_row"] = r.get("_row")
             if hasattr(model, "period") and not payload.get("period") and r.get("date") and pm:
                 payload["period"] = pm.period_key(r["date"], "month") or ""
+            key = _MASTER_KEYS.get(model.__name__)
+            existing = None
+            if key and all(payload.get(k) not in (None, "") for k in key):
+                q = select(model).where(model.company_id == company.id)
+                for k in key:
+                    q = q.where(getattr(model, k) == payload[k])
+                existing = s.exec(q).first()
+            if existing is not None:         # بيانات أساسية: تُحدَّث ولا تُكرَّر عند إعادة الرفع
+                for k, v in payload.items():
+                    if k != "company_id" and v not in (None, ""):
+                        setattr(existing, k, v)
+                s.add(existing); updated += 1
+                continue
             s.add(model(**payload)); created += 1
             if created % 2000 == 0:          # دفعات: ملفات كبيرة بلا ضغط على الذاكرة
                 s.flush()
@@ -4334,8 +4402,8 @@ def company_dataset_import(dataset_id: int, user: User = Depends(get_current_use
         d.staging_json = "[]"          # لا نحتفظ بالنسخة المؤقتة بعد الاعتماد
         s.add(d); s.commit()
         log_audit(company.id, user.id, user.name, "dataset_import", f"dataset:{dataset_id}",
-                  f"type={d.dataset_type} imported={created} rejected={d.rejected_rows} quality={d.quality_score}")
-        return {"ok": True, "imported": created, "rejected": d.rejected_rows, "status": d.status,
+                  f"type={d.dataset_type} imported={created} updated={updated} rejected={d.rejected_rows} quality={d.quality_score}")
+        return {"ok": True, "imported": created, "updated": updated, "rejected": d.rejected_rows, "status": d.status,
                 "quality_score": d.quality_score, "quality_gate": d.quality_gate}
 
 
@@ -5152,6 +5220,153 @@ def company_cashflow_ai_insights(data: dict, request: Request, user: User = Depe
     return {"period": res.get("period"), "ai": out}
 
 
+# ═══════════════════════════════════════════════════════════
+#  Phase 2.9 — People Intelligence (الموظفون من نفس جدول البيانات الأساسية)
+# ═══════════════════════════════════════════════════════════
+def _hr_scope(s, user):
+    _ensure_data_tables()
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    company = s.get(Company, user.company_id)
+    role = get_user_role(s, user) if company else None
+    if not company or not (role == "owner" or check_permission(role, "hr", "view")
+                           or check_permission(role, "finance", "view")):
+        raise HTTPException(403, "غير مصرّح — الموارد البشرية للمالك ومن لديه صلاحية الموارد البشرية")
+    if company.is_active != 1:
+        raise HTTPException(402, "شركتك قيد التفعيل")
+    return company, role
+
+
+_HR_PAY_FIELDS = ("monthly_cost", "basic_salary", "allowances", "benefits")
+
+
+def _hr_result(s, company, *, period=None, branch_id=None, department="", can_see_pay=True):
+    he = _load_p24("hr_engine")
+    if he is None:
+        raise HTTPException(503, "محرّك الموارد البشرية غير متاح — " + _p23_diagnostic())
+    names = {b.id: b.name for b in s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company.id)).all()}
+    deps = {d.id: d.name for d in s.exec(select(CompanyDepartment).where(CompanyDepartment.company_id == company.id)).all()}
+    emps = []
+    for e in s.exec(select(CompanyEmployee).where(CompanyEmployee.company_id == company.id).limit(50000)).all():
+        extra = {}
+        try:
+            extra = json.loads(e.extra_json or "{}")
+        except (TypeError, ValueError):
+            pass
+        row = {k: getattr(e, k, None) for k in ("employee_code", "name", "role", "employment_status", "hire_date",
+                                                "termination_date", "monthly_cost", "employment_type", "manager",
+                                                "termination_type", "basic_salary", "allowances", "benefits",
+                                                "performance_rating", "last_promotion_date", "training_hours",
+                                                "absence_days", "overtime_hours", "critical_role", "successors")}
+        row["branch_id"], row["branch_name"] = e.branch_id, names.get(e.branch_id)
+        row["department"] = deps.get(e.department_id) or extra.get("department")
+        emps.append(row)
+    if branch_id:
+        emps = [x for x in emps if x["branch_id"] == branch_id]
+    if department:
+        emps = [x for x in emps if (x["department"] or "") == department]
+    ops = [{"title": o.title, "opened_date": o.opened_date, "filled_date": o.filled_date, "status": o.status,
+            "applicants": o.applicants, "interviews": o.interviews, "offers": o.offers, "hires": o.hires,
+            "hiring_cost": o.hiring_cost, "department": deps.get(o.department_id) or json.loads(o.extra_json or "{}").get("department"),
+            "branch_name": names.get(o.branch_id), "branch_id": o.branch_id}
+           for o in s.exec(select(CompanyJobOpening).where(CompanyJobOpening.company_id == company.id).limit(10000)).all()]
+    if branch_id:
+        ops = [o for o in ops if o["branch_id"] == branch_id]
+    if department:
+        ops = [o for o in ops if (o["department"] or "") == department]
+    payroll_cash = None
+    try:
+        _cf = _cashflow_result(s, company, period=period, branch_id=branch_id)
+        if _cf.get("has_data") and not branch_id:
+            payroll_cash = next(((d["amount"] or {}).get("value") for d in _cf.get("drivers", []) if d["key"] == "payroll"), None)
+    except HTTPException:
+        pass
+    res = he.analyze_hr(emps, openings=ops, period=period, sales_rows=_sales_rows(s, company.id, {branch_id} if branch_id else None),
+                        payroll_cash=payroll_cash if can_see_pay else None,
+                        currency=getattr(company, "currency", None) or "SAR")
+    if not can_see_pay and res.get("has_data"):      # RBAC على مستوى الحقل: لا رواتب لغير المخوّلين
+        res["compensation"] = {"available": False, "restricted": True, "reason_ar": "بيانات الرواتب متاحة للمالك والمحاسب فقط"}
+        res["kpis"]["cost"] = {"current": None, "restricted": True}
+        res["pillars"]["cost"] = {"restricted": True}
+        res["productivity"]["cost_to_revenue_pct"] = None
+        for u in res["units"]["branches"] + res["units"]["departments"]:
+            u["payroll"] = None
+        for d in res["performance"].get("distribution", []) if res["performance"].get("available") else []:
+            d["avg_cost"] = None
+        res["signals"] = [x for x in res["signals"] if x["code"] != "cost_increase"]
+    res["filters"] = {"period": res.get("period"), "branch_id": branch_id, "department": department}
+    res["options"] = {"branch_list": [{"id": k, "name": v} for k, v in names.items()], "departments": sorted(set(deps.values()))}
+    res["can_see_pay"] = can_see_pay
+    return res
+
+
+@app.get("/company/hr-intelligence")
+def company_hr_intelligence(user: User = Depends(get_current_user), period: str = "", branch_id: str = "", department: str = ""):
+    if period and not re.match(r"^\d{4}-\d{2}$", period):
+        raise HTTPException(422, "الفترة بصيغة YYYY-MM")
+    with Session(engine) as s:
+        company, role = _hr_scope(s, user)
+        return _hr_result(s, company, period=period or None, branch_id=_int_or_none(branch_id), department=department,
+                          can_see_pay=role == "owner" or can_see_sensitive_financials(role))
+
+
+@app.post("/company/hr/to-decision")
+def company_hr_to_decision(data: dict, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role = _exec_scope(s, user, need="edit")
+        res = _hr_result(s, company, period=data.get("period") or None, branch_id=_int_or_none(data.get("branch_id")),
+                         department=str(data.get("department") or ""),
+                         can_see_pay=role == "owner" or can_see_sensitive_financials(role))
+        sig = next((x for x in res.get("signals", []) if x["id"] == str(data.get("signal_id") or "")), None)
+        if not sig:
+            raise HTTPException(404, "الإشارة غير موجودة أو لم تعد قائمة لهذه الفترة")
+        d = CompanyDecision(
+            company_id=company.id, title=str(data.get("title") or sig["name_ar"])[:200],
+            detail=" · ".join(sig.get("evidence", []))[:1000], owner=str(data.get("owner") or "")[:100],
+            due_date=str(data.get("due_date") or "")[:20], kpi=sig.get("metric_id") or "headcount", status="open",
+            baseline_sales=_company_total_sales(s, company.id), expected_impact="غير قابل للتقدير",
+            linked_to=f"hr_signal:{sig['id']}", rationale=sig.get("suggested_action_ar", "")[:500],
+            metric_id=sig.get("metric_id") or "headcount", impact_status="expected", source_signal=sig["id"],
+            problem_type=sig["code"], decision_type="hr", outcome_status="pending_measurement",
+            created_by=user.name or user.email, data_source="companyemployee", updated_at=datetime.now())
+        s.add(d); s.commit(); s.refresh(d)
+        act = CompanyAction(company_id=company.id, decision_id=d.id, title=sig.get("suggested_action_ar", "")[:200],
+                            owner=d.owner, priority="P1" if sig["severity"] == "high" else "P2", due_date=d.due_date,
+                            start_date=datetime.now().strftime("%Y-%m-%d"), updated_at=datetime.now())
+        s.add(act); s.commit(); s.refresh(act)
+        log_audit(company.id, user.id, user.name, "decision_from_hr_signal", f"decision:{d.id}", f"signal={sig['id']}")
+        return {"ok": True, "decision_id": d.id, "action_ids": [act.id]}
+
+
+@app.post("/company/hr/ai-insights")
+def company_hr_ai_insights(data: dict, request: Request, user: User = Depends(get_current_user)):
+    """AI يشرح مؤشرات القوى العاملة المحسوبة فقط — بلا أسماء موظفين ولا رواتب أفراد."""
+    with Session(engine) as s:
+        company, role = _hr_scope(s, user)
+        res = _hr_result(s, company, period=data.get("period") or None, branch_id=_int_or_none(data.get("branch_id")),
+                         department=str(data.get("department") or ""),
+                         can_see_pay=role == "owner" or can_see_sensitive_financials(role))
+    if not res.get("has_data"):
+        raise HTTPException(422, res.get("message_ar") or "لا توجد بيانات موظفين")
+    gw = _load_p24("ai_gateway")
+    if gw is None:
+        raise HTTPException(503, "بوابة الذكاء الاصطناعي غير متاحة — " + _p23_diagnostic())
+    t = res["turnover"]
+    ctx = {"period": res["period"], "kpis": res["kpis"], "workforce": {k: res["workforce"][k] for k in ("active", "previous", "joiners", "leavers")},
+           "turnover": {"rate_12m": t["rate_12m"], "by_branch": t["by_branch"][:5], "by_department": t["by_department"][:5],
+                        "voluntary": t["voluntary"], "involuntary": t["involuntary"]},
+           "performance": {k: v for k, v in res["performance"].items() if k in ("average", "distribution", "by_department")},
+           "productivity": {k: v for k, v in res["productivity"].items() if k != "by_branch"},
+           "flight_risk_count": res["flight_risk"]["count"], "succession": {k: v for k, v in res["succession"].items() if k != "roles"},
+           "signals": [{"type": x["type"], "name": x["name_ar"], "dimension": x.get("dimension")} for x in res["signals"][:8]]}
+    out = gw.request_ai_analysis(gw.GeminiProvider(company_gemini), ctx,
+                                 "اشرح وضع القوى العاملة: الدليل، ثم مستوى الثقة، ثم التوصية. لا تحسب أي رقم ولا تذكر أفراداً.",
+                                 trust_report={"overall_score": 80, "status": "pass", "has_critical_fail": False, "main_causes": []},
+                                 lang=get_lang(request), company=company)
+    log_audit(company.id, user.id, user.name, "hr_ai_insights", "hr", f"period={res['period']}")
+    return {"period": res["period"], "ai": out}
+
+
 @app.get("/company/executive-intelligence")
 def company_executive_intelligence(request: Request, user: User = Depends(get_current_user),
                                    period: Optional[str] = None, ai: int = 0):
@@ -5170,6 +5385,13 @@ def company_executive_intelligence(request: Request, user: User = Depends(get_cu
                 if _inv.get("has_data"):
                     result.setdefault("module_signals", {})["inventory"] = _inv.get("signals", [])[:6]
                     result["risks"] = result["risks"] + [x for x in _inv.get("signals", []) if x["type"] == "risk"][:2]
+            except HTTPException:
+                pass
+            try:   # إشارات الموارد البشرية 2.9 (بلا رواتب)
+                _hr = _hr_result(s, company, can_see_pay=False)
+                if _hr.get("has_data"):
+                    result.setdefault("module_signals", {})["hr"] = _hr.get("signals", [])[:6]
+                    result["risks"] = result["risks"] + [x for x in _hr.get("signals", []) if x["type"] == "risk"][:2]
             except HTTPException:
                 pass
             try:   # إشارات التدفق النقدي 2.8
@@ -10504,7 +10726,7 @@ ENGINE_MODULES = ("nabbah_finance", "nabbah_trust", "semantic_layer", "kpi_engin
                   "ai_gateway", "period_aggregation", "legacy_adapters", "platform_bridge",
                   "intelligence_engine", "forecast_engine", "scenario_engine", "decision_memory",
                   "rule_catalog", "canonical_model", "period_model", "metric_registry", "ingestion",
-                  "sales_engine", "inventory_engine", "purchases_engine", "cashflow_engine")
+                  "sales_engine", "inventory_engine", "purchases_engine", "cashflow_engine", "hr_engine")
 
 
 def _runtime_health():
