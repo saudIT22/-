@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>نبّاه · الوحدة المالية</title>
+<link href="nabbah-design.css" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{background:var(--bg,#070b09);color:var(--txt,#e8f1ec);font-family:Tajawal,Tahoma,Arial,sans-serif;margin:0}
+  .wrap{max-width:1180px;margin:0 auto;padding:70px 16px 60px}
+  h1{margin:0 0 4px;font-size:24px}.sub{color:var(--txt-soft,#8ba396);margin:0 0 16px;font-size:14px}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+  select{background:var(--panel,#101a15);color:var(--txt,#e8f1ec);border:1px solid var(--line,#1d2c24);border-radius:10px;padding:8px 10px;font:inherit;font-size:13px;max-width:190px}
+  .crumbs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;min-height:4px}
+  .chip{background:rgba(16,185,129,.12);color:var(--mint,#10b981);border:1px solid rgba(16,185,129,.35);border-radius:20px;padding:3px 10px;font-size:12px;cursor:pointer}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+  .tile,.panel{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:14px;padding:14px}
+  .tile .l{font-size:12px;color:var(--txt-soft,#8ba396)}.tile .v{font-size:21px;font-weight:800;margin-top:4px}
+  .tile .c{font-size:12px;margin-top:4px}
+  .panel{margin-bottom:14px;min-width:0}.panel h2{margin:0 0 10px;font-size:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .panel h3{margin:12px 0 6px;font-size:13px;color:var(--txt-soft,#8ba396)}
+  .num{font-size:11px;color:var(--txt-soft,#8ba396);font-weight:600;border:1px solid var(--line,#1d2c24);border-radius:8px;padding:1px 6px}
+  .grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+  table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px;border-bottom:1px solid var(--line,#1d2c24);text-align:start;white-space:nowrap}
+  th{color:var(--txt-soft,#8ba396);font-weight:600}.tbl{overflow-x:auto}
+  tr.drill{cursor:pointer}tr.drill:hover td{background:rgba(16,185,129,.06)}
+  .barrow{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:13px}
+  .barrow.drill{cursor:pointer}.barrow.drill:hover{background:rgba(16,185,129,.06);border-radius:6px}
+  .barrow .t{flex:0 0 120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .barrow .g{flex:1;height:10px;background:var(--line,#1d2c24);border-radius:6px;overflow:hidden}
+  .barrow .g i{display:block;height:100%;background:var(--mint,#10b981)}
+  .pos{color:#10b981}.neg{color:#ef4444}.muted{color:var(--txt-soft,#8ba396);font-size:12px}
+  .b{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700;display:inline-block}
+  .high{background:rgba(234,88,12,.16);color:#ea580c}.medium{background:rgba(245,179,1,.15);color:#f5b301}
+  .low{background:rgba(16,185,129,.15);color:#10b981}.critical{background:rgba(239,68,68,.16);color:#ef4444}
+  .est{background:rgba(168,85,247,.15);color:#a855f7}
+  .sig{border-inline-start:4px solid var(--line,#1d2c24);padding:10px 12px;margin:8px 0;background:rgba(255,255,255,.02);border-radius:8px}
+  .sig.risk{border-color:#ef4444}.sig.opportunity{border-color:#10b981}.sig.data_quality{border-color:#f5b301}
+  .btn{background:var(--mint,#10b981);color:#062b1c;border:0;border-radius:10px;padding:7px 13px;font-weight:800;cursor:pointer;font:inherit;font-size:12px;text-decoration:none;display:inline-block}
+  .btn.ghost{background:transparent;color:var(--txt-soft,#8ba396);border:1px solid var(--line,#1d2c24);font-weight:600}
+  .btn:disabled{opacity:.5;cursor:default}
+  .state{padding:36px 16px;text-align:center;color:var(--txt-soft,#8ba396);border:1px dashed var(--line,#1d2c24);border-radius:14px}
+  .na{color:var(--txt-soft,#8ba396);font-size:13px;padding:10px;border:1px dashed var(--line,#1d2c24);border-radius:10px}
+  svg.ch{width:100%;height:170px;display:block}
+  .legend{display:flex;gap:14px;font-size:12px;color:var(--txt-soft,#8ba396);margin-top:6px;flex-wrap:wrap}
+  .legend i{display:inline-block;width:14px;height:3px;vertical-align:middle;margin-inline-end:4px}
+  .ai-sec{margin:8px 0}.ai-sec b{display:block;font-size:13px;margin-bottom:4px}.ai-sec li{font-size:13px;margin:3px 0}
+  input.f{flex:1;min-width:120px;background:var(--panel,#101a15);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:8px;padding:6px}
+  .st{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700;display:inline-block;white-space:nowrap}
+  .st.healthy{background:rgba(16,185,129,.15);color:#10b981}.st.watch{background:rgba(245,179,1,.15);color:#f5b301}
+  .st.low{background:rgba(234,88,12,.16);color:#ea580c}.st.stockout{background:rgba(239,68,68,.16);color:#ef4444}
+  .st.slow{background:rgba(59,130,246,.15);color:#60a5fa}.st.obsolete{background:rgba(148,163,184,.18);color:#cbd5e1}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}.schip{cursor:pointer;border:1px solid var(--line,#1d2c24);border-radius:12px;padding:8px 12px;min-width:120px}
+  .schip b{display:block;font-size:18px}.schip:hover{border-color:var(--mint,#10b981)}
+  .eq{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:13px}.eq .box{border:1px solid var(--line,#1d2c24);border-radius:10px;padding:8px 10px;text-align:center;min-width:90px}
+  .eq .box b{display:block;font-size:16px}
+  .ov{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:50;padding:14px}
+  .ov.on{display:flex}.modal{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:16px;padding:18px;width:min(560px,100%);max-height:90vh;overflow:auto}
+  .fg{display:grid;grid-template-columns:1fr 1fr;gap:10px}.fg label{font-size:12px;color:var(--txt-soft,#8ba396);display:flex;flex-direction:column;gap:4px}
+  .fg input,.fg select{background:var(--bg,#070b09);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:9px;padding:8px;font:inherit;max-width:none}
+  .cta{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  @media(max-width:760px){.fg{grid-template-columns:1fr}.tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.tile{padding:10px}.tile .v{font-size:17px}.grid2,.grid3{grid-template-columns:minmax(0,1fr)}h1{font-size:20px}select{max-width:47%}}
+  .ledger td{font-variant-numeric:tabular-nums}
+  @media(max-width:700px){.hero[style]{grid-template-columns:1fr 1fr!important}}
+</style>
+<style>
+  .tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--line,#1d2c24);margin:6px 0 16px}
+  .tab{background:none;border:0;color:var(--txt-soft,#8ba396);padding:10px 14px;font:inherit;font-size:14px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+  .tab.on{color:var(--txt,#e8f1ec);border-color:#d4a72c;font-weight:800}
+  .hero{display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr;gap:12px;margin-bottom:14px}
+  .hcard{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:16px;padding:16px;cursor:default}
+  .hcard.click{cursor:pointer}.hcard.click:hover{border-color:var(--mint,#10b981)}
+  .hcard .big{font-size:30px;font-weight:900;margin:6px 0}.hstat{font-size:22px;font-weight:900}
+  .hs-stable{color:#10b981}.hs-attention{color:#f5b301}.hs-critical{color:#ef4444}
+  .event{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-inline-start:4px solid #ef4444;border-radius:12px;padding:14px;margin-bottom:10px}
+  .event.opportunity{border-inline-start-color:#10b981}.event.data_quality{border-inline-start-color:#f5b301}
+  .event h4{margin:0 0 6px;font-size:15px}.acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .rec{display:grid;grid-template-columns:110px 1fr;gap:6px 12px;font-size:13px;margin-top:8px}.rec b{color:var(--txt-soft,#8ba396);font-weight:600}
+  .flow{display:flex;align-items:stretch;gap:8px;flex-wrap:wrap;justify-content:center}
+  .fnode{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:14px;padding:14px 18px;text-align:center;min-width:140px}
+  .fnode .big{font-size:22px;font-weight:900}.farrow{align-self:center;font-size:22px;color:var(--txt-soft,#8ba396)}
+  .ptip{background:var(--bg,#070b09);border:1px solid var(--mint,#10b981);border-radius:12px;padding:12px;margin-top:8px;font-size:13px}
+  .search{flex:1;min-width:180px;background:var(--panel,#101a15);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:10px;padding:9px 12px;font:inherit}
+  .perf{display:grid;grid-template-columns:70px 1fr 50px;gap:8px;align-items:center;font-size:13px;margin:8px 0}
+  .perf .g{height:10px;background:var(--line,#1d2c24);border-radius:6px;overflow:hidden}.perf .g i{display:block;height:100%}
+  .life{display:flex;gap:0;align-items:center;flex-wrap:wrap;margin:10px 0}.lstep{text-align:center;min-width:110px}
+  .ldot{width:16px;height:16px;border-radius:50%;margin:0 auto 6px;background:var(--line,#1d2c24)}.ldot.on{background:var(--mint,#10b981)}
+  .lline{flex:1;min-width:30px;height:2px;background:var(--line,#1d2c24);margin-bottom:22px}
+  .back{background:none;border:0;color:var(--mint,#10b981);cursor:pointer;font:inherit;padding:0;margin-bottom:10px}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-inline-end:6px}
+  @media(max-width:900px){.hero{grid-template-columns:1fr 1fr}}
+  @media(max-width:560px){.hero{grid-template-columns:1fr}.tab{padding:8px 10px;font-size:13px}.rec{grid-template-columns:1fr}}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <h1>💼 الوحدة المالية</h1>
+  <p class="sub">ماذا تعني بيانات المبيعات والمخزون والمشتريات والسيولة والموظفين والعمليات ماليًا للشركة؟</p>
+  <div class="bar"><select id="fPeriod"></select><select id="fGrain"><option value="month">شهري</option><option value="quarter">ربع سنوي</option><option value="year">سنوي</option></select><button class="btn ghost" id="btnSet" style="display:none">⚙ المدخلات المالية</button></div>
+  <nav class="tabs" id="tabs"></nav>
+  <div id="content"><div class="state">…</div></div>
+</div>
+<div class="ov" id="ov"><div class="modal" id="modal"></div></div>
+<script src="i18n.js"></script>
+<script>
+(function(){
+  const TOKEN=localStorage.getItem("nabbah_token")||"";if(!TOKEN){location.href="login.html";return;}
+  const TABS=[["overview","نظرة عامة"],["summary","الملخص المالي"],["pnl","قائمة الدخل"],["balance","الميزانية العمومية"],["ratios","النسب المالية"],["revenue","الإيرادات"],["expenses","المصروفات"],["cash","التدفق النقدي"],["trends","الاتجاهات"],["forecast","التوقعات"],["variance","تحليل الانحراف"],["whatif","ماذا لو؟"],["branches","الفروع"],["signals","الإشارات والقرارات"]];
+  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const n=(v,d=0)=>v==null?"—":Number(v).toLocaleString("ar-SA",{maximumFractionDigits:d});
+  const pct=(v,inv,u="%")=>v==null?"—":`<span class="${(inv?v<=0:v>=0)?"pos":"neg"}">${v>0?"+":""}${n(v,1)}${u}</span>`;
+  const sgn=(v,inv)=>v==null?"—":`<span class="${(inv?v<=0:v>=0)?"pos":"neg"}">${v>0?"+":""}${n(v)}</span>`;
+  const t=k=>({noDim:"لا توجد بيانات"})[k]||k;
+  const H={Authorization:"Bearer "+TOKEN,"Content-Type":"application/json"},$=id=>document.getElementById(id);
+  const SEV={high:"عالٍ",medium:"متوسط",low:"منخفض"},CONF={high:"عالية",medium:"متوسطة",low:"منخفضة"},GRP={profitability:"الربحية",liquidity:"السيولة",efficiency:"الكفاءة",leverage:"الرفع المالي"};
+  let D=null;
+  function F(){return {period:$("fPeriod").value||"",grain:$("fGrain").value};}
+  const route=()=>{const h=decodeURIComponent(location.hash.slice(1)||"overview");const i=h.indexOf("/");return i<0?[h,""]:[h.slice(0,i),h.slice(i+1)];};
+  const go=(v,arg)=>{location.hash=arg?`${v}/${encodeURIComponent(arg)}`:v;};
+  window.addEventListener("hashchange",()=>{if(D)render();});
+  function load(){$("content").innerHTML=`<div class="state">…</div>`;
+    fetch("/company/financial-intelligence?"+new URLSearchParams(F()),{headers:H}).then(async r=>{
+      if(r.status===401){location.href="login.html";return null;}
+      if(r.status===403||r.status===402){let d="";try{d=(await r.json()).detail;}catch(_){}$("content").innerHTML=`<div class="state">🔒 ${esc(d||"ليست لديك صلاحية.")}</div>`;return null;}
+      if(!r.ok){let d="";try{const j=await r.json();d=typeof j.detail==="string"?j.detail:JSON.stringify(j.detail||j);}catch(_){}err(`HTTP ${r.status}${d?" — "+d:""}`);return null;}
+      return r.json();}).then(d=>{if(!d)return;D=d;$("btnSet").style.display=d.can_edit?"":"none";
+        if(d.periods){const cur=$("fPeriod").value;$("fPeriod").innerHTML=d.periods.slice().reverse().map(p=>`<option value="${esc(p)}" ${d.period===p?"selected":""}>${esc(p)}</option>`).join("");}
+        try{render();}catch(e){console.error(e);err("render: "+(e&&e.message||e));}}).catch(e=>err("network: "+(e&&e.message||e)));}
+  function err(m){$("content").innerHTML=`<div class="state neg">تعذّر تحميل الوحدة المالية.<div class="muted" style="margin-top:8px">${esc(m)}</div></div>`;}
+  const panel=(title,body,extra="")=>`<div class="panel"><h2>${title}${extra}</h2>${body}</div>`;
+  const na=m=>`<div class="na">${esc(m)}</div>`;
+  const tile=(l,v,c)=>`<div class="tile"><div class="l">${l}</div><div class="v">${v}</div><div class="c">${c||""}</div></div>`;
+  const unav=`<span class="muted" style="font-size:14px">غير متاح</span>`;
+  const bars=(list,val,lab,col="#d4a72c",fmt=v=>n(v),go_)=>{if(!list||!list.length)return na("لا توجد بيانات");const mx=Math.max(...list.map(val).map(v=>Math.abs(v||0)),1);return list.map(x=>`<div class="barrow ${go_?"drill":""}" ${go_?`data-go="${go_}" data-arg="${esc(lab(x))}"`:""}><span class="t">${esc(lab(x))}</span><span class="g"><i style="width:${(Math.abs(val(x)||0)/mx*100).toFixed(1)}%;background:${(val(x)||0)<0?"#ef4444":col}"></i></span><span>${fmt(val(x))}</span></div>`).join("");};
+  function chart(labels,series){
+    if(!labels.length)return na(t("noDim"));
+    const W=640,Hh=160,all=series.flatMap(s=>s.values.filter(v=>v!=null));
+    if(!all.length)return na(t("noDim"));
+    const max=Math.max(...all),min=Math.min(...all,0),rng=(max-min)||1;
+    const x=i=>labels.length<2?W/2:(i/(labels.length-1))*(W-20)+10,y=v=>Hh-12-((v-min)/rng)*(Hh-30);
+    const lines=series.map(s=>{let seg=[],out="";const flush=()=>{if(seg.length)out+=`<polyline points="${seg.join(" ")}" fill="none" stroke="${s.color}" stroke-width="2" ${s.dash?'stroke-dasharray="5 4"':""}/>`;seg=[];};
+      s.values.forEach((v,i)=>{if(v==null)flush();else seg.push(`${x(i).toFixed(1)},${y(v).toFixed(1)}`);});flush();
+      out+=s.values.map((v,i)=>v==null?"":`<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="2.6" fill="${s.color}"><title>${esc(labels[i])}: ${n(v)}</title></circle>`).join("");return out;}).join("");
+    return `<svg class="ch" viewBox="0 0 ${W} ${Hh}" preserveAspectRatio="none">${lines}</svg>
+      <div class="legend"><span>${esc(labels[0])} → ${esc(labels[labels.length-1])}</span>${series.map(s=>`<span><i style="background:${s.color}"></i>${esc(s.label)}</span>`).join("")}</div>`;
+  }
+  const K=k=>(D.kpis||[]).find(x=>x.key===k)||{};
+  function sigCard(s,i){return `<div class="event ${esc(s.type)}"><h4>${i!=null?(i+1)+". ":""}${s.type==="risk"?"⚠":s.type==="opportunity"?"🟢":"🟡"} ${esc(s.name_ar)}${s.dimension?` — ${esc(s.dimension)}`:""} <span class="b ${esc(s.severity)}">${SEV[s.severity]||s.severity}</span></h4>
+    <div class="rec"><b>الدليل</b><span>${(s.evidence||[]).map(esc).join(" · ")}</span><b>الأثر</b><span>${esc(s.impact_ar||"غير قابل للتقدير")}</span><b>التوصية</b><span>${esc(s.suggested_action_ar)}</span></div>
+    <div class="acts"><button class="btn" data-sig="${esc(s.id)}">قرار + إجراء</button>${s.dimension&&D.branches.some(b=>b.key===s.dimension)?`<button class="btn ghost" data-go="branch" data-arg="${esc(s.dimension)}">فتح الفرع</button>`:""}${s.code==="expense_spike"||s.code==="budget_overrun"?`<button class="btn ghost" data-go="expenses">المصروفات</button>`:""}${s.code==="margin_decline"||s.code==="growth_without_margin"?`<button class="btn ghost" data-go="variance">لماذا؟</button>`:""}${["balance_sheet_gap","net_profit_incomplete"].includes(s.code)&&D.can_edit?`<button class="btn ghost" data-act="settings">أكمل المدخلات</button>`:""}</div><div class="frm"></div></div>`;}
+  // ═══ نظرة عامة: القصة المالية
+  function overview(){const v=D.variance,rev=K("revenue"),gm=K("gross_margin"),nm=K("net_margin"),br=D.branches.slice().sort((a,b)=>(a.contribution_margin??999)-(b.contribution_margin??999))[0];
+    const row=x=>`<tr><td><b>${esc(x.name_ar)}</b></td><td>${x.available?(x.unit==="pct"?n(x.current,1)+"%":n(x.current)):unav}</td><td>${x.previous==null?"—":(x.unit==="pct"?n(x.previous,1)+"%":n(x.previous))}</td><td>${x.yoy==null?"—":(x.unit==="pct"?n(x.yoy,1)+"%":n(x.yoy))}</td><td>${x.target==null?"—":n(x.target)}</td><td>${x.change==null?"—":pct(x.change,["opex"].includes(x.key),x.change_unit==="pp"?" نقطة":"%")}</td></tr>`;
+    const story=[];
+    if(rev.change!=null)story.push(["الإيراد",rev.change>=0?`ينمو ${pct(rev.change)}`:`يتراجع ${pct(rev.change)}`,"revenue"]);
+    if(gm.change!=null)story.push(["الهامش",gm.change>=0?`يتحسن ${pct(gm.change,false," نقطة")}`:`يتراجع ${pct(gm.change,false," نقطة")}`,"pnl"]);
+    if(v&&v.contributions.length)story.push(["لماذا؟",v.contributions.slice(0,3).map(c=>`${esc(c.label)} ${sgn(c.effect)}`).join(" · "),"variance"]);
+    if(br)story.push(["أي فرع؟",`${esc(br.key)}: هامش المساهمة ${br.contribution_margin==null?"—":n(br.contribution_margin,1)+"%"}`,"branch/"+br.key]);
+    const top=D.signals.filter(s=>s.type!=="data_quality").slice(0,3);
+    return `<div class="hero" style="grid-template-columns:repeat(4,minmax(0,1fr))">${tile("الإيراد",rev.available?n(rev.current):unav,pct(rev.change))}${tile("مجمل الربح",K("gross_profit").available?n(K("gross_profit").current):unav,gm.available?`الهامش ${n(gm.current,1)}%`:"")}${tile("EBITDA",K("ebitda").available?n(K("ebitda").current):unav,pct(K("ebitda").change))}${tile("صافي الربح",K("net_profit").available?n(K("net_profit").current):unav,nm.available?`الهامش ${n(nm.current,1)}%`+(D.quality.net_profit_missing.length?` <span class="muted">(قبل ${esc(D.quality.net_profit_missing.join(" و"))})</span>`:""):"")}</div>
+      ${panel("القصة المالية — "+esc(D.period),story.length?`<div class="flow">${story.map((s,i)=>`${i?`<div class="farrow">←</div>`:""}<div class="fnode drill" data-go="${esc(s[2].split("/")[0])}" ${s[2].includes("/")?`data-arg="${esc(s[2].split("/").slice(1).join("/"))}"`:""}><div class="muted">${s[0]}</div><div style="font-weight:800;margin-top:4px">${s[1]}</div></div>`).join("")}<div class="farrow">←</div><div class="fnode drill" data-go="signals"><div class="muted">القرار</div><div style="font-weight:800;margin-top:4px">${n(D.status.risks)} إشارات</div></div></div>`:na("لا توجد فترة سابقة لبناء القصة"))}
+      ${panel("المؤشرات المالية",`<div class="tbl"><table><thead><tr><th>المؤشر</th><th>الحالي</th><th>السابق</th><th>نفس الفترة العام الماضي</th><th>المستهدف</th><th>التغير</th></tr></thead><tbody>${D.kpis.map(row).join("")}</tbody></table></div>`)}
+      ${panel("أهم الإشارات",top.length?top.map((s,i)=>sigCard(s,i)).join(""):na("لا مخاطر وفق القواعد"))}
+      ${panel("اسأل عن الوضع المالي",`<div class="chips">${["لماذا تغيّر صافي الربح؟","لماذا يتراجع الهامش؟","أي فرع يضغط على الربحية؟","ما أكبر مصروف يمكن خفضه؟","هل الربح يتحول إلى نقد؟"].map(q=>`<div class="schip" data-q="${esc(q)}" style="cursor:pointer">${esc(q)}</div>`).join("")}</div><div class="muted" style="margin-top:6px">المحرك يحسب ← الإشارات ← الذكاء الاصطناعي يشرح فقط، مع ذكر مصادر البيانات.</div><div id="aiOut" style="margin-top:10px"></div>`)}`;}
+  function summary(){const s=D.summary,blk=(title,items)=>panel(title,`<div class="tiles">${items.map(([l,v,c])=>tile(l,v==null?unav:v,c)).join("")}</div>`);
+    return blk("الإيرادات",[["إجمالي المبيعات",n(s.revenue.gross_sales)],["الخصومات",n(s.revenue.discounts)],["المرتجعات",n(s.revenue.returns)],["صافي المبيعات",n(s.revenue.net_sales),pct(s.revenue.growth_pct)]])+
+      blk("الربحية",[["تكلفة المبيعات",s.profitability.cogs==null?null:n(s.profitability.cogs)],["مجمل الربح",s.profitability.gross_profit==null?null:n(s.profitability.gross_profit),s.profitability.gross_margin!=null?n(s.profitability.gross_margin,1)+"%":""],["المصروفات التشغيلية",s.profitability.opex==null?null:n(s.profitability.opex)],["EBITDA",s.profitability.ebitda==null?null:n(s.profitability.ebitda)],["صافي الربح",s.profitability.net_profit==null?null:n(s.profitability.net_profit),s.profitability.net_margin!=null?n(s.profitability.net_margin,1)+"%":""]])+
+      blk("النقد",[["الرصيد",s.cash.balance==null?null:n(s.cash.balance)],["الداخل",s.cash.inflow==null?null:n(s.cash.inflow)],["الخارج",s.cash.outflow==null?null:n(s.cash.outflow)],["الصافي",s.cash.net==null?null:sgn(s.cash.net)]])+
+      blk("رأس المال العامل",[["الذمم المدينة",s.working_capital.receivables==null?null:n(s.working_capital.receivables)],["الذمم الدائنة",s.working_capital.payables==null?null:n(s.working_capital.payables)],["المخزون",s.working_capital.inventory==null?null:n(s.working_capital.inventory)],["رأس المال العامل",s.working_capital.working_capital==null?null:n(s.working_capital.working_capital),s.working_capital.working_capital==null?"يحتاج الذمم الدائنة":""]]);}
+  function pnl(){const q=D.quality;return panel("قائمة الدخل — "+esc(D.period),`<div class="tbl"><table class="ledger"><thead><tr><th>البند</th><th>الفعلي</th><th>السابق</th><th>الفرق</th><th>%</th><th>العام الماضي</th><th>الموازنة</th><th>فرق الموازنة</th></tr></thead><tbody>${D.statement.map(l=>{const tot=["net_revenue","gross_profit","opex_total","ebitda","net_profit"].includes(l.key);return `<tr style="${tot?"font-weight:800;border-top:1px solid var(--line,#1d2c24)":""}"><td style="padding-inline-start:${8+l.level*18}px">${esc(l.label)}</td><td>${l.available?n(l.actual):unav}</td><td>${n(l.previous)}</td><td>${sgn(l.var_prev,l.inverse)}</td><td>${pct(l.var_prev_pct,l.inverse)}</td><td>${n(l.yoy)}</td><td>${n(l.budget)}</td><td>${l.var_budget_pct==null?"—":pct(l.var_budget_pct,l.inverse)}</td></tr>`;}).join("")}</tbody></table></div>
+      <div class="na" style="margin-top:10px"><b>جودة البيانات:</b> تكلفة المبيعات — ${esc(q.cogs_method_ar)} (تغطية ${q.cogs_coverage_pct==null?"—":n(q.cogs_coverage_pct,1)+"%"}) · المصروفات — ${esc(q.expense_basis_ar||"لا توجد")}${q.net_profit_missing.length?` · صافي الربح قبل: ${esc(q.net_profit_missing.join("، "))}`:""}</div>`);}
+  function balance(){const b=D.balance_sheet,col=(title,items,total)=>`<div class="panel"><h2>${title}</h2>${items.map(x=>`<div class="barrow"><span class="t">${esc(x.label)}</span><span>${x.value==null?`<span class="muted">غير مُدخل</span>`:n(x.value)}</span><span class="muted" style="font-size:11px">${esc(x.source)}</span></div>`).join("")}<div class="barrow" style="font-weight:800;border-top:1px solid var(--line,#1d2c24);padding-top:6px"><span class="t">الإجمالي</span><span>${n(total)}</span></div></div>`;
+    return `<div class="panel" style="text-align:center"><div style="font-size:20px;font-weight:900" class="${b.balanced?"pos":"neg"}">${b.balanced?"✓ متوازنة":"⚠ يوجد فرق"}</div><div class="muted">الأصول ${n(b.total_assets)} = الالتزامات ${n(b.total_liabilities)} + حقوق الملكية ${n(b.total_equity)} ${b.balanced?"":` · الفرق ${n(b.difference)}`}</div>${b.missing.length?`<div class="muted">بنود ناقصة: ${b.missing.map(esc).join("، ")}</div>`:""}<div class="muted" style="font-size:11px;margin-top:6px">${esc(b.note_ar)}</div>${D.can_edit?`<div class="acts" style="justify-content:center"><button class="btn ghost" data-act="settings">أكمل البنود</button></div>`:""}</div>
+      <div class="grid2">${col("الأصول",b.assets,b.total_assets)}<div>${col("الالتزامات",b.liabilities,b.total_liabilities)}${col("حقوق الملكية",b.equity,b.total_equity)}</div></div>`;}
+  function ratios(){return ["profitability","liquidity","efficiency","leverage"].map(g=>panel(GRP[g],`<div class="tiles">${D.ratios.filter(r=>r.group===g).map(r=>tile(esc(r.name_ar),r.available?n(r.value,r.unit==="days"?0:2)+(r.unit==="%"?"%":r.unit==="x"?"x":r.unit==="days"?" يوم":""):unav,`<span class="muted" style="font-size:11px">${esc(r.method_ar)}</span>${r.available?"":`<div class="neg" style="font-size:11px">${esc(r.needs_ar)}</div>`}`)).join("")}</div>`)).join("");}
+  function revenue(){const r=D.revenue,tb=(list,l)=>!list.length?na("لا بيانات"):`<div class="tbl"><table><thead><tr><th>${l}</th><th>الإيراد</th><th>المساهمة</th><th>النمو</th><th>هامش مجمل الربح</th></tr></thead><tbody>${list.map(x=>`<tr><td><b>${esc(x.key)}</b></td><td>${n(x.revenue)}</td><td>${n(x.share_pct,1)}%</td><td>${pct(x.growth_pct)}</td><td>${x.gross_margin==null?"—":n(x.gross_margin,1)+"%"}</td></tr>`).join("")}</tbody></table></div>`;
+    return `<div class="tiles">${tile("صافي الإيراد",n(r.total),"")}${tile("النمو الشهري",pct(r.growth_pct),"")}${tile("عن العام الماضي",pct(r.yoy_pct),r.yoy_pct==null?"لا بيانات للعام الماضي":"")}</div>
+      ${panel("حسب الفئة",bars(r.by_category,x=>x.revenue,x=>x.key)+tb(r.by_category,"الفئة"))}<div class="grid2">${panel("حسب الفرع",tb(r.by_branch,"الفرع"))}${panel("حسب القناة",tb(r.by_channel,"القناة"))}</div>${panel("أعلى المنتجات",tb(r.by_product,"المنتج"))}<div class="muted">المصدر: ذكاء المبيعات 2.5 — نفس السجلات، بلا نسخ <a href="company-sales-intelligence.html">فتح ←</a></div>`;}
+  function expenses(){const e=D.expenses;if(!e.available)return panel("المصروفات",na("لا توجد مصروفات — ارفع ملف المصروفات أو الكشف البنكي"));const pr=e.payroll_reconciliation;
+    return `<div class="tiles">${tile("المصروفات التشغيلية",n(e.total),pct(e.change_pct,true))}${tile("من الإيراد",n(e.pct_of_revenue,1)+"%","")}${tile("الأساس",`<span style="font-size:12px">${esc(e.basis_ar)}</span>`,"")}</div>
+      ${e.drivers.length?panel("أكبر محرّكات التغير",e.drivers.map(x=>`<div class="barrow"><span class="t">${esc(x.label)}</span><span>${pct(x.change_pct,true)}</span><span class="muted">${n(x.previous)} ← ${n(x.current)}</span></div>`).join("")):""}
+      ${panel("البنود",`<div class="tbl"><table><thead><tr><th>البند</th><th>الحالي</th><th>السابق</th><th>التغير</th><th>% من الإيراد</th><th>الموازنة</th><th>الانحراف</th></tr></thead><tbody>${e.lines.map(x=>`<tr class="drill" data-exp="${esc(x.key)}"><td><b>${esc(x.label)}</b></td><td>${n(x.current)}</td><td>${n(x.previous)}</td><td>${pct(x.change_pct,true)}</td><td>${n(x.pct_of_revenue,1)}%</td><td>${n(x.budget)}</td><td>${x.var_budget_pct==null?"—":pct(x.var_budget_pct,true)}</td></tr><tr class="expd" data-for="${esc(x.key)}" style="display:none"><td colspan="7">${x.top_items.map(i=>`<div class="barrow"><span class="t">${esc(i.desc||"—")}</span><span>${n(i.amount)}</span><span class="muted">${esc(i.branch||"مركزي")} · ${i.source==="cash"?"حركة نقدية":"ملف المصروفات"}</span></div>`).join("")}</td></tr>`).join("")}</tbody></table></div><div class="muted">اضغط أي بند لرؤية الحركات الأصلية</div>`)}
+      ${pr?panel("مطابقة الرواتب مع ملف الموظفين (2.9)",`<div class="tiles">${tile("المسجّل في القائمة",n(pr.recorded),"")}${tile("تقدير ملف الموظفين",n(pr.hr_estimate),"")}${tile("الفرق",pct(pr.gap_pct,true),"")}</div><div class="muted">${esc(pr.note_ar)}</div>`):""}`;}
+  function cash(){const c=D.cash_analysis;if(!c.available)return panel("التدفق النقدي",na("لا توجد بيانات تدفق نقدي — ارفع الكشف البنكي"));
+    return `<div class="tiles">${tile("صافي الربح",n(c.net_profit),"")}${tile("صافي التدفق النقدي",sgn(c.net_cash),"")}${tile("تحويل الربح إلى نقد",c.cash_conversion_pct==null?unav:n(c.cash_conversion_pct,1)+"%","الصافي النقدي ÷ صافي الربح")}${tile("الرصيد",n(c.balance),c.runway_months!=null?"مدة السيولة "+n(c.runway_months,1)+" شهر":"")}</div>
+      ${panel("الربح مقابل النقد",`<div class="barrow"><span class="t">الفرق (النقد − الربح)</span><span>${sgn(c.gap)}</span></div><div class="muted">${esc(c.note_ar)}</div><div class="acts"><a class="btn ghost" href="company-cashflow-intelligence.html">ذكاء التدفق النقدي 2.8 ←</a></div>`)}`;}
+  function trends(){const s=D.trends,P=s.map(x=>x.period);return panel("الإيراد والربحية",chart(P,[{label:"الإيراد",values:s.map(x=>x.revenue),color:"#d4a72c"},{label:"مجمل الربح",values:s.map(x=>x.gross_profit),color:"#10b981"},{label:"EBITDA",values:s.map(x=>x.ebitda),color:"#60a5fa"},{label:"صافي الربح",values:s.map(x=>x.net_profit),color:"#a855f7"}]))+panel("الهوامش %",chart(P,[{label:"هامش مجمل الربح",values:s.map(x=>x.gross_margin),color:"#10b981"},{label:"هامش صافي الربح",values:s.map(x=>x.net_margin),color:"#a855f7"}]))+panel("المصروفات والنقد",chart(P,[{label:"المصروفات",values:s.map(x=>x.opex),color:"#ef4444"},{label:"صافي النقد",values:s.map(x=>x.net_cash),color:"#22d3ee"}]))+`<div class="muted">قائمة الدخل تُبنى شهرياً لأن المصروفات شهرية؛ المبيعات اليومية والأسبوعية في ذكاء المبيعات.</div>`;}
+  function forecast(){const f=D.forecast;if(!f.available)return panel("التوقعات المالية",na(f.reason_ar));
+    return `<div class="tiles">${tile("الثقة",CONF[f.confidence],"")}${tile("كفاية البيانات",`<span style="font-size:13px">${esc(f.sufficiency)}</span>`,"")}${tile("النمو المفترض",n(f.assumptions.growth_pct,1)+"% شهرياً","")}</div>
+      ${panel("الفعلي + المتوقع",chart(D.trends.map(x=>x.period).concat(f.points.map(x=>x.period)),[{label:"الإيراد الفعلي",values:D.trends.map(x=>x.revenue).concat(f.points.map(()=>null)),color:"#d4a72c"},{label:"الإيراد المتوقع",values:D.trends.map((x,i)=>i===D.trends.length-1?x.revenue:null).concat(f.points.map(x=>x.revenue)),color:"#a855f7",dash:1}]))}
+      ${panel("الأشهر القادمة",`<div class="tbl"><table><thead><tr><th>الشهر</th><th>الإيراد</th><th>مجمل الربح</th><th>EBITDA</th><th>صافي الربح</th><th>النقد المتوقع</th></tr></thead><tbody>${f.points.map(p=>`<tr><td>${esc(p.period)}</td><td>${n(p.revenue)}</td><td>${n(p.gross_profit)}</td><td>${sgn(p.ebitda)}</td><td>${sgn(p.net_profit)}</td><td>${n(p.cash)}</td></tr>`).join("")}</tbody></table></div><div class="muted">المنهجية: ${esc(f.method_ar)} <span class="b est">تقديري</span></div>`)}`;}
+  function variance(){const v=D.variance;if(!v)return panel("تحليل الانحراف",na("لا توجد فترة سابقة أو صافي الربح غير متاح"));const mx=Math.max(...v.contributions.map(c=>Math.abs(c.effect)),1);
+    return `<div class="tiles">${tile("تغيّر صافي الربح",sgn(v.net_profit_change),"")}${tile("تغيّر هامش صافي الربح",v.margin_change_pp==null?"—":pct(v.margin_change_pp,false," نقطة"),"")}${tile("تغيّر هامش مجمل الربح",v.gross_margin_change_pp==null?"—":pct(v.gross_margin_change_pp,false," نقطة"),"")}${tile("مقابل الموازنة",v.budget_available?"في قائمة الدخل":unav,v.budget_available?"":"أدخل الموازنة من الإعدادات")}</div>
+      ${panel("لماذا تغيّر صافي الربح؟",`<div style="margin-bottom:8px"><b>${esc(v.main_cause_ar||"")}</b></div>`+v.contributions.map(c=>`<div class="barrow"><span class="t">${esc(c.label)}</span><span class="g"><i style="width:${(Math.abs(c.effect)/mx*100).toFixed(1)}%;background:${c.effect>=0?"#10b981":"#ef4444"}"></i></span>${sgn(c.effect)}</div>`).join("")+`<div class="muted">الأخضر يرفع الربح والأحمر يخفضه · مجموع المساهمات = تغيّر صافي الربح</div>`)}
+      ${panel("الدليل ← الأثر ← التوصية ← القرار",D.signals.filter(s=>["margin_decline","growth_without_margin","expense_spike","budget_overrun"].includes(s.code)).map((s,i)=>sigCard(s,i)).join("")||na("لا إشارات انحراف وفق القواعد"))}`;}
+  function whatif(){const b=D.whatif_base;if(b.revenue==null||b.cogs==null)return panel("ماذا لو؟",na("يحتاج الإيراد وتكلفة المبيعات"));
+    const sl=(id,l,min,max,val)=>`<label style="display:block;margin:10px 0">${l}: <b id="${id}V">${val}%</b><input type="range" id="${id}" min="${min}" max="${max}" value="${val}" style="width:100%"></label>`;
+    return panel("محاكاة — لا تغيّر البيانات الفعلية",`<div class="grid2"><div>${sl("wRev","نمو الإيراد",-30,30,0)}${sl("wCogs","تكلفة المبيعات (نسبتها)",-20,20,0)}${sl("wPay","الرواتب",-20,30,0)}${sl("wMkt","التسويق",-50,50,0)}${sl("wOth","مصروفات أخرى",-30,30,0)}<button class="btn ghost" id="wReset">إعادة</button></div><div id="wOut"></div></div><div class="muted">الأساس: فترة ${esc(D.period)} الفعلية. الضرائب والإهلاك والفوائد ثابتة.</div>`);}
+  function runWhatif(){const b=D.whatif_base,g=id=>Number($(id).value)/100;["wRev","wCogs","wPay","wMkt","wOth"].forEach(id=>$(id+"V").textContent=$(id).value+"%");
+    const rev=b.revenue*(1+g("wRev")),cogs=b.cogs/b.revenue*(1+g("wCogs"))*rev,gp=rev-cogs,opex=b.payroll==null?null:(b.payroll||0)*(1+g("wPay"))+(b.marketing||0)*(1+g("wMkt"))+(b.other_opex||0)*(1+g("wOth")),eb=opex==null?null:gp-opex,np=eb==null?null:eb-(b.below||0);
+    const baseGp=b.revenue-b.cogs,baseEb=b.payroll==null?null:baseGp-((b.payroll||0)+(b.marketing||0)+(b.other_opex||0)),baseNp=baseEb==null?null:baseEb-(b.below||0);
+    const r=(l,v,base,pctv)=>`<div class="barrow"><span class="t">${l}</span><b>${v==null?"—":n(v)}</b><span class="muted">${base==null||v==null?"":"الفعلي "+n(base)+" · "}${pctv!=null?n(pctv,1)+"%":""}</span></div>`;
+    $("wOut").innerHTML=`<div class="panel" style="margin:0">${r("الإيراد المتوقع",rev,b.revenue)}${r("مجمل الربح",gp,baseGp,gp/rev*100)}${r("EBITDA",eb,baseEb,eb==null?null:eb/rev*100)}${r("صافي الربح",np,baseNp,np==null?null:np/rev*100)}<div class="muted" style="margin-top:6px">النسب = الهامش من الإيراد المتوقع <span class="b est">محاكاة</span></div></div>`;}
+  function branches(){const b=D.branches;return b.length?panel("ربحية الفروع — "+esc(D.period),`<div class="tbl"><table><thead><tr><th>الفرع</th><th>الإيراد</th><th>النمو</th><th>هامش مجمل الربح</th><th>المصروفات المباشرة</th><th>المساهمة</th><th>هامش المساهمة</th><th>كفاءة التشغيل</th></tr></thead><tbody>${b.map(x=>`<tr class="drill" data-go="branch" data-arg="${esc(x.key)}"><td><b>${esc(x.key)}</b></td><td>${n(x.revenue)}</td><td>${pct(x.revenue_growth_pct)}</td><td>${x.gross_margin==null?"—":n(x.gross_margin,1)+"%"}</td><td>${n(x.direct_opex)}</td><td>${sgn(x.contribution)}</td><td>${x.contribution_margin==null?"—":n(x.contribution_margin,1)+"%"}</td><td>${x.ops_efficiency==null?"—":n(x.ops_efficiency,1)}</td></tr>`).join("")}</tbody></table></div><div class="muted">المساهمة = مجمل الربح − مصروفات الفرع المباشرة. المصروفات المركزية (${n(D.central_opex)}) لا تُوزَّع بالتقدير.</div>`):panel("الفروع",na("المبيعات غير مسندة لفروع"));}
+  function branch360(key){const b=D.branches.find(x=>x.key===key);if(!b)return `<button class="back" data-go="branches">→ الفروع</button>`+na("غير موجود");const sig=D.signals.filter(s=>s.dimension===key);
+    return `<button class="back" data-go="branches">→ الفروع</button><div class="panel"><h2 style="font-size:20px">${esc(key)}</h2><div class="tiles">${tile("الإيراد",n(b.revenue),pct(b.revenue_growth_pct))}${tile("تكلفة المبيعات",n(b.cogs),"")}${tile("مجمل الربح",n(b.gross_profit),b.gross_margin!=null?n(b.gross_margin,1)+"%"+(b.gross_margin_prev!=null?` (السابق ${n(b.gross_margin_prev,1)}%)`:""):"")}${tile("المصروفات المباشرة",n(b.direct_opex),"")}${tile("المساهمة",sgn(b.contribution),b.contribution_margin!=null?n(b.contribution_margin,1)+"%":"")}</div></div>
+      ${panel("السياق من الوحدات الأخرى",`<div class="tiles">${tile("صافي النقد (2.8)",b.net_cash==null?unav:sgn(b.net_cash),"")}${tile("قيمة المخزون (2.6)",b.inventory_value==null?unav:n(b.inventory_value),"")}${tile("المشتريات (2.7)",b.purchases==null?unav:n(b.purchases),"")}${tile("تقدير الرواتب (2.9)",b.hr_payroll_estimate==null?unav:n(b.hr_payroll_estimate),"")}${tile("كفاءة التشغيل (2.10)",b.ops_efficiency==null?unav:n(b.ops_efficiency,1),b.ops_on_time!=null?"في الموعد "+n(b.ops_on_time,1)+"%":"")}</div>
+        <div class="acts"><a class="btn ghost" href="company-inventory-intelligence.html">المخزون</a><a class="btn ghost" href="company-operations-intelligence.html#branch/${encodeURIComponent(key)}">العمليات</a><a class="btn ghost" href="company-purchases-intelligence.html">المشتريات</a></div>`)}
+      ${b.opex_lines.length?panel("المصروفات المباشرة",b.opex_lines.map(x=>`<div class="barrow"><span class="t">${esc(x.label)}</span><span>${n(x.amount)}</span></div>`).join("")):""}${sig.length?panel("الإشارات",sig.map(s=>sigCard(s)).join("")):""}`;}
+  function signals(){const r=D.signals.filter(s=>s.type==="risk"),o=D.signals.filter(s=>s.type==="opportunity"),q=D.signals.filter(s=>s.type==="data_quality");
+    return panel(`⚠ ${n(r.length)} إشارات مالية تحتاج قراراً`,r.length?r.map((s,i)=>sigCard(s,i)).join(""):na("لا مخاطر"))+panel(`🟢 ${n(o.length)} فرص`,o.length?o.map((s,i)=>sigCard(s,i)).join(""):na("لا فرص"))+panel(`🟡 ${n(q.length)} جودة البيانات`,q.length?q.map(s=>sigCard(s)).join(""):na("لا ملاحظات"));}
+  function render(){const d=D;
+    if(!d.has_data){$("tabs").innerHTML="";const r=d.required||{};$("content").innerHTML=`<div class="state"><div style="font-size:16px;margin-bottom:10px">${esc(d.message_ar)}</div><div class="muted">المطلوب: ${(r.required||[]).map(esc).join("، ")}</div><div class="muted">مستحسن: ${(r.recommended||[]).map(esc).join("، ")}</div><div class="muted">اختياري: ${(r.optional||[]).map(esc).join("، ")}</div><div class="cta" style="justify-content:center"><a class="btn" href="company-data-center.html">مركز البيانات</a></div></div>`;return;}
+    const [v,arg]=route(),tabOf=v==="branch"?"branches":v;
+    $("tabs").innerHTML=TABS.map(([k,l],i)=>`<button class="tab ${k===tabOf?"on":""}" data-go="${k}"><span class="muted" style="font-size:10px">${String(i+1).padStart(2,"0")}</span> ${l}${k==="signals"&&d.status.risks?` <span class="b high">${d.status.risks}</span>`:""}</button>`).join("");
+    const view={overview,summary,pnl,balance,ratios,revenue,expenses,cash,trends,forecast,variance,whatif,branches,signals}[v];
+    $("content").innerHTML=v==="branch"?branch360(arg):(view?view():overview());bind();window.scrollTo(0,0);
+    if(v==="whatif"&&$("wRev")){["wRev","wCogs","wPay","wMkt","wOth"].forEach(id=>$(id).oninput=runWhatif);$("wReset").onclick=()=>{["wRev","wCogs","wPay","wMkt","wOth"].forEach(id=>$(id).value=0);runWhatif();};runWhatif();}}
+  function bind(){document.querySelectorAll("[data-go]").forEach(el=>el.onclick=e=>{e.stopPropagation();$("ov").classList.remove("on");go(el.dataset.go,el.dataset.arg||null);});
+    document.querySelectorAll("#content [data-act='settings']").forEach(el=>el.onclick=settings);
+    document.querySelectorAll("#content [data-sig]").forEach(b=>b.onclick=()=>decision(b));
+    document.querySelectorAll("#content [data-exp]").forEach(r=>r.onclick=()=>{const x=document.querySelector(`.expd[data-for="${r.dataset.exp}"]`);if(x)x.style.display=x.style.display==="none"?"":"none";});
+    document.querySelectorAll("#content [data-q]").forEach(c=>c.onclick=()=>runAI(c.dataset.q));}
+  function settings(){const s=D.saved_settings||{},b=s.balance||{},bu=s.budget||{},ox=bu.opex_monthly||{};
+    const f=(path,l,val)=>`<label>${l}<input data-p="${path}" inputmode="decimal" value="${val??""}"></label>`;
+    $("modal").innerHTML=`<h3 style="margin-top:0">المدخلات المالية اليدوية</h3><div class="muted" style="margin-bottom:8px">بنود لا تأتي من الوحدات. الفارغ = غير متاح (لا يُحسب صفراً).</div>
+      <h4>الميزانية العمومية</h4><div class="fg">${f("balance.fixed_assets","الأصول الثابتة",b.fixed_assets)}${f("balance.other_assets","أصول أخرى",b.other_assets)}${f("balance.accounts_payable","الذمم الدائنة",b.accounts_payable)}${f("balance.loans","القروض",b.loans)}${f("balance.accrued","مستحقات",b.accrued)}${f("balance.other_liabilities","التزامات أخرى",b.other_liabilities)}${f("balance.paid_in_capital","رأس المال المدفوع",b.paid_in_capital)}${f("balance.retained_earnings","الأرباح المبقاة",b.retained_earnings)}</div>
+      <h4>بنود شهرية</h4><div class="fg">${f("depreciation_monthly","الإهلاك الشهري",s.depreciation_monthly)}${f("interest_monthly","الفوائد الشهرية",s.interest_monthly)}${f("revenue_target","مستهدف الإيراد الشهري",s.revenue_target)}</div>
+      <h4>الموازنة الشهرية</h4><div class="fg">${f("budget.revenue_monthly","الإيراد",bu.revenue_monthly)}${[["payroll","الرواتب"],["rent","الإيجار"],["marketing","التسويق"],["delivery","التوصيل"],["utilities","المرافق"],["maintenance","الصيانة"],["software","البرمجيات"],["other","أخرى"]].map(([k,l])=>f("budget.opex_monthly."+k,l,ox[k])).join("")}</div>
+      <div class="cta"><button class="btn" id="mSave">حفظ</button><button class="btn ghost" id="mCancel">إلغاء</button><span id="mMsg" class="muted"></span></div>`;
+    $("ov").classList.add("on");$("mCancel").onclick=()=>$("ov").classList.remove("on");
+    $("mSave").onclick=()=>{const body={};$("modal").querySelectorAll("[data-p]").forEach(i=>{const p=i.dataset.p.split(".");let o=body;p.slice(0,-1).forEach(k=>{o[k]=o[k]||{};o=o[k];});o[p[p.length-1]]=i.value;});
+      fetch("/company/financial/settings",{method:"POST",headers:H,body:JSON.stringify(body)}).then(async r=>{const j=await r.json().catch(()=>({}));if(r.ok){$("ov").classList.remove("on");load();}else{$("mMsg").className="neg";$("mMsg").textContent=typeof j.detail==="string"?j.detail:"HTTP "+r.status;}});};}
+  function decision(b){const box=b.closest(".event").querySelector(".frm");
+    box.innerHTML=`<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap"><input class="f o" placeholder="المسؤول (مثلاً المدير المالي)"><input class="f d" type="date"><button class="btn c">إنشاء</button></div><div class="m muted"></div>`;
+    box.querySelector(".c").onclick=()=>fetch("/company/financial/to-decision",{method:"POST",headers:H,body:JSON.stringify({signal_id:b.dataset.sig,owner:box.querySelector(".o").value,due_date:box.querySelector(".d").value,period:D.period})}).then(async r=>{const j=await r.json().catch(()=>({}));box.querySelector(".m").textContent=r.ok?"تم إنشاء القرار والإجراء ✓ (الحالة: مفتوح)":(typeof j.detail==="string"?j.detail:"HTTP "+r.status);if(r.ok)b.disabled=true;});}
+  function runAI(q){const out=$("aiOut");out.innerHTML=`<div class="muted">«${esc(q)}» — جارٍ التحليل…</div>`;
+    fetch("/company/financial/ai-insights",{method:"POST",headers:H,body:JSON.stringify({period:D.period,question:q})}).then(async r=>{const j=await r.json().catch(()=>({}));
+      if(!r.ok){out.innerHTML=`<div class="neg">${esc(typeof j.detail==="string"?j.detail:"HTTP "+r.status)}</div>`;return;}
+      const a=j.ai||{},resp=a.response||{},L={FACTS:"العوامل المدعومة بالبيانات",INTERPRETATION:"الأثر",HYPOTHESES:"فرضيات غير مؤكدة",RECOMMENDATIONS:"التوصية",DATA_GAPS:"ما لم يُحتسب لنقص البيانات"};
+      out.innerHTML=`<div class="muted" style="margin-bottom:6px">«${esc(j.question||q)}» · المصادر: المبيعات، المخزون، المشتريات، التدفق النقدي، الموارد البشرية، العمليات</div>`+(a.message?`<div class="na">${esc(a.message)}</div>`:"")+Object.keys(L).map(k=>resp[k]&&resp[k].length?`<div class="ai-sec"><b>${L[k]}</b><ul style="margin:0;padding-inline-start:18px">${resp[k].map(x=>`<li>${esc(typeof x==="string"?x:JSON.stringify(x))}</li>`).join("")}</ul></div>`:"").join("");}).catch(e=>{out.innerHTML=`<div class="neg">${esc(e.message||e)}</div>`;});}
+  $("ov").onclick=e=>{if(e.target===$("ov"))$("ov").classList.remove("on");};
+  $("btnSet").onclick=settings;["fPeriod","fGrain"].forEach(id=>$(id).addEventListener("change",load));
+  load();
+})();
+</script>
+<script src="nabbah-sidebar.js"></script>
+</body></html>
