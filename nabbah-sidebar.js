@@ -82,6 +82,7 @@
       { label: "ذكاء المخزون", href: "company-inventory-intelligence.html" },
       { label: "ذكاء المشتريات", href: "company-purchases-intelligence.html" },
       { label: "ذكاء التدفق النقدي", href: "company-cashflow-intelligence.html" },
+      { label: "ذكاء الموارد البشرية", href: "company-hr-intelligence.html" },
       { label: "مركز البيانات", href: "company-data-center.html" },
     ]},
   ];
