@@ -58,6 +58,27 @@ SYNONYMS = {
                    "receipt date", "actual delivery"],
  "received_qty": ["الكمية المستلمة", "المستلم", "received qty", "qty received", "received quantity"],
  "rejected_qty": ["الكمية المرفوضة", "المرفوض", "المعيب", "rejected qty", "rejected", "defective", "rejected quantity"],
+ "employment_type": ["نوع التوظيف", "نوع العقد", "دوام", "employment type", "contract type"],
+ "manager": ["المدير المباشر", "المدير", "المسؤول المباشر", "manager", "reports to", "line manager"],
+ "termination_type": ["نوع المغادرة", "سبب المغادرة", "نوع انتهاء الخدمة", "termination type", "exit type", "leave reason"],
+ "basic_salary": ["الراتب الأساسي", "basic salary", "base salary"],
+ "allowances": ["البدلات", "allowances"],
+ "benefits": ["المزايا", "التأمين والمزايا", "benefits"],
+ "performance_rating": ["تقييم الأداء", "الأداء", "التقييم", "performance", "performance rating", "rating"],
+ "last_promotion_date": ["تاريخ آخر ترقية", "آخر ترقية", "last promotion", "last promotion date"],
+ "training_hours": ["ساعات التدريب", "التدريب", "training hours"],
+ "absence_days": ["أيام الغياب", "الغياب", "absence days", "absences"],
+ "overtime_hours": ["ساعات العمل الإضافي", "العمل الإضافي", "overtime", "overtime hours"],
+ "critical_role": ["وظيفة حرجة", "دور حرج", "critical role", "key role"],
+ "successors": ["عدد البدلاء", "البدلاء", "المرشحون للخلافة", "successors", "succession candidates"],
+ "title": ["المسمى الوظيفي", "الوظيفة الشاغرة", "الوظيفة", "job title", "position", "opening"],
+ "opened_date": ["تاريخ الفتح", "تاريخ فتح الوظيفة", "تاريخ الإعلان", "opened date", "open date", "posted date"],
+ "filled_date": ["تاريخ الشغل", "تاريخ التعيين الفعلي", "تاريخ الإغلاق", "filled date", "hire date", "closed date"],
+ "applicants": ["المتقدمون", "عدد المتقدمين", "applicants"],
+ "interviews": ["المقابلات", "عدد المقابلات", "interviews"],
+ "offers": ["العروض", "عروض العمل", "offers"],
+ "hires": ["المعيّنون", "عدد المعينين", "التعيينات", "hires", "hired"],
+ "hiring_cost": ["تكلفة التوظيف", "hiring cost", "recruitment cost", "cost per hire"],
  "promotion": ["الحملة", "العرض الترويجي", "الحملة الترويجية", "promotion", "promo", "campaign"],
  "supplier_name": ["المورد", "اسم المورد", "supplier", "vendor"],
  "unit_cost": ["سعر الوحدة", "تكلفة الوحدة", "unit cost", "unit price", "price"],
@@ -305,6 +326,8 @@ def parse_value(field, raw, year_hint=None):
         if _month_word(_norm(str(raw))) and not year_hint:
             return None, f"«{str(raw)[:20]}» شهر بلا سنة — اكتب السنة في العمود أو في عنوان الملف"
         return None, f"شهر غير مفهوم «{str(raw)[:25]}»"
+    if field == "critical_role":
+        field = "active"
     if field == "active":
         s = _norm(raw)
         if s in ("1", "نعم", "yes", "y", "true", "active", "نشط", "فعال", "مفعل", "ساري"):
@@ -437,6 +460,7 @@ TYPE_HINTS = {
     "employee": ("موظف", "الموظفين", "وظيف", "employee", "staff", "راتب", "salary"),
     "product": ("منتج", "صنف", "product", "sku", "item", "سعر البيع"),
     "department": ("قسم", "الاقسام", "اداره", "department"),
+    "job_opening": ("شاغر", "شاغره", "المتقدم", "مقابل", "عروض", "opening", "applicant", "vacanc"),
     "sale": ("مبيعات", "المبيعات", "sales", "فاتوره", "invoice"),
     "purchase": ("مشتريات", "شراء", "purchase", "po"),
     "inventory": ("مخزون", "رصيد", "inventory", "stock"),
