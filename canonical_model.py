@@ -16,6 +16,22 @@ ENTITIES = {
               "basic_salary": SENSITIVE, "allowances": SENSITIVE, "benefits": SENSITIVE,
               "performance_rating": OPTIONAL, "last_promotion_date": OPTIONAL, "training_hours": OPTIONAL,
               "absence_days": OPTIONAL, "overtime_hours": OPTIONAL, "critical_role": OPTIONAL, "successors": OPTIONAL}},
+ # ── Phase 2.11 — المصروفات التشغيلية من النظام المحاسبي (اختياري: يحوّل المصروفات من الأساس النقدي إلى المسجّل)
+ "expense": {"ar": "المصروفات", "en": "Expenses", "table": "companyexpense",
+   "fields": {"date": REQUIRED, "amount": REQUIRED, "category": OPTIONAL, "description": OPTIONAL,
+              "branch_id": OPTIONAL, "vendor": OPTIONAL}},
+ # ── Phase 2.10 — العمليات (طلب/خدمة لكل صف، مراحل العملية، المشاكل التشغيلية)
+ "operation_order": {"ar": "الطلبات التشغيلية", "en": "Operational orders", "table": "companyopsorder",
+   "fields": {"reference": REQUIRED, "date": REQUIRED, "branch_id": OPTIONAL, "department_id": OPTIONAL, "service": OPTIONAL,
+              "status": OPTIONAL, "created_time": OPTIONAL, "ready_time": OPTIONAL, "delivered_time": OPTIONAL,
+              "due_time": OPTIONAL, "items": OPTIONAL, "accurate": OPTIONAL, "defect_type": OPTIONAL, "rework": OPTIONAL}},
+ "process_event": {"ar": "مراحل العمليات", "en": "Process events", "table": "companyopsevent",
+   "fields": {"reference": REQUIRED, "stage": REQUIRED, "start_time": REQUIRED, "end_time": OPTIONAL,
+              "branch_id": OPTIONAL, "department_id": OPTIONAL}},
+ "operational_issue": {"ar": "المشاكل والأعطال التشغيلية", "en": "Operational issues", "table": "companyopsissue",
+   "fields": {"title": REQUIRED, "opened_time": REQUIRED, "branch_id": OPTIONAL, "department_id": OPTIONAL,
+              "severity": OPTIONAL, "status": OPTIONAL, "resolved_time": OPTIONAL, "owner": OPTIONAL,
+              "root_cause": OPTIONAL, "impact": OPTIONAL, "sla_hours": OPTIONAL}},
  "job_opening": {"ar": "الوظائف الشاغرة والتوظيف", "en": "Job openings", "table": "companyjobopening",
    "fields": {"title": REQUIRED, "opened_date": REQUIRED, "department_id": OPTIONAL, "branch_id": OPTIONAL,
               "status": OPTIONAL, "filled_date": OPTIONAL, "applicants": OPTIONAL, "interviews": OPTIONAL,
@@ -60,9 +76,12 @@ ENTITIES = {
 DATASET_TYPES = tuple(ENTITIES)
 NUMERIC = {"quantity", "gross_sales", "discounts", "returns", "net_sales", "vat", "unit_cost", "total_cost",
            "opening_qty", "opening_value", "purchases_qty", "sold_qty", "adjustments_qty", "closing_qty",
-           "closing_value", "amount", "cost", "selling_price", "monthly_cost", "credit_limit", "inflow", "outflow", "received_qty", "rejected_qty", "balance", "paid_amount", "basic_salary", "allowances", "benefits", "performance_rating", "training_hours", "absence_days", "overtime_hours", "successors", "applicants", "interviews", "offers", "hires", "hiring_cost"}
+           "closing_value", "amount", "cost", "selling_price", "monthly_cost", "credit_limit", "inflow", "outflow", "received_qty", "rejected_qty", "balance", "paid_amount", "basic_salary", "allowances", "benefits", "performance_rating", "training_hours", "absence_days", "overtime_hours", "successors", "applicants", "interviews", "offers", "hires", "hiring_cost", "items", "sla_hours"}
 DATE_FIELDS = {"date", "hire_date", "termination_date", "expected_date", "received_date", "invoice_date", "due_date", "paid_date", "last_promotion_date", "opened_date", "filled_date"}
 PERIOD_FIELDS = {"period"}
+# تاريخ + وقت (العمليات تُقاس بالدقائق). وقت بلا تاريخ يُدمج مع «التاريخ» في نفس الصف.
+DATETIME_FIELDS = {"created_time", "ready_time", "delivered_time", "due_time", "start_time", "end_time",
+                   "opened_time", "resolved_time"}
 # مفاتيح كشف التكرار لكل نوع
 DUP_KEYS = {"sale": ("date", "branch_id", "reference", "product_sku"),
             "purchase": ("date", "branch_id", "reference", "product_sku"),
@@ -70,6 +89,10 @@ DUP_KEYS = {"sale": ("date", "branch_id", "reference", "product_sku"),
             "cash_movement": ("date", "branch_id", "reference", "amount"),
             "employee": ("employee_code",), "product": ("sku",), "supplier": ("name",),
             "customer": ("name", "phone", "email"),
+            "expense": ("date", "amount", "description", "branch_id"),
+            "operation_order": ("reference", "branch_id"),
+            "process_event": ("reference", "stage", "start_time"),
+            "operational_issue": ("title", "opened_time", "branch_id"),
             "job_opening": ("title", "opened_date", "department_id", "branch_id"),
             "receivable": ("reference", "customer_name", "invoice_date", "amount"),
             "department": ("name", "branch_id")}
