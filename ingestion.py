@@ -11,6 +11,7 @@ from decimal import Decimal
 _H = os.path.dirname(os.path.abspath(__file__))
 for _d in ("..", "../phase21", "../phase22"):
     sys.path.insert(0, os.path.join(_H, _d))
+from canonical_model import DATETIME_FIELDS
 from canonical_model import (ENTITIES, DATASET_TYPES, NUMERIC, DATE_FIELDS, PERIOD_FIELDS,
                              DUP_KEYS, DIRECTIONS, required_fields, all_fields)
 from period_model import parse_date, period_key
@@ -28,7 +29,7 @@ SYNONYMS = {
  "reference": ["رقم الفاتورة", "الفاتورة", "المرجع", "invoice", "invoice no", "reference", "ref", "order", "رقم الطلب", "po", "رقم أمر الشراء", "رقم أمر الشراء", "أمر الشراء", "po", "po number", "po no"],
  "channel": ["القناة", "channel", "قناة البيع", "sales channel"],
  "product_sku": ["رمز المنتج", "الصنف", "sku", "product", "product code", "item", "المنتج", "كود الصنف"],
- "category": ["التصنيف", "الفئة", "category", "group", "المجموعة"],
+ "category": ["التصنيف", "الفئة", "category", "group", "المجموعة", "بند المصروف", "نوع المصروف", "expense category", "account name", "اسم الحساب المحاسبي"],
  "quantity": ["الكمية", "العدد", "qty", "quantity", "units"],
  "gross_sales": ["المبيعات", "إجمالي المبيعات", "المبيعات الإجمالية", "sales", "gross sales", "amount", "المبلغ", "القيمة", "total sales"],
  "discounts": ["الخصم", "الخصومات", "discount", "discounts"],
@@ -71,7 +72,8 @@ SYNONYMS = {
  "overtime_hours": ["ساعات العمل الإضافي", "العمل الإضافي", "overtime", "overtime hours"],
  "critical_role": ["وظيفة حرجة", "دور حرج", "critical role", "key role"],
  "successors": ["عدد البدلاء", "البدلاء", "المرشحون للخلافة", "successors", "succession candidates"],
- "title": ["المسمى الوظيفي", "الوظيفة الشاغرة", "الوظيفة", "job title", "position", "opening"],
+ "title": ["المسمى الوظيفي", "الوظيفة الشاغرة", "الوظيفة", "job title", "position", "opening",
+           "المشكلة", "العطل", "وصف المشكلة", "البلاغ", "issue", "fault", "problem"],
  "opened_date": ["تاريخ الفتح", "تاريخ فتح الوظيفة", "تاريخ الإعلان", "opened date", "open date", "posted date"],
  "filled_date": ["تاريخ الشغل", "تاريخ التعيين الفعلي", "تاريخ الإغلاق", "filled date", "hire date", "closed date"],
  "applicants": ["المتقدمون", "عدد المتقدمين", "applicants"],
@@ -79,6 +81,27 @@ SYNONYMS = {
  "offers": ["العروض", "عروض العمل", "offers"],
  "hires": ["المعيّنون", "عدد المعينين", "التعيينات", "hires", "hired"],
  "hiring_cost": ["تكلفة التوظيف", "hiring cost", "recruitment cost", "cost per hire"],
+ "description": ["البيان", "الوصف", "تفاصيل المصروف", "description", "memo", "narration"],
+ "vendor": ["الجهة", "المستفيد", "المورد/الجهة", "vendor", "payee"],
+ "service": ["الخدمة", "نوع الخدمة", "نوع الطلب", "قناة الطلب", "service", "order type", "service type"],
+ "created_time": ["وقت الطلب", "وقت الإنشاء", "وقت الاستلام من العميل", "created time", "order time", "created at"],
+ "ready_time": ["وقت الجاهزية", "وقت التجهيز", "جاهز", "ready time", "prepared at"],
+ "delivered_time": ["وقت التسليم", "وقت التسليم الفعلي", "delivered time", "delivered at", "completed at"],
+ "due_time": ["الموعد المستهدف", "وقت التسليم المستهدف", "موعد SLA", "due time", "promised time", "sla deadline", "target time"],
+ "items": ["عدد الأصناف", "الأصناف", "items", "item count"],
+ "accurate": ["طلب صحيح", "الدقة", "صحيح", "accurate", "correct order"],
+ "defect_type": ["نوع الخطأ", "نوع العيب", "الخطأ", "defect", "defect type", "error type"],
+ "rework": ["إعادة عمل", "إعادة تجهيز", "rework", "redo"],
+ "stage": ["المرحلة", "مرحلة العملية", "stage", "process step", "step"],
+ "start_time": ["وقت البداية", "بداية المرحلة", "start time", "started at"],
+ "end_time": ["وقت النهاية", "نهاية المرحلة", "end time", "ended at"],
+ "opened_time": ["وقت الفتح", "تاريخ المشكلة", "وقت البلاغ", "تاريخ البلاغ", "opened at", "reported at", "issue date"],
+ "resolved_time": ["وقت الحل", "تاريخ الحل", "resolved at", "resolved time", "closed at"],
+ "severity": ["الخطورة", "الأولوية", "severity", "priority"],
+ "owner": ["المسؤول", "owner", "assignee", "assigned to"],
+ "root_cause": ["السبب الجذري", "السبب", "root cause", "cause"],
+ "impact": ["الأثر", "impact"],
+ "sla_hours": ["مدة SLA بالساعات", "SLA (ساعات)", "sla hours"],
  "promotion": ["الحملة", "العرض الترويجي", "الحملة الترويجية", "promotion", "promo", "campaign"],
  "supplier_name": ["المورد", "اسم المورد", "supplier", "vendor"],
  "unit_cost": ["سعر الوحدة", "تكلفة الوحدة", "unit cost", "unit price", "price"],
@@ -301,6 +324,37 @@ def map_columns(headers, dataset_type):
             "fields": fields, "required": required_fields(dataset_type)}
 
 
+def parse_datetime(raw):
+    """تاريخ+وقت → 'YYYY-MM-DDTHH:MM' · وقت فقط → 'THH:MM' (يُدمج مع تاريخ الصف لاحقاً)."""
+    import datetime as _dt
+    if isinstance(raw, _dt.datetime):
+        return raw.strftime("%Y-%m-%dT%H:%M"), None
+    if isinstance(raw, _dt.time):
+        return raw.strftime("T%H:%M"), None
+    if isinstance(raw, _dt.date):
+        return raw.strftime("%Y-%m-%dT00:00"), None
+    if isinstance(raw, float) and 0 <= raw < 1:                      # كسر يوم Excel
+        mins = round(raw * 1440)
+        return f"T{mins // 60:02d}:{mins % 60:02d}", None
+    t = str(raw).translate(_AR_DIGITS).strip().replace("ص", "AM").replace("م", "PM")
+    m = re.match(r"^(.*?)[ T]?(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)?$", t, re.I)
+    if m:
+        hh, mm, ap = int(m.group(2)), int(m.group(3)), (m.group(4) or "").upper()
+        if ap == "PM" and hh < 12:
+            hh += 12
+        if ap == "AM" and hh == 12:
+            hh = 0
+        if hh > 23 or mm > 59:
+            return None, f"وقت غير مفهوم «{str(raw)[:25]}»"
+        dpart = m.group(1).strip()
+        if not dpart:
+            return f"T{hh:02d}:{mm:02d}", None
+        d = parse_any_date(dpart)
+        return (f"{d.isoformat()}T{hh:02d}:{mm:02d}", None) if d else (None, f"تاريخ غير مفهوم «{str(raw)[:25]}»")
+    d = parse_any_date(raw)
+    return (f"{d.isoformat()}T00:00", None) if d else (None, f"تاريخ/وقت غير مفهوم «{str(raw)[:25]}»")
+
+
 def parse_value(field, raw, year_hint=None):
     """يحوّل القيمة حسب نوع الحقل. يُرجع (value, error) — لا تخمين صامت."""
     if raw is None or str(raw).strip() == "":
@@ -316,6 +370,10 @@ def parse_value(field, raw, year_hint=None):
         if v is not None and neg:
             v = -v
         return (float(v), None) if v is not None else (None, "قيمة غير رقمية")
+    if field in DATETIME_FIELDS:
+        return parse_datetime(raw)
+    if field in ("accurate", "rework"):
+        field = "active"
     if field in DATE_FIELDS:
         d = parse_any_date(raw)
         return (d.isoformat(), None) if d else (None, f"تاريخ غير مفهوم «{str(raw)[:25]}»")
@@ -404,6 +462,12 @@ def validate_rows(rows, mapping, dataset_type, *, branch_names=None, existing_ke
                 errors.append({"field": "branch_id", "value": str(rec["branch_id"])[:40], "error": "فرع غير معروف"})
             else:
                 rec["branch_id"] = bid
+        for _f in DATETIME_FIELDS:
+            if isinstance(rec.get(_f), str) and rec[_f].startswith("T"):
+                base = rec.get("date") or (rec.get("opened_time") or "")[:10] or (rec.get("start_time") or "")[:10]
+                rec[_f] = (base + rec[_f]) if base and not base.startswith("T") else None
+        if dataset_type in ("process_event",) and rec.get("start_time") is None:
+            pass
         if (dataset_type == "purchase" and rec.get("total_cost") is None
                 and rec.get("quantity") is not None and rec.get("unit_cost") is not None):
             rec["total_cost"] = round(float(rec["quantity"]) * float(rec["unit_cost"]), 2)
@@ -460,6 +524,10 @@ TYPE_HINTS = {
     "employee": ("موظف", "الموظفين", "وظيف", "employee", "staff", "راتب", "salary"),
     "product": ("منتج", "صنف", "product", "sku", "item", "سعر البيع"),
     "department": ("قسم", "الاقسام", "اداره", "department"),
+    "expense": ("مصروف", "مصاريف", "المصروفات", "expense", "opex", "بند المصروف"),
+    "operation_order": ("تسليم", "تجهيز", "جاهز", "sla", "ready", "delivered", "طلب صحيح", "خطأ"),
+    "process_event": ("مرحله", "stage", "بدايه", "نهايه", "start", "end"),
+    "operational_issue": ("مشكله", "عطل", "بلاغ", "خطوره", "issue", "fault", "severity", "سبب جذري"),
     "job_opening": ("شاغر", "شاغره", "المتقدم", "مقابل", "عروض", "opening", "applicant", "vacanc"),
     "sale": ("مبيعات", "المبيعات", "sales", "فاتوره", "invoice"),
     "purchase": ("مشتريات", "شراء", "purchase", "po"),
