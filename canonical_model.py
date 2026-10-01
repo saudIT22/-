@@ -10,7 +10,16 @@ ENTITIES = {
  "employee": {"ar": "الموظفون", "en": "Employees", "table": "companyemployee",
    "fields": {"employee_code": REQUIRED, "name": REQUIRED, "branch_id": OPTIONAL, "department_id": OPTIONAL,
               "role": OPTIONAL, "employment_status": OPTIONAL, "hire_date": OPTIONAL,
-              "termination_date": OPTIONAL, "monthly_cost": SENSITIVE, "email": OPTIONAL, "phone": OPTIONAL}},
+              "termination_date": OPTIONAL, "monthly_cost": SENSITIVE, "email": OPTIONAL, "phone": OPTIONAL,
+              # Phase 2.9 — كلها اختيارية: غيابها = «غير متاح» في التحليل، لا صفر
+              "employment_type": OPTIONAL, "manager": OPTIONAL, "termination_type": OPTIONAL,
+              "basic_salary": SENSITIVE, "allowances": SENSITIVE, "benefits": SENSITIVE,
+              "performance_rating": OPTIONAL, "last_promotion_date": OPTIONAL, "training_hours": OPTIONAL,
+              "absence_days": OPTIONAL, "overtime_hours": OPTIONAL, "critical_role": OPTIONAL, "successors": OPTIONAL}},
+ "job_opening": {"ar": "الوظائف الشاغرة والتوظيف", "en": "Job openings", "table": "companyjobopening",
+   "fields": {"title": REQUIRED, "opened_date": REQUIRED, "department_id": OPTIONAL, "branch_id": OPTIONAL,
+              "status": OPTIONAL, "filled_date": OPTIONAL, "applicants": OPTIONAL, "interviews": OPTIONAL,
+              "offers": OPTIONAL, "hires": OPTIONAL, "hiring_cost": OPTIONAL}},
  "product": {"ar": "المنتجات", "en": "Products", "table": "companyproduct",
    "fields": {"sku": REQUIRED, "name": REQUIRED, "category": OPTIONAL, "unit": OPTIONAL,
               "cost": OPTIONAL, "selling_price": OPTIONAL, "active": OPTIONAL}},
@@ -51,8 +60,8 @@ ENTITIES = {
 DATASET_TYPES = tuple(ENTITIES)
 NUMERIC = {"quantity", "gross_sales", "discounts", "returns", "net_sales", "vat", "unit_cost", "total_cost",
            "opening_qty", "opening_value", "purchases_qty", "sold_qty", "adjustments_qty", "closing_qty",
-           "closing_value", "amount", "cost", "selling_price", "monthly_cost", "credit_limit", "inflow", "outflow", "received_qty", "rejected_qty", "balance", "paid_amount"}
-DATE_FIELDS = {"date", "hire_date", "termination_date", "expected_date", "received_date", "invoice_date", "due_date", "paid_date"}
+           "closing_value", "amount", "cost", "selling_price", "monthly_cost", "credit_limit", "inflow", "outflow", "received_qty", "rejected_qty", "balance", "paid_amount", "basic_salary", "allowances", "benefits", "performance_rating", "training_hours", "absence_days", "overtime_hours", "successors", "applicants", "interviews", "offers", "hires", "hiring_cost"}
+DATE_FIELDS = {"date", "hire_date", "termination_date", "expected_date", "received_date", "invoice_date", "due_date", "paid_date", "last_promotion_date", "opened_date", "filled_date"}
 PERIOD_FIELDS = {"period"}
 # مفاتيح كشف التكرار لكل نوع
 DUP_KEYS = {"sale": ("date", "branch_id", "reference", "product_sku"),
@@ -61,6 +70,7 @@ DUP_KEYS = {"sale": ("date", "branch_id", "reference", "product_sku"),
             "cash_movement": ("date", "branch_id", "reference", "amount"),
             "employee": ("employee_code",), "product": ("sku",), "supplier": ("name",),
             "customer": ("name", "phone", "email"),
+            "job_opening": ("title", "opened_date", "department_id", "branch_id"),
             "receivable": ("reference", "customer_name", "invoice_date", "amount"),
             "department": ("name", "branch_id")}
 DIRECTIONS = {"in", "out"}
