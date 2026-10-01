@@ -626,6 +626,101 @@ class CompanyJobOpening(SQLModel, table=True):
     created_at: _DTCOL = Field(default_factory=_now_naive)
 
 
+class CompanyOpsOrder(SQLModel, table=True):
+    """طلب/خدمة تشغيلية — Phase 2.10. الأوقات بصيغة YYYY-MM-DDTHH:MM."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    branch_id: Optional[int] = Field(default=None, index=True)
+    department_id: Optional[int] = None
+    reference: str = Field(default="", index=True)
+    date: str = Field(default="", index=True)
+    service: str = ""
+    status: str = ""
+    created_time: str = ""
+    ready_time: str = ""
+    delivered_time: str = ""
+    due_time: str = ""
+    items: Optional[float] = None
+    accurate: Optional[int] = None
+    defect_type: str = ""
+    rework: Optional[int] = None
+    extra_json: str = ""
+    dataset_id: Optional[int] = Field(default=None, index=True)
+    source_row: Optional[int] = None
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+class CompanyOpsEvent(SQLModel, table=True):
+    """مرحلة من مراحل العملية (بداية/نهاية) — لسير العمليات والاختناقات."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    branch_id: Optional[int] = Field(default=None, index=True)
+    department_id: Optional[int] = None
+    reference: str = ""
+    stage: str = ""
+    start_time: str = Field(default="", index=True)
+    end_time: str = ""
+    extra_json: str = ""
+    dataset_id: Optional[int] = Field(default=None, index=True)
+    source_row: Optional[int] = None
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+class CompanyOpsIssue(SQLModel, table=True):
+    """مشكلة/عطل تشغيلي."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    branch_id: Optional[int] = Field(default=None, index=True)
+    department_id: Optional[int] = None
+    title: str = ""
+    opened_time: str = ""
+    resolved_time: str = ""
+    severity: str = ""
+    status: str = ""
+    owner: str = ""
+    root_cause: str = ""
+    impact: str = ""
+    sla_hours: Optional[float] = None
+    extra_json: str = ""
+    dataset_id: Optional[int] = Field(default=None, index=True)
+    source_row: Optional[int] = None
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+class CompanyExpense(SQLModel, table=True):
+    """المصروفات من النظام المحاسبي — Phase 2.11 (اختياري؛ بدونه تُستخدم الحركات النقدية كأساس نقدي)."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    branch_id: Optional[int] = Field(default=None, index=True)
+    date: str = Field(default="", index=True)
+    amount: Optional[float] = None
+    category: str = ""
+    description: str = ""
+    vendor: str = ""
+    extra_json: str = ""
+    dataset_id: Optional[int] = Field(default=None, index=True)
+    source_row: Optional[int] = None
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+class CompanyFinSetting(SQLModel, table=True):
+    """مدخلات مالية يدوية لا تأتي من الوحدات: بنود الميزانية، الإهلاك، الفوائد، الموازنة."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    settings_json: str = "{}"
+    updated_by: str = ""
+    updated_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+class CompanyOpsSetting(SQLModel, table=True):
+    """إعدادات العمليات اليدوية: الطاقة اليومية لكل فرع، SLA بالدقائق، المستهدفات."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    settings_json: str = "{}"
+    updated_by: str = ""
+    updated_at: _DTCOL = Field(default_factory=_now_naive)
+
+
 class CompanyCashSetting(SQLModel, table=True):
     """مدخلات يدوية للسيولة لا توجد في الملفات: الرصيد الافتتاحي، الالتزامات المتداولة، الحد الأدنى، النقد المقيد."""
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -1215,6 +1310,16 @@ def page_fin_overview():
 @app.get("/company-ops-analytics.html")
 def page_ops_analytics():
     return FileResponse("company-ops-analytics.html")
+
+
+@app.get("/company-financial-intelligence.html")
+def page_financial_intelligence():
+    return FileResponse("company-financial-intelligence.html")
+
+
+@app.get("/company-operations-intelligence.html")
+def page_operations_intelligence():
+    return FileResponse("company-operations-intelligence.html")
 
 
 @app.get("/company-hr-intelligence.html")
@@ -4060,7 +4165,7 @@ def _load_p24(name):
     """يحمّل محركات 2.4 من المجلد أو من حزمة nabbah_engines."""
     try:
         import sys as _sys, os as _os, importlib
-        for _d in ("phase21", "phase22", "phase23", "phase24", "phase25", "phase26", "phase27", "phase28", "phase29"):
+        for _d in ("phase21", "phase22", "phase23", "phase24", "phase25", "phase26", "phase27", "phase28", "phase29", "phase210", "phase211"):
             _p = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), _d)
             if _p not in _sys.path:
                 _sys.path.insert(0, _p)
@@ -4324,6 +4429,13 @@ _IMPORT_TARGETS = {
                                       "basic_salary", "allowances", "benefits", "performance_rating",
                                       "last_promotion_date", "training_hours", "absence_days", "overtime_hours",
                                       "critical_role", "successors")),
+    "expense": ("CompanyExpense", ("branch_id", "date", "amount", "category", "description", "vendor")),
+    "operation_order": ("CompanyOpsOrder", ("branch_id", "department_id", "reference", "date", "service", "status",
+                                            "created_time", "ready_time", "delivered_time", "due_time", "items",
+                                            "accurate", "defect_type", "rework")),
+    "process_event": ("CompanyOpsEvent", ("branch_id", "department_id", "reference", "stage", "start_time", "end_time")),
+    "operational_issue": ("CompanyOpsIssue", ("branch_id", "department_id", "title", "opened_time", "resolved_time",
+                                              "severity", "status", "owner", "root_cause", "impact", "sla_hours")),
     "job_opening": ("CompanyJobOpening", ("branch_id", "department_id", "title", "opened_date", "filled_date", "status",
                                           "applicants", "interviews", "offers", "hires", "hiring_cost")),
     "product": ("CompanyProduct", ("sku", "name", "category", "unit", "cost", "selling_price", "active")),
@@ -4362,7 +4474,8 @@ def company_dataset_import(dataset_id: int, user: User = Depends(get_current_use
             payload = {f: r.get(f) for f in fields if f in r}
             payload["company_id"] = company.id
             extra = dict(r.get("extra") or {})
-            if model in (CompanyEmployee, CompanyJobOpening) and payload.get("department_id") not in (None, "") \
+            if model in (CompanyEmployee, CompanyJobOpening, CompanyOpsOrder, CompanyOpsEvent, CompanyOpsIssue) \
+                    and payload.get("department_id") not in (None, "") \
                     and not str(payload["department_id"]).isdigit():
                 if _depts is None:
                     _depts = {x.name.strip(): x.id for x in s.exec(select(CompanyDepartment).where(
@@ -5367,6 +5480,390 @@ def company_hr_ai_insights(data: dict, request: Request, user: User = Depends(ge
     return {"period": res["period"], "ai": out}
 
 
+# ═══════════════════════════════════════════════════════════
+#  Phase 2.10 — Operations Intelligence (Command Center — ليس ERP)
+# ═══════════════════════════════════════════════════════════
+def _ops_scope(s, user, need="view"):
+    _ensure_data_tables()
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    company = s.get(Company, user.company_id)
+    role = get_user_role(s, user) if company else None
+    if not company or not (role == "owner" or check_permission(role, "ops", "view") or check_permission(role, "ops", "edit")):
+        raise HTTPException(403, "غير مصرّح — العمليات للمالك ومن لديه صلاحية العمليات")
+    if company.is_active != 1:
+        raise HTTPException(402, "شركتك قيد التفعيل")
+    if need == "edit" and not (role == "owner" or check_permission(role, "ops", "edit")):
+        raise HTTPException(403, "غير مصرّح — تعديل إعدادات العمليات")
+    return company, role
+
+
+def _ops_settings(s, company_id):
+    r = s.exec(select(CompanyOpsSetting).where(CompanyOpsSetting.company_id == company_id)).first()
+    try:
+        return json.loads(r.settings_json or "{}") if r else {}
+    except (TypeError, ValueError):
+        return {}
+
+
+def _ops_result(s, company, *, period=None, branch_id=None, department="", service=""):
+    oe = _load_p24("ops_engine")
+    if oe is None:
+        raise HTTPException(503, "محرّك العمليات غير متاح — " + _p23_diagnostic())
+    names = {b.id: b.name for b in s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company.id)).all()}
+    deps = {d.id: d.name for d in s.exec(select(CompanyDepartment).where(CompanyDepartment.company_id == company.id)).all()}
+
+    def dep_of(r):
+        if r.department_id:
+            return deps.get(r.department_id)
+        try:
+            return json.loads(r.extra_json or "{}").get("department")
+        except (TypeError, ValueError):
+            return None
+    keep = lambda r, d: (not branch_id or r.branch_id == branch_id) and (not department or (d or "") == department)
+    orders, events, issues = [], [], []
+    for r in s.exec(select(CompanyOpsOrder).where(CompanyOpsOrder.company_id == company.id).limit(300000)).all():
+        d = dep_of(r)
+        if keep(r, d) and (not service or r.service == service):
+            orders.append({"reference": r.reference, "date": r.date, "branch_name": names.get(r.branch_id), "department": d,
+                           "service": r.service or None, "status": r.status or None, "created_time": r.created_time or None,
+                           "ready_time": r.ready_time or None, "delivered_time": r.delivered_time or None,
+                           "due_time": r.due_time or None, "items": r.items, "accurate": r.accurate,
+                           "defect_type": r.defect_type or None, "rework": r.rework})
+    for r in s.exec(select(CompanyOpsEvent).where(CompanyOpsEvent.company_id == company.id).limit(300000)).all():
+        d = dep_of(r)
+        if keep(r, d):
+            events.append({"reference": r.reference, "stage": r.stage, "start_time": r.start_time, "end_time": r.end_time,
+                           "branch_name": names.get(r.branch_id), "department": d})
+    for r in s.exec(select(CompanyOpsIssue).where(CompanyOpsIssue.company_id == company.id).limit(50000)).all():
+        d = dep_of(r)
+        if keep(r, d):
+            issues.append({"title": r.title, "opened_time": r.opened_time, "resolved_time": r.resolved_time or None,
+                           "severity": r.severity, "status": r.status, "owner": r.owner, "root_cause": r.root_cause or None,
+                           "impact": r.impact or None, "sla_hours": r.sla_hours, "branch_name": names.get(r.branch_id), "department": d})
+    st = _ops_settings(s, company.id)
+    hc, sales_chg, stockouts, sup_late = None, None, None, None
+    try:   # 2.9 → عدد الموظفين النشطين لكل فرع (بلا رواتب)
+        _hr = _hr_result(s, company, can_see_pay=False)
+        if _hr.get("has_data"):
+            hc = {u["key"]: u["employees"] for u in _hr["units"]["branches"] if u["employees"]}
+    except HTTPException:
+        pass
+    try:   # 2.5 → تغير المبيعات الشهري
+        months = {}
+        for x in _sales_rows(s, company.id, {branch_id} if branch_id else None):
+            v = x.get("net_sales") if x.get("net_sales") is not None else x.get("gross_sales")
+            if v is not None and x.get("date"):
+                months[str(x["date"])[:7]] = months.get(str(x["date"])[:7], 0) + float(v)
+        ks = sorted(months)
+        if len(ks) >= 2 and months[ks[-2]]:
+            sales_chg = round((months[ks[-1]] - months[ks[-2]]) / months[ks[-2]] * 100, 1)
+    except Exception:
+        pass
+    try:   # 2.6 → النفاد · 2.7 → تأخر الموردين
+        _inv = _inventory_result(s, company, branch_id=branch_id)
+        if _inv.get("has_data"):
+            stockouts = sum(1 for p in (_inv.get("reorder") or []) if p.get("status") == "stockout")
+        _pur = _purchases_result(s, company, branch_id=branch_id)
+        lates = [x["delivery"]["late_pct"] for x in _pur.get("suppliers", []) if x.get("delivery") and x["delivery"].get("late_pct") is not None]
+        sup_late = round(sum(lates) / len(lates), 1) if lates else None
+    except HTTPException:
+        pass
+    res = oe.analyze_operations(orders, events=events, issues=issues, period=period, settings=st, headcount_by_branch=hc,
+                                sales_change_pct=sales_chg, stockouts=stockouts, supplier_late_pct=sup_late)
+    res["filters"] = {"period": res.get("period"), "branch_id": branch_id, "department": department, "service": service}
+    res["options"] = {"branch_list": [{"id": k, "name": v} for k, v in names.items()],
+                      "departments": sorted({o["department"] for o in orders if o.get("department")}),
+                      "services": sorted({o["service"] for o in orders if o.get("service")})}
+    res["saved_settings"] = st
+    return res
+
+
+@app.get("/company/operations-intelligence")
+def company_operations_intelligence(user: User = Depends(get_current_user), period: str = "", branch_id: str = "",
+                                    department: str = "", service: str = ""):
+    with Session(engine) as s:
+        company, role = _ops_scope(s, user)
+        res = _ops_result(s, company, period=period or None, branch_id=_int_or_none(branch_id), department=department, service=service)
+        res["can_edit"] = role == "owner" or check_permission(role, "ops", "edit")
+        return res
+
+
+@app.post("/company/operations/settings")
+def company_operations_settings(data: dict, user: User = Depends(get_current_user)):
+    """الطاقة اليومية لكل فرع (طلبات/يوم)، SLA بالدقائق، ومستهدفات التسليم والدقة وزمن التنفيذ."""
+    with Session(engine) as s:
+        company, role = _ops_scope(s, user, need="edit")
+        names = {b.name for b in s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company.id)).all()}
+        out = {"capacity": {}, "targets": {}}
+
+        def num(v, k):
+            if v in (None, ""):
+                return None
+            try:
+                x = float(str(v).replace(",", ""))
+            except ValueError:
+                raise HTTPException(422, f"قيمة غير رقمية في {k}")
+            if x < 0:
+                raise HTTPException(422, f"قيمة سالبة في {k}")
+            return x
+        for b, v in (data.get("capacity") or {}).items():
+            if b in names and num(v, b) is not None:
+                out["capacity"][b] = num(v, b)
+        out["sla_minutes"] = num(data.get("sla_minutes"), "sla_minutes")
+        for k in ("on_time_target", "accuracy_target", "fulfillment_target_min"):
+            if num((data.get("targets") or {}).get(k), k) is not None:
+                out["targets"][k] = num(data["targets"][k], k)
+        row = s.exec(select(CompanyOpsSetting).where(CompanyOpsSetting.company_id == company.id)).first() \
+            or CompanyOpsSetting(company_id=company.id)
+        row.settings_json, row.updated_by, row.updated_at = json.dumps(out, ensure_ascii=False), (user.name or user.email)[:100], datetime.now()
+        s.add(row); s.commit()
+        log_audit(company.id, user.id, user.name, "ops_settings", "operations", json.dumps(out, ensure_ascii=False)[:500])
+        return {"ok": True, "settings": out}
+
+
+@app.post("/company/operations/to-decision")
+def company_operations_to_decision(data: dict, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role = _exec_scope(s, user, need="edit")
+        res = _ops_result(s, company, period=data.get("period") or None, branch_id=_int_or_none(data.get("branch_id")),
+                          department=str(data.get("department") or ""), service=str(data.get("service") or ""))
+        sig = next((x for x in res.get("signals", []) if x["id"] == str(data.get("signal_id") or "")), None)
+        if not sig:
+            raise HTTPException(404, "الإشارة غير موجودة أو لم تعد قائمة لهذه الفترة")
+        d = CompanyDecision(
+            company_id=company.id, title=str(data.get("title") or sig["name_ar"])[:200],
+            detail=" · ".join(sig.get("evidence", []))[:1000], owner=str(data.get("owner") or "")[:100],
+            due_date=str(data.get("due_date") or "")[:20], kpi=sig.get("metric_id") or "efficiency", status="open",
+            baseline_sales=_company_total_sales(s, company.id), expected_impact="غير قابل للتقدير",
+            linked_to=f"ops_signal:{sig['id']}", rationale=sig.get("suggested_action_ar", "")[:500],
+            metric_id=sig.get("metric_id") or "efficiency", impact_status="expected", source_signal=sig["id"],
+            problem_type=sig["code"], decision_type="operations", outcome_status="pending_measurement",
+            created_by=user.name or user.email, data_source="companyopsorder", updated_at=datetime.now())
+        s.add(d); s.commit(); s.refresh(d)
+        act = CompanyAction(company_id=company.id, decision_id=d.id, title=sig.get("suggested_action_ar", "")[:200],
+                            owner=d.owner, priority="P1" if sig["severity"] == "high" else "P2", due_date=d.due_date,
+                            start_date=datetime.now().strftime("%Y-%m-%d"), updated_at=datetime.now())
+        s.add(act); s.commit(); s.refresh(act)
+        log_audit(company.id, user.id, user.name, "decision_from_ops_signal", f"decision:{d.id}", f"signal={sig['id']}")
+        return {"ok": True, "decision_id": d.id, "action_ids": [act.id]}
+
+
+@app.post("/company/operations/ai-insights")
+def company_operations_ai_insights(data: dict, request: Request, user: User = Depends(get_current_user)):
+    """AI يجيب عن أسئلة التشغيل من المؤشرات المحسوبة فقط: الدليل ← الأثر ← التوصية ← الإجراء."""
+    with Session(engine) as s:
+        company, role = _ops_scope(s, user)
+        res = _ops_result(s, company, period=data.get("period") or None, branch_id=_int_or_none(data.get("branch_id")),
+                          department=str(data.get("department") or ""), service=str(data.get("service") or ""))
+    if not res.get("has_data"):
+        raise HTTPException(422, res.get("message_ar") or "لا توجد بيانات تشغيلية")
+    gw = _load_p24("ai_gateway")
+    if gw is None:
+        raise HTTPException(503, "بوابة الذكاء الاصطناعي غير متاحة — " + _p23_diagnostic())
+    q = str(data.get("question") or "لماذا تغيّرت كفاءة التشغيل؟ وأين أكبر اختناق؟")[:300]
+    ctx = {"period": res["period"], "score": res["score"], "kpis": res["kpis"], "bottlenecks": res["bottlenecks"][:5],
+           "fulfillment": res["fulfillment"], "capacity": {k: v for k, v in res["capacity"].items() if k != "how_ar"},
+           "branches": [{k: v for k, v in b.items() if k != "components"} for b in res["branches"]][:10],
+           "quality": {k: v for k, v in res["quality"].items() if k in ("quality_rate", "defect_rate", "top_defects")},
+           "issues": {k: v for k, v in res["issues"].items() if k != "list"}, "cross_module": res["cross"],
+           "signals": [{"type": x["type"], "name": x["name_ar"], "dimension": x.get("dimension"), "evidence": x.get("evidence")} for x in res["signals"][:8]]}
+    out = gw.request_ai_analysis(gw.GeminiProvider(company_gemini), ctx,
+                                 q + " — أجب من البيانات فقط: الدليل، ثم الأثر، ثم التوصية، ثم الإجراء. لا تحسب أي رقم جديد، ولا تجزم بسبب لا تثبته البيانات.",
+                                 trust_report={"overall_score": 80, "status": "pass", "has_critical_fail": False, "main_causes": []},
+                                 lang=get_lang(request), company=company)
+    log_audit(company.id, user.id, user.name, "ops_ai_insights", "operations", f"period={res['period']}")
+    return {"period": res["period"], "question": q, "ai": out}
+
+
+# ═══════════════════════════════════════════════════════════
+#  Phase 2.11 — Financial Unit (لا قاعدة بيانات مالية منفصلة: تجميع من 2.5–2.10)
+# ═══════════════════════════════════════════════════════════
+def _fin_scope(s, user, need="view"):
+    _ensure_data_tables()
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    company = s.get(Company, user.company_id)
+    role = get_user_role(s, user) if company else None
+    # قائمة الدخل تكشف إجمالي الرواتب والهوامش → للمالك ومن يرى البيانات المالية الحساسة فقط
+    if not company or not (role == "owner" or (check_permission(role, "finance", "view") and can_see_sensitive_financials(role))):
+        raise HTTPException(403, "غير مصرّح — الوحدة المالية للمالك والمحاسب")
+    if company.is_active != 1:
+        raise HTTPException(402, "شركتك قيد التفعيل")
+    if need == "edit" and not (role == "owner" or check_permission(role, "finance", "edit")):
+        raise HTTPException(403, "غير مصرّح — تعديل المدخلات المالية")
+    return company, role
+
+
+def _fin_settings(s, company_id):
+    r = s.exec(select(CompanyFinSetting).where(CompanyFinSetting.company_id == company_id)).first()
+    try:
+        return json.loads(r.settings_json or "{}") if r else {}
+    except (TypeError, ValueError):
+        return {}
+
+
+def _fin_result(s, company, *, period=None, grain="month"):
+    fe = _load_p24("finance_engine")
+    if fe is None:
+        raise HTTPException(503, "المحرّك المالي غير متاح — " + _p23_diagnostic())
+    names = {b.id: b.name for b in s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company.id)).all()}
+    sales = [dict(r, discount=r.get("discounts")) for r in _sales_rows(s, company.id)]
+    cost_map = {}
+    for p in s.exec(select(CompanyProduct).where(CompanyProduct.company_id == company.id)).all():
+        if p.cost is not None and p.sku:
+            cost_map[p.sku] = p.cost
+    for r in s.exec(select(CompanyInventory).where(CompanyInventory.company_id == company.id).limit(100000)).all():
+        if r.product_sku and r.closing_qty and r.closing_value is not None and r.product_sku not in cost_map:
+            cost_map[(r.product_sku, r.period)] = r.closing_value / r.closing_qty
+    exp_rows = [{"date": e.date, "amount": e.amount, "category": e.category, "description": e.description,
+                 "branch_name": names.get(e.branch_id)} for e in s.exec(select(CompanyExpense).where(CompanyExpense.company_id == company.id).limit(200000)).all()]
+    cash_mv = [{"date": r.date, "direction": r.direction, "amount": r.amount, "movement_type": r.movement_type, "category": r.category,
+                "counterparty": getattr(r, "counterparty", ""), "branch_name": names.get(r.branch_id)}
+               for r in s.exec(select(CompanyCashMovement).where(CompanyCashMovement.company_id == company.id).limit(200000)).all()]
+    emps = [{"monthly_cost": e.monthly_cost, "hire_date": e.hire_date, "termination_date": e.termination_date,
+             "branch_name": names.get(e.branch_id)} for e in s.exec(select(CompanyEmployee).where(CompanyEmployee.company_id == company.id).limit(50000)).all()]
+    cash, ar_total, ctx = {}, None, {}
+    try:
+        cf = _cashflow_result(s, company, period=period)
+        if cf.get("has_data"):
+            cash = {"balance": (cf["position"].get("balance") or {}).get("value"),
+                    "net_by_month": {m["period"]: (m["net"] or {}).get("value") for m in cf.get("movement", [])},
+                    "inflow": (cf["flows"].get("inflow") or {}).get("value"), "outflow": (cf["flows"].get("outflow") or {}).get("value"),
+                    "runway": next((x["value"] for x in cf.get("liquidity", []) if x["code"] == "runway"), None),
+                    "forecast": {p_["period"]: (p_.get("balance") or {}).get("value") for p_ in (cf.get("forecast") or {}).get("points", [])}}
+            ar_total = ((cf.get("collections") or {}).get("total_receivables") or {}).get("value")
+            for b in cf.get("branches", []):
+                ctx.setdefault(b["branch"], {})["net_cash"] = (b.get("net") or {}).get("value")
+    except HTTPException:
+        pass
+    inv_by_p, inv_branch = {}, {}
+    for r in s.exec(select(CompanyInventory).where(CompanyInventory.company_id == company.id).limit(100000)).all():
+        if r.closing_value is not None:
+            inv_by_p[r.period] = inv_by_p.get(r.period, 0) + r.closing_value
+    ip = sorted(inv_by_p)
+    if ip:
+        for r in s.exec(select(CompanyInventory).where(CompanyInventory.company_id == company.id, CompanyInventory.period == ip[-1])).all():
+            if r.closing_value is not None:
+                bn = names.get(r.branch_id)
+                ctx.setdefault(bn, {})["inventory_value"] = round(ctx.get(bn, {}).get("inventory_value", 0) + r.closing_value, 2)
+    for fn_, key, val in ((lambda: _purchases_result(s, company), "by_branch", "purchases"),):
+        try:
+            res_ = fn_()
+            if res_.get("has_data"):
+                for b in res_.get(key, []):
+                    ctx.setdefault(b["key"], {})[val] = (b.get("spend") or {}).get("value")
+        except HTTPException:
+            pass
+    try:
+        op = _ops_result(s, company)
+        if op.get("has_data"):
+            for b in op.get("branches", []):
+                ctx.setdefault(b["key"], {}).update({"ops_efficiency": b.get("efficiency"), "ops_on_time": b.get("on_time")})
+    except HTTPException:
+        pass
+    res = fe.analyze_finance(sales, cost_map=cost_map, expense_lines=fe.build_expense_lines(exp_rows, cash_mv), employees=emps,
+                             cash=cash, receivables_total=ar_total, inventory_value=inv_by_p[ip[-1]] if ip else None,
+                             inventory_value_prev=inv_by_p[ip[-2]] if len(ip) > 1 else None, settings=_fin_settings(s, company.id),
+                             period=period, grain=grain, branch_context={k: v for k, v in ctx.items() if k},
+                             currency=getattr(company, "currency", None) or "SAR")
+    res["saved_settings"] = _fin_settings(s, company.id)
+    return res
+
+
+@app.get("/company/financial-intelligence")
+def company_financial_intelligence(user: User = Depends(get_current_user), period: str = "", grain: str = "month"):
+    if grain not in ("month", "quarter", "year"):
+        raise HTTPException(422, "التجميع غير صالح")
+    with Session(engine) as s:
+        company, role = _fin_scope(s, user)
+        res = _fin_result(s, company, period=period or None, grain=grain)
+        res["can_edit"] = role == "owner" or check_permission(role, "finance", "edit")
+        log_audit(company.id, user.id, user.name, "financial_view", "finance", f"period={res.get('period')}")
+        return res
+
+
+@app.post("/company/financial/settings")
+def company_financial_settings(data: dict, user: User = Depends(get_current_user)):
+    """بنود الميزانية، الإهلاك والفوائد الشهرية، والموازنة. الفارغ = غير متاح (لا صفر)."""
+    with Session(engine) as s:
+        company, role = _fin_scope(s, user, need="edit")
+
+        def num(v, k, allow_neg=False):
+            if v in (None, ""):
+                return None
+            try:
+                x = float(str(v).replace(",", ""))
+            except ValueError:
+                raise HTTPException(422, f"قيمة غير رقمية في {k}")
+            if x < 0 and not allow_neg:
+                raise HTTPException(422, f"قيمة سالبة في {k}")
+            return x
+        bal_keys = ("fixed_assets", "other_assets", "accounts_payable", "loans", "accrued", "other_liabilities", "paid_in_capital", "retained_earnings")
+        out = {"balance": {k: num((data.get("balance") or {}).get(k), k, k == "retained_earnings") for k in bal_keys},
+               "depreciation_monthly": num(data.get("depreciation_monthly"), "depreciation_monthly"),
+               "interest_monthly": num(data.get("interest_monthly"), "interest_monthly"),
+               "revenue_target": num(data.get("revenue_target"), "revenue_target"),
+               "budget": {"revenue_monthly": num((data.get("budget") or {}).get("revenue_monthly"), "revenue_monthly"),
+                          "opex_monthly": {k: num(v, k) for k, v in ((data.get("budget") or {}).get("opex_monthly") or {}).items()
+                                           if k in ("payroll", "rent", "marketing", "delivery", "software", "maintenance", "utilities", "other")}}}
+        row = s.exec(select(CompanyFinSetting).where(CompanyFinSetting.company_id == company.id)).first() or CompanyFinSetting(company_id=company.id)
+        row.settings_json, row.updated_by, row.updated_at = json.dumps(out, ensure_ascii=False), (user.name or user.email)[:100], datetime.now()
+        s.add(row); s.commit()
+        log_audit(company.id, user.id, user.name, "financial_settings", "finance", json.dumps(out, ensure_ascii=False)[:800])
+        return {"ok": True, "settings": out}
+
+
+@app.post("/company/financial/to-decision")
+def company_financial_to_decision(data: dict, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role = _fin_scope(s, user)
+        _exec_scope(s, user, need="edit")
+        res = _fin_result(s, company, period=data.get("period") or None)
+        sig = next((x for x in res.get("signals", []) if x["id"] == str(data.get("signal_id") or "")), None)
+        if not sig:
+            raise HTTPException(404, "الإشارة غير موجودة أو لم تعد قائمة لهذه الفترة")
+        d = CompanyDecision(
+            company_id=company.id, title=str(data.get("title") or sig["name_ar"])[:200],
+            detail=" · ".join(sig.get("evidence", []))[:1000], owner=str(data.get("owner") or "")[:100],
+            due_date=str(data.get("due_date") or "")[:20], kpi=sig.get("metric_id") or "net_profit", status="open",
+            baseline_sales=_company_total_sales(s, company.id), expected_impact=(sig.get("impact_ar") or "غير قابل للتقدير")[:200],
+            linked_to=f"finance_signal:{sig['id']}", rationale=sig.get("suggested_action_ar", "")[:500],
+            metric_id=sig.get("metric_id") or "net_profit", impact_status="expected", source_signal=sig["id"],
+            problem_type=sig["code"], decision_type="finance", outcome_status="pending_measurement",
+            created_by=user.name or user.email, data_source="financial_unit", updated_at=datetime.now())
+        s.add(d); s.commit(); s.refresh(d)
+        act = CompanyAction(company_id=company.id, decision_id=d.id, title=sig.get("suggested_action_ar", "")[:200],
+                            owner=d.owner, priority="P1" if sig["severity"] == "high" else "P2", due_date=d.due_date,
+                            start_date=datetime.now().strftime("%Y-%m-%d"), updated_at=datetime.now())
+        s.add(act); s.commit(); s.refresh(act)
+        log_audit(company.id, user.id, user.name, "decision_from_finance_signal", f"decision:{d.id}", f"signal={sig['id']}")
+        return {"ok": True, "decision_id": d.id, "action_ids": [act.id]}
+
+
+@app.post("/company/financial/ai-insights")
+def company_financial_ai_insights(data: dict, request: Request, user: User = Depends(get_current_user)):
+    """AI يشرح الأرقام المالية المحسوبة فقط — لا يحسب ولا يخترع."""
+    with Session(engine) as s:
+        company, role = _fin_scope(s, user)
+        res = _fin_result(s, company, period=data.get("period") or None)
+    gw = _load_p24("ai_gateway")
+    if gw is None:
+        raise HTTPException(503, "بوابة الذكاء الاصطناعي غير متاحة — " + _p23_diagnostic())
+    q = str(data.get("question") or "لماذا تغيّر صافي الربح؟")[:300]
+    ctx = {"period": res.get("period"), "kpis": res.get("kpis"), "statement": res.get("statement"), "variance": res.get("variance"),
+           "expenses": {k: v for k, v in (res.get("expenses") or {}).items() if k in ("total", "change_pct", "drivers", "basis_ar")},
+           "branches": [{k: v for k, v in b.items() if k != "opex_lines"} for b in res.get("branches", [])][:10],
+           "data_quality": res.get("quality"), "sources": ["Sales 2.5", "Inventory 2.6", "Purchases 2.7", "Cash Flow 2.8", "HR 2.9", "Operations 2.10"],
+           "signals": [{"type": x["type"], "name": x["name_ar"], "evidence": x.get("evidence"), "impact": x.get("impact_ar")} for x in res.get("signals", [])[:8]]}
+    out = gw.request_ai_analysis(gw.GeminiProvider(company_gemini), ctx,
+                                 q + " — أجب من الأرقام المحسوبة فقط: العوامل المدعومة بالبيانات، ثم الأثر، ثم التوصية، واذكر مصادر البيانات. لا تحسب رقماً جديداً.",
+                                 trust_report={"overall_score": 80, "status": "pass", "has_critical_fail": False, "main_causes": []},
+                                 lang=get_lang(request), company=company)
+    log_audit(company.id, user.id, user.name, "financial_ai_insights", "finance", f"period={res.get('period')}")
+    return {"period": res.get("period"), "question": q, "ai": out}
+
+
 @app.get("/company/executive-intelligence")
 def company_executive_intelligence(request: Request, user: User = Depends(get_current_user),
                                    period: Optional[str] = None, ai: int = 0):
@@ -5385,6 +5882,21 @@ def company_executive_intelligence(request: Request, user: User = Depends(get_cu
                 if _inv.get("has_data"):
                     result.setdefault("module_signals", {})["inventory"] = _inv.get("signals", [])[:6]
                     result["risks"] = result["risks"] + [x for x in _inv.get("signals", []) if x["type"] == "risk"][:2]
+            except HTTPException:
+                pass
+            try:   # إشارات الوحدة المالية 2.11 (للمالك/المحاسب فقط)
+                if _role == "owner" or can_see_sensitive_financials(_role):
+                    _fn = _fin_result(s, company)
+                    if _fn.get("has_data"):
+                        result.setdefault("module_signals", {})["finance"] = _fn.get("signals", [])[:6]
+                        result["risks"] = result["risks"] + [x for x in _fn.get("signals", []) if x["type"] == "risk"][:2]
+            except HTTPException:
+                pass
+            try:   # إشارات العمليات 2.10
+                _op = _ops_result(s, company)
+                if _op.get("has_data"):
+                    result.setdefault("module_signals", {})["operations"] = _op.get("signals", [])[:6]
+                    result["risks"] = result["risks"] + [x for x in _op.get("signals", []) if x["type"] == "risk"][:2]
             except HTTPException:
                 pass
             try:   # إشارات الموارد البشرية 2.9 (بلا رواتب)
@@ -10726,7 +11238,7 @@ ENGINE_MODULES = ("nabbah_finance", "nabbah_trust", "semantic_layer", "kpi_engin
                   "ai_gateway", "period_aggregation", "legacy_adapters", "platform_bridge",
                   "intelligence_engine", "forecast_engine", "scenario_engine", "decision_memory",
                   "rule_catalog", "canonical_model", "period_model", "metric_registry", "ingestion",
-                  "sales_engine", "inventory_engine", "purchases_engine", "cashflow_engine", "hr_engine")
+                  "sales_engine", "inventory_engine", "purchases_engine", "cashflow_engine", "hr_engine", "ops_engine", "finance_engine")
 
 
 def _runtime_health():
