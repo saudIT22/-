@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>نبّاه · ذكاء الموارد البشرية</title>
+<link href="nabbah-design.css" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{background:var(--bg,#070b09);color:var(--txt,#e8f1ec);font-family:Tajawal,Tahoma,Arial,sans-serif;margin:0}
+  .wrap{max-width:1180px;margin:0 auto;padding:70px 16px 60px}
+  h1{margin:0 0 4px;font-size:24px}.sub{color:var(--txt-soft,#8ba396);margin:0 0 16px;font-size:14px}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+  select{background:var(--panel,#101a15);color:var(--txt,#e8f1ec);border:1px solid var(--line,#1d2c24);border-radius:10px;padding:8px 10px;font:inherit;font-size:13px;max-width:190px}
+  .crumbs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;min-height:4px}
+  .chip{background:rgba(16,185,129,.12);color:var(--mint,#10b981);border:1px solid rgba(16,185,129,.35);border-radius:20px;padding:3px 10px;font-size:12px;cursor:pointer}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+  .tile,.panel{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:14px;padding:14px}
+  .tile .l{font-size:12px;color:var(--txt-soft,#8ba396)}.tile .v{font-size:21px;font-weight:800;margin-top:4px}
+  .tile .c{font-size:12px;margin-top:4px}
+  .panel{margin-bottom:14px;min-width:0}.panel h2{margin:0 0 10px;font-size:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .panel h3{margin:12px 0 6px;font-size:13px;color:var(--txt-soft,#8ba396)}
+  .num{font-size:11px;color:var(--txt-soft,#8ba396);font-weight:600;border:1px solid var(--line,#1d2c24);border-radius:8px;padding:1px 6px}
+  .grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+  table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px;border-bottom:1px solid var(--line,#1d2c24);text-align:start;white-space:nowrap}
+  th{color:var(--txt-soft,#8ba396);font-weight:600}.tbl{overflow-x:auto}
+  tr.drill{cursor:pointer}tr.drill:hover td{background:rgba(16,185,129,.06)}
+  .barrow{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:13px}
+  .barrow.drill{cursor:pointer}.barrow.drill:hover{background:rgba(16,185,129,.06);border-radius:6px}
+  .barrow .t{flex:0 0 120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .barrow .g{flex:1;height:10px;background:var(--line,#1d2c24);border-radius:6px;overflow:hidden}
+  .barrow .g i{display:block;height:100%;background:var(--mint,#10b981)}
+  .pos{color:#10b981}.neg{color:#ef4444}.muted{color:var(--txt-soft,#8ba396);font-size:12px}
+  .b{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700;display:inline-block}
+  .high{background:rgba(234,88,12,.16);color:#ea580c}.medium{background:rgba(245,179,1,.15);color:#f5b301}
+  .low{background:rgba(16,185,129,.15);color:#10b981}.critical{background:rgba(239,68,68,.16);color:#ef4444}
+  .est{background:rgba(168,85,247,.15);color:#a855f7}
+  .sig{border-inline-start:4px solid var(--line,#1d2c24);padding:10px 12px;margin:8px 0;background:rgba(255,255,255,.02);border-radius:8px}
+  .sig.risk{border-color:#ef4444}.sig.opportunity{border-color:#10b981}.sig.data_quality{border-color:#f5b301}
+  .btn{background:var(--mint,#10b981);color:#062b1c;border:0;border-radius:10px;padding:7px 13px;font-weight:800;cursor:pointer;font:inherit;font-size:12px;text-decoration:none;display:inline-block}
+  .btn.ghost{background:transparent;color:var(--txt-soft,#8ba396);border:1px solid var(--line,#1d2c24);font-weight:600}
+  .btn:disabled{opacity:.5;cursor:default}
+  .state{padding:36px 16px;text-align:center;color:var(--txt-soft,#8ba396);border:1px dashed var(--line,#1d2c24);border-radius:14px}
+  .na{color:var(--txt-soft,#8ba396);font-size:13px;padding:10px;border:1px dashed var(--line,#1d2c24);border-radius:10px}
+  svg.ch{width:100%;height:170px;display:block}
+  .legend{display:flex;gap:14px;font-size:12px;color:var(--txt-soft,#8ba396);margin-top:6px;flex-wrap:wrap}
+  .legend i{display:inline-block;width:14px;height:3px;vertical-align:middle;margin-inline-end:4px}
+  .ai-sec{margin:8px 0}.ai-sec b{display:block;font-size:13px;margin-bottom:4px}.ai-sec li{font-size:13px;margin:3px 0}
+  input.f{flex:1;min-width:120px;background:var(--panel,#101a15);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:8px;padding:6px}
+  .st{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700;display:inline-block;white-space:nowrap}
+  .st.healthy{background:rgba(16,185,129,.15);color:#10b981}.st.watch{background:rgba(245,179,1,.15);color:#f5b301}
+  .st.low{background:rgba(234,88,12,.16);color:#ea580c}.st.stockout{background:rgba(239,68,68,.16);color:#ef4444}
+  .st.slow{background:rgba(59,130,246,.15);color:#60a5fa}.st.obsolete{background:rgba(148,163,184,.18);color:#cbd5e1}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}.schip{cursor:pointer;border:1px solid var(--line,#1d2c24);border-radius:12px;padding:8px 12px;min-width:120px}
+  .schip b{display:block;font-size:18px}.schip:hover{border-color:var(--mint,#10b981)}
+  .eq{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:13px}.eq .box{border:1px solid var(--line,#1d2c24);border-radius:10px;padding:8px 10px;text-align:center;min-width:90px}
+  .eq .box b{display:block;font-size:16px}
+  .ov{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:50;padding:14px}
+  .ov.on{display:flex}.modal{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:16px;padding:18px;width:min(560px,100%);max-height:90vh;overflow:auto}
+  .fg{display:grid;grid-template-columns:1fr 1fr;gap:10px}.fg label{font-size:12px;color:var(--txt-soft,#8ba396);display:flex;flex-direction:column;gap:4px}
+  .fg input,.fg select{background:var(--bg,#070b09);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:9px;padding:8px;font:inherit;max-width:none}
+  .cta{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  @media(max-width:760px){.fg{grid-template-columns:1fr}.tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.tile{padding:10px}.tile .v{font-size:17px}.grid2,.grid3{grid-template-columns:minmax(0,1fr)}h1{font-size:20px}select{max-width:47%}}
+</style>
+<style>
+  .tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--line,#1d2c24);margin:6px 0 16px}
+  .tab{background:none;border:0;color:var(--txt-soft,#8ba396);padding:10px 14px;font:inherit;font-size:14px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+  .tab.on{color:var(--txt,#e8f1ec);border-color:#818cf8;font-weight:800}
+  .hero{display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr;gap:12px;margin-bottom:14px}
+  .hcard{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:16px;padding:16px;cursor:default}
+  .hcard.click{cursor:pointer}.hcard.click:hover{border-color:var(--mint,#10b981)}
+  .hcard .big{font-size:30px;font-weight:900;margin:6px 0}.hstat{font-size:22px;font-weight:900}
+  .hs-stable{color:#10b981}.hs-attention{color:#f5b301}.hs-critical{color:#ef4444}
+  .event{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-inline-start:4px solid #ef4444;border-radius:12px;padding:14px;margin-bottom:10px}
+  .event.opportunity{border-inline-start-color:#10b981}.event.data_quality{border-inline-start-color:#f5b301}
+  .event h4{margin:0 0 6px;font-size:15px}.acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .rec{display:grid;grid-template-columns:110px 1fr;gap:6px 12px;font-size:13px;margin-top:8px}.rec b{color:var(--txt-soft,#8ba396);font-weight:600}
+  .flow{display:flex;align-items:stretch;gap:8px;flex-wrap:wrap;justify-content:center}
+  .fnode{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:14px;padding:14px 18px;text-align:center;min-width:140px}
+  .fnode .big{font-size:22px;font-weight:900}.farrow{align-self:center;font-size:22px;color:var(--txt-soft,#8ba396)}
+  .ptip{background:var(--bg,#070b09);border:1px solid var(--mint,#10b981);border-radius:12px;padding:12px;margin-top:8px;font-size:13px}
+  .search{flex:1;min-width:180px;background:var(--panel,#101a15);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:10px;padding:9px 12px;font:inherit}
+  .perf{display:grid;grid-template-columns:70px 1fr 50px;gap:8px;align-items:center;font-size:13px;margin:8px 0}
+  .perf .g{height:10px;background:var(--line,#1d2c24);border-radius:6px;overflow:hidden}.perf .g i{display:block;height:100%}
+  .life{display:flex;gap:0;align-items:center;flex-wrap:wrap;margin:10px 0}.lstep{text-align:center;min-width:110px}
+  .ldot{width:16px;height:16px;border-radius:50%;margin:0 auto 6px;background:var(--line,#1d2c24)}.ldot.on{background:var(--mint,#10b981)}
+  .lline{flex:1;min-width:30px;height:2px;background:var(--line,#1d2c24);margin-bottom:22px}
+  .back{background:none;border:0;color:var(--mint,#10b981);cursor:pointer;font:inherit;padding:0;margin-bottom:10px}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-inline-end:6px}
+  @media(max-width:900px){.hero{grid-template-columns:1fr 1fr}}
+  @media(max-width:560px){.hero{grid-template-columns:1fr}.tab{padding:8px 10px;font-size:13px}.rec{grid-template-columns:1fr}}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <h1>👥 ذكاء الموارد البشرية</h1>
+  <p class="sub">كيف حال القوى العاملة؟ هل العدد مناسب؟ هل تكلّف أكثر مما تنتج؟ وأين مشاكل الدوران والأداء؟</p>
+  <div class="bar"><select id="fPeriod"></select><select id="fBranch"></select><select id="fDept"></select><button class="btn ghost" id="reset">إعادة الضبط</button></div>
+  <div class="crumbs" id="crumbs"></div>
+  <nav class="tabs" id="tabs"></nav>
+  <div id="content"><div class="state">…</div></div>
+</div>
+<script src="i18n.js"></script>
+<script>
+(function(){
+  const TOKEN=localStorage.getItem("nabbah_token")||"";if(!TOKEN){location.href="login.html";return;}
+  const TABS=[["overview","نظرة عامة"],["workforce","القوى العاملة"],["structure","الهيكل التنظيمي"],["recruitment","التوظيف"],["turnover","الدوران والاستقرار"],["performance","الأداء"],["compensation","التعويضات"],["talent","التعلم والخلافة"],["flight","مخاطر الفقدان"],["productivity","الإنتاجية"],["units","الفروع والأقسام"],["alerts","التنبيهات والإجراءات"]];
+  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const n=(v,d=0)=>v==null?"—":Number(v).toLocaleString("ar-SA",{maximumFractionDigits:d});
+  const mv=m=>m&&m.value!=null?n(m.value):"—";
+  const pct=(v,inv)=>v==null?"—":`<span class="${(inv?v<=0:v>=0)?"pos":"neg"}">${v>0?"+":""}${n(v,1)}%</span>`;
+  const t=k=>({noDim:"لا توجد بيانات"})[k]||k;
+  const H={Authorization:"Bearer "+TOKEN,"Content-Type":"application/json"},$=id=>document.getElementById(id);
+  const SEV={high:"عالٍ",medium:"متوسط",low:"منخفض"},HEALTH={stable:["مستقرة","🟢"],attention:["تحتاج انتباه","🟠"],critical:["حرجة","🔴"]},BAND={high:"أداء مرتفع",average:"متوسط",low:"منخفض"};
+  let D=null;
+  function F(){const f={};if($("fPeriod").value)f.period=$("fPeriod").value;if($("fBranch").value)f.branch_id=$("fBranch").value;if($("fDept").value)f.department=$("fDept").value;return f;}
+  const route=()=>{const h=decodeURIComponent(location.hash.slice(1)||"overview");const i=h.indexOf("/");return i<0?[h,""]:[h.slice(0,i),h.slice(i+1)];};
+  const go=(v,arg)=>{location.hash=arg?`${v}/${encodeURIComponent(arg)}`:v;};
+  window.addEventListener("hashchange",()=>{if(D)render();});
+  function load(){$("content").innerHTML=`<div class="state">…</div>`;
+    fetch("/company/hr-intelligence?"+new URLSearchParams(F()),{headers:H}).then(async r=>{
+      if(r.status===401){location.href="login.html";return null;}
+      if(r.status===403||r.status===402){let d="";try{d=(await r.json()).detail;}catch(_){}$("content").innerHTML=`<div class="state">${esc(d||"ليست لديك صلاحية.")}</div>`;return null;}
+      if(!r.ok){let d="";try{const j=await r.json();d=typeof j.detail==="string"?j.detail:JSON.stringify(j.detail||j);}catch(_){}err(`HTTP ${r.status}${d?" — "+d:""}`);return null;}
+      return r.json();}).then(d=>{if(!d)return;D=d;try{filters(d);}catch(e){console.error(e);}try{render();}catch(e){console.error(e);err("render: "+(e&&e.message||e));}}).catch(e=>err("network: "+(e&&e.message||e)));}
+  function err(m){$("content").innerHTML=`<div class="state neg">تعذّر تحميل ذكاء الموارد البشرية.<div class="muted" style="margin-top:8px">${esc(m)}</div></div>`;}
+  function filters(d){const f=d.filters||{},o=d.options||{};
+    const months=[];const now=new Date();for(let i=0;i<18;i++){const x=new Date(now.getFullYear(),now.getMonth()-i,1);months.push(x.getFullYear()+"-"+String(x.getMonth()+1).padStart(2,"0"));}
+    $("fPeriod").innerHTML=months.map(p=>`<option value="${p}" ${f.period===p?"selected":""}>${p}</option>`).join("");
+    $("fBranch").innerHTML=`<option value="">الفرع: الكل</option>`+(o.branch_list||[]).map(b=>`<option value="${b.id}" ${String(f.branch_id)===String(b.id)?"selected":""}>${esc(b.name)}</option>`).join("");
+    $("fDept").innerHTML=`<option value="">القسم: الكل</option>`+(o.departments||[]).map(x=>`<option value="${esc(x)}" ${f.department===x?"selected":""}>${esc(x)}</option>`).join("");
+    const c=[];const b=(o.branch_list||[]).find(x=>String(x.id)===String(f.branch_id));if(b)c.push(["fBranch","الفرع: "+b.name]);if(f.department)c.push(["fDept","القسم: "+f.department]);
+    $("crumbs").innerHTML=c.map(([id,l])=>`<span class="chip" data-clear="${id}">${esc(l)} ✕</span>`).join("");$("crumbs").querySelectorAll("[data-clear]").forEach(x=>x.onclick=()=>{$(x.dataset.clear).value="";load();});}
+  const panel=(title,body,extra="")=>`<div class="panel"><h2>${title}${extra}</h2>${body}</div>`;
+  const na=m=>`<div class="na">${esc(m)}</div>`;
+  const tile=(l,v,c)=>`<div class="tile"><div class="l">${l}</div><div class="v">${v}</div><div class="c">${c||""}</div></div>`;
+  const unav=`<span class="muted" style="font-size:14px">غير متاح</span>`;
+  const locked=`<span class="muted" style="font-size:14px">🔒 للمالك والمحاسب</span>`;
+  const bars=(list,val,lab,col="#818cf8",fmt=v=>n(v))=>{if(!list||!list.length)return na("لا توجد بيانات");const mx=Math.max(...list.map(val).map(v=>Math.abs(v||0)),1);return list.map(x=>`<div class="barrow"><span class="t">${esc(lab(x))}</span><span class="g"><i style="width:${(Math.abs(val(x)||0)/mx*100).toFixed(1)}%;background:${col}"></i></span><span>${fmt(val(x))}</span></div>`).join("");};
+  function chart(labels,series){
+    if(!labels.length)return na(t("noDim"));
+    const W=640,Hh=160,all=series.flatMap(s=>s.values.filter(v=>v!=null));
+    if(!all.length)return na(t("noDim"));
+    const max=Math.max(...all),min=Math.min(...all,0),rng=(max-min)||1;
+    const x=i=>labels.length<2?W/2:(i/(labels.length-1))*(W-20)+10,y=v=>Hh-12-((v-min)/rng)*(Hh-30);
+    const lines=series.map(s=>{let seg=[],out="";const flush=()=>{if(seg.length)out+=`<polyline points="${seg.join(" ")}" fill="none" stroke="${s.color}" stroke-width="2" ${s.dash?'stroke-dasharray="5 4"':""}/>`;seg=[];};
+      s.values.forEach((v,i)=>{if(v==null)flush();else seg.push(`${x(i).toFixed(1)},${y(v).toFixed(1)}`);});flush();
+      out+=s.values.map((v,i)=>v==null?"":`<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="2.6" fill="${s.color}"><title>${esc(labels[i])}: ${n(v)}</title></circle>`).join("");return out;}).join("");
+    return `<svg class="ch" viewBox="0 0 ${W} ${Hh}" preserveAspectRatio="none">${lines}</svg>
+      <div class="legend"><span>${esc(labels[0])} → ${esc(labels[labels.length-1])}</span>${series.map(s=>`<span><i style="background:${s.color}"></i>${esc(s.label)}</span>`).join("")}</div>`;
+  }
+  function sigCard(s,i){return `<div class="event ${esc(s.type)}"><h4>${i!=null?(i+1)+". ":""}${s.type==="risk"?"🔴":s.type==="opportunity"?"🟢":"🟡"} ${esc(s.name_ar)}${s.dimension?` — ${esc(s.dimension)}`:""} <span class="b ${esc(s.severity)}">${SEV[s.severity]||s.severity}</span></h4>
+    <div class="rec"><b>الدليل</b><span>${(s.evidence||[]).map(esc).join(" · ")}</span>${s.confidence?`<b>الثقة</b><span>${s.confidence==="low"?"منخفضة (مؤشرات)":"متوسطة"}</span>`:""}<b>الإجراء</b><span>${esc(s.suggested_action_ar)}</span></div>
+    <div class="acts"><button class="btn" data-sig="${esc(s.id)}">إنشاء قرار + مهمة</button>${s.dimension&&(D.units.branches.some(u=>u.key===s.dimension)||D.units.departments.some(u=>u.key===s.dimension))?`<button class="btn ghost" data-go="unit" data-arg="${esc(s.dimension)}">فتح التفاصيل</button>`:""}</div><div class="frm"></div></div>`;}
+  // ═══ نظرة عامة: صحة القوى العاملة
+  function overview(){const d=D,k=d.kpis,h=d.health,[hl,hi]=HEALTH[h.status]||["—",""],pl=d.pillars;
+    const node=(ico,l,v,sub,go_)=>`<div class="fnode" style="cursor:pointer" data-go="${go_}"><div class="muted">${ico} ${l}</div><div class="big">${v}</div><div class="muted" style="font-size:12px">${sub}</div></div>`;
+    const top=d.signals.filter(s=>s.type!=="data_quality").slice(0,4);
+    return `<div class="hero"><div class="hcard"><div class="muted">صحة القوى العاملة · ${esc(d.period)}</div><div class="hstat hs-${esc(h.status)}">${hl} ${hi}</div><div>${n(k.headcount.current)} موظف ${k.headcount.change?`(${k.headcount.change>0?"+":""}${k.headcount.change})`:""}</div><div class="muted" style="font-size:11px;margin-top:6px">${esc(h.rule_ar)}</div></div>
+      <div class="hcard click" data-go="alerts"><div class="muted">🔴 مخاطر</div><div class="big hs-critical">${n(h.risks)}</div></div><div class="hcard click" data-go="alerts"><div class="muted">🟢 فرص</div><div class="big hs-stable">${n(h.opportunities)}</div></div><div class="hcard click" data-go="alerts"><div class="muted">🟡 بيانات تحتاج انتباه</div><div class="big hs-attention">${n(h.attention)}</div></div></div>
+      <div class="tiles" style="grid-template-columns:repeat(3,minmax(0,1fr))">${tile("الموظفون",n(k.headcount.current),`السابق ${n(k.headcount.previous)}`)}${tile("التوظيف هذا الشهر",(k.hires.current>0?"+":"")+n(k.hires.current),"منضمون في "+esc(k.hires.period))}${tile("الدوران",k.turnover.current!=null?n(k.turnover.current,1)+"%":unav,"آخر "+esc(k.turnover.basis))}
+        ${tile("التكلفة الشهرية",k.cost.restricted?locked:(k.cost.current?n(k.cost.current.value):unav),k.cost.change_pct!=null?pct(k.cost.change_pct,true)+" عن الشهر السابق":"")}${tile("متوسط الأداء",k.performance.current!=null?n(k.performance.current,1):unav,k.performance.current!=null?"من 100":"أضف تقييم الأداء")}${tile("الإيراد لكل موظف",k.productivity.current?n(k.productivity.current.value):unav,"آخر 12 شهراً")}</div>
+      ${panel("مركز ذكاء الأفراد",`<div class="flow">${node("👥","الأفراد",n(pl.people.headcount),"الدوران "+(pl.people.turnover!=null?n(pl.people.turnover,1)+"%":"—"),"turnover")}${node("🎯","الأداء",pl.performance.average!=null?n(pl.performance.average,1):"—","مرتفع "+(pl.performance.high_share!=null?n(pl.performance.high_share)+"%":"—"),"performance")}${node("💰","التكلفة",pl.cost.restricted?"🔒":(pl.cost.monthly?n(pl.cost.monthly.value):"—"),pl.cost.avg?"للموظف "+n(pl.cost.avg.value):"","compensation")}${node("📈","الإنتاجية",pl.productivity?n(pl.productivity.value):"—","إيراد/موظف","productivity")}</div>
+        <div class="farrow" style="text-align:center">↓</div><div class="flow">${node("⚠","المواهب والمخاطر",n(pl.talent_risk.flight_risk),"مؤشرات فقدان · "+(pl.talent_risk.without_successor!=null?n(pl.talent_risk.without_successor)+" وظيفة حرجة بلا بديل":"الخلافة غير متاحة"),"flight")}</div><div class="farrow" style="text-align:center">↓</div><div class="flow">${node("✅","القرار والإجراء",n(h.risks+h.opportunities),"إشارات قابلة للتحويل لمهام","alerts")}</div>`)}
+      ${panel("أهم ما يحدث الآن",top.length?top.map((s,i)=>sigCard(s,i)).join(""):na("لا مخاطر أو فرص وفق القواعد"))}
+      ${panel("اتجاه عدد الموظفين",chart(d.workforce.trend.map(x=>x.period),[{label:"عدد الموظفين",values:d.workforce.trend.map(x=>x.headcount),color:"#818cf8"}]))}
+      ${panel("لماذا؟ — شرح تنفيذي",`<div class="acts"><button class="btn" id="aiBtn">اشرح وضع القوى العاملة بالذكاء الاصطناعي</button></div><div class="muted" style="margin-top:6px">يصيغ المؤشرات المحسوبة فقط، مع الدليل والثقة والتوصية — بلا أسماء أفراد ولا رواتب.</div><div id="aiOut" style="margin-top:10px"></div>`)}`;}
+  function workforce(){const w=D.workforce;
+    return `<div class="tiles">${tile("النشطون",n(w.active),`السابق ${n(w.previous)}`)}${tile("منضمون (الشهر)",n(w.joiners),"")}${tile("مغادرون (الشهر)",n(w.leavers),w.leavers_no_date?`<span class="neg">${n(w.leavers_no_date)} بلا تاريخ</span>`:"")}${tile("بلا تاريخ تعيين",n(w.unknown_hire_date),"")}</div>
+      <div class="grid2">${panel("حسب الفرع",bars(w.by_branch,x=>x.count,x=>x.key))}${panel("حسب القسم",bars(w.by_department,x=>x.count,x=>x.key))}</div>
+      <div class="grid2">${panel("حسب الوظيفة",bars(w.by_role,x=>x.count,x=>x.key))}${panel("حسب نوع التوظيف",w.by_type?bars(w.by_type,x=>x.count,x=>x.key):na("نوع التوظيف (دوام كامل/جزئي/متعاقد) غير مسجّل"))}</div>
+      ${panel("اتجاه العدد (12 شهراً)",chart(w.trend.map(x=>x.period),[{label:"الموظفون",values:w.trend.map(x=>x.headcount),color:"#818cf8"}]))}`;}
+  function structure(){return panel("الهيكل التنظيمي",D.structure.map(s=>`<details class="event opportunity" style="border-inline-start-color:#818cf8"><summary style="cursor:pointer"><b>${esc(s.department)}</b> — ${n(s.count)} موظف ${s.branches.length?`<span class="muted">· ${s.branches.map(esc).join("، ")}</span>`:""}${s.managers.length?`<span class="muted"> · المديرون: ${s.managers.map(esc).join("، ")}</span>`:""}</summary>
+      ${s.roles.map(r=>`<details style="margin:8px 16px"><summary style="cursor:pointer">${esc(r.role||"غير محدد")} — ${n(r.count)}</summary><div class="muted" style="margin:6px 16px">${r.employees.map(e=>`${esc(e.name)}${e.branch?" ("+esc(e.branch)+")":""}`).join(" · ")}</div></details>`).join("")}</details>`).join("")||na("لا بيانات"));}
+  function recruitment(){const r=D.recruitment;if(!r.available)return panel("التوظيف",na("لا يوجد ملف وظائف شاغرة — ارفعه لتظهر الوظائف المفتوحة ومدة التوظيف وتكلفته")+`<div class="acts"><a class="btn" href="company-data-center.html">ارفع ملف الوظائف الشاغرة</a></div>`);
+    return `<div class="tiles">${tile("وظائف مفتوحة",n(r.open),"")}${tile("متوسط مدة التوظيف",r.time_to_hire_days!=null?n(r.time_to_hire_days,1)+" يوم":unav,"من الفتح حتى الشغل")}${tile("تكلفة التعيين",r.cost_per_hire?n(r.cost_per_hire.value):unav,"")}${tile("قبول العروض",r.offer_acceptance_pct!=null?n(r.offer_acceptance_pct,1)+"%":unav,r.applicants!=null?n(r.applicants)+" متقدم":"")}</div>
+      <div class="grid2">${panel("المفتوحة حسب القسم",bars(r.open_by_department,x=>x.count,x=>x.key))}${panel("المفتوحة حسب الفرع",bars(r.open_by_branch,x=>x.count,x=>x.key))}</div>
+      ${panel("الوظائف المفتوحة",r.open_list.length?`<div class="tbl"><table><thead><tr><th>الوظيفة</th><th>القسم</th><th>الفرع</th><th>تاريخ الفتح</th><th>مفتوحة منذ</th></tr></thead><tbody>${r.open_list.map(o=>`<tr><td><b>${esc(o.title)}</b></td><td>${esc(o.department||"—")}</td><td>${esc(o.branch||"—")}</td><td>${esc(o.opened)}</td><td class="${o.days_open>45?"neg":""}">${n(o.days_open)} يوم</td></tr>`).join("")}</tbody></table></div>`:na("لا وظائف مفتوحة"))}`;}
+  function turnover(){const t=D.turnover,st=D.stability,tb=(list,l)=>`<div class="tbl"><table><thead><tr><th>${l}</th><th>المغادرون</th><th>متوسط العدد</th><th>الدوران</th></tr></thead><tbody>${list.map(x=>`<tr class="${D.units.branches.some(u=>u.key===x.key)||D.units.departments.some(u=>u.key===x.key)?"drill":""}" data-go="unit" data-arg="${esc(x.key)}"><td><b>${esc(x.key)}</b></td><td>${n(x.leavers)}</td><td>${n(x.avg_headcount,1)}</td><td class="${t.rate_12m&&x.rate>=t.rate_12m*D.rules.turnover_high_factor?"neg":""}">${x.rate==null?"—":n(x.rate,1)+"%"}${t.rate_12m&&x.rate>=t.rate_12m*D.rules.turnover_high_factor?" 🔴":""}</td></tr>`).join("")}</tbody></table></div>`;
+    return `<div class="tiles">${tile("معدل الدوران (12 شهراً)",t.rate_12m!=null?n(t.rate_12m,1)+"%":unav,`<span class="muted">${esc(t.method_ar)}</span>`)}${tile("مغادرون / منضمون",n(t.leavers_12m)+" / "+n(t.joiners_12m),"")}${tile("طوعي / غير طوعي",t.voluntary!=null?n(t.voluntary)+" / "+n(t.involuntary):unav,`<span class="muted">${esc(t.type_note_ar||"")}</span>`)}${tile("متوسط مدة الخدمة",st.tenure.avg_years!=null?n(st.tenure.avg_years,1)+" سنة":unav,"")}</div>
+      ${t.note_ar?`<div class="na" style="margin:10px 0">${esc(t.note_ar)}</div>`:""}
+      <div class="grid2">${panel("حسب الفرع",tb(t.by_branch,"الفرع"))}${panel("حسب القسم",tb(t.by_department,"القسم"))}</div>
+      ${panel("المنضمون والمغادرون شهرياً",chart(t.trend.map(x=>x.period),[{label:"منضمون",values:t.trend.map(x=>x.joiners),color:"#10b981"},{label:"مغادرون",values:t.trend.map(x=>x.leavers),color:"#ef4444"}]))}
+      <div class="grid2">${panel("الغياب والعمل الإضافي",(st.absence.available?`<div class="barrow"><span class="t">أيام الغياب</span><span>${n(st.absence.total_days,1)} (متوسط ${n(st.absence.avg_per_employee,1)})</span></div>`+bars(st.absence.by_department,x=>x.avg,x=>x.key,"#f5b301",v=>n(v,1)+" يوم"):na("أيام الغياب غير مسجّلة"))+(st.overtime.available?`<div class="barrow"><span class="t">العمل الإضافي</span><span>${n(st.overtime.total_hours,1)} ساعة (متوسط ${n(st.overtime.avg_per_employee,1)})</span></div>`:"")+`<div class="muted">${esc(st.attendance_note_ar)}</div>`)}${panel("مدة الخدمة",bars(st.tenure.buckets,x=>x.count,x=>x.bucket))}</div>`;}
+  function performance(){const p=D.performance;if(!p.available)return panel("الأداء",na("تقييمات الأداء غير متاحة — أضف عمود «تقييم الأداء» (1–5 أو 0–100)"));
+    return `<div class="tiles">${tile("متوسط الأداء",n(p.average,1),"من 100")}${tile("المقيَّمون",n(p.rated),`تغطية ${n(p.coverage_pct,1)}%`)}</div>
+      ${panel("توزيع الأداء",p.distribution.map(x=>`<div class="barrow"><span class="t">${BAND[x.band]}</span><span class="g"><i style="width:${x.pct||0}%;background:${x.band==="high"?"#10b981":x.band==="low"?"#ef4444":"#818cf8"}"></i></span><span>${n(x.pct,1)}%</span><span class="muted">${n(x.count)} موظف${x.avg_cost?` · متوسط التكلفة ${n(x.avg_cost.value)}`:""}</span></div>`).join("")+`<div class="muted">${esc(p.rule_ar)}</div>`)}
+      <div class="grid2">${panel("حسب القسم",bars(p.by_department,x=>x.avg,x=>x.key,"#818cf8",v=>n(v,1)))}${panel("حسب الفرع",bars(p.by_branch,x=>x.avg,x=>x.key,"#818cf8",v=>n(v,1)))}</div>${panel("حسب الوظيفة",bars(p.by_role,x=>x.avg,x=>x.key,"#818cf8",v=>n(v,1)))}`;}
+  function compensation(){const c=D.compensation;if(c.restricted)return panel("التعويضات والمزايا",na(c.reason_ar));if(!c.available)return panel("التعويضات والمزايا",na("الرواتب غير مسجّلة في ملف الموظفين"));
+    const dist=c.distribution;
+    return `<div class="tiles">${tile("الرواتب الشهرية",n(c.monthly_total.value),c.change_pct!=null?pct(c.change_pct,true)+" عن الشهر السابق":"")}${tile("سنوياً (تقديري)",n(c.annualized.value),"× 12")}${tile("متوسط تكلفة الموظف",n(c.avg_per_employee.value),`تغطية ${n(c.coverage_pct,1)}%`)}${tile("مدفوعات الرواتب الفعلية",c.payroll_cash?n(c.payroll_cash.value):unav,esc(c.payroll_cash_note_ar||"من ذكاء التدفق النقدي"))}</div>
+      <div class="muted" style="margin:8px 0">${esc(c.change_note_ar)}</div>
+      ${c.components?panel("مكونات التكلفة",bars(Object.entries(c.components).map(([k,v])=>({k:{basic_salary:"الراتب الأساسي",allowances:"البدلات",benefits:"المزايا"}[k],v:v.value})),x=>x.v,x=>x.k,"#10b981")):""}
+      <div class="grid2">${panel("حسب القسم",bars(c.by_department,x=>x.total.value,x=>x.key+" ("+x.count+")","#10b981"))}${panel("حسب الفرع",bars(c.by_branch,x=>x.total.value,x=>x.key+" ("+x.count+")","#10b981"))}</div>
+      ${panel("توزيع الرواتب",`<div class="tiles">${tile("الأدنى",n(dist.min),"")}${tile("الربع الأول",n(dist.p25),"")}${tile("الوسيط",n(dist.median),"")}${tile("الربع الثالث",n(dist.p75),"")}${tile("الأعلى",n(dist.max),"")}</div>`)}`;}
+  function talent(){const l=D.learning,s=D.succession;
+    return panel("التعلم والتطوير",l.available?`<div class="tiles">${tile("ساعات التدريب",n(l.total_hours,1),"")}${tile("متوسط/موظف",n(l.avg_per_employee,1)+" ساعة","")}${tile("موظفون مدرَّبون",n(l.trained),"")}</div>`+bars(l.by_department,x=>x.avg,x=>x.key,"#818cf8",v=>n(v,1)+" ساعة")+`<div class="muted">${esc(l.completion_note_ar)}</div>`:na("ساعات التدريب غير مسجّلة"))+
+      panel("المواهب والخلافة",s.available?`<div class="tiles">${tile("وظائف حرجة",n(s.critical_roles),"")}${tile("بلا بديل",`<span class="${s.without_successor?"neg":"pos"}">${n(s.without_successor)}</span>`,"")}${tile("تغطية الخلافة",s.coverage_pct!=null?n(s.coverage_pct,1)+"%":unav,"")}</div>`+s.roles.map(r=>`<div class="barrow"><span class="t">${esc(r.role)}</span><span>${esc(r.employee)} ${r.branch?"· "+esc(r.branch):""}</span><span>${r.successors==null?"—":r.successors===0?"⚠ لا بديل":(r.successors===1?"🟡 مرشح واحد":"🟢 "+r.successors+" مرشحين")}</span></div>`).join(""):na("الوظائف الحرجة غير محددة — أضف «وظيفة حرجة» و«عدد البدلاء»"));}
+  function flight(){const f=D.flight_risk;return panel(`مؤشرات مخاطر الفقدان — ${n(f.count)} موظف`,`<div class="na" style="margin-bottom:10px">${esc(f.disclaimer_ar)} · ${esc(f.method_ar)}</div>`+(f.employees.length?`<div class="tbl"><table><thead><tr><th>الموظف</th><th>الوظيفة</th><th>القسم</th><th>الفرع</th><th>المؤشرات (الدليل)</th><th>الثقة</th></tr></thead><tbody>${f.employees.map(x=>`<tr><td><b>${esc(x.name)}</b>${x.high_performer?" ⭐":""}</td><td>${esc(x.role||"—")}</td><td>${esc(x.department)}</td><td>${esc(x.branch||"—")}</td><td style="white-space:normal">${x.indicators.map(esc).join(" · ")}</td><td>${x.confidence==="low"?"منخفضة":"متوسطة"} (${x.indicators_count}/${x.possible})</td></tr>`).join("")}</tbody></table></div><div class="muted">⭐ موظف عالي الأداء</div>`:na("لا يوجد موظف تنطبق عليه المؤشرات")));}
+  function productivity(){const p=D.productivity;
+    return `<div class="tiles">${tile("الإيراد لكل موظف",p.revenue_per_employee?n(p.revenue_per_employee.value):unav,`<span class="muted">${esc(p.method_ar)}</span>`)}${tile("الربح لكل موظف",unav,`<span class="muted">${esc(p.profit_note_ar)}</span>`)}${tile("تكلفة الرواتب ÷ الإيراد",p.cost_to_revenue_pct!=null?n(p.cost_to_revenue_pct,1)+"%":(D.can_see_pay?unav:locked),"سنوياً")}${tile("متوسط عدد الموظفين",n(p.avg_headcount,1),"12 شهراً")}</div>
+      ${panel("الإيراد لكل موظف حسب الفرع",p.by_branch.length?`<div class="tbl"><table><thead><tr><th>الفرع</th><th>الإيراد 12 شهراً</th><th>متوسط الموظفين</th><th>الإيراد/موظف</th></tr></thead><tbody>${p.by_branch.map(b=>`<tr class="drill" data-go="unit" data-arg="${esc(b.key)}"><td><b>${esc(b.key)}</b></td><td>${mv(b.revenue_12m)}</td><td>${n(b.avg_headcount,1)}</td><td>${mv(b.revenue_per_employee)}</td></tr>`).join("")}</tbody></table></div><div class="muted">يحتاج إسناد الموظفين لفروع + بيانات المبيعات</div>`:na("يحتاج بيانات المبيعات وإسناد الموظفين للفروع"))}`;}
+  function units(){const row=u=>`<tr class="drill" data-go="unit" data-arg="${esc(u.key)}"><td><b>${esc(u.key)}</b></td><td>${n(u.employees)}</td><td>${u.turnover==null?"—":n(u.turnover,1)+"%"}</td><td>${u.payroll?n(u.payroll.value):(D.can_see_pay?"—":"🔒")}</td><td>${u.performance==null?"—":n(u.performance,1)}</td><td>${u.revenue_per_employee?n(u.revenue_per_employee.value):"—"}</td><td>${n(u.flight_risk)}</td></tr>`,head=l=>`<thead><tr><th>${l}</th><th>الموظفون</th><th>الدوران</th><th>الرواتب</th><th>الأداء</th><th>الإيراد/موظف</th><th>مؤشرات فقدان</th></tr></thead>`;
+    return panel("حسب الفرع",`<div class="tbl"><table>${head("الفرع")}<tbody>${D.units.branches.map(row).join("")}</tbody></table></div>`)+panel("حسب القسم",`<div class="tbl"><table>${head("القسم")}<tbody>${D.units.departments.map(u=>row(Object.assign({},u,{revenue_per_employee:null}))).join("")}</tbody></table></div><div class="muted">اضغط أي صف للتفاصيل — «أين توجد مشكلة القوى العاملة؟»</div>`);}
+  function unit360(key){const u=D.units.branches.find(x=>x.key===key)||D.units.departments.find(x=>x.key===key);if(!u)return `<button class="back" data-go="units">→ الفروع والأقسام</button>`+na("غير موجود");
+    const isB=D.units.branches.some(x=>x.key===key),sig=D.signals.filter(s=>s.dimension===key),fr=D.flight_risk.employees.filter(x=>(isB?x.branch:x.department)===key);
+    return `<button class="back" data-go="units">→ الفروع والأقسام</button><div class="panel"><h2 style="font-size:20px">${isB?"الفرع":"القسم"}: ${esc(key)}</h2><div class="tiles">${tile("الموظفون",n(u.employees),"")}${tile("الدوران",u.turnover==null?"—":n(u.turnover,1)+"%","12 شهراً")}${tile("الرواتب",u.payroll?n(u.payroll.value):(D.can_see_pay?"—":locked),"")}${tile("الأداء",u.performance==null?"—":n(u.performance,1),"")}${isB?tile("الإيراد/موظف",u.revenue_per_employee?n(u.revenue_per_employee.value):"—",""):""}</div></div>
+      ${sig.length?panel("الإشارات",sig.map(s=>sigCard(s)).join("")):""}${fr.length?panel("مؤشرات فقدان",fr.map(x=>`<div class="barrow"><span class="t">${esc(x.name)}</span><span class="muted">${x.indicators.map(esc).join(" · ")}</span></div>`).join("")):""}
+      <div class="acts"><button class="btn ghost" data-filter="${isB?"fBranch":"fDept"}" data-arg="${esc(isB?((D.options.branch_list||[]).find(b=>b.name===key)||{}).id||"":key)}">تطبيق كفلتر على كل الصفحات</button></div>`;}
+  function alerts(){const r=D.signals.filter(s=>s.type==="risk"),o=D.signals.filter(s=>s.type==="opportunity"),q=D.signals.filter(s=>s.type==="data_quality");
+    return panel(`🔴 ${n(r.length)} تنبيهات تحتاج قراراً`,r.length?r.map((s,i)=>sigCard(s,i)).join(""):na("لا مخاطر"))+panel(`🟢 ${n(o.length)} فرص`,o.length?o.map((s,i)=>sigCard(s,i)).join(""):na("لا فرص"))+panel(`🟡 ${n(q.length)} بيانات تحتاج انتباه`,q.length?q.map(s=>sigCard(s)).join(""):na("لا ملاحظات"));}
+  function render(){const d=D;
+    if(!d.has_data){$("tabs").innerHTML="";const r=d.required||{};$("content").innerHTML=`<div class="state"><div style="font-size:16px;margin-bottom:10px">${esc(d.message_ar)}</div><div class="muted">المطلوب: ${(r.required||[]).map(esc).join("، ")}</div><div class="muted">مستحسن: ${(r.recommended||[]).map(esc).join("، ")}</div><div class="muted">اختياري: ${(r.optional||[]).map(esc).join("، ")}</div><div class="cta" style="justify-content:center"><a class="btn" href="company-data-center.html">ارفع ملف الموظفين</a></div></div>`;return;}
+    const [v,arg]=route(),tabOf=v==="unit"?"units":v;
+    $("tabs").innerHTML=TABS.map(([k,l])=>`<button class="tab ${k===tabOf?"on":""}" data-go="${k}">${l}${k==="alerts"&&d.health.risks?` <span class="b high">${d.health.risks}</span>`:""}</button>`).join("");
+    const view={overview,workforce,structure,recruitment,turnover,performance,compensation,talent,flight,productivity,units,alerts}[v];
+    $("content").innerHTML=v==="unit"?unit360(arg):(view?view():overview());bind();window.scrollTo(0,0);}
+  function bind(){document.querySelectorAll("[data-go]").forEach(el=>el.onclick=()=>go(el.dataset.go,el.dataset.arg||null));
+    document.querySelectorAll("#content [data-sig]").forEach(b=>b.onclick=()=>decision(b));
+    document.querySelectorAll("#content [data-filter]").forEach(b=>b.onclick=()=>{const s=$(b.dataset.filter);s.value=b.dataset.arg;location.hash="overview";load();});
+    const ab=$("aiBtn");if(ab)ab.onclick=runAI;}
+  function decision(b){const box=b.closest(".event").querySelector(".frm");
+    box.innerHTML=`<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap"><input class="f o" placeholder="المسؤول (مثلاً مدير الموارد البشرية)"><input class="f d" type="date"><button class="btn c">إنشاء</button></div><div class="m muted"></div>`;
+    box.querySelector(".c").onclick=()=>fetch("/company/hr/to-decision",{method:"POST",headers:H,body:JSON.stringify(Object.assign({},F(),{signal_id:b.dataset.sig,owner:box.querySelector(".o").value,due_date:box.querySelector(".d").value,period:D.period}))}).then(async r=>{const j=await r.json().catch(()=>({}));box.querySelector(".m").textContent=r.ok?"تم إنشاء القرار والمهمة ✓ (الحالة: مفتوحة)":(typeof j.detail==="string"?j.detail:"HTTP "+r.status);if(r.ok)b.disabled=true;});}
+  function runAI(){const b=$("aiBtn"),out=$("aiOut");b.disabled=true;out.innerHTML=`<div class="muted">جارٍ الصياغة…</div>`;
+    fetch("/company/hr/ai-insights",{method:"POST",headers:H,body:JSON.stringify(Object.assign({},F(),{period:D.period}))}).then(async r=>{const j=await r.json().catch(()=>({}));b.disabled=false;
+      if(!r.ok){out.innerHTML=`<div class="neg">${esc(typeof j.detail==="string"?j.detail:"HTTP "+r.status)}</div>`;return;}
+      const a=j.ai||{},resp=a.response||{},L={FACTS:"الدليل",INTERPRETATION:"القراءة",HYPOTHESES:"فرضيات (ثقة منخفضة)",RECOMMENDATIONS:"التوصية",DATA_GAPS:"ما لم يُحتسب لنقص البيانات"};
+      out.innerHTML=(a.message?`<div class="na">${esc(a.message)}</div>`:"")+Object.keys(L).map(k=>resp[k]&&resp[k].length?`<div class="ai-sec"><b>${L[k]}</b><ul style="margin:0;padding-inline-start:18px">${resp[k].map(x=>`<li>${esc(typeof x==="string"?x:JSON.stringify(x))}</li>`).join("")}</ul></div>`:"").join("");}).catch(e=>{b.disabled=false;out.innerHTML=`<div class="neg">${esc(e.message||e)}</div>`;});}
+  ["fPeriod","fBranch","fDept"].forEach(id=>$(id).addEventListener("change",load));
+  $("reset").onclick=()=>{$("fBranch").value="";$("fDept").value="";$("fPeriod").selectedIndex=0;load();};
+  load();
+})();
+</script>
+<script src="nabbah-sidebar.js"></script>
+</body></html>
