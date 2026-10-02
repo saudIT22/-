@@ -58,11 +58,15 @@ def _bucket(ym, grain):
 
 
 def analyze_leakage(sales_rows, *, expense_lines=None, receivables=None, cost_map=None, settings=None, period=None,
-                    grain="month", actions=None, as_of=None, restricted_categories=None, currency="SAR", rules=None):
+                    grain="month", actions=None, as_of=None, restricted_categories=None, currency="SAR", rules=None,
+                    sector_block=None):
     st = settings or {}
     R = dict(RULES, **{k: float(v) for k, v in (st.get("rules") or {}).items() if v not in (None, "")}, **(rules or {}))
     expense_lines, receivables, cost_map, actions = expense_lines or [], receivables or [], cost_map or {}, actions or []
     hidden = set(restricted_categories or [])
+    sector_block = sector_block or {}
+    sector_items = sector_block.get("items") or []
+    superseded = {c for it in sector_items if it.get("available") and it.get("in_total") for c in (it.get("supersedes") or [])}
     rows = [r for r in sales_rows if r.get("date")]
     if not rows:
         return {"has_data": False, "version": f"leak-v{LEAK_VERSION}",
@@ -142,7 +146,9 @@ def analyze_leakage(sales_rows, *, expense_lines=None, receivables=None, cost_ma
             if cat in hidden:
                 item.update({"actual": None, "baseline": None, "leakage": None})
             lines.append(item)
-            if leak is not None and cat not in hidden:
+            if cat in superseded:
+                item["superseded_ar"] = "محسوب ضمن مؤشر القطاع (" + next(it["name_ar"] for it in sector_items if cat in (it.get("supersedes") or [])) + ") — لا يُحسب مرتين"
+            if leak is not None and cat not in hidden and cat not in superseded:
                 total += leak
         has_base = any(l["baseline_source"] for l in lines)
         return {"available": has_base, "leakage": _m(total) if has_base else None, "lines": sorted(lines, key=lambda l: -(l["leakage"] or 0)),
@@ -244,13 +250,27 @@ def analyze_leakage(sales_rows, *, expense_lines=None, receivables=None, cost_ma
                         "verdict_ar": ("ارتفعت المبيعات اليومية خلال الحملة بأكثر من تكلفة الخصم" if uplift > disc_cost else
                                        "ارتفعت المبيعات اليومية لكن أقل من تكلفة الخصم" if uplift > 0 else "لم يظهر ارتفاع في المبيعات اليومية خلال الحملة"),
                         "note_ar": "مقارنة زمنية (أيام الحملة مقابل باقي أيام نفس الأشهر) — ليست إثباتاً سببياً"})
-    discount = {**(O["parts"]["discount"] or {"available": False}), "by_branch": by_dim("_disc", "branch_name") if has_disc_col else [],
+    def txns(field, n=20):
+        rs = sorted([r for r in rows if r["_ym"] == cur and r[field] > 0], key=lambda r: -r[field])[:n]
+        return [{"reference": r.get("reference"), "date": str(r["date"])[:10], "branch": r.get("branch_name"), "product": r.get("product_sku"),
+                 "channel": r.get("channel"), "promotion": r.get("promotion") or None, "gross": _m(r["_gross"]), "amount": _m(r[field]),
+                 "rate_pct": _pct(r[field], r["_gross"])} for r in rs]
+    def by_promo():
+        out = {}
+        for r in rows:
+            if r["_ym"] == cur and r["_disc"] > 0:
+                k = r.get("promotion") or "بدون حملة"
+                e = out.setdefault(k, [D0, D0, 0])
+                e[0] += r["_disc"]; e[1] += r["_gross"]; e[2] += 1
+        return sorted([{"key": k, "discount": _m(v[0]), "rate_pct": _pct(v[0], v[1]), "transactions": v[2]} for k, v in out.items()], key=lambda x: -x["discount"])
+    discount = {**(O["parts"]["discount"] or {"available": False}), "transactions": txns("_disc") if has_disc_col else [],
+                "by_promotion": by_promo() if has_disc_col else [], "by_branch": by_dim("_disc", "branch_name") if has_disc_col else [],
                 "by_category": by_dim("_disc", "category") if has_disc_col else [], "by_channel": by_dim("_disc", "channel") if has_disc_col else [],
                 "by_product": by_dim("_disc", "product_sku")[:15] if has_disc_col else [],
                 "frequency_pct": _pct(Decimal(sum(1 for r in rows if r["_ym"] == cur and r["_disc"] > 0)), Decimal(sum(1 for r in rows if r["_ym"] == cur))),
                 "effectiveness": eff, "effectiveness_note_ar": None if eff else "لا يمكن تحديد فعالية الخصم — لا توجد بيانات حملات لقياس الأثر",
                 "method_ar": "الخصم الفعلي − (المعدل المرجعي × إجمالي المبيعات). المعدل المرجعي: الحد المُعدّ أو وسيط الأشهر السابقة لنفس النطاق"}
-    returns = {**(O["parts"]["returns"] or {"available": False}), "by_branch": by_dim("_ret", "branch_name") if has_ret_col else [],
+    returns = {**(O["parts"]["returns"] or {"available": False}), "transactions": txns("_ret") if has_ret_col else [], "by_branch": by_dim("_ret", "branch_name") if has_ret_col else [],
                "by_category": by_dim("_ret", "category") if has_ret_col else [], "by_product": by_dim("_ret", "product_sku")[:15] if has_ret_col else [],
                "reason_ar_note": "سبب الإرجاع غير متاح في البيانات" if not any(r.get("return_reason") for r in rows) else None,
                "method_ar": "المرتجعات الفعلية − (المعدل المرجعي × إجمالي المبيعات)"}
@@ -371,7 +391,66 @@ def analyze_leakage(sales_rows, *, expense_lines=None, receivables=None, cost_ma
                 "measured_improvement": _m(sum((Decimal(str(p["improvement"])) for p in plan if p["improvement"] and p["improvement"] > 0), D0)),
                 "note_ar": "الوفر المتوقع ≠ المسترد فعلياً: المسترد يُقاس من بيانات فترة لاحقة لنفس المصدر", "actions": plan}
 
+    # ── بنود القطاع ضمن الإجمالي (بلا تكرار: ما يحل محل بند مصروفات يُستبعد منه، وما هو «جزء من» بند آخر لا يُضاف)
+    sector_total = sum((Decimal(str(it["amount"])) for it in sector_items if it.get("available") and it.get("in_total")), D0)
+    detected = (Decimal(str(O["total"])) if O["total"] is not None else D0) + sector_total
+    any_avail = O["total"] is not None or any(it.get("available") and it.get("in_total") for it in sector_items)
+    # فرصة الاسترداد — قاعدة لكل نوع، معلنة
+    opp_lines = []
+    if O["parts"]["discount"] and O["parts"]["discount"].get("available"):
+        opp_lines.append({"key": "discount", "label": TLABEL["discount"], "amount": O["parts"]["discount"]["leakage"],
+                          "basis_ar": "سياسة خصم: يمكن العودة لمعدل سبق للشركة تحقيقه أو للحد المُعدّ"})
+    if O["parts"]["opex"] and O["parts"]["opex"].get("available"):
+        opp_lines.append({"key": "opex", "label": TLABEL["opex"], "amount": O["parts"]["opex"]["leakage"],
+                          "basis_ar": "قرار إنفاق: العودة لخط الأساس أو الموازنة"})
+    rp_ = O["parts"]["returns"]
+    if rp_ and rp_.get("available"):
+        brs = [b for b in returns["by_branch"] if b.get("rate") is not None]
+        if len(brs) >= 2:
+            best = min(b["rate"] for b in brs) / 100
+            gap = sum(max(0.0, (b["actual"] or 0) - best * (b["gross"] or 0)) for b in brs)
+            amt_ = min(rp_["leakage"] or 0, round(gap, 2))
+            basis = f"الفرق عن أفضل فرع داخلياً (معدل {best * 100:.2f}%) — ليس كل إرجاع قابلاً للمنع"
+        else:
+            amt_, basis = rp_["leakage"], "فرع واحد: العودة للمعدل التاريخي"
+        opp_lines.append({"key": "returns", "label": TLABEL["returns"], "amount": amt_, "basis_ar": basis})
+    for it in sector_items:
+        if it.get("available") and it.get("recoverable") is not None and (it.get("in_total") or it.get("part_of")):
+            opp_lines.append({"key": it["code"], "label": it["name_ar"], "amount": it["recoverable"], "basis_ar": it.get("recoverable_basis_ar"),
+                              "part_of": it.get("part_of")})
+    # جزء من بند آخر: يُحسب منه أقل القيمتين لا مجموعهما
+    opp_total = sum((Decimal(str(x["amount"] or 0)) for x in opp_lines if not x.get("part_of")), D0)
+    collectible = None
+    if ar.get("available"):
+        recent_payers = {a.get("customer_name") for a in receivables if a.get("paid_date") and str(a["paid_date"])[:10] >= _ym_add(cur, -3) + "-01"}
+        collectible = sum((Decimal(str(c["amount"])) for c in ar["top_customers"] if c["customer"] in recent_payers), D0)
+    # التسرب المتكرر: نوع ظهر في شهرين على الأقل من آخر 3 أشهر
+    last3 = trends[-3:] if grain == "month" else []
+    rec_lines = []
+    for k in ("discount", "returns", "opex"):
+        vals = [t_.get(k) for t_ in last3 if t_.get(k) is not None]
+        curv = (O["parts"][k] or {}).get("leakage") if O["parts"][k] and O["parts"][k].get("available") else None
+        if curv and sum(1 for v in vals if v and v > 0) >= 2:
+            rec_lines.append({"key": k, "label": TLABEL[k], "amount": curv, "months": sum(1 for v in vals if v and v > 0)})
+    for it in sector_items:
+        if it.get("available") and it.get("in_total") and it.get("recurring"):
+            rec_lines.append({"key": it["code"], "label": it["name_ar"], "amount": it["amount"], "months": None})
+    money = {"detected": _m(detected) if any_avail else None, "opportunity": _m(opp_total) if opp_lines else None, "opportunity_lines": opp_lines,
+             "recovered": recovery["measured_improvement"], "recurring": _m(sum((Decimal(str(x["amount"])) for x in rec_lines), D0)) if rec_lines else (0.0 if any_avail and grain == "month" and len(last3) >= 2 else None),
+             "recurring_lines": rec_lines, "collectible_ar": _m(collectible), "ar_at_risk": ar.get("at_risk") if ar.get("available") else None,
+             "rules_ar": {"detected": "التسرب الأساسي + بنود القطاع داخل الإجمالي (بلا تكرار)",
+                          "opportunity": "لكل نوع قاعدة معلنة — التسرب ليس كله قابلاً للاسترداد",
+                          "recovered": "تحسن مقاس فعلياً بعد إجراءات الاسترداد (قبل/بعد من فترة لاحقة)",
+                          "recurring": "تسرب ظهر في شهرين على الأقل من آخر 3 أشهر",
+                          "collectible": "ذمم معرّضة للخطر لعملاء سددوا فواتير أخرى خلال آخر 3 أشهر (منفصلة — نقد لا ربح)"}}
     signals = _signals(R, cur, O, Op, types, ar, branches, discount, returns, causes, currency, has_disc_col, has_ret_col, expense_lines)
+    for it in sector_items:
+        if it.get("available") and (it.get("amount") or 0) > 0 and it.get("kind") in ("ratio", "supplier"):
+            signals.append({"id": _sid("sector", it["code"], cur), "type": "risk", "code": "sector_" + it["code"], "source_module": "leakage",
+                            "name_ar": f"{it['name_ar']} — {it['amount']:,.0f} {currency}", "severity": "medium", "dimension": it["name_ar"], "period": cur,
+                            "evidence": [it.get("money_ar")] + [f"{e.get('product')} لدى {e.get('supplier') or '—'}: {e.get('change_pct', 0):+}% ({e['impact']:,.0f})" for e in (it.get("evidence") or [])[:3]],
+                            "estimated_impact": {"value": it["amount"], "value_decimal": str(it["amount"])}, "suggested_action_ar": it.get("action_ar"),
+                            "metric_id": it["code"], "method": "sector-rule (" + (sector_block.get("sector") or "") + ")"})
     sev = {"high": 0, "medium": 1, "low": 2}
     signals.sort(key=lambda x: ({"risk": 0, "opportunity": 1, "data_quality": 2}[x["type"]], sev.get(x["severity"], 3), -((x.get("estimated_impact") or {}).get("value") or 0)))
     return {"has_data": True, "version": f"leak-v{LEAK_VERSION}", "period": cur, "previous_period": prev, "periods": months, "grain": grain,
@@ -383,7 +462,8 @@ def analyze_leakage(sales_rows, *, expense_lines=None, receivables=None, cost_ma
                                            "الذمم المعرّضة للخطر تُعرض منفصلة ولا تُضاف، لأنها مخاطرة تحصيل وليست خسارة محققة."},
             "opex": O["parts"]["opex"], "discount": discount, "returns": returns, "ar": ar, "branches": branches,
             "heatmap": {"rows": heat, "rule_ar": heat_rule}, "products": products, "categories": categories, "trends": trends,
-            "root_causes": causes, "recovery": recovery, "signals": signals,
+            "root_causes": causes, "recovery": recovery, "signals": signals, "money": money,
+            "sector": {k: v for k, v in sector_block.items()} if sector_block else None,
             "data_quality": {"has_discount_column": has_disc_col, "has_returns_column": has_ret_col, "has_expenses": bool(expense_lines),
                              "has_receivables": bool(receivables), "baseline_months": len(base_m),
                              "baseline_note_ar": "خط الأساس من تاريخ الشركة نفسها ما لم تُدخل حدوداً في الإعدادات"}}
@@ -400,30 +480,30 @@ def _signals(R, period, O, Op, types, ar, branches, disc, ret, causes, cur_, has
     if ret.get("available") and ret.get("leakage"):
         c = next((x for x in causes if x["type"] == "returns"), {})
         sev = "high" if (c.get("change_pct") or 0) >= R["returns_rise_pct"] else "medium"
-        add("risk", "returns_excess", "مرتجعات فوق المعتاد", sev, None,
+        add("risk", "returns_excess", f"المرتجعات أعلى من المعتاد بـ {ret['leakage']:,.0f} {cur_}", sev, None,
             [f"معدل المرتجعات {ret['rate']}% مقابل مرجعي {ret['baseline_rate']}% ({'مُعدّ' if ret['baseline_source'] == 'configured' else 'تاريخي'})"]
             + ([f"التغير {c['change_pct']:+}% عن الشهر السابق"] if c.get("change_pct") is not None else [])
             + [f"{e['dimension']} {e['value']}: {e['share_pct']}% من المرتجعات" for e in c.get("evidence", [])[:2]],
             ret["leakage"], "راجع المنتجات والفروع الأعلى إرجاعاً وأسباب الإرجاع", "returns")
     if disc.get("available") and disc.get("leakage"):
-        add("risk", "discount_excess", "خصومات فوق المعتاد", "medium", None,
+        add("risk", "discount_excess", f"الخصومات أعلى من المعتاد بـ {disc['leakage']:,.0f} {cur_}", "medium", None,
             [f"معدل الخصم {disc['rate']}% مقابل مرجعي {disc['baseline_rate']}%", f"تكرار الخصم في {disc['frequency_pct']}% من المعاملات"]
             + [f"{b['key']}: {b['rate']}%" for b in disc["by_branch"][:2] if b.get("leakage")],
             disc["leakage"], "راجع سياسة الخصومات وحدود الصلاحية لكل فرع", "discount_rate")
     for b in disc.get("by_branch", []):
         if b.get("available") and b.get("rate") is not None and b.get("baseline_rate") is not None and b["rate"] - b["baseline_rate"] >= R["discount_rise_pp"]:
-            add("risk", "discount_excess", "خصومات مرتفعة في فرع", "low", b["key"], [f"معدل الخصم {b['rate']}% مقابل {b['baseline_rate']}%"], b.get("leakage"),
+            add("risk", "discount_excess", f"خصومات الفرع أعلى بـ {(b.get('leakage') or 0):,.0f} {cur_}", "low", b["key"], [f"معدل الخصم {b['rate']}% مقابل {b['baseline_rate']}%"], b.get("leakage"),
                 "راجع صلاحيات الخصم في الفرع", "discount_rate")
     ox = O["parts"]["opex"]
     if ox and ox.get("available"):
         for l in ox["lines"][:3]:
-            if l["leakage"]:
-                add("risk", "opex_excess", f"{l['label']} فوق خط الأساس", "medium" if l["change_pct"] and l["change_pct"] >= 25 else "low", l["label"],
+            if l["leakage"] and not l.get("superseded_ar"):
+                add("risk", "opex_excess", f"{l['label']} أعلى من خط الأساس بـ {l['leakage']:,.0f} {cur_}", "medium" if l["change_pct"] and l["change_pct"] >= 25 else "low", l["label"],
                     [f"الفعلي {l['actual']:,.0f} مقابل {'الموازنة' if l['baseline_source'] == 'configured' else 'الوسيط التاريخي'} {(l['baseline'] or 0):,.0f}"
                      + (f" ({l['change_pct']:+}%)" if l["change_pct"] is not None else " — بند لم يُصرف عليه في فترة خط الأساس")],
                     l["leakage"], f"راجع بنود {l['label']} وضرورتها", "opex")
     if ar.get("available") and ar.get("at_risk"):
-        add("risk", "ar_at_risk", "ذمم متأخرة معرّضة للخطر", "high" if (ar["at_risk_pct"] or 0) >= 20 else "medium", None,
+        add("risk", "ar_at_risk", f"{ar['at_risk']:,.0f} {cur_} ذمم متأخرة معرّضة للخطر", "high" if (ar["at_risk_pct"] or 0) >= 20 else "medium", None,
             [f"{ar['at_risk']:,.0f} متأخرة أكثر من {ar['risk_days']} يوماً ({ar['at_risk_pct']}% من الذمم)"]
             + [f"{c['customer']}: {c['amount']:,.0f}" for c in ar["top_customers"][:3]], ar["at_risk"],
             "ابدأ التحصيل بأكبر العملاء المتأخرين وراجع شروط الائتمان", "ar")
