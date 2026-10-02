@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>نبّاه · الضرائب والزكاة</title>
+<link href="nabbah-design.css" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{background:var(--bg,#070b09);color:var(--txt,#e8f1ec);font-family:Tajawal,Tahoma,Arial,sans-serif;margin:0}
+  .wrap{max-width:1180px;margin:0 auto;padding:70px 16px 60px}
+  h1{margin:0 0 4px;font-size:24px}.sub{color:var(--txt-soft,#8ba396);margin:0 0 16px;font-size:14px}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+  select{background:var(--panel,#101a15);color:var(--txt,#e8f1ec);border:1px solid var(--line,#1d2c24);border-radius:10px;padding:8px 10px;font:inherit;font-size:13px;max-width:190px}
+  .crumbs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;min-height:4px}
+  .chip{background:rgba(16,185,129,.12);color:var(--mint,#10b981);border:1px solid rgba(16,185,129,.35);border-radius:20px;padding:3px 10px;font-size:12px;cursor:pointer}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+  .tile,.panel{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:14px;padding:14px}
+  .tile .l{font-size:12px;color:var(--txt-soft,#8ba396)}.tile .v{font-size:21px;font-weight:800;margin-top:4px}
+  .tile .c{font-size:12px;margin-top:4px}
+  .panel{margin-bottom:14px;min-width:0}.panel h2{margin:0 0 10px;font-size:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .panel h3{margin:12px 0 6px;font-size:13px;color:var(--txt-soft,#8ba396)}
+  .num{font-size:11px;color:var(--txt-soft,#8ba396);font-weight:600;border:1px solid var(--line,#1d2c24);border-radius:8px;padding:1px 6px}
+  .grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+  table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px;border-bottom:1px solid var(--line,#1d2c24);text-align:start;white-space:nowrap}
+  th{color:var(--txt-soft,#8ba396);font-weight:600}.tbl{overflow-x:auto}
+  tr.drill{cursor:pointer}tr.drill:hover td{background:rgba(16,185,129,.06)}
+  .barrow{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:13px}
+  .barrow.drill{cursor:pointer}.barrow.drill:hover{background:rgba(16,185,129,.06);border-radius:6px}
+  .barrow .t{flex:0 0 120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .barrow .g{flex:1;height:10px;background:var(--line,#1d2c24);border-radius:6px;overflow:hidden}
+  .barrow .g i{display:block;height:100%;background:var(--mint,#10b981)}
+  .pos{color:#10b981}.neg{color:#ef4444}.muted{color:var(--txt-soft,#8ba396);font-size:12px}
+  .b{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700;display:inline-block}
+  .high{background:rgba(234,88,12,.16);color:#ea580c}.medium{background:rgba(245,179,1,.15);color:#f5b301}
+  .low{background:rgba(16,185,129,.15);color:#10b981}.critical{background:rgba(239,68,68,.16);color:#ef4444}
+  .est{background:rgba(168,85,247,.15);color:#a855f7}
+  .sig{border-inline-start:4px solid var(--line,#1d2c24);padding:10px 12px;margin:8px 0;background:rgba(255,255,255,.02);border-radius:8px}
+  .sig.risk{border-color:#ef4444}.sig.opportunity{border-color:#10b981}.sig.data_quality{border-color:#f5b301}
+  .btn{background:var(--mint,#10b981);color:#062b1c;border:0;border-radius:10px;padding:7px 13px;font-weight:800;cursor:pointer;font:inherit;font-size:12px;text-decoration:none;display:inline-block}
+  .btn.ghost{background:transparent;color:var(--txt-soft,#8ba396);border:1px solid var(--line,#1d2c24);font-weight:600}
+  .btn:disabled{opacity:.5;cursor:default}
+  .state{padding:36px 16px;text-align:center;color:var(--txt-soft,#8ba396);border:1px dashed var(--line,#1d2c24);border-radius:14px}
+  .na{color:var(--txt-soft,#8ba396);font-size:13px;padding:10px;border:1px dashed var(--line,#1d2c24);border-radius:10px}
+  svg.ch{width:100%;height:170px;display:block}
+  .legend{display:flex;gap:14px;font-size:12px;color:var(--txt-soft,#8ba396);margin-top:6px;flex-wrap:wrap}
+  .legend i{display:inline-block;width:14px;height:3px;vertical-align:middle;margin-inline-end:4px}
+  .ai-sec{margin:8px 0}.ai-sec b{display:block;font-size:13px;margin-bottom:4px}.ai-sec li{font-size:13px;margin:3px 0}
+  input.f{flex:1;min-width:120px;background:var(--panel,#101a15);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:8px;padding:6px}
+  .st{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700;display:inline-block;white-space:nowrap}
+  .st.healthy{background:rgba(16,185,129,.15);color:#10b981}.st.watch{background:rgba(245,179,1,.15);color:#f5b301}
+  .st.low{background:rgba(234,88,12,.16);color:#ea580c}.st.stockout{background:rgba(239,68,68,.16);color:#ef4444}
+  .st.slow{background:rgba(59,130,246,.15);color:#60a5fa}.st.obsolete{background:rgba(148,163,184,.18);color:#cbd5e1}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}.schip{cursor:pointer;border:1px solid var(--line,#1d2c24);border-radius:12px;padding:8px 12px;min-width:120px}
+  .schip b{display:block;font-size:18px}.schip:hover{border-color:var(--mint,#10b981)}
+  .eq{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:13px}.eq .box{border:1px solid var(--line,#1d2c24);border-radius:10px;padding:8px 10px;text-align:center;min-width:90px}
+  .eq .box b{display:block;font-size:16px}
+  .ov{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:50;padding:14px}
+  .ov.on{display:flex}.modal{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:16px;padding:18px;width:min(560px,100%);max-height:90vh;overflow:auto}
+  .fg{display:grid;grid-template-columns:1fr 1fr;gap:10px}.fg label{font-size:12px;color:var(--txt-soft,#8ba396);display:flex;flex-direction:column;gap:4px}
+  .fg input,.fg select{background:var(--bg,#070b09);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:9px;padding:8px;font:inherit;max-width:none}
+  .cta{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  @media(max-width:760px){.fg{grid-template-columns:1fr}.tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.tile{padding:10px}.tile .v{font-size:17px}.grid2,.grid3{grid-template-columns:minmax(0,1fr)}h1{font-size:20px}select{max-width:47%}}
+  @media(max-width:700px){.tiles[style]{grid-template-columns:1fr 1fr!important}}
+</style>
+<style>
+  .tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--line,#1d2c24);margin:6px 0 16px}
+  .tab{background:none;border:0;color:var(--txt-soft,#8ba396);padding:10px 14px;font:inherit;font-size:14px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+  .tab.on{color:var(--txt,#e8f1ec);border-color:#14b8a6;font-weight:800}
+  .hero{display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr;gap:12px;margin-bottom:14px}
+  .hcard{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:16px;padding:16px;cursor:default}
+  .hcard.click{cursor:pointer}.hcard.click:hover{border-color:var(--mint,#10b981)}
+  .hcard .big{font-size:30px;font-weight:900;margin:6px 0}.hstat{font-size:22px;font-weight:900}
+  .hs-stable{color:#10b981}.hs-attention{color:#f5b301}.hs-critical{color:#ef4444}
+  .event{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-inline-start:4px solid #ef4444;border-radius:12px;padding:14px;margin-bottom:10px}
+  .event.opportunity{border-inline-start-color:#10b981}.event.data_quality{border-inline-start-color:#f5b301}
+  .event h4{margin:0 0 6px;font-size:15px}.acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .rec{display:grid;grid-template-columns:110px 1fr;gap:6px 12px;font-size:13px;margin-top:8px}.rec b{color:var(--txt-soft,#8ba396);font-weight:600}
+  .flow{display:flex;align-items:stretch;gap:8px;flex-wrap:wrap;justify-content:center}
+  .fnode{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:14px;padding:14px 18px;text-align:center;min-width:140px}
+  .fnode .big{font-size:22px;font-weight:900}.farrow{align-self:center;font-size:22px;color:var(--txt-soft,#8ba396)}
+  .ptip{background:var(--bg,#070b09);border:1px solid var(--mint,#10b981);border-radius:12px;padding:12px;margin-top:8px;font-size:13px}
+  .search{flex:1;min-width:180px;background:var(--panel,#101a15);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:10px;padding:9px 12px;font:inherit}
+  .perf{display:grid;grid-template-columns:70px 1fr 50px;gap:8px;align-items:center;font-size:13px;margin:8px 0}
+  .perf .g{height:10px;background:var(--line,#1d2c24);border-radius:6px;overflow:hidden}.perf .g i{display:block;height:100%}
+  .life{display:flex;gap:0;align-items:center;flex-wrap:wrap;margin:10px 0}.lstep{text-align:center;min-width:110px}
+  .ldot{width:16px;height:16px;border-radius:50%;margin:0 auto 6px;background:var(--line,#1d2c24)}.ldot.on{background:var(--mint,#10b981)}
+  .lline{flex:1;min-width:30px;height:2px;background:var(--line,#1d2c24);margin-bottom:22px}
+  .back{background:none;border:0;color:var(--mint,#10b981);cursor:pointer;font:inherit;padding:0;margin-bottom:10px}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-inline-end:6px}
+  @media(max-width:900px){.hero{grid-template-columns:1fr 1fr}}
+  @media(max-width:560px){.hero{grid-template-columns:1fr}.tab{padding:8px 10px;font-size:13px}.rec{grid-template-columns:1fr}}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <h1>🧾 الضرائب والزكاة والامتثال</h1>
+  <p class="sub">هل بيانات الشركة الضريبية مكتملة ومتسقة؟ ما الذي يحتاج مراجعة؟ ما الاستحقاق القادم؟ وما الإجراء الآن؟</p>
+  <div class="bar"><select id="fPeriod"></select><button class="btn ghost" id="btnSet" style="display:none">⚙ إعدادات الضريبة</button></div>
+  <div class="na" id="disc" style="margin:6px 0 10px"></div>
+  <nav class="tabs" id="tabs"></nav>
+  <div id="content"><div class="state">…</div></div>
+</div>
+<div class="ov" id="ov"><div class="modal" id="modal"></div></div>
+<script src="i18n.js"></script>
+<script>
+(function(){
+  const TOKEN=localStorage.getItem("nabbah_token")||"";if(!TOKEN){location.href="login.html";return;}
+  const TABS=[["overview","نظرة عامة"],["status","حالة الالتزام"],["vat","ضريبة القيمة المضافة"],["recon","المطابقة"],["zakat","الزكاة"],["einvoice","الفوترة الإلكترونية"],["invoices","فحص الفواتير"],["branches","الفروع"],["calendar","التقويم"],["exposure","التعرض والمخاطر"],["quality","جودة البيانات"],["audit","سجل التدقيق"],["alerts","التنبيهات والإجراءات"],["rules","الإعدادات التنظيمية"]];
+  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const n=(v,d=2)=>v==null?"—":Number(v).toLocaleString("ar-SA",{maximumFractionDigits:d});
+  const t=k=>({noDim:"لا توجد بيانات"})[k]||k;
+  const H={Authorization:"Bearer "+TOKEN,"Content-Type":"application/json"},$=id=>document.getElementById(id);
+  const ST={complete:["مكتمل","#10b981","🟢"],partial:["جزئي","#f5b301","🟠"],missing:["ناقص","#ef4444","🔴"]},IV={valid:["سليمة","#10b981"],warning:["تحذير","#f5b301"],needs_review:["تحتاج مراجعة","#f97316"],error:["خطأ","#ef4444"],duplicate:["مكررة","#a855f7"]},TY={tax:"ضريبية",simplified:"مبسطة",credit:"إشعار دائن",debit:"إشعار مدين",unknown:"غير محدد"},CAL={filed:["مقدّم","#10b981"],upcoming:["قادم","#60a5fa"],due_soon:["قريب الاستحقاق","#f5b301"],overdue:["متأخر","#ef4444"],unrecorded:["غير مسجّل في نبّاه","#64748b"]},SEV={high:"عالٍ",medium:"متوسط",low:"منخفض"};
+  let D=null,AUD=null,ivFilter="all";
+  const route=()=>{const h=decodeURIComponent(location.hash.slice(1)||"overview");const i=h.indexOf("/");return i<0?[h,""]:[h.slice(0,i),h.slice(i+1)];};
+  const go=(v,arg)=>{location.hash=arg?`${v}/${encodeURIComponent(arg)}`:v;};
+  window.addEventListener("hashchange",()=>{if(D)render();});
+  function load(){$("content").innerHTML=`<div class="state">…</div>`;
+    fetch("/company/tax-intelligence?"+new URLSearchParams($("fPeriod").value?{period:$("fPeriod").value}:{}),{headers:H}).then(async r=>{
+      if(r.status===401){location.href="login.html";return null;}
+      if(r.status===403||r.status===402){let d="";try{d=(await r.json()).detail;}catch(_){}$("content").innerHTML=`<div class="state">🔒 ${esc(d||"ليست لديك صلاحية.")}</div>`;return null;}
+      if(!r.ok){let d="";try{const j=await r.json();d=typeof j.detail==="string"?j.detail:JSON.stringify(j.detail||j);}catch(_){}err(`HTTP ${r.status}${d?" — "+d:""}`);return null;}
+      return r.json();}).then(d=>{if(!d)return;D=d;$("btnSet").style.display=d.can_edit?"":"none";$("disc").textContent="ℹ "+(d.disclaimer_ar||"");
+        if(d.periods)$("fPeriod").innerHTML=d.periods.slice().reverse().map(p=>`<option value="${esc(p)}" ${d.period===p?"selected":""}>${esc(p)}</option>`).join("");
+        try{render();}catch(e){console.error(e);err("render: "+(e&&e.message||e));}}).catch(e=>err("network: "+(e&&e.message||e)));}
+  function err(m){$("content").innerHTML=`<div class="state neg">تعذّر تحميل وحدة الضرائب.<div class="muted" style="margin-top:8px">${esc(m)}</div></div>`;}
+  const panel=(title,body,extra="")=>`<div class="panel"><h2>${title}${extra}</h2>${body}</div>`;
+  const na=m=>`<div class="na">${esc(m)}</div>`;
+  const tile=(l,v,c)=>`<div class="tile"><div class="l">${l}</div><div class="v">${v}</div><div class="c">${c||""}</div></div>`;
+  const unav=`<span class="muted" style="font-size:14px">غير متاح</span>`;
+  const badge=(l,col)=>`<span style="display:inline-block;padding:2px 8px;border-radius:8px;background:${col}22;color:${col};font-weight:700;font-size:12px">${esc(l)}</span>`;
+  function sigCard(s,i){return `<div class="event ${esc(s.type)}"><h4>${i!=null?(i+1)+". ":""}${s.type==="risk"?"🔴":"🔵"} ${esc(s.name_ar)} <span class="b ${esc(s.severity)}">${SEV[s.severity]||s.severity}</span></h4>
+    <div class="rec"><b>الدليل</b><span>${(s.evidence||[]).map(esc).join(" · ")}</span><b>الأثر</b><span>${s.estimated_impact?`${n(s.estimated_impact.value)} ${esc(D.currency)} <span class="b est">أثر على سجلات تحتاج مراجعة</span>`:"غير قابل للتقدير"}</span><b>الإجراء</b><span>${esc(s.suggested_action_ar)}</span></div>
+    <div class="acts">${s.type==="risk"?`<button class="btn" data-sig="${esc(s.id)}">قرار + إجراء</button>`:""}${s.code.startsWith("invoice")?`<button class="btn ghost" data-go="invoices">عرض الفواتير</button>`:""}${s.code==="reconciliation_difference"?`<button class="btn ghost" data-go="recon">المطابقة</button>`:""}${s.code.startsWith("filing")?`<button class="btn ghost" data-go="calendar">التقويم</button>`:""}</div><div class="frm"></div></div>`;}
+  function overview(){const o=D.overview,nx=o.next_deadline;
+    return `<div class="tiles" style="grid-template-columns:repeat(3,minmax(0,1fr))">${tile("تغطية البيانات الضريبية",o.tax_data_coverage_pct==null?unav:n(o.tax_data_coverage_pct,0)+"%","متطلبات مكتملة من قائمة التحقق")}${tile("اكتمال بيانات الضريبة",o.vat_completeness_pct==null?unav:n(o.vat_completeness_pct,0)+"%","سجلات بمبلغ ضريبة")}${tile("تغطية الفوترة الإلكترونية",o.einvoice_coverage_pct==null?unav:n(o.einvoice_coverage_pct,0)+"%","مبيعات لها فاتورة في السجل")}
+      ${tile("قضايا مفتوحة",`<span class="${o.open_issues?"neg":""}">${n(o.open_issues,0)}</span>`,"")}${tile("الاستحقاق القادم",nx?(nx.days_remaining<0?`<span class="neg">متأخر ${n(-nx.days_remaining,0)} يوماً</span>`:n(nx.days_remaining,0)+" يوماً"):unav,nx?esc(nx.period)+" · "+esc(nx.due_date):esc(D.calendar.reason_ar||""))}${tile("تعرض محتمل",o.potential_exposure==null?unav:n(o.potential_exposure),esc(o.exposure_note_ar))}</div>
+      ${panel("ما يحتاج إجراءً الآن",D.signals.filter(s=>s.type==="risk").slice(0,4).map((s,i)=>sigCard(s,i)).join("")||na("لا قضايا مفتوحة وفق الفحوص"))}
+      ${D.sector_tax?panel("ملاحظات قطاع "+esc(D.sector_tax.name_ar),`<div class="chips">${D.sector_tax.transactions.map(x=>`<div class="schip">${esc(x)}</div>`).join("")}</div><div class="muted" style="margin-top:6px">${esc(D.sector_tax.notes_ar)} · ${esc(D.sector_tax.disclaimer_ar)}</div>`):""}
+      ${panel("اسأل",`<div class="chips">${["وش المشاكل الضريبية عندي؟","ليش فيه فرق بين المبيعات والفواتير؟","أي فواتير تحتاج مراجعة؟","وش أقرب استحقاق؟","وش البيانات الناقصة للزكاة؟"].map(q=>`<div class="schip" data-q="${esc(q)}" style="cursor:pointer">${esc(q)}</div>`).join("")}</div><div id="aiOut" style="margin-top:10px"></div>`)}`;}
+  function status(){return panel("قائمة التحقق من البيانات",`<div class="tbl"><table><thead><tr><th>المتطلب</th><th>الحالة</th><th>الملاحظة</th></tr></thead><tbody>${D.checklist.map(c=>`<tr><td><b>${esc(c.item)}</b></td><td>${ST[c.status][2]} ${badge(ST[c.status][0],ST[c.status][1])}</td><td class="muted">${esc(c.detail||"—")}</td></tr>`).join("")}</tbody></table></div><div class="muted">مبنية على نطاق الفحوص والبيانات المتوفرة — ليست حكماً بالامتثال القانوني.</div>`);}
+  function vat(){const v=D.vat;return `<div class="tiles">${tile("صافي المبيعات",n(v.sales_net,0),"")}${tile("المبيعات الخاضعة",v.taxable_sales==null?unav:n(v.taxable_sales,0),esc(v.taxable_sales==null?v.expected_basis_ar:""))}${tile("ضريبة المخرجات المسجلة",v.output_vat_recorded==null?unav:n(v.output_vat_recorded),v.output_vat_coverage_pct!=null?"تغطية "+n(v.output_vat_coverage_pct,0)+"%":"لا عمود ضريبة في المبيعات")}${tile("من سجل الفواتير",v.output_vat_invoices==null?unav:n(v.output_vat_invoices),"بعد الإشعارات الدائنة")}${tile("المتوقعة من المبيعات",v.output_vat_expected==null?unav:n(v.output_vat_expected),`<span class="muted" style="font-size:11px">${esc(v.expected_basis_ar)}</span>`)}${tile("ضريبة المدخلات",v.input_vat==null?unav:n(v.input_vat),v.input_vat==null?`<span class="muted" style="font-size:11px">${esc(v.input_reason_ar)}</span>`:"تغطية "+n(v.input_vat_coverage_pct,0)+"%")}${tile("صافي المركز الضريبي",v.net_position==null?unav:n(v.net_position),`<span class="muted" style="font-size:11px">${esc(v.net_basis_ar)}</span>`)}</div><div class="muted">النسبة ${n(v.rate_pct,0)}% — المصدر: ${esc(v.rate_source)}</div>`;}
+  function recon(){const r=D.reconciliation;if(!r.available)return panel("المطابقة",na("تحتاج المبيعات وسجل الفواتير معاً لنفس الفترة"));const mx=Math.max(...r.waterfall.map(w=>Math.abs(w.amount||0)),1);
+    return `<div class="tiles">${tile("المبيعات",n(r.sales_total,0),"")}${tile("المفوتر",n(r.invoiced_total,0),"قبل الإشعارات")}${tile("الإشعارات الدائنة",n(r.credit_notes,0),"")}${tile("الفرق",`<span class="${Math.abs(r.difference)>1?"neg":"pos"}">${n(r.difference,0)}</span>`,badge(r.status,r.status==="متطابقة"?"#10b981":"#f97316"))}</div>
+      ${panel("تفسير الفرق",r.waterfall.map(w=>`<div class="barrow"><span class="t">${esc(w.label)}${w.count!=null?` (${n(w.count,0)})`:""}</span><span class="g"><i style="width:${(Math.abs(w.amount||0)/mx*100).toFixed(1)}%;background:${w.label==="غير مُفسَّر"?"#ef4444":"#14b8a6"}"></i></span><span>${n(w.amount,0)}</span></div>`).join("")+`<div class="muted">${esc(r.note_ar)}</div>${r.inferred_basis_ar?`<div class="na" style="margin-top:6px">${esc(r.inferred_basis_ar)}</div>`:""}`)}
+      <div class="grid2">${panel(`مبيعات بلا فاتورة (${r.sales_without_invoice.length})`,r.sales_without_invoice.length?`<div class="tbl"><table><thead><tr><th>المرجع</th><th>التاريخ</th><th>الفرع</th><th>المبلغ</th></tr></thead><tbody>${r.sales_without_invoice.slice(0,50).map(x=>`<tr><td>${esc(x.reference)}</td><td>${esc(x.date)}</td><td>${esc(x.branch||"—")}</td><td>${n(x.amount)}</td></tr>`).join("")}</tbody></table></div>`:na("لا يوجد"))}${panel(`فواتير بلا مبيعات (${r.invoices_without_sales.length})`,r.invoices_without_sales.length?`<div class="tbl"><table><thead><tr><th>الفاتورة</th><th>التاريخ</th><th>الإجمالي</th></tr></thead><tbody>${r.invoices_without_sales.slice(0,50).map(x=>`<tr><td>${esc(x.invoice_number)}</td><td>${esc(x.date)}</td><td>${n(x.total)}</td></tr>`).join("")}</tbody></table></div>`:na("لا يوجد"))}</div>
+      ${panel(`فروق في فواتير مطابقة (${r.mismatches.length})`,r.mismatches.length?`<div class="tbl"><table><thead><tr><th>الفاتورة</th><th>النوع</th><th>التفاصيل</th></tr></thead><tbody>${r.mismatches.slice(0,80).map(x=>`<tr><td>${esc(x.invoice_number)}</td><td>${{amount:"مبلغ",date:"تاريخ",branch:"فرع"}[x.kind]}</td><td class="muted">${x.kind==="amount"?`المبيعات ${n(x.sales_amount)} · الفاتورة ${n(x.invoice_total)} (الخاضع ${n(x.invoice_taxable)})`:x.kind==="date"?`${esc(x.sales_date)} ↔ ${esc(x.invoice_date)}`:`${esc(x.sales_branch)} ↔ ${esc(x.invoice_branch)}`}</td></tr>`).join("")}</tbody></table></div>`:na("لا فروق"))}`;}
+  function zakat(){const z=D.zakat;return `<div class="tiles">${tile("جاهزية البيانات",z.readiness_pct==null?unav:n(z.readiness_pct,0)+"%","من بنود الوعاء")}${tile("الحساب",unav,`<span class="muted" style="font-size:11px">${esc(z.calculation.reason_ar)}</span>`)}</div>
+      ${panel("تجهيز بيانات الوعاء",`<div class="tbl"><table><thead><tr><th>البند</th><th>المجموعة</th><th>القيمة</th><th>المصدر</th></tr></thead><tbody>${z.items.map(x=>`<tr><td><b>${esc(x.label)}</b></td><td>${esc(x.group)}</td><td>${x.available?n(x.value,0):`<span class="neg">ناقص</span>`}</td><td class="muted">${esc(x.source||"—")}</td></tr>`).join("")}</tbody></table></div><div class="muted">${esc(z.note_ar)} · البنود اليدوية تُكمل من الوحدة المالية ← المدخلات المالية</div><div class="acts"><a class="btn ghost" href="company-financial-intelligence.html#balance">الميزانية العمومية ←</a></div>`)}`;}
+  function einvoice(){const e=D.einvoice,ig=D.integration;
+    return panel("حالة التكامل مع منصة الفوترة",`<div style="font-size:18px;font-weight:800">🔴 ${esc(ig.label_ar)}</div><div class="muted">${esc(ig.note_ar)}</div><div class="rec" style="margin-top:8px"><b>البيئة</b><span>—</span><b>آخر مزامنة</b><span>—</span><b>الإرسالات الفاشلة/المعلّقة</b><span>—</span></div>`)+
+      (e.available?`<div class="tiles">${tile("الفواتير في الفترة",n(e.total,0),"")}${Object.entries(e.by_type).filter(([k,v])=>v).map(([k,v])=>tile(TY[k],n(v,0),"")).join("")}</div>
+      ${panel("صحة الفواتير",Object.entries(e.health).map(([k,v])=>`<div class="barrow drill" data-ivf="${k}"><span class="t">${badge(IV[k][0],IV[k][1])}</span><span>${n(v,0)}</span></div>`).join("")+`<div class="muted">اضغط حالة لعرض فواتيرها</div>`)}
+      ${Object.keys(e.zatca_statuses).length?panel("حالات الإرسال كما وردت في سجلك",Object.entries(e.zatca_statuses).map(([k,v])=>`<div class="barrow"><span class="t">${esc(k)}</span><span>${n(v,0)}</span></div>`).join("")):""}`:na(e.reason_ar))+
+      panel("مراحل الفوترة الإلكترونية (من الإعدادات التنظيمية)",`<div class="rec"><b>المرحلة الأولى</b><span>${esc(e.phases.phase1.value)} — ${esc(e.phases.phase1.applicability)}</span><b>المرحلة الثانية</b><span>${esc(e.phases.phase2.value)} — ${esc(e.phases.phase2.applicability)}</span><b>المصدر</b><span>${esc(e.phases.phase1.source)}</span></div>`);}
+  function invoices(){const list=D.invoices.filter(c=>ivFilter==="all"||c.status===ivFilter);
+    return panel("فحص الفواتير",`<div class="chips" style="margin-bottom:8px">${[["all","الكل"],...Object.entries(IV).map(([k,v])=>[k,v[0]])].map(([k,l])=>`<div class="schip ${ivFilter===k?"on":""}" data-ivf="${k}" style="cursor:pointer;${ivFilter===k?"outline:2px solid #14b8a6":""}">${esc(l)} ${k==="all"?n(D.invoices.length,0):n(D.einvoice.health[k],0)}</div>`).join("")}</div>
+      ${list.length?`<div class="tbl"><table><thead><tr><th>الفاتورة</th><th>التاريخ</th><th>النوع</th><th>الفرع</th><th>الخاضع</th><th>الضريبة</th><th>الإجمالي</th><th>الحالة</th><th>الملاحظات</th></tr></thead><tbody>${list.slice(0,200).map(c=>`<tr><td><b>${esc(c.invoice_number||"—")}</b></td><td>${esc(c.issue_date)}</td><td>${TY[c.type]||"—"}</td><td>${esc(c.branch||"—")}</td><td>${n(c.taxable)}</td><td>${n(c.vat)}</td><td>${n(c.total)}</td><td>${badge(IV[c.status][0],IV[c.status][1])}</td><td class="muted" style="white-space:normal;font-size:12px">${c.issues.map(esc).join(" · ")||"—"}</td></tr>`).join("")}</tbody></table></div>`:na(D.einvoice.available?"لا فواتير بهذه الحالة":D.einvoice.reason_ar)}<div class="muted">الفحص يغطي الحقول الأساسية وتناسق المبالغ والتكرار والإشعارات — وليس كامل مواصفات XML والتوقيع.</div>`);}
+  function branches(){return panel("الضريبة حسب الفرع",D.branches.length?`<div class="tbl"><table><thead><tr><th>الفرع</th><th>المبيعات</th><th>الضريبة المسجلة</th><th>المتوقعة</th><th>من الفواتير</th><th>الفواتير</th><th>أخطاء</th><th>حالة البيانات</th></tr></thead><tbody>${D.branches.map(b=>`<tr><td><b>${esc(b.branch)}</b></td><td>${n(b.sales,0)}</td><td>${b.vat_recorded==null?"—":n(b.vat_recorded)}</td><td>${b.vat_expected==null?"—":n(b.vat_expected)}</td><td>${b.vat_invoices==null?"—":n(b.vat_invoices)}</td><td>${n(b.invoices,0)}</td><td class="${b.invoice_errors?"neg":""}">${n(b.invoice_errors,0)}</td><td>${badge(b.data_status,b.data_status==="مكتملة"?"#10b981":b.data_status==="جزئية"?"#f5b301":"#ef4444")}</td></tr>`).join("")}</tbody></table></div>`:na("المبيعات غير مسندة لفروع"));}
+  function calendar(){const c=D.calendar;if(!c.available)return panel("التقويم والاستحقاقات",na(c.reason_ar)+(D.can_edit?`<div class="acts"><button class="btn" data-act="settings">حدد دورية الإقرار</button></div>`:""));
+    return panel("التقويم والاستحقاقات",`<div class="tbl"><table><thead><tr><th>الفترة</th><th>النوع</th><th>الاستحقاق</th><th>المتبقي</th><th>الحالة</th><th>المسؤول</th><th></th></tr></thead><tbody>${c.items.slice().reverse().map(x=>`<tr><td><b>${esc(x.period)}</b></td><td>${esc(x.type)}</td><td>${esc(x.due_date)}</td><td>${x.status==="filed"?"—":(x.days_remaining<0?`<span class="neg">متأخر ${n(-x.days_remaining,0)}</span>`:n(x.days_remaining,0)+" يوم")}</td><td>${badge(CAL[x.status][0],CAL[x.status][1])}${x.filed_on?` <span class="muted">${esc(x.filed_on)}</span>`:""}</td><td>${esc(x.responsible||"—")}</td><td>${D.can_edit?(x.status==="filed"?`<button class="btn ghost" data-filed="${esc(x.period)}" data-undo="1">تراجع</button>`:`<button class="btn" data-filed="${esc(x.period)}">تسجيل التقديم</button>`):""}</td></tr>`).join("")}</tbody></table></div><div class="muted">القاعدة: ${esc(c.rule.applicability)} — المصدر: ${esc(c.rule.source)}</div>`);}
+  function exposure(){const e=D.exposures;return panel("التعرض المحتمل",e.length?e.map(x=>`<div class="event"><h4>${esc(x.label)}</h4><div class="rec"><b>السجلات المتأثرة</b><span>${n(x.records,0)}</span><b>الأثر الضريبي</b><span>${x.tax_amount==null?"—":n(x.tax_amount)}</span><b>الأساس</b><span>${esc(x.basis_ar)}</span><b>الغرامة</b><span>${x.penalty_estimate==null?`<span class="muted">${esc(x.penalty_note_ar)}</span>`:n(x.penalty_estimate)+" — "+esc(x.penalty_note_ar)}</span><b>الثقة</b><span>${{low:"منخفضة",medium:"متوسطة",high:"عالية"}[x.confidence]}</span></div></div>`).join(""):na("لا تعرض مكتشف وفق الفحوص"));}
+  function quality(){return panel("جودة البيانات الضريبية",D.quality.map(q=>`<div class="perf"><span>${esc(q.dimension)}</span>${q.score==null?`<span class="muted">غير متاح</span><span></span>`:`<span class="g"><i style="width:${q.score}%;background:${q.score>=85?"#10b981":q.score>=60?"#f5b301":"#ef4444"}"></i></span><b>${n(q.score,0)}</b>`}</div><div class="muted" style="font-size:11px;margin:-4px 0 8px">${esc(q.detail||"")}</div>`).join(""));}
+  function audit(){if(!AUD){fetch("/company/tax/audit",{headers:H}).then(r=>r.json()).then(j=>{AUD=j.items||[];if(route()[0]==="audit")render();});return panel("سجل التدقيق",`<div class="state">…</div>`);}
+    return panel("سجل التدقيق — من، ماذا، متى، القيمة السابقة والجديدة",AUD.length?`<div class="tbl"><table><thead><tr><th>متى</th><th>من</th><th>الإجراء</th><th>الهدف</th><th>التفاصيل</th></tr></thead><tbody>${AUD.map(a=>`<tr><td>${esc((a.when||"").replace("T"," "))}</td><td>${esc(a.who)}</td><td>${esc(a.action)}</td><td>${esc(a.target)}</td><td class="muted" style="white-space:normal;font-size:11px;max-width:420px">${esc(a.details)}</td></tr>`).join("")}</tbody></table></div>`:na("لا سجلات بعد"));}
+  function alerts(){const r=D.signals.filter(s=>s.type==="risk"),q=D.signals.filter(s=>s.type==="data_quality");return panel(`🔴 ${n(r.length,0)} قضايا امتثال تحتاج إجراء`,r.map((s,i)=>sigCard(s,i)).join("")||na("لا قضايا"))+panel(`🔵 ${n(q.length,0)} بيانات ناقصة`,q.map(s=>sigCard(s)).join("")||na("—"));}
+  function rules(){const g=D.regulatory;return panel("طبقة الإعدادات التنظيمية",`<div class="tbl"><table><thead><tr><th>القاعدة</th><th>القيمة</th><th>تاريخ السريان</th><th>الإصدار</th><th>النطاق</th><th>المصدر</th></tr></thead><tbody>${Object.entries(g).map(([k,v])=>`<tr><td><b>${esc(k)}</b>${v.overridden?" ✎":""}</td><td style="white-space:normal">${esc(Array.isArray(v.value)?(v.value.length?JSON.stringify(v.value):"—"):String(v.value))}</td><td>${esc(v.effective_date||"—")}</td><td>${esc(v.version)}</td><td class="muted" style="white-space:normal;font-size:12px">${esc(v.applicability||"")}</td><td class="muted" style="font-size:12px">${esc(v.source||"—")}</td></tr>`).join("")}</tbody></table></div><div class="muted">تُحدَّث القواعد من الإعدادات بمصدرها دون إعادة بناء النظام. ✎ = معدّلة لشركتك. تحقّق دائماً من المصدر الرسمي.</div>`);}
+  function render(){const d=D;
+    if(!d.has_data){$("tabs").innerHTML="";const r=d.required||{};$("content").innerHTML=`<div class="state"><div style="font-size:16px;margin-bottom:10px">${esc(d.message_ar)}</div><div class="muted">المطلوب: ${(r.required||[]).map(esc).join("، ")}</div><div class="muted">مستحسن: ${(r.recommended||[]).map(esc).join("، ")}</div><div class="cta" style="justify-content:center"><a class="btn" href="company-data-center.html">مركز البيانات</a></div></div>`;return;}
+    const [v]=route();
+    $("tabs").innerHTML=TABS.map(([k,l],i)=>`<button class="tab ${k===v?"on":""}" data-go="${k}"><span class="muted" style="font-size:10px">${String(i+1).padStart(2,"0")}</span> ${l}${k==="alerts"&&d.overview.open_issues?` <span class="b high">${d.overview.open_issues}</span>`:""}</button>`).join("");
+    const view={overview,status,vat,recon,zakat,einvoice,invoices,branches,calendar,exposure,quality,audit,alerts,rules}[v];
+    $("content").innerHTML=view?view():overview();bind();}
+  function bind(){document.querySelectorAll("[data-go]").forEach(el=>el.onclick=e=>{e.stopPropagation();go(el.dataset.go,el.dataset.arg||null);});
+    document.querySelectorAll("#content [data-act='settings']").forEach(el=>el.onclick=settings);
+    document.querySelectorAll("#content [data-ivf]").forEach(el=>el.onclick=()=>{ivFilter=el.dataset.ivf;if(route()[0]!=="invoices")go("invoices");else render();});
+    document.querySelectorAll("#content [data-filed]").forEach(b=>b.onclick=()=>fetch("/company/tax/mark-filed",{method:"POST",headers:H,body:JSON.stringify({period:b.dataset.filed,undo:!!b.dataset.undo})}).then(async r=>{if(r.ok){AUD=null;load();}else{const j=await r.json().catch(()=>({}));alert(j.detail||"HTTP "+r.status);}}));
+    document.querySelectorAll("#content [data-sig]").forEach(b=>b.onclick=()=>decision(b));
+    document.querySelectorAll("#content [data-q]").forEach(c=>c.onclick=()=>runAI(c.dataset.q));}
+  function settings(){const s=D.saved_settings||{};
+    $("modal").innerHTML=`<h3 style="margin-top:0">إعدادات الضريبة</h3><div class="fg"><label>الرقم الضريبي للمنشأة<input id="sVat" value="${esc(s.vat_number||"")}" placeholder="3xxxxxxxxxxxxx3"></label><label>دورية الإقرار<select id="sFreq"><option value="">غير محدد</option><option value="monthly" ${s.filing_frequency==="monthly"?"selected":""}>شهري</option><option value="quarterly" ${s.filing_frequency==="quarterly"?"selected":""}>ربع سنوي</option></select></label><label>مبالغ المبيعات<select id="sInc"><option value="">غير محدد (لا نفترض)</option><option value="true" ${s.prices_include_vat===true?"selected":""}>شاملة الضريبة</option><option value="false" ${s.prices_include_vat===false?"selected":""}>قبل الضريبة</option></select></label><label>المسؤول عن الإقرارات<input id="sResp" value="${esc(s.responsible||"")}"></label></div>
+      <h4>قاعدة غرامة (اختياري — بمصدرها)</h4><div class="fg"><label>تنطبق على<select id="pApp"><option value="">—</option><option value="invoice_errors">أخطاء الفواتير</option><option value="late_filing">التأخر في الإقرار</option><option value="reconciliation">فروق المطابقة</option></select></label><label>النسبة % من الأثر الضريبي<input id="pPct" inputmode="decimal"></label><label>المصدر (إلزامي)<input id="pSrc" placeholder="رقم القرار/اللائحة والرابط"></label></div>
+      <div class="cta"><button class="btn" id="mSave">حفظ</button><button class="btn ghost" id="mCancel">إلغاء</button><span id="mMsg" class="muted"></span></div><div class="muted">كل تعديل يُسجّل في سجل التدقيق بالقيمة السابقة والجديدة.</div>`;
+    $("ov").classList.add("on");$("mCancel").onclick=()=>$("ov").classList.remove("on");
+    $("mSave").onclick=()=>{const body={vat_number:$("sVat").value,filing_frequency:$("sFreq").value,prices_include_vat:$("sInc").value===""?null:$("sInc").value,responsible:$("sResp").value};
+      const ov=Object.assign({},D.regulatory_overrides||{});if($("pApp").value&&$("pPct").value){const cur=((ov.penalties||{}).value)||[];ov.penalties={value:cur.concat([{applies_to:$("pApp").value,percent:Number($("pPct").value),source:$("pSrc").value}]),source:$("pSrc").value,version:"1"};body.regulatory_overrides=ov;}
+      fetch("/company/tax/settings",{method:"POST",headers:H,body:JSON.stringify(body)}).then(async r=>{const j=await r.json().catch(()=>({}));if(r.ok){$("ov").classList.remove("on");AUD=null;load();}else{$("mMsg").className="neg";$("mMsg").textContent=typeof j.detail==="string"?j.detail:"HTTP "+r.status;}});};}
+  function decision(b){const box=b.closest(".event").querySelector(".frm");
+    box.innerHTML=`<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap"><input class="f o" placeholder="المسؤول (مثلاً المدير المالي)"><input class="f d" type="date"><button class="btn c">إنشاء</button></div><div class="m muted"></div>`;
+    box.querySelector(".c").onclick=()=>fetch("/company/tax/to-decision",{method:"POST",headers:H,body:JSON.stringify({signal_id:b.dataset.sig,owner:box.querySelector(".o").value,due_date:box.querySelector(".d").value,period:D.period})}).then(async r=>{const j=await r.json().catch(()=>({}));box.querySelector(".m").textContent=r.ok?"تم إنشاء القرار والإجراء ✓ — مسجّل في سجل التدقيق":(typeof j.detail==="string"?j.detail:"HTTP "+r.status);if(r.ok){b.disabled=true;AUD=null;}});}
+  function runAI(q){const out=$("aiOut");out.innerHTML=`<div class="muted">«${esc(q)}» — جارٍ التحليل…</div>`;
+    fetch("/company/tax/ai-insights",{method:"POST",headers:H,body:JSON.stringify({period:D.period,question:q})}).then(async r=>{const j=await r.json().catch(()=>({}));
+      if(!r.ok){out.innerHTML=`<div class="neg">${esc(typeof j.detail==="string"?j.detail:"HTTP "+r.status)}</div>`;return;}
+      const a=j.ai||{},resp=a.response||{},L={FACTS:"الدليل",INTERPRETATION:"القراءة",HYPOTHESES:"أسباب بيانات محتملة",RECOMMENDATIONS:"الإجراء",DATA_GAPS:"بيانات ناقصة"};
+      out.innerHTML=`<div class="muted" style="margin-bottom:6px">«${esc(j.question||q)}» · ليس استشارة ضريبية</div>`+(a.message?`<div class="na">${esc(a.message)}</div>`:"")+Object.keys(L).map(k=>resp[k]&&resp[k].length?`<div class="ai-sec"><b>${L[k]}</b><ul style="margin:0;padding-inline-start:18px">${resp[k].map(x=>`<li>${esc(typeof x==="string"?x:JSON.stringify(x))}</li>`).join("")}</ul></div>`:"").join("");}).catch(e=>{out.innerHTML=`<div class="neg">${esc(e.message||e)}</div>`;});}
+  $("ov").onclick=e=>{if(e.target===$("ov"))$("ov").classList.remove("on");};
+  $("btnSet").onclick=settings;$("fPeriod").addEventListener("change",load);
+  load();
+})();
+</script>
+<script src="nabbah-sidebar.js"></script>
+</body></html>
