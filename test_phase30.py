@@ -36,6 +36,8 @@ ct("clinics: no-show needs appointment data", not cl["no_show"]["available"] and
 ct("no baseline (first month) → no invented leakage", sector_leakage("fnb", {"2026-08": mon["2026-08"]}, "2026-08", [])["items"][0]["available"] is False)
 ct("recurring flag when leakage in ≥2 of last 3 months", sector_leakage("fnb", {**mon, "2026-07": {**mon["2026-07"], "cogs": 31000}}, "2026-08", ["2026-06"])["items"][0]["recurring"] is True)
 ct("all 11 sectors compute without error on the same canonical data", all(sector_leakage(s, mon, "2026-08", ["2026-06", "2026-07"])["items"] for s in SECTORS))
+from sector_intelligence import get_tax_profile
+ct("tax profile per sector (one engine, sector classification)", all(get_tax_profile(s_)["transactions"] for s_ in SECTORS) and "المستخلصات" in " ".join(get_tax_profile("contracting")["transactions"]))
 ct("no NaN", "NaN" not in json.dumps([sector_leakage(s, mon, "2026-08", ["2026-06"]) for s in SECTORS], default=str))
 print(f"\nTOTAL: {P+F} | PASSED: {P} | FAILED: {F}")
 sys.exit(0 if F == 0 else 1)
