@@ -21,7 +21,8 @@
     ]},
     { icon: "💰", label: "المالية", items: [
       { label: "الوحدة المالية", href: "company-financial-intelligence.html" },
-      { label: "تسرب الإيرادات", href: "company-leakage-intelligence.html" },
+      { label: "مركز استرداد الأموال", href: "company-leakage-intelligence.html" },
+      { label: "الضرائب والزكاة", href: "company-tax-intelligence.html" },
       { label: "إدخال البيانات المالية", href: "company-finance.html" },
       { label: "الخزينة والسيولة", href: "company-treasury.html" },
       { label: "التدفق النقدي", href: "company-cashflow.html" },
