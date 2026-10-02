@@ -712,6 +712,15 @@ class CompanyFinSetting(SQLModel, table=True):
     updated_at: _DTCOL = Field(default_factory=_now_naive)
 
 
+class CompanyLeakSetting(SQLModel, table=True):
+    """حدود تحليل التسرب (3.1): أقصى نسبة خصم، نسبة مرتجعات مقبولة، أيام مخاطر الذمم، تكلفة التمويل."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    settings_json: str = "{}"
+    updated_by: str = ""
+    updated_at: _DTCOL = Field(default_factory=_now_naive)
+
+
 class CompanyOpsSetting(SQLModel, table=True):
     """إعدادات العمليات اليدوية: الطاقة اليومية لكل فرع، SLA بالدقائق، المستهدفات."""
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -1310,6 +1319,11 @@ def page_fin_overview():
 @app.get("/company-ops-analytics.html")
 def page_ops_analytics():
     return FileResponse("company-ops-analytics.html")
+
+
+@app.get("/company-leakage-intelligence.html")
+def page_leakage_intelligence():
+    return FileResponse("company-leakage-intelligence.html")
 
 
 @app.get("/company-financial-intelligence.html")
@@ -4165,7 +4179,7 @@ def _load_p24(name):
     """يحمّل محركات 2.4 من المجلد أو من حزمة nabbah_engines."""
     try:
         import sys as _sys, os as _os, importlib
-        for _d in ("phase21", "phase22", "phase23", "phase24", "phase25", "phase26", "phase27", "phase28", "phase29", "phase210", "phase211"):
+        for _d in ("phase21", "phase22", "phase23", "phase24", "phase25", "phase26", "phase27", "phase28", "phase29", "phase210", "phase211", "phase31"):
             _p = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), _d)
             if _p not in _sys.path:
                 _sys.path.insert(0, _p)
@@ -5864,6 +5878,175 @@ def company_financial_ai_insights(data: dict, request: Request, user: User = Dep
     return {"period": res.get("period"), "question": q, "ai": out}
 
 
+# ═══════════════════════════════════════════════════════════
+#  Phase 3.1 — Revenue Leakage Intelligence (يقرأ نفس السجلات؛ لا ينسخها)
+# ═══════════════════════════════════════════════════════════
+def _leak_scope(s, user, need="view"):
+    _ensure_data_tables()
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    company = s.get(Company, user.company_id)
+    role = get_user_role(s, user) if company else None
+    if not company or not (role == "owner" or check_permission(role, "finance", "view") or check_permission(role, "sales", "view")):
+        raise HTTPException(403, "غير مصرّح — تحليل التسرب للمالك والمالية والمديرين")
+    if company.is_active != 1:
+        raise HTTPException(402, "شركتك قيد التفعيل")
+    if need == "edit" and not (role == "owner" or check_permission(role, "finance", "edit")):
+        raise HTTPException(403, "غير مصرّح — تعديل حدود التسرب")
+    return company, role
+
+
+def _leak_settings(s, company_id):
+    r = s.exec(select(CompanyLeakSetting).where(CompanyLeakSetting.company_id == company_id)).first()
+    try:
+        return json.loads(r.settings_json or "{}") if r else {}
+    except (TypeError, ValueError):
+        return {}
+
+
+def _leak_result(s, company, role, *, period=None, grain="month", branch_id=None):
+    le, fe = _load_p24("leakage_engine"), _load_p24("finance_engine")
+    if le is None or fe is None:
+        raise HTTPException(503, "محرّك التسرب غير متاح — " + _p23_diagnostic())
+    names = {b.id: b.name for b in s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company.id)).all()}
+    sales = [dict(r, discount=r.get("discounts")) for r in _sales_rows(s, company.id, {branch_id} if branch_id else None)]
+    cost_map = {p.sku: p.cost for p in s.exec(select(CompanyProduct).where(CompanyProduct.company_id == company.id)).all() if p.sku and p.cost is not None}
+    exp_rows = [{"date": e.date, "amount": e.amount, "category": e.category, "description": e.description, "branch_name": names.get(e.branch_id)}
+                for e in s.exec(select(CompanyExpense).where(CompanyExpense.company_id == company.id).limit(200000)).all()
+                if not branch_id or e.branch_id == branch_id]
+    cash_mv = [{"date": r.date, "direction": r.direction, "amount": r.amount, "movement_type": r.movement_type, "category": r.category,
+                "counterparty": getattr(r, "counterparty", ""), "branch_name": names.get(r.branch_id)}
+               for r in s.exec(select(CompanyCashMovement).where(CompanyCashMovement.company_id == company.id).limit(200000)).all()
+               if not branch_id or r.branch_id == branch_id]
+    ar = [{"invoice_date": r.invoice_date, "due_date": r.due_date, "amount": r.amount, "paid_amount": r.paid_amount,
+           "customer_name": r.customer_name, "branch_name": names.get(r.branch_id)}
+          for r in s.exec(select(CompanyReceivable).where(CompanyReceivable.company_id == company.id).limit(100000)).all()
+          if not branch_id or r.branch_id == branch_id]
+    st = _leak_settings(s, company.id)
+    st["budget"] = (_fin_settings(s, company.id).get("budget") or {})          # موازنة المصروفات من الوحدة المالية — مصدر واحد
+    acts = []
+    for d in s.exec(select(CompanyDecision).where(CompanyDecision.company_id == company.id, CompanyDecision.decision_type == "leakage")).all():
+        parts = (d.linked_to or "").split("|")
+        a = s.exec(select(CompanyAction).where(CompanyAction.company_id == company.id, CompanyAction.decision_id == d.id)).first()
+        stt = (a.status if a else "not_started")
+        acts.append({"id": d.id, "title": d.title, "owner": d.owner, "due_date": d.due_date, "code": d.problem_type,
+                     "dimension": parts[1] if len(parts) > 1 and parts[1] else None, "period": parts[2] if len(parts) > 2 else None,
+                     "expected": d.expected_impact_value, "status": {"completed": "done", "cancelled": "cancelled", "in_progress": "in_progress"}.get(stt, "open")})
+    sensitive = role == "owner" or can_see_sensitive_financials(role)
+    res = le.analyze_leakage(sales, expense_lines=fe.build_expense_lines(exp_rows, cash_mv), receivables=ar, cost_map=cost_map,
+                             settings=st, period=period, grain=grain, actions=acts,
+                             restricted_categories=None if sensitive else {"payroll"},
+                             currency=getattr(company, "currency", None) or "SAR")
+    res["filters"] = {"period": res.get("period"), "grain": grain, "branch_id": branch_id}
+    res["options"] = {"branch_list": [{"id": k, "name": v} for k, v in names.items()]}
+    res["saved_settings"] = {k: v for k, v in st.items() if k != "budget"}
+    res["can_see_sensitive"] = sensitive
+    return res
+
+
+@app.get("/company/leakage-intelligence")
+def company_leakage_intelligence(user: User = Depends(get_current_user), period: str = "", grain: str = "month", branch_id: str = ""):
+    if grain not in ("month", "quarter", "year"):
+        raise HTTPException(422, "التجميع غير صالح")
+    with Session(engine) as s:
+        company, role = _leak_scope(s, user)
+        res = _leak_result(s, company, role, period=period or None, grain=grain, branch_id=_int_or_none(branch_id))
+        res["can_edit"] = role == "owner" or check_permission(role, "finance", "edit")
+        log_audit(company.id, user.id, user.name, "leakage_view", "leakage", f"period={res.get('period')} branch={branch_id or 'all'}")
+        return res
+
+
+@app.post("/company/leakage/settings")
+def company_leakage_settings(data: dict, user: User = Depends(get_current_user)):
+    """حدود التسرب: الفارغ = يُستخدم خط الأساس من تاريخ الشركة نفسها."""
+    with Session(engine) as s:
+        company, role = _leak_scope(s, user, need="edit")
+        out = {}
+        for k, hi in (("max_discount_rate", 100), ("acceptable_return_rate", 100), ("cost_of_capital_annual", 100)):
+            v = data.get(k)
+            if v not in (None, ""):
+                try:
+                    x = float(str(v).replace(",", ""))
+                except ValueError:
+                    raise HTTPException(422, f"قيمة غير رقمية في {k}")
+                if not 0 <= x <= hi:
+                    raise HTTPException(422, f"القيمة خارج النطاق في {k}")
+                out[k] = x
+        rules = {}
+        for k, lo, hi in (("ar_risk_days", 1, 720), ("baseline_months", 1, 12), ("heat_high_pct", 0.1, 50), ("heat_medium_pct", 0.1, 50)):
+            v = (data.get("rules") or {}).get(k)
+            if v not in (None, ""):
+                try:
+                    x = float(v)
+                except ValueError:
+                    raise HTTPException(422, f"قيمة غير رقمية في {k}")
+                if not lo <= x <= hi:
+                    raise HTTPException(422, f"القيمة خارج النطاق في {k}")
+                rules[k] = x
+        out["rules"] = rules
+        row = s.exec(select(CompanyLeakSetting).where(CompanyLeakSetting.company_id == company.id)).first() or CompanyLeakSetting(company_id=company.id)
+        row.settings_json, row.updated_by, row.updated_at = json.dumps(out, ensure_ascii=False), (user.name or user.email)[:100], datetime.now()
+        s.add(row); s.commit()
+        log_audit(company.id, user.id, user.name, "leakage_settings", "leakage", json.dumps(out, ensure_ascii=False)[:500])
+        return {"ok": True, "settings": out}
+
+
+@app.post("/company/leakage/to-decision")
+def company_leakage_to_decision(data: dict, user: User = Depends(get_current_user)):
+    """تسرب → قرار + إجراء استرداد. القيمة المتوقعة تُحفظ منفصلة عن المسترد الفعلي الذي يُقاس لاحقاً."""
+    with Session(engine) as s:
+        company, role = _leak_scope(s, user)
+        _exec_scope(s, user, need="edit")
+        res = _leak_result(s, company, role, period=data.get("period") or None, branch_id=_int_or_none(data.get("branch_id")))
+        sig = next((x for x in res.get("signals", []) if x["id"] == str(data.get("signal_id") or "")), None)
+        if not sig:
+            raise HTTPException(404, "الإشارة غير موجودة أو لم تعد قائمة لهذه الفترة")
+        impact = (sig.get("estimated_impact") or {}).get("value")
+        d = CompanyDecision(
+            company_id=company.id, title=str(data.get("title") or sig["name_ar"])[:200],
+            detail=" · ".join(sig.get("evidence", []))[:1000], owner=str(data.get("owner") or "")[:100],
+            due_date=str(data.get("due_date") or "")[:20], kpi=sig.get("metric_id") or "leakage", status="open",
+            baseline_sales=_company_total_sales(s, company.id),
+            expected_impact=(f"{impact} {res['currency']} (مكتشف — ليس مسترداً)" if impact is not None else "غير قابل للتقدير")[:200],
+            linked_to=f"leakage_signal:{sig['id']}|{sig.get('dimension') or ''}|{res['period']}"[:200],
+            rationale=sig.get("suggested_action_ar", "")[:500], metric_id=sig.get("metric_id") or "leakage",
+            expected_impact_value=impact, impact_status="expected", source_signal=sig["id"], problem_type=sig["code"],
+            decision_type="leakage", outcome_status="pending_measurement", created_by=user.name or user.email,
+            data_source="leakage_engine", updated_at=datetime.now())
+        s.add(d); s.commit(); s.refresh(d)
+        act = CompanyAction(company_id=company.id, decision_id=d.id, title=sig.get("suggested_action_ar", "")[:200],
+                            owner=d.owner, priority="P1" if sig["severity"] == "high" else "P2", due_date=d.due_date,
+                            start_date=datetime.now().strftime("%Y-%m-%d"), updated_at=datetime.now())
+        s.add(act); s.commit(); s.refresh(act)
+        log_audit(company.id, user.id, user.name, "decision_from_leakage_signal", f"decision:{d.id}", f"signal={sig['id']} impact={impact}")
+        return {"ok": True, "decision_id": d.id, "action_ids": [act.id]}
+
+
+@app.post("/company/leakage/ai-insights")
+def company_leakage_ai_insights(data: dict, request: Request, user: User = Depends(get_current_user)):
+    """AI يشرح نتائج محرك التسرب المحسوبة فقط: الدليل، المصدر، الفترة، طريقة الحساب."""
+    with Session(engine) as s:
+        company, role = _leak_scope(s, user)
+        res = _leak_result(s, company, role, period=data.get("period") or None, branch_id=_int_or_none(data.get("branch_id")))
+    if not res.get("has_data"):
+        raise HTTPException(422, res.get("message_ar") or "لا توجد بيانات")
+    gw = _load_p24("ai_gateway")
+    if gw is None:
+        raise HTTPException(503, "بوابة الذكاء الاصطناعي غير متاحة — " + _p23_diagnostic())
+    q = str(data.get("question") or "أين أكبر مصدر للهدر؟")[:300]
+    ctx = {"period": res["period"], "overview": res["overview"],
+           "methods": {k: (res.get(k) or {}).get("method_ar") for k in ("opex", "discount", "returns", "ar")},
+           "branches": [{k: v for k, v in b.items() if k not in ("trend",)} for b in res["branches"]][:10],
+           "root_causes": res["root_causes"], "top_products": res["products"][:8],
+           "signals": [{"name": x["name_ar"], "dimension": x.get("dimension"), "evidence": x.get("evidence")} for x in res["signals"][:8]]}
+    out = gw.request_ai_analysis(gw.GeminiProvider(company_gemini), ctx,
+                                 q + " — أجب من نتائج المحرك فقط واذكر لكل رقم: الدليل والمصدر والفترة وطريقة الحساب. لا تحسب ولا تجزم بسبب غير مثبت.",
+                                 trust_report={"overall_score": 80, "status": "pass", "has_critical_fail": False, "main_causes": []},
+                                 lang=get_lang(request), company=company)
+    log_audit(company.id, user.id, user.name, "leakage_ai_insights", "leakage", f"period={res['period']}")
+    return {"period": res["period"], "question": q, "ai": out}
+
+
 @app.get("/company/executive-intelligence")
 def company_executive_intelligence(request: Request, user: User = Depends(get_current_user),
                                    period: Optional[str] = None, ai: int = 0):
@@ -5882,6 +6065,13 @@ def company_executive_intelligence(request: Request, user: User = Depends(get_cu
                 if _inv.get("has_data"):
                     result.setdefault("module_signals", {})["inventory"] = _inv.get("signals", [])[:6]
                     result["risks"] = result["risks"] + [x for x in _inv.get("signals", []) if x["type"] == "risk"][:2]
+            except HTTPException:
+                pass
+            try:   # إشارات التسرب 3.1
+                _lk = _leak_result(s, company, _role)
+                if _lk.get("has_data"):
+                    result.setdefault("module_signals", {})["leakage"] = _lk.get("signals", [])[:6]
+                    result["risks"] = result["risks"] + [x for x in _lk.get("signals", []) if x["type"] == "risk"][:2]
             except HTTPException:
                 pass
             try:   # إشارات الوحدة المالية 2.11 (للمالك/المحاسب فقط)
@@ -11238,7 +11428,7 @@ ENGINE_MODULES = ("nabbah_finance", "nabbah_trust", "semantic_layer", "kpi_engin
                   "ai_gateway", "period_aggregation", "legacy_adapters", "platform_bridge",
                   "intelligence_engine", "forecast_engine", "scenario_engine", "decision_memory",
                   "rule_catalog", "canonical_model", "period_model", "metric_registry", "ingestion",
-                  "sales_engine", "inventory_engine", "purchases_engine", "cashflow_engine", "hr_engine", "ops_engine", "finance_engine")
+                  "sales_engine", "inventory_engine", "purchases_engine", "cashflow_engine", "hr_engine", "ops_engine", "finance_engine", "leakage_engine")
 
 
 def _runtime_health():
