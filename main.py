@@ -4179,7 +4179,7 @@ def _load_p24(name):
     """يحمّل محركات 2.4 من المجلد أو من حزمة nabbah_engines."""
     try:
         import sys as _sys, os as _os, importlib
-        for _d in ("phase21", "phase22", "phase23", "phase24", "phase25", "phase26", "phase27", "phase28", "phase29", "phase210", "phase211", "phase31"):
+        for _d in ("phase21", "phase22", "phase23", "phase24", "phase25", "phase26", "phase27", "phase28", "phase29", "phase210", "phase211", "phase30", "phase31"):
             _p = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), _d)
             if _p not in _sys.path:
                 _sys.path.insert(0, _p)
@@ -5782,6 +5782,12 @@ def _fin_result(s, company, *, period=None, grain="month"):
                              period=period, grain=grain, branch_context={k: v for k, v in ctx.items() if k},
                              currency=getattr(company, "currency", None) or "SAR")
     res["saved_settings"] = _fin_settings(s, company.id)
+    try:      # مؤشرات القطاع في الوحدة المالية — من نفس الطبقة
+        sb = _sector_block(s, company, period=res.get("period"))
+        res["sector"] = {"sector": sb["sector"], "name_ar": sb["sector_name_ar"], "kpis": sb["kpis"], "watch_ar": sb.get("watch_ar")} if sb else None
+    except Exception as e:
+        _logger.warning(f"sector kpis: {type(e).__name__}: {str(e)[:120]}")
+        res["sector"] = None
     return res
 
 
@@ -5904,6 +5910,105 @@ def _leak_settings(s, company_id):
         return {}
 
 
+# ═══════════════════════════════════════════════════════════
+#  Sector Intelligence Layer — كل وحدة تسأل الطبقة نفسها (Core + قواعد القطاع)
+# ═══════════════════════════════════════════════════════════
+def _sector_inputs(s, company, branch_id=None):
+    """سلاسل شهرية موحدة لمؤشرات القطاع: الإيراد، التكلفة، الرواتب، التوصيل، الفاقد — من نفس السجلات."""
+    fe = _load_p24("finance_engine")
+    names = {b.id: b.name for b in s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company.id)).all()}
+    cost = {p.sku: p.cost for p in s.exec(select(CompanyProduct).where(CompanyProduct.company_id == company.id)).all() if p.sku and p.cost is not None}
+    mon = {}
+    for r in _sales_rows(s, company.id, {branch_id} if branch_id else None):
+        ym = str(r.get("date") or "")[:7]
+        if not ym:
+            continue
+        m = mon.setdefault(ym, {"revenue": 0.0, "gross": 0.0, "discounts": 0.0, "returns": 0.0, "delivery_rev": 0.0, "cogs": None})
+        g, d_, rt = r.get("gross_sales") or 0, r.get("discounts") or 0, r.get("returns") or 0
+        net = r.get("net_sales") if r.get("net_sales") is not None else g - d_ - rt
+        m["revenue"] += net; m["gross"] += g; m["discounts"] += d_; m["returns"] += rt
+        if any(w in str(r.get("channel") or "").lower() for w in ("توصيل", "delivery", "تطبيق")):
+            m["delivery_rev"] += net
+        if r.get("quantity") is not None and cost.get(r.get("product_sku")) is not None:
+            m["cogs"] = (m["cogs"] or 0) + r["quantity"] * cost[r["product_sku"]]
+    if fe is not None:
+        exp = [{"date": e.date, "amount": e.amount, "category": e.category, "description": e.description, "branch_name": names.get(e.branch_id)}
+               for e in s.exec(select(CompanyExpense).where(CompanyExpense.company_id == company.id).limit(200000)).all() if not branch_id or e.branch_id == branch_id]
+        cm = [{"date": r.date, "direction": r.direction, "amount": r.amount, "movement_type": r.movement_type, "category": r.category,
+               "counterparty": getattr(r, "counterparty", ""), "branch_name": names.get(r.branch_id)}
+              for r in s.exec(select(CompanyCashMovement).where(CompanyCashMovement.company_id == company.id).limit(200000)).all() if not branch_id or r.branch_id == branch_id]
+        for x in fe.build_expense_lines(exp, cm):
+            m = mon.get(x["ym"])
+            if m is None:
+                continue
+            if x["cat"] == "payroll":
+                m["payroll"] = (m.get("payroll") or 0) + float(x["amount"])
+            if x["cat"] == "delivery":
+                m["delivery_exp"] = (m.get("delivery_exp") or 0) + float(x["amount"])
+    for r in s.exec(select(CompanyInventory).where(CompanyInventory.company_id == company.id).limit(100000)).all():
+        if branch_id and r.branch_id != branch_id:
+            continue
+        m = mon.get(r.period)
+        if m is None or r.adjustments_qty is None:
+            continue
+        uc = cost.get(r.product_sku) or ((r.closing_value / r.closing_qty) if r.closing_qty and r.closing_value is not None else None)
+        if uc is not None:
+            m["shrinkage"] = (m.get("shrinkage") or 0) + (max(0.0, -r.adjustments_qty) * uc)
+    supplier_items, obsolete = None, None
+    try:
+        pr = _purchases_result(s, company, branch_id=branch_id)
+        if pr.get("has_data"):
+            supplier_items = [{"product": p["product_sku"], "supplier": "، ".join(p.get("suppliers") or []) or None, "change_pct": p.get("variance_pct"),
+                               "impact": round((p["avg_unit_cost"] - p["baseline_unit_cost"]) * (p["qty"] or 0), 2) if p.get("variance_pct") and p["variance_pct"] > 0 else 0,
+                               "potential_saving": (p.get("potential_saving") or {}).get("value") or 0}
+                              for p in pr.get("products", []) if p.get("baseline_unit_cost") is not None and p.get("avg_unit_cost") is not None]
+    except HTTPException:
+        pass
+    try:
+        inv = _inventory_result(s, company, branch_id=branch_id)
+        if inv.get("has_data"):
+            obsolete = ((inv.get("kpis") or {}).get("obsolete_value") or {}).get("current")
+    except HTTPException:
+        pass
+    return mon, supplier_items, obsolete
+
+
+def _sector_block(s, company, period=None, branch_id=None):
+    si = _load_p24("sector_intelligence")
+    if si is None:
+        return None
+    mon, sup, obs = _sector_inputs(s, company, branch_id)
+    months = sorted(mon)
+    if not months:
+        return None
+    cur = period if period in months else months[-1]
+    base = [m for m in months if m < cur][-3:]
+    targets = (_leak_settings(s, company.id).get("sector_targets") or {})
+    block = si.sector_leakage(getattr(company, "sector", None), mon, cur, base, supplier_items=sup, obsolete_value=obs, targets=targets)
+    block["kpis"] = si.compute_kpis(getattr(company, "sector", None), mon, cur, base, targets=targets)
+    return block
+
+
+@app.get("/company/sector-profile")
+def company_sector_profile(user: User = Depends(get_current_user)):
+    """ملف القطاع للشركة: المصطلحات، مؤشرات القطاع، أنواع التسرب المطبقة وما تحتاجه من بيانات — تستخدمه كل الوحدات."""
+    with Session(engine) as s:
+        _ensure_data_tables()
+        if not user.company_id:
+            raise HTTPException(403, "لا توجد شركة نشطة")
+        company = s.get(Company, user.company_id)
+        if not company:
+            raise HTTPException(404, "الشركة غير موجودة")
+        si = _load_p24("sector_intelligence")
+        if si is None:
+            raise HTTPException(503, "طبقة القطاعات غير متاحة — " + _p23_diagnostic())
+        p = si.get_profile(getattr(company, "sector", None))
+        return {"sector": p["key"], "name_ar": p["name_ar"], "terms": p["terms"], "core_kpis": p["core_kpis"],
+                "sector_kpis": [{"code": k, **{x: si.KPI_DEFS[k][x] for x in ("name_ar", "formula_ar")}} for k in p["kpis"]],
+                "leakage_types": [{"code": t["code"], "name_ar": t["name_ar"], "group": t["group"], "needs_ar": t.get("needs_ar")} for t in p["leakage"]],
+                "watch_ar": p.get("watch_ar")}
+
+
 def _leak_result(s, company, role, *, period=None, grain="month", branch_id=None):
     le, fe = _load_p24("leakage_engine"), _load_p24("finance_engine")
     if le is None or fe is None:
@@ -5936,7 +6041,8 @@ def _leak_result(s, company, role, *, period=None, grain="month", branch_id=None
     res = le.analyze_leakage(sales, expense_lines=fe.build_expense_lines(exp_rows, cash_mv), receivables=ar, cost_map=cost_map,
                              settings=st, period=period, grain=grain, actions=acts,
                              restricted_categories=None if sensitive else {"payroll"},
-                             currency=getattr(company, "currency", None) or "SAR")
+                             currency=getattr(company, "currency", None) or "SAR",
+                             sector_block=_sector_block(s, company, period=period, branch_id=branch_id) if sensitive else None)
     res["filters"] = {"period": res.get("period"), "grain": grain, "branch_id": branch_id}
     res["options"] = {"branch_list": [{"id": k, "name": v} for k, v in names.items()]}
     res["saved_settings"] = {k: v for k, v in st.items() if k != "budget"}
@@ -5984,6 +6090,17 @@ def company_leakage_settings(data: dict, user: User = Depends(get_current_user))
                     raise HTTPException(422, f"القيمة خارج النطاق في {k}")
                 rules[k] = x
         out["rules"] = rules
+        tg = {}
+        for k, v in (data.get("sector_targets") or {}).items():
+            if v not in (None, "") and re.match(r"^[a-z_]{2,40}$", k):
+                try:
+                    x = float(v)
+                except ValueError:
+                    raise HTTPException(422, f"قيمة غير رقمية في {k}")
+                if not 0 <= x <= 100:
+                    raise HTTPException(422, f"القيمة خارج النطاق في {k}")
+                tg[k] = x
+        out["sector_targets"] = tg
         row = s.exec(select(CompanyLeakSetting).where(CompanyLeakSetting.company_id == company.id)).first() or CompanyLeakSetting(company_id=company.id)
         row.settings_json, row.updated_by, row.updated_at = json.dumps(out, ensure_ascii=False), (user.name or user.email)[:100], datetime.now()
         s.add(row); s.commit()
@@ -11428,7 +11545,7 @@ ENGINE_MODULES = ("nabbah_finance", "nabbah_trust", "semantic_layer", "kpi_engin
                   "ai_gateway", "period_aggregation", "legacy_adapters", "platform_bridge",
                   "intelligence_engine", "forecast_engine", "scenario_engine", "decision_memory",
                   "rule_catalog", "canonical_model", "period_model", "metric_registry", "ingestion",
-                  "sales_engine", "inventory_engine", "purchases_engine", "cashflow_engine", "hr_engine", "ops_engine", "finance_engine", "leakage_engine")
+                  "sales_engine", "inventory_engine", "purchases_engine", "cashflow_engine", "hr_engine", "ops_engine", "finance_engine", "sector_intelligence", "leakage_engine")
 
 
 def _runtime_health():
