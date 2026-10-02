@@ -70,6 +70,28 @@ ct("overdue + counts + expected vs measured kept separate", rp["overdue"] == 1 a
 newcat = exp + [{"ym": "2026-08", "cat": "maintenance", "amount": 900, "branch": "C", "source": "cash"}]
 nc = analyze_leakage(sales, expense_lines=newcat)
 ct("new expense category with zero baseline: no crash, flagged as new spend", any("لم يُصرف عليه" in e for s in nc["signals"] for e in s["evidence"]))
+print("[GROUP] Money Recovery Center")
+mo = r["money"]
+ct("4 money metrics: detected / opportunity / recovered / recurring", mo["detected"] == 5000.0 and mo["opportunity"] is not None and mo["recovered"] is not None and "recurring" in mo)
+ct("returns opportunity = gap to best branch (A at 2%) — not the full leakage", next(x for x in mo["opportunity_lines"] if x["key"] == "returns")["amount"] == 1000.0 and "أفضل فرع" in next(x for x in mo["opportunity_lines"] if x["key"] == "returns")["basis_ar"])
+ct("every money metric carries its published rule", all(k in mo["rules_ar"] for k in ("detected", "opportunity", "recovered", "recurring")))
+ct("AR collectible separate (no recent payers → 0)", mo["collectible_ar"] == 0.0)
+ct("money language in signal names (SAR)", any("أعلى من المعتاد بـ" in s["name_ar"] and "SAR" in s["name_ar"] for s in r["signals"]))
+ct("drill-down: discount transactions + promotions", r["discount"]["transactions"][0]["amount"] == 1500.0 and r["discount"]["by_promotion"][0]["key"] == "بدون حملة")
+rec = analyze_leakage(sales + [S("2026-07", "C", "كيك", "حلويات", 10000, 1500, 200)])
+ct("recurring leakage = type present ≥2 of last 3 months", any(x["key"] == "discount" for x in rec["money"]["recurring_lines"]))
+import sys as _s; _s.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "../phase30"))
+from sector_intelligence import sector_leakage
+monthly = {m: {"revenue": 16600, "cogs": 5000, "payroll": 4000 if m != "2026-08" else 6000} for m in ("2026-05", "2026-06", "2026-07", "2026-08")}
+sb = sector_leakage("fnb", monthly, "2026-08", ["2026-05", "2026-06", "2026-07"], supplier_items=[{"product": "دجاج", "supplier": "أ", "impact": 700, "change_pct": 11, "potential_saving": 300}])
+rs = analyze_leakage(sales, expense_lines=exp, sector_block=sb)
+lab = next(i for i in sb["items"] if i["code"] == "labor_cost")
+ct("sector item (labor cost % F&B) added to detected", rs["money"]["detected"] == round(5000 + lab["amount"], 2))
+ct("labor supersedes payroll opex excess (no double counting)", any(l.get("superseded_ar") for l in rs["opex"]["lines"] if l["key"] == "payroll"))
+sup = next(i for i in sb["items"] if i["code"] == "supplier_price")
+ct("supplier price increase is 'part of' food cost → shown, not added; recoverable = vs cheapest supplier", sup["in_total"] is False and sup["part_of"] == "food_cost" and sup["recoverable"] == 300)
+ct("sector data-needed types listed as unavailable with required data", any(i["code"] == "waste" and not i["available"] and "سجل الهدر" in i["reason_ar"] for i in sb["items"]))
+ct("sector signal speaks money", any(s["code"] == "sector_labor_cost" and "SAR" in s["name_ar"] for s in rs["signals"]))
 print("[GROUP] RBAC & safety")
 rr = analyze_leakage(sales, expense_lines=exp, restricted_categories={"payroll"})
 pl = next(l for l in rr["opex"]["lines"] if l["key"] == "payroll")
