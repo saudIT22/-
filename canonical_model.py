@@ -16,6 +16,11 @@ ENTITIES = {
               "basic_salary": SENSITIVE, "allowances": SENSITIVE, "benefits": SENSITIVE,
               "performance_rating": OPTIONAL, "last_promotion_date": OPTIONAL, "training_hours": OPTIONAL,
               "absence_days": OPTIONAL, "overtime_hours": OPTIONAL, "critical_role": OPTIONAL, "successors": OPTIONAL}},
+ # ── Phase 3.2 — سجل الفواتير الضريبية/الإلكترونية (تصدير من نظام الفوترة)
+ "tax_invoice": {"ar": "سجل الفواتير الضريبية", "en": "Tax invoice register", "table": "companytaxinvoice",
+   "fields": {"invoice_number": REQUIRED, "issue_date": REQUIRED, "invoice_type": OPTIONAL, "branch_id": OPTIONAL,
+              "buyer_name": OPTIONAL, "buyer_vat": OPTIONAL, "taxable_amount": OPTIONAL, "vat_amount": OPTIONAL,
+              "total_amount": OPTIONAL, "currency": OPTIONAL, "original_invoice": OPTIONAL, "zatca_status": OPTIONAL}},
  # ── Phase 2.11 — المصروفات التشغيلية من النظام المحاسبي (اختياري: يحوّل المصروفات من الأساس النقدي إلى المسجّل)
  "expense": {"ar": "المصروفات", "en": "Expenses", "table": "companyexpense",
    "fields": {"date": REQUIRED, "amount": REQUIRED, "category": OPTIONAL, "description": OPTIONAL,
@@ -76,8 +81,8 @@ ENTITIES = {
 DATASET_TYPES = tuple(ENTITIES)
 NUMERIC = {"quantity", "gross_sales", "discounts", "returns", "net_sales", "vat", "unit_cost", "total_cost",
            "opening_qty", "opening_value", "purchases_qty", "sold_qty", "adjustments_qty", "closing_qty",
-           "closing_value", "amount", "cost", "selling_price", "monthly_cost", "credit_limit", "inflow", "outflow", "received_qty", "rejected_qty", "balance", "paid_amount", "basic_salary", "allowances", "benefits", "performance_rating", "training_hours", "absence_days", "overtime_hours", "successors", "applicants", "interviews", "offers", "hires", "hiring_cost", "items", "sla_hours"}
-DATE_FIELDS = {"date", "hire_date", "termination_date", "expected_date", "received_date", "invoice_date", "due_date", "paid_date", "last_promotion_date", "opened_date", "filled_date"}
+           "closing_value", "amount", "cost", "selling_price", "monthly_cost", "credit_limit", "inflow", "outflow", "received_qty", "rejected_qty", "balance", "paid_amount", "basic_salary", "allowances", "benefits", "performance_rating", "training_hours", "absence_days", "overtime_hours", "successors", "applicants", "interviews", "offers", "hires", "hiring_cost", "items", "sla_hours", "taxable_amount", "vat_amount", "total_amount"}
+DATE_FIELDS = {"date", "hire_date", "termination_date", "expected_date", "received_date", "invoice_date", "due_date", "paid_date", "last_promotion_date", "opened_date", "filled_date", "issue_date"}
 PERIOD_FIELDS = {"period"}
 # تاريخ + وقت (العمليات تُقاس بالدقائق). وقت بلا تاريخ يُدمج مع «التاريخ» في نفس الصف.
 DATETIME_FIELDS = {"created_time", "ready_time", "delivered_time", "due_time", "start_time", "end_time",
@@ -90,6 +95,7 @@ DUP_KEYS = {"sale": ("date", "branch_id", "reference", "product_sku"),
             "employee": ("employee_code",), "product": ("sku",), "supplier": ("name",),
             "customer": ("name", "phone", "email"),
             "expense": ("date", "amount", "description", "branch_id"),
+            "tax_invoice": ("invoice_number", "invoice_type", "issue_date", "total_amount", "branch_id"),
             "operation_order": ("reference", "branch_id"),
             "process_event": ("reference", "stage", "start_time"),
             "operational_issue": ("title", "opened_time", "branch_id"),
