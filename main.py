@@ -712,6 +712,37 @@ class CompanyFinSetting(SQLModel, table=True):
     updated_at: _DTCOL = Field(default_factory=_now_naive)
 
 
+class CompanyTaxInvoice(SQLModel, table=True):
+    """سجل الفواتير الضريبية/الإلكترونية — Phase 3.2 (تصدير من نظام الفوترة؛ لا تكامل مباشر)."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    branch_id: Optional[int] = Field(default=None, index=True)
+    invoice_number: str = Field(default="", index=True)
+    issue_date: str = Field(default="", index=True)
+    invoice_type: str = ""
+    buyer_name: str = ""
+    buyer_vat: str = ""
+    taxable_amount: Optional[float] = None
+    vat_amount: Optional[float] = None
+    total_amount: Optional[float] = None
+    currency: str = ""
+    original_invoice: str = ""
+    zatca_status: str = ""
+    extra_json: str = ""
+    dataset_id: Optional[int] = Field(default=None, index=True)
+    source_row: Optional[int] = None
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+class CompanyTaxSetting(SQLModel, table=True):
+    """إعدادات الضرائب: الرقم الضريبي، دورية الإقرار، شمول الأسعار للضريبة، الإقرارات المقدمة، والإعدادات التنظيمية."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    settings_json: str = "{}"
+    updated_by: str = ""
+    updated_at: _DTCOL = Field(default_factory=_now_naive)
+
+
 class CompanyLeakSetting(SQLModel, table=True):
     """حدود تحليل التسرب (3.1): أقصى نسبة خصم، نسبة مرتجعات مقبولة، أيام مخاطر الذمم، تكلفة التمويل."""
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -1319,6 +1350,11 @@ def page_fin_overview():
 @app.get("/company-ops-analytics.html")
 def page_ops_analytics():
     return FileResponse("company-ops-analytics.html")
+
+
+@app.get("/company-tax-intelligence.html")
+def page_tax_intelligence():
+    return FileResponse("company-tax-intelligence.html")
 
 
 @app.get("/company-leakage-intelligence.html")
@@ -4179,7 +4215,7 @@ def _load_p24(name):
     """يحمّل محركات 2.4 من المجلد أو من حزمة nabbah_engines."""
     try:
         import sys as _sys, os as _os, importlib
-        for _d in ("phase21", "phase22", "phase23", "phase24", "phase25", "phase26", "phase27", "phase28", "phase29", "phase210", "phase211", "phase30", "phase31"):
+        for _d in ("phase21", "phase22", "phase23", "phase24", "phase25", "phase26", "phase27", "phase28", "phase29", "phase210", "phase211", "phase30", "phase31", "phase32"):
             _p = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), _d)
             if _p not in _sys.path:
                 _sys.path.insert(0, _p)
@@ -4444,6 +4480,8 @@ _IMPORT_TARGETS = {
                                       "last_promotion_date", "training_hours", "absence_days", "overtime_hours",
                                       "critical_role", "successors")),
     "expense": ("CompanyExpense", ("branch_id", "date", "amount", "category", "description", "vendor")),
+    "tax_invoice": ("CompanyTaxInvoice", ("branch_id", "invoice_number", "issue_date", "invoice_type", "buyer_name", "buyer_vat",
+                                          "taxable_amount", "vat_amount", "total_amount", "currency", "original_invoice", "zatca_status")),
     "operation_order": ("CompanyOpsOrder", ("branch_id", "department_id", "reference", "date", "service", "status",
                                             "created_time", "ready_time", "delivered_time", "due_time", "items",
                                             "accurate", "defect_type", "rework")),
@@ -6164,6 +6202,195 @@ def company_leakage_ai_insights(data: dict, request: Request, user: User = Depen
     return {"period": res["period"], "question": q, "ai": out}
 
 
+# ═══════════════════════════════════════════════════════════
+#  Phase 3.2 — Tax & Zakat Compliance Intelligence (فحص بيانات — ليس شهادة امتثال)
+# ═══════════════════════════════════════════════════════════
+def _tax_scope(s, user, need="view"):
+    _ensure_data_tables()
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    company = s.get(Company, user.company_id)
+    role = get_user_role(s, user) if company else None
+    if not company or not (role == "owner" or (check_permission(role, "finance", "view") and can_see_sensitive_financials(role))):
+        raise HTTPException(403, "غير مصرّح — الضرائب والزكاة للمالك والمحاسب")
+    if company.is_active != 1:
+        raise HTTPException(402, "شركتك قيد التفعيل")
+    if need == "edit" and not (role == "owner" or check_permission(role, "finance", "edit")):
+        raise HTTPException(403, "غير مصرّح — تعديل إعدادات الضرائب")
+    return company, role
+
+
+def _tax_settings(s, company_id):
+    r = s.exec(select(CompanyTaxSetting).where(CompanyTaxSetting.company_id == company_id)).first()
+    try:
+        return json.loads(r.settings_json or "{}") if r else {}
+    except (TypeError, ValueError):
+        return {}
+
+
+def _tax_save(s, company, user, new, action, target):
+    row = s.exec(select(CompanyTaxSetting).where(CompanyTaxSetting.company_id == company.id)).first() or CompanyTaxSetting(company_id=company.id)
+    old = row.settings_json or "{}"
+    row.settings_json, row.updated_by, row.updated_at = json.dumps(new, ensure_ascii=False), (user.name or user.email)[:100], datetime.now()
+    s.add(row); s.commit()
+    # سجل التدقيق: القيمة السابقة والجديدة
+    log_audit(company.id, user.id, user.name, action, target, json.dumps({"before": json.loads(old), "after": new}, ensure_ascii=False)[:500])
+
+
+def _tax_result(s, company, *, period=None):
+    te = _load_p24("tax_engine")
+    if te is None:
+        raise HTTPException(503, "محرّك الضرائب غير متاح — " + _p23_diagnostic())
+    names = {b.id: b.name for b in s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company.id)).all()}
+    sales = _sales_rows(s, company.id)
+    purchases = [{"date": p.date, "vat": p.vat, "branch_name": names.get(p.branch_id), "supplier": p.supplier_name}
+                 for p in s.exec(select(CompanyPurchase).where(CompanyPurchase.company_id == company.id).limit(100000)).all()]
+    inv = [{"invoice_number": i.invoice_number, "issue_date": i.issue_date, "invoice_type": i.invoice_type, "branch_name": names.get(i.branch_id),
+            "buyer_name": i.buyer_name, "buyer_vat": i.buyer_vat, "taxable_amount": i.taxable_amount, "vat_amount": i.vat_amount,
+            "total_amount": i.total_amount, "currency": i.currency, "original_invoice": i.original_invoice, "zatca_status": i.zatca_status}
+           for i in s.exec(select(CompanyTaxInvoice).where(CompanyTaxInvoice.company_id == company.id).limit(200000)).all()]
+    bal, src = {}, {}
+    try:     # مدخلات الزكاة من الوحدة المالية (نفس المصدر)
+        fn = _fin_result(s, company)
+        if fn.get("has_data"):
+            bs = fn["balance_sheet"]
+            for grp in ("assets", "liabilities", "equity"):
+                for x in bs[grp]:
+                    k = {"payables": "payables", "capital": "paid_in_capital", "retained": "retained_earnings", "current_profit": "net_profit_ytd"}.get(x["key"], x["key"])
+                    if x["value"] is not None:
+                        bal[k], src[k] = x["value"], x["source"]
+    except HTTPException:
+        pass
+    bal["_sources"] = src
+    st = _tax_settings(s, company.id)
+    if not st.get("vat_number") and getattr(company, "tax_number", ""):
+        st["vat_number"] = company.tax_number
+    si = _load_p24("sector_intelligence")
+    res = te.analyze_tax(sales, purchases=purchases, invoices=inv, settings=st, balance_inputs=bal, period=period,
+                         sector_tax=si.get_tax_profile(getattr(company, "sector", None)) if si else None,
+                         currency=getattr(company, "currency", None) or "SAR")
+    res["saved_settings"] = {k: v for k, v in st.items() if k != "regulatory_overrides"}
+    res["regulatory_overrides"] = st.get("regulatory_overrides") or {}
+    return res
+
+
+@app.get("/company/tax-intelligence")
+def company_tax_intelligence(user: User = Depends(get_current_user), period: str = ""):
+    with Session(engine) as s:
+        company, role = _tax_scope(s, user)
+        res = _tax_result(s, company, period=period or None)
+        res["can_edit"] = role == "owner" or check_permission(role, "finance", "edit")
+        log_audit(company.id, user.id, user.name, "tax_view", "tax", f"period={res.get('period')}")
+        return res
+
+
+@app.post("/company/tax/settings")
+def company_tax_settings(data: dict, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role = _tax_scope(s, user, need="edit")
+        st = _tax_settings(s, company.id)
+        vn = str(data.get("vat_number") or "").strip()
+        if vn and not re.match(r"^3\d{13}3$", vn):
+            raise HTTPException(422, "الرقم الضريبي يتكون من 15 رقماً ويبدأ وينتهي بـ 3")
+        fq = data.get("filing_frequency") or None
+        if fq not in (None, "monthly", "quarterly"):
+            raise HTTPException(422, "دورية الإقرار: شهري أو ربع سنوي")
+        inc = data.get("prices_include_vat")
+        st.update({"vat_number": vn or None, "filing_frequency": fq, "responsible": str(data.get("responsible") or "")[:100] or None,
+                   "prices_include_vat": True if inc in (True, "true", "1", "yes") else (False if inc in (False, "false", "0", "no") else None)})
+        ov = data.get("regulatory_overrides")
+        if isinstance(ov, dict):
+            clean = {}
+            for k, v in ov.items():
+                if isinstance(v, dict) and k in ("vat_standard_rate", "vat_return_due", "penalties", "b2b_buyer_vat_required"):
+                    if k == "penalties" and not all(isinstance(p, dict) and p.get("source") for p in (v.get("value") or [])):
+                        raise HTTPException(422, "كل قاعدة غرامة تحتاج مصدراً")
+                    clean[k] = {kk: v[kk] for kk in ("value", "effective_date", "version", "source", "applicability") if kk in v}
+            st["regulatory_overrides"] = clean
+        _tax_save(s, company, user, st, "tax_settings", "tax")
+        return {"ok": True}
+
+
+@app.post("/company/tax/mark-filed")
+def company_tax_mark_filed(data: dict, user: User = Depends(get_current_user)):
+    """تسجيل تقديم إقرار لفترة (أو إلغاؤه) — مع أثر في سجل التدقيق."""
+    with Session(engine) as s:
+        company, role = _tax_scope(s, user, need="edit")
+        p_ = str(data.get("period") or "")
+        if not re.match(r"^\d{4}-(\d{2}|Q[1-4])$", p_):
+            raise HTTPException(422, "الفترة غير صالحة")
+        st = _tax_settings(s, company.id)
+        fp = st.get("filed_periods") or {}
+        if data.get("undo"):
+            fp.pop(p_, None)
+        else:
+            d_ = str(data.get("date") or datetime.now().strftime("%Y-%m-%d"))[:10]
+            fp[p_] = {"date": d_, "by": user.name or user.email, "note": str(data.get("note") or "")[:200]}
+        st["filed_periods"] = fp
+        _tax_save(s, company, user, st, "tax_mark_filed", f"period:{p_}")
+        return {"ok": True}
+
+
+@app.get("/company/tax/audit")
+def company_tax_audit(user: User = Depends(get_current_user), limit: int = 100):
+    with Session(engine) as s:
+        company, role = _tax_scope(s, user)
+        rows = s.exec(select(AuditLog).where(AuditLog.company_id == company.id).order_by(AuditLog.created_at.desc()).limit(500)).all()
+        out = [{"when": r.created_at.isoformat(timespec="minutes") if r.created_at else None, "who": r.user_name, "action": r.action,
+                "target": r.target, "details": r.details} for r in rows
+               if (r.action or "").startswith("tax_") or "tax_signal" in (r.target or "") or (r.action or "") == "decision_from_tax_signal"]
+        return {"items": out[:max(1, min(limit, 300))]}
+
+
+@app.post("/company/tax/to-decision")
+def company_tax_to_decision(data: dict, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role = _tax_scope(s, user)
+        _exec_scope(s, user, need="edit")
+        res = _tax_result(s, company, period=data.get("period") or None)
+        sig = next((x for x in res.get("signals", []) if x["id"] == str(data.get("signal_id") or "")), None)
+        if not sig:
+            raise HTTPException(404, "الإشارة غير موجودة أو لم تعد قائمة")
+        impact = (sig.get("estimated_impact") or {}).get("value")
+        d = CompanyDecision(
+            company_id=company.id, title=str(data.get("title") or sig["name_ar"])[:200], detail=" · ".join(sig.get("evidence", []))[:1000],
+            owner=str(data.get("owner") or "")[:100], due_date=str(data.get("due_date") or "")[:20], kpi=sig.get("metric_id") or "tax", status="open",
+            baseline_sales=_company_total_sales(s, company.id), expected_impact=(f"{impact} {res['currency']} (أثر ضريبي على سجلات تحتاج مراجعة)" if impact is not None else "غير قابل للتقدير")[:200],
+            linked_to=f"tax_signal:{sig['id']}|{sig.get('dimension') or ''}|{res['period']}"[:200], rationale=sig.get("suggested_action_ar", "")[:500],
+            metric_id=sig.get("metric_id") or "tax", expected_impact_value=impact, impact_status="expected", source_signal=sig["id"], problem_type=sig["code"],
+            decision_type="tax", outcome_status="pending_measurement", created_by=user.name or user.email, data_source="tax_engine", updated_at=datetime.now())
+        s.add(d); s.commit(); s.refresh(d)
+        act = CompanyAction(company_id=company.id, decision_id=d.id, title=sig.get("suggested_action_ar", "")[:200], owner=d.owner,
+                            priority="P1" if sig["severity"] == "high" else "P2", due_date=d.due_date, start_date=datetime.now().strftime("%Y-%m-%d"), updated_at=datetime.now())
+        s.add(act); s.commit(); s.refresh(act)
+        log_audit(company.id, user.id, user.name, "decision_from_tax_signal", f"tax_signal:{sig['id']}", f"decision={d.id} code={sig['code']}")
+        return {"ok": True, "decision_id": d.id, "action_ids": [act.id]}
+
+
+@app.post("/company/tax/ai-insights")
+def company_tax_ai_insights(data: dict, request: Request, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role = _tax_scope(s, user)
+        res = _tax_result(s, company, period=data.get("period") or None)
+    if not res.get("has_data"):
+        raise HTTPException(422, res.get("message_ar") or "لا توجد بيانات")
+    gw = _load_p24("ai_gateway")
+    if gw is None:
+        raise HTTPException(503, "بوابة الذكاء الاصطناعي غير متاحة — " + _p23_diagnostic())
+    q = str(data.get("question") or "وش المشاكل الضريبية عندي؟")[:300]
+    ctx = {"period": res["period"], "overview": res["overview"], "checklist": res["checklist"], "vat": res["vat"],
+           "reconciliation": {k: v for k, v in res["reconciliation"].items() if k not in ("mismatches", "sales_without_invoice", "invoices_without_sales")},
+           "einvoice": res["einvoice"], "calendar": res["calendar"]["items"][-3:], "zakat_readiness": res["zakat"]["readiness_pct"],
+           "exposures": res["exposures"], "signals": [{"name": x["name_ar"], "evidence": x.get("evidence")} for x in res["signals"][:8]],
+           "disclaimer": res["disclaimer_ar"]}
+    out = gw.request_ai_analysis(gw.GeminiProvider(company_gemini), ctx,
+                                 q + " — أجب من نتائج المحرك فقط مع الدليل. لا تحسب أرقاماً جديدة، ولا تصف الفروق بأنها تهرب، ولا تمنح حكماً بالامتثال القانوني.",
+                                 trust_report={"overall_score": 80, "status": "pass", "has_critical_fail": False, "main_causes": []},
+                                 lang=get_lang(request), company=company)
+    log_audit(company.id, user.id, user.name, "tax_ai_insights", "tax", f"period={res['period']}")
+    return {"period": res["period"], "question": q, "ai": out}
+
+
 @app.get("/company/executive-intelligence")
 def company_executive_intelligence(request: Request, user: User = Depends(get_current_user),
                                    period: Optional[str] = None, ai: int = 0):
@@ -6182,6 +6409,14 @@ def company_executive_intelligence(request: Request, user: User = Depends(get_cu
                 if _inv.get("has_data"):
                     result.setdefault("module_signals", {})["inventory"] = _inv.get("signals", [])[:6]
                     result["risks"] = result["risks"] + [x for x in _inv.get("signals", []) if x["type"] == "risk"][:2]
+            except HTTPException:
+                pass
+            try:   # إشارات الضرائب 3.2 (للمالك/المحاسب)
+                if _role == "owner" or can_see_sensitive_financials(_role):
+                    _tx = _tax_result(s, company)
+                    if _tx.get("has_data"):
+                        result.setdefault("module_signals", {})["tax"] = _tx.get("signals", [])[:6]
+                        result["risks"] = result["risks"] + [x for x in _tx.get("signals", []) if x["type"] == "risk"][:2]
             except HTTPException:
                 pass
             try:   # إشارات التسرب 3.1
@@ -11545,7 +11780,7 @@ ENGINE_MODULES = ("nabbah_finance", "nabbah_trust", "semantic_layer", "kpi_engin
                   "ai_gateway", "period_aggregation", "legacy_adapters", "platform_bridge",
                   "intelligence_engine", "forecast_engine", "scenario_engine", "decision_memory",
                   "rule_catalog", "canonical_model", "period_model", "metric_registry", "ingestion",
-                  "sales_engine", "inventory_engine", "purchases_engine", "cashflow_engine", "hr_engine", "ops_engine", "finance_engine", "sector_intelligence", "leakage_engine")
+                  "sales_engine", "inventory_engine", "purchases_engine", "cashflow_engine", "hr_engine", "ops_engine", "finance_engine", "sector_intelligence", "leakage_engine", "tax_engine")
 
 
 def _runtime_health():
