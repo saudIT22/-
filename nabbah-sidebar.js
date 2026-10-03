@@ -55,7 +55,8 @@
       { label: "الأهداف والنتائج", href: "company-goals.html" },
     ]},
     { icon: "⚠️", label: "المخاطر والامتثال", items: [
-      { label: "محرّك المخاطر", href: "company-risks.html" },
+      { label: "مركز المخاطر", href: "company-risk-intelligence.html" },
+      { label: "محرّك المخاطر (السابق)", href: "company-risks.html" },
       { label: "الضريبة والزكاة", href: "company-tax.html" },
       { label: "سجل التدقيق", href: "company-audit.html" },
       { label: "جودة البيانات", href: "company-data-quality.html" },
