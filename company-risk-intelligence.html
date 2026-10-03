@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>نبّاه · مركز المخاطر</title>
+<link href="nabbah-design.css" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{background:var(--bg,#070b09);color:var(--txt,#e8f1ec);font-family:Tajawal,Tahoma,Arial,sans-serif;margin:0}
+  .wrap{max-width:1180px;margin:0 auto;padding:70px 16px 60px}
+  h1{margin:0 0 4px;font-size:24px}.sub{color:var(--txt-soft,#8ba396);margin:0 0 16px;font-size:14px}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+  select{background:var(--panel,#101a15);color:var(--txt,#e8f1ec);border:1px solid var(--line,#1d2c24);border-radius:10px;padding:8px 10px;font:inherit;font-size:13px;max-width:190px}
+  .crumbs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;min-height:4px}
+  .chip{background:rgba(16,185,129,.12);color:var(--mint,#10b981);border:1px solid rgba(16,185,129,.35);border-radius:20px;padding:3px 10px;font-size:12px;cursor:pointer}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+  .tile,.panel{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:14px;padding:14px}
+  .tile .l{font-size:12px;color:var(--txt-soft,#8ba396)}.tile .v{font-size:21px;font-weight:800;margin-top:4px}
+  .tile .c{font-size:12px;margin-top:4px}
+  .panel{margin-bottom:14px;min-width:0}.panel h2{margin:0 0 10px;font-size:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .panel h3{margin:12px 0 6px;font-size:13px;color:var(--txt-soft,#8ba396)}
+  .num{font-size:11px;color:var(--txt-soft,#8ba396);font-weight:600;border:1px solid var(--line,#1d2c24);border-radius:8px;padding:1px 6px}
+  .grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+  table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px;border-bottom:1px solid var(--line,#1d2c24);text-align:start;white-space:nowrap}
+  th{color:var(--txt-soft,#8ba396);font-weight:600}.tbl{overflow-x:auto}
+  tr.drill{cursor:pointer}tr.drill:hover td{background:rgba(16,185,129,.06)}
+  .barrow{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:13px}
+  .barrow.drill{cursor:pointer}.barrow.drill:hover{background:rgba(16,185,129,.06);border-radius:6px}
+  .barrow .t{flex:0 0 120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .barrow .g{flex:1;height:10px;background:var(--line,#1d2c24);border-radius:6px;overflow:hidden}
+  .barrow .g i{display:block;height:100%;background:var(--mint,#10b981)}
+  .pos{color:#10b981}.neg{color:#ef4444}.muted{color:var(--txt-soft,#8ba396);font-size:12px}
+  .b{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700;display:inline-block}
+  .high{background:rgba(234,88,12,.16);color:#ea580c}.medium{background:rgba(245,179,1,.15);color:#f5b301}
+  .low{background:rgba(16,185,129,.15);color:#10b981}.critical{background:rgba(239,68,68,.16);color:#ef4444}
+  .est{background:rgba(168,85,247,.15);color:#a855f7}
+  .sig{border-inline-start:4px solid var(--line,#1d2c24);padding:10px 12px;margin:8px 0;background:rgba(255,255,255,.02);border-radius:8px}
+  .sig.risk{border-color:#ef4444}.sig.opportunity{border-color:#10b981}.sig.data_quality{border-color:#f5b301}
+  .btn{background:var(--mint,#10b981);color:#062b1c;border:0;border-radius:10px;padding:7px 13px;font-weight:800;cursor:pointer;font:inherit;font-size:12px;text-decoration:none;display:inline-block}
+  .btn.ghost{background:transparent;color:var(--txt-soft,#8ba396);border:1px solid var(--line,#1d2c24);font-weight:600}
+  .btn:disabled{opacity:.5;cursor:default}
+  .state{padding:36px 16px;text-align:center;color:var(--txt-soft,#8ba396);border:1px dashed var(--line,#1d2c24);border-radius:14px}
+  .na{color:var(--txt-soft,#8ba396);font-size:13px;padding:10px;border:1px dashed var(--line,#1d2c24);border-radius:10px}
+  svg.ch{width:100%;height:170px;display:block}
+  .legend{display:flex;gap:14px;font-size:12px;color:var(--txt-soft,#8ba396);margin-top:6px;flex-wrap:wrap}
+  .legend i{display:inline-block;width:14px;height:3px;vertical-align:middle;margin-inline-end:4px}
+  .ai-sec{margin:8px 0}.ai-sec b{display:block;font-size:13px;margin-bottom:4px}.ai-sec li{font-size:13px;margin:3px 0}
+  input.f{flex:1;min-width:120px;background:var(--panel,#101a15);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:8px;padding:6px}
+  .st{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700;display:inline-block;white-space:nowrap}
+  .st.healthy{background:rgba(16,185,129,.15);color:#10b981}.st.watch{background:rgba(245,179,1,.15);color:#f5b301}
+  .st.low{background:rgba(234,88,12,.16);color:#ea580c}.st.stockout{background:rgba(239,68,68,.16);color:#ef4444}
+  .st.slow{background:rgba(59,130,246,.15);color:#60a5fa}.st.obsolete{background:rgba(148,163,184,.18);color:#cbd5e1}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}.schip{cursor:pointer;border:1px solid var(--line,#1d2c24);border-radius:12px;padding:8px 12px;min-width:120px}
+  .schip b{display:block;font-size:18px}.schip:hover{border-color:var(--mint,#10b981)}
+  .eq{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:13px}.eq .box{border:1px solid var(--line,#1d2c24);border-radius:10px;padding:8px 10px;text-align:center;min-width:90px}
+  .eq .box b{display:block;font-size:16px}
+  .ov{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:50;padding:14px}
+  .ov.on{display:flex}.modal{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:16px;padding:18px;width:min(560px,100%);max-height:90vh;overflow:auto}
+  .fg{display:grid;grid-template-columns:1fr 1fr;gap:10px}.fg label{font-size:12px;color:var(--txt-soft,#8ba396);display:flex;flex-direction:column;gap:4px}
+  .fg input,.fg select{background:var(--bg,#070b09);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:9px;padding:8px;font:inherit;max-width:none}
+  .cta{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  @media(max-width:760px){.fg{grid-template-columns:1fr}.tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.tile{padding:10px}.tile .v{font-size:17px}.grid2,.grid3{grid-template-columns:minmax(0,1fr)}h1{font-size:20px}select{max-width:47%}}
+  @media(max-width:700px){.tiles[style]{grid-template-columns:1fr 1fr!important}}
+</style>
+<style>
+  .tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--line,#1d2c24);margin:6px 0 16px}
+  .tab{background:none;border:0;color:var(--txt-soft,#8ba396);padding:10px 14px;font:inherit;font-size:14px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+  .tab.on{color:var(--txt,#e8f1ec);border-color:#14b8a6;font-weight:800}
+  .hero{display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr;gap:12px;margin-bottom:14px}
+  .hcard{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:16px;padding:16px;cursor:default}
+  .hcard.click{cursor:pointer}.hcard.click:hover{border-color:var(--mint,#10b981)}
+  .hcard .big{font-size:30px;font-weight:900;margin:6px 0}.hstat{font-size:22px;font-weight:900}
+  .hs-stable{color:#10b981}.hs-attention{color:#f5b301}.hs-critical{color:#ef4444}
+  .event{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-inline-start:4px solid #ef4444;border-radius:12px;padding:14px;margin-bottom:10px}
+  .event.opportunity{border-inline-start-color:#10b981}.event.data_quality{border-inline-start-color:#f5b301}
+  .event h4{margin:0 0 6px;font-size:15px}.acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .rec{display:grid;grid-template-columns:110px 1fr;gap:6px 12px;font-size:13px;margin-top:8px}.rec b{color:var(--txt-soft,#8ba396);font-weight:600}
+  .flow{display:flex;align-items:stretch;gap:8px;flex-wrap:wrap;justify-content:center}
+  .fnode{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:14px;padding:14px 18px;text-align:center;min-width:140px}
+  .fnode .big{font-size:22px;font-weight:900}.farrow{align-self:center;font-size:22px;color:var(--txt-soft,#8ba396)}
+  .ptip{background:var(--bg,#070b09);border:1px solid var(--mint,#10b981);border-radius:12px;padding:12px;margin-top:8px;font-size:13px}
+  .search{flex:1;min-width:180px;background:var(--panel,#101a15);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:10px;padding:9px 12px;font:inherit}
+  .perf{display:grid;grid-template-columns:70px 1fr 50px;gap:8px;align-items:center;font-size:13px;margin:8px 0}
+  .perf .g{height:10px;background:var(--line,#1d2c24);border-radius:6px;overflow:hidden}.perf .g i{display:block;height:100%}
+  .life{display:flex;gap:0;align-items:center;flex-wrap:wrap;margin:10px 0}.lstep{text-align:center;min-width:110px}
+  .ldot{width:16px;height:16px;border-radius:50%;margin:0 auto 6px;background:var(--line,#1d2c24)}.ldot.on{background:var(--mint,#10b981)}
+  .lline{flex:1;min-width:30px;height:2px;background:var(--line,#1d2c24);margin-bottom:22px}
+  .back{background:none;border:0;color:var(--mint,#10b981);cursor:pointer;font:inherit;padding:0;margin-bottom:10px}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-inline-end:6px}
+  @media(max-width:900px){.hero{grid-template-columns:1fr 1fr}}
+  @media(max-width:560px){.hero{grid-template-columns:1fr}.tab{padding:8px 10px;font-size:13px}.rec{grid-template-columns:1fr}}
+</style>
+
+<style>
+  .lv-critical{background:rgba(239,68,68,.18);color:#ef4444}.lv-high{background:rgba(234,88,12,.18);color:#f97316}
+  .lv-medium{background:rgba(245,179,1,.16);color:#f5b301}.lv-low{background:rgba(16,185,129,.15);color:#10b981}.lv-none{background:rgba(148,163,184,.15);color:#94a3b8}
+  .gauge{position:relative;height:12px;border-radius:8px;background:linear-gradient(270deg,#10b981 0 40%,#f5b301 40% 65%,#f97316 65% 85%,#ef4444 85% 100%);margin:8px 0 4px}
+  .gauge i{position:absolute;top:-5px;width:4px;height:22px;background:#fff;border-radius:3px;transform:translateX(50%)}
+  .heat td.c{text-align:center;font-weight:800;border-radius:6px}
+  .catgrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:14px}
+  .cat{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:14px;padding:12px;cursor:pointer}
+  .cat:hover{border-color:var(--mint,#10b981)}.cat .s{font-size:26px;font-weight:900;margin:4px 0}
+  .chain{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:8px 0}
+  .cnode{border:1px solid var(--line,#1d2c24);border-radius:10px;padding:6px 10px;font-size:12px;cursor:pointer}
+  .cnode.on{border-color:#ef4444}.carrow{color:var(--txt-soft,#8ba396)}
+  .kan{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.kcol{background:rgba(255,255,255,.02);border:1px solid var(--line,#1d2c24);border-radius:12px;padding:8px;min-height:80px}
+  .kcard{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:10px;padding:8px;margin:6px 0;font-size:12px;cursor:pointer}
+  .imp4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+  .brief li{margin:6px 0;font-size:14px}
+  @media(max-width:900px){.catgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.kan,.imp4{grid-template-columns:1fr 1fr}}
+  @media(max-width:560px){.catgrid,.kan,.imp4{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🛡️ مركز المخاطر</h1>
+  <p class="sub">ما المخاطر الحالية؟ كم قوتها؟ ما سببها المحتمل؟ كم ستكلف؟ من المسؤول؟ ما القرار والإجراء؟ وهل انخفضت بعد التنفيذ؟</p>
+  <div class="bar"><button class="btn ghost" id="btnSet" style="display:none">⚙ قواعد المخاطر</button><a class="btn ghost" href="company-data-center.html">مركز البيانات</a><span class="muted" id="asof"></span></div>
+  <div class="na" id="disc" style="margin:6px 0 10px"></div>
+  <nav class="tabs" id="tabs"></nav>
+  <div id="content"><div class="state">…</div></div>
+</div>
+<div class="ov" id="ov"><div class="modal" id="modal"></div></div>
+<script src="i18n.js"></script>
+<script>
+(function(){
+  const TOKEN=localStorage.getItem("nabbah_token")||"";if(!TOKEN){location.href="login.html";return;}
+  const TABS=[["overview","نظرة عامة"],["index","مؤشر المخاطر"],["liquidity","السيولة"],["customer","العملاء"],["profit","الربح"],["operational","التشغيل"],["compliance","الامتثال"],
+    ["drivers","محركات الخطر"],["impact","الأثر المالي"],["chains","الارتباط"],["rootcause","الأسباب الجذرية"],["branches","حسب الفرع"],["departments","حسب القسم"],
+    ["trends","الاتجاهات"],["alerts","التنبيهات"],["register","سجل المخاطر"],["mitigation","المعالجة والقرار"],["brief","موجز الرئيس التنفيذي"],["rules","القواعد والثقة"]];
+  const CATS=["liquidity","customer","profit","operational","compliance"];
+  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const n=(v,d=1)=>v==null?"—":Number(v).toLocaleString("ar-SA",{maximumFractionDigits:d});
+  const H={Authorization:"Bearer "+TOKEN,"Content-Type":"application/json"},$=id=>document.getElementById(id);
+  const LV={critical:"حرج",high:"مرتفع",medium:"متوسط",low:"منخفض"},LC={critical:"#ef4444",high:"#f97316",medium:"#f5b301",low:"#10b981"};
+  const STS=[["detected","مكتشف"],["reviewed","تمت المراجعة"],["decision","بانتظار قرار"],["approved","قرار معتمد"],["action","قيد التنفيذ"],["measurement","قياس الأثر"],["reassessment","إعادة تقييم"],["monitoring","مراقبة"],["closed","مغلق"]];
+  let D=null,AUD=null;
+  const route=()=>{const h=decodeURIComponent(location.hash.slice(1)||"overview");const i=h.indexOf("/");return i<0?[h,""]:[h.slice(0,i),h.slice(i+1)];};
+  const go=(v,arg)=>{location.hash=arg?`${v}/${encodeURIComponent(arg)}`:v;};
+  window.addEventListener("hashchange",()=>{if(D){render();window.scrollTo(0,0);}});
+  function load(){$("content").innerHTML=`<div class="state">…</div>`;
+    fetch("/company/risk-intelligence",{headers:H}).then(async r=>{
+      if(r.status===401){location.href="login.html";return null;}
+      if(r.status===403||r.status===402){let d="";try{d=(await r.json()).detail;}catch(_){}$("content").innerHTML=`<div class="state">🔒 ${esc(d||"ليست لديك صلاحية.")}</div>`;return null;}
+      if(!r.ok){let d="";try{const j=await r.json();d=typeof j.detail==="string"?j.detail:JSON.stringify(j.detail||j);}catch(_){}err(`HTTP ${r.status}${d?" — "+d:""}`);return null;}
+      return r.json();}).then(d=>{if(!d)return;D=d;$("btnSet").style.display=d.can_edit_rules?"":"none";
+        $("disc").textContent="ℹ "+(d.disclaimer_ar||"")+(d.scope&&d.scope.note_ar?" · "+d.scope.note_ar:"");$("asof").textContent="التقييم بتاريخ "+(d.as_of||"");
+        try{render();}catch(e){console.error(e);err("render: "+(e&&e.message||e));}}).catch(e=>err("network: "+(e&&e.message||e)));}
+  function err(m){$("content").innerHTML=`<div class="state neg">تعذّر تحميل مركز المخاطر.<div class="muted" style="margin-top:8px">${esc(m)}</div></div>`;}
+  const panel=(title,body,extra="")=>`<div class="panel"><h2>${title}${extra}</h2>${body}</div>`;
+  const na=m=>`<div class="na">${esc(m)}</div>`;
+  const tile=(l,v,c)=>`<div class="tile"><div class="l">${l}</div><div class="v">${v}</div><div class="c">${c||""}</div></div>`;
+  const lv=(l,txt)=>`<span class="b lv-${l||"none"}">${esc(txt||LV[l]||"تعذّر التحديد")}</span>`;
+  const sc=(s,l)=>s==null?`<span class="muted" style="font-size:14px">تعذّر التحديد</span>`:`<span style="color:${LC[l]||"inherit"}">${n(s,1)}</span>`;
+  const gauge=s=>s==null?"":`<div class="gauge"><i style="right:${Math.max(0,Math.min(100,s))}%"></i></div><div class="muted" style="display:flex;justify-content:space-between"><span>0</span><span>40</span><span>65</span><span>85</span><span>100</span></div>`;
+  const money=v=>v==null?"—":n(v,0)+" "+esc(D.currency||"SAR");
+  const imps=list=>(list||[]).length?(list||[]).map(i=>`<div style="margin:3px 0"><span class="b ${i.type==="actual"?"critical":i.type==="potential"?"high":i.type==="exposure"?"medium":"low"}">${esc(i.type_ar)}</span> <b>${money(i.amount)}</b> <span class="muted">${esc(i.basis_ar||"")}</span></div>`).join(""):`<span class="muted">لا أثر مالي قابل للقياس</span>`;
+  const DRV=k=>D.drivers.find(d=>d.key===k);
+  const REG=k=>D.register.find(r=>r.risk_key===k);
+  function drvRow(d){return `<tr class="drill" data-go="driver" data-arg="${esc(d.key)}"><td><b>${esc(d.name_ar)}</b><div class="muted">${esc(d.source_ar)}</div></td><td>${d.value==null?(d.display_ar?`<span class="muted">${esc(d.display_ar)}</span>`:"—"):n(d.value,2)+" "+esc(d.unit)}</td><td class="muted">${d.thresholds.map(x=>n(x,1)).join(" / ")}</td><td>${sc(d.score,d.level)}</td><td>${lv(d.level)}</td><td class="muted" style="white-space:normal;max-width:280px">${d.score==null?esc(d.reason_ar||""):esc((d.evidence||[])[0]||"")}</td></tr>`;}
+  const drvTable=list=>`<div class="tbl"><table><thead><tr><th>المحرك</th><th>القيمة</th><th>الحدود (متوسط/مرتفع/حرج)</th><th>الدرجة</th><th>المستوى</th><th>الدليل / السبب</th></tr></thead><tbody>${list.map(drvRow).join("")}</tbody></table></div>`;
+  function catCards(){return `<div class="catgrid">${D.categories.map(c=>`<div class="cat" data-go="${c.key}"><div class="muted">${c.icon} ${esc(c.ar)}</div><div class="s">${sc(c.score,c.level)}</div>${lv(c.level,c.level_ar)}<div class="muted" style="margin-top:6px">${c.score==null?"بيانات غير كافية":"أعلى محرك: "+esc((c.top_driver||{}).name_ar||"")}</div><div class="muted">ثقة ${n(c.confidence_pct,0)}%</div></div>`).join("")}</div>`;}
+  function overview(){const i=D.index,c=D.confidence;
+    const act=D.chains.filter(x=>x.active);
+    return `<div class="hero"><div class="hcard click" data-go="index"><div class="muted">مؤشر المخاطر العام</div><div class="big">${sc(i.score,i.level)}</div>${lv(i.level,i.level_ar)}${gauge(i.score)}</div>
+      <div class="hcard click" data-go="rules"><div class="muted">ثقة التقييم</div><div class="big">${n(c.pct,0)}%</div><div class="muted">${esc(c.sufficiency_ar)} · ${c.evaluated}/${c.total} محركاً</div></div>
+      <div class="hcard click" data-go="alerts"><div class="muted">تنبيهات مفتوحة</div><div class="big">${n(D.alerts.length,0)}</div><div class="muted">${n(D.alerts.filter(a=>a.severity==="critical").length,0)} حرجة · ${n(D.alerts.filter(a=>!a.decision_id).length,0)} بلا قرار</div></div>
+      <div class="hcard click" data-go="chains"><div class="muted">سلاسل مرتبطة نشطة</div><div class="big">${n(act.length,0)}</div><div class="muted">علاقة متزامنة — ليست سببية</div></div></div>
+      ${catCards()}
+      <div class="grid2">${panel("أهم المخاطر الآن",D.top_risks.length?D.top_risks.map((t,k)=>`<div class="event"><h4>${k+1}. ${esc(t.name_ar)} ${lv(t.level)} <span class="muted">${esc(t.category_ar)}</span></h4><div class="rec"><b>القيمة</b><span>${n(t.value,2)} ${esc(t.unit)} · درجة ${n(t.score,1)}</span><b>الدليل</b><span>${(t.evidence||[]).map(esc).join(" · ")}</span><b>الأثر</b><span>${imps(t.impacts)}</span><b>المصدر</b><span><a href="${esc(t.link)}" style="color:var(--mint,#10b981)">${esc(t.source_ar)} ↗</a></span></div><div class="acts"><button class="btn ghost" data-go="driver" data-arg="${esc(t.key)}">التفاصيل والتعمق</button></div></div>`).join(""):na("لا مخاطر مرتفعة وفق القواعد الحالية"))}
+      <div>${panel("الأثر المالي حسب النوع",impactTiles())+panel("اسأل نبّاه (يشرح فقط — لا يحسب ولا يقرر)",`<div class="chips">${D.ai_questions.map(q=>`<span class="chip" data-q="${esc(q)}">${esc(q)}</span>`).join("")}</div><div id="aiOut" style="margin-top:10px"></div>`)}</div></div>
+      ${D.module_errors&&Object.keys(D.module_errors).length?na("وحدات تعذّر قراءتها: "+Object.entries(D.module_errors).map(([k,v])=>k+": "+v).join(" · ")):""}`;}
+  function impactTiles(){const by={};(D.impacts||[]).forEach(i=>by[i.type]=i);
+    return `<div class="imp4">${[["actual","أثر فعلي"],["potential","أثر محتمل"],["exposure","تعرّض"],["recovery","فرصة استرداد"]].map(([k,l])=>tile(l,by[k]?money(by[k].amount):`<span class="muted" style="font-size:14px">لا يوجد</span>`,by[k]?`${n(by[k].items,0)} بنود`:"")).join("")}</div><div class="muted" style="margin-top:8px">${esc(D.impact_note_ar)}</div>`;}
+  function indexView(){const i=D.index;
+    return panel("كيف وصلنا إلى "+(i.score==null?"—":n(i.score,1))+"؟",i.score==null?na(i.explanation_ar):`${gauge(i.score)}
+      <div class="tbl"><table><thead><tr><th>الفئة</th><th>الدرجة</th><th>الوزن</th><th>النقاط في المؤشر</th></tr></thead><tbody>${i.contributions.map(c=>`<tr class="drill" data-go="${c.category}"><td><b>${esc(c.ar)}</b></td><td>${n(c.score,1)}</td><td>${n(c.weight,2)} (${n(c.weight_share_pct,1)}%)</td><td><b>${n(c.points,1)}</b></td></tr>`).join("")}<tr><td><b>المؤشر</b></td><td></td><td></td><td><b>${n(i.score,1)}</b></td></tr></tbody></table></div>
+      <div class="ptip">${esc(i.explanation_ar)}</div>${i.excluded_note_ar?na(i.excluded_note_ar):""}<div class="muted" style="margin-top:8px">${esc(D.rules.index_rule_ar)} · ${esc(D.rules.category_rule_ar)} · ${esc(i.rule_ar)}</div>`)
+      +panel("طريقة درجة المحرك",`<div class="muted" style="font-size:13px">${esc(D.rules.score_rule_ar)}</div>`);}
+  function catView(k){const c=D.categories.find(x=>x.key===k);if(!c)return na("هذه الفئة خارج صلاحيتك");const ds=D.drivers.filter(d=>d.category===k);
+    return `<div class="tiles">${tile(c.icon+" "+esc(c.ar),sc(c.score,c.level),lv(c.level,c.level_ar))}${tile("ثقة الفئة",n(c.confidence_pct,0)+"%",`${c.evaluated}/${c.drivers} محركات`)}${tile("الوزن في المؤشر",n(c.weight,2),esc(D.sector.ar))}</div>
+      ${c.score==null?panel("تعذّر تحديد "+esc(c.ar),`<div class="muted">المؤشر لا يعامل الفئة كصفر — البيانات المطلوبة:</div><ul>${c.unable_reasons.map(u=>`<li><b>${esc(u.driver)}</b>: ${esc(u.reason_ar||"")} — <span class="muted">${esc(u.needs_ar||"")}</span></li>`).join("")}</ul><a class="btn" href="company-data-center.html">ارفع البيانات</a>`)
+        :panel("المعادلة",`<div class="ptip">${esc(c.formula_ar)}</div>`+(c.impacts&&c.impacts.length?`<h3>الأثر المالي</h3>${c.impacts.map(i=>`<div><span class="b">${esc(i.type_ar)}</span> <b>${money(i.amount)}</b></div>`).join("")}`:""))}
+      ${panel("محركات "+esc(c.ar),drvTable(ds))}${c.unable_reasons&&c.unable_reasons.length&&c.score!=null?panel("محركات تعذّر تقييمها",c.unable_reasons.map(u=>`<div class="muted">• ${esc(u.driver)}: ${esc(u.reason_ar||"")} — ${esc(u.needs_ar||"")}</div>`).join("")):""}`;}
+  function driversView(arg){if(arg)return driverDetail(arg);const ds=D.drivers.slice().sort((a,b)=>(b.score??-1)-(a.score??-1));
+    return panel("كل محركات الخطر ("+ds.length+")",drvTable(ds)+`<div class="muted">كل محرك يقرأ مؤشراً من وحدته الأصلية بنفس تعريفه هناك — اضغط للتعمق.</div>`);}
+  function driverDetail(k){const d=DRV(k);if(!d)return na("المحرك غير موجود أو خارج صلاحيتك");const r=REG(k);const rc=D.root_causes.find(x=>x.driver===k);
+    const chains=D.chains.filter(c=>c.nodes.some(x=>x.key===k));
+    const br=Object.entries(d.by_branch||{}),dp=Object.entries(d.by_department||{});
+    return `<button class="back" data-go="drivers">→ كل المحركات</button>
+      <div class="hero"><div class="hcard"><div class="muted">${esc(d.category_ar)}</div><div style="font-size:18px;font-weight:800">${esc(d.name_ar)}</div>${lv(d.level)}</div><div class="hcard"><div class="muted">القيمة</div><div class="big">${d.value==null?(d.display_ar?"آمن":"—"):n(d.value,2)}</div><div class="muted">${esc(d.unit)}${d.previous!=null?" · السابق "+n(d.previous,2):""}</div></div>
+      <div class="hcard"><div class="muted">الدرجة</div><div class="big">${sc(d.score,d.level)}</div>${gauge(d.score)}</div><div class="hcard"><div class="muted">المصدر</div><a href="${esc(d.link)}" class="btn ghost" style="margin-top:8px">${esc(d.source_ar)} ↗</a><div class="muted" style="margin-top:6px">الحدود: ${esc({default:"افتراضية",sector:"القطاع",company:"شركتك"}[d.threshold_source])}</div></div></div>
+      ${d.score==null&&!d.display_ar?panel("تعذّر التحديد",na((d.reason_ar||"")+" — المطلوب: "+(d.needs_ar||""))):""}
+      <div class="grid2">${panel("كيف حُسبت الدرجة",d.score_parts.length?`<div class="tbl"><table><tbody>${d.score_parts.map(p=>`<tr><td style="white-space:normal">${esc(p.ar)}</td><td><b>${p.points>0&&p.code!=="threshold"?"+":""}${n(p.points,1)}</b></td></tr>`).join("")}<tr><td><b>الدرجة</b></td><td><b>${n(d.score,1)}</b></td></tr></tbody></table></div>`:na("—"))}
+      ${panel("الدليل",(d.evidence||[]).map(e=>`<div style="margin:4px 0">• ${esc(e)}</div>`).join("")||na("—"))}</div>
+      ${panel("الأثر المالي",imps(d.impacts))}
+      ${d.drill&&d.drill.length?panel("التعمق",`<div class="tbl"><table><thead><tr><th>المستوى</th><th>العنصر</th><th>التفاصيل</th><th></th></tr></thead><tbody>${d.drill.map(x=>`<tr><td>${esc({supplier:"مورد",product:"صنف",customer:"عميل",branch:"فرع"}[x.level]||x.level)}</td><td><b>${esc(x.key||x.name||"")}</b>${x.branch?` <span class="muted">${esc(x.branch)}</span>`:""}</td><td class="muted" style="white-space:normal">${x.variance_pct!=null?`السعر ${n(x.current,2)} مقابل ${n(x.baseline,2)} (${n(x.variance_pct,1)}%)`:""}${x.late_pct!=null?`متأخر ${n(x.late_pct,1)}%`:""}${x.previous_revenue!=null?`إيراد سابق ${money(x.previous_revenue)} · ${n(x.orders,0)} طلب`:""}${x.events!=null?`نفاد ${n(x.events,0)} مرات`:""}${x.sales_impact?" · "+esc(x.sales_impact.note_ar):""}</td><td><a href="${esc(x.link)}" style="color:var(--mint,#10b981)">↗</a></td></tr>`).join("")}</tbody></table></div><div class="muted">المسار: المورد ← الصنف ← الفرع ← أمر الشراء ← تاريخ السعر (في وحدة المصدر)</div>`):""}
+      ${br.length||dp.length?`<div class="grid2">${br.length?panel("حسب الفرع",br.sort((a,b)=>b[1]-a[1]).map(([k_,v])=>`<div class="barrow drill" data-go="branches" data-arg="${esc(k_)}"><span class="t">${esc(k_)}</span><span class="g"><i style="width:${Math.min(100,Math.abs(v)/Math.max(...br.map(x=>Math.abs(x[1])),1)*100)}%"></i></span><b>${n(v,1)}</b></div>`).join("")):""}${dp.length?panel("حسب القسم",dp.sort((a,b)=>b[1]-a[1]).map(([k_,v])=>`<div class="barrow"><span class="t">${esc(k_)}</span><span class="g"><i style="width:${Math.min(100,Math.abs(v)/Math.max(...dp.map(x=>Math.abs(x[1])),1)*100)}%"></i></span><b>${n(v,1)}</b></div>`).join("")):""}</div>`:""}
+      ${rc?panel("مرتبط بـ (عوامل محتملة)",rcBody(rc)):""}
+      ${chains.length?panel("السلاسل التي يظهر فيها",chains.map(chainRow).join("")+`<div class="muted">${esc(D.graph.note_ar)}</div>`):""}
+      ${panel("السجل والقرار",regBox(k,r,d))}`;}
+  function regBox(k,r,d){const elevated=d&&["medium","high","critical"].includes(d.level);
+    return `${r?`<div class="rec"><b>الحالة</b><span>${esc(r.status_ar)}</span><b>المسؤول</b><span>${esc(r.owner||"—")}${r.owner_is_default?" <span class='muted'>(افتراضي)</span>":""}</span><b>الاستحقاق</b><span class="${r.overdue?"neg":""}">${esc(r.due_date||"—")}</span><b>خطة المعالجة</b><span>${esc(r.mitigation||"—")}</span><b>القرار</b><span>${r.decision_id?`<a href="company-decisions.html" style="color:var(--mint,#10b981)">قرار #${r.decision_id} ↗</a>`:"—"}</span>${r.before_after?`<b>قبل / بعد</b><span>${n(r.before_after.baseline_score,1)} ← ${n(r.before_after.current_score,1)} (${esc(r.before_after.result_ar)}) <span class="muted">${esc(r.before_after.note_ar)}</span></span>`:""}</div>`:""}
+      <div class="acts">${D.can_edit&&elevated&&!(r&&r.decision_id)?`<button class="btn" data-dec="${esc(k)}">قرار + إجراء</button>`:""}${D.can_edit&&(r||elevated)?`<button class="btn ghost" data-upd="${esc(k)}">تحديث الحالة / المسؤول</button>`:""}</div><div class="frm" data-frm="${esc(k)}"></div>`;}
+  function impactView(){const ds=D.drivers.filter(d=>(d.impacts||[]).length);
+    return panel("الأثر المالي (كل نوع منفصل)",impactTiles())+(D.impacts||[]).map(i=>panel(esc(i.type_ar)+" — "+money(i.amount),`<div class="muted">${esc(i.rule_ar)}</div><div class="tbl"><table><thead><tr><th>المحرك</th><th>المبلغ</th><th>مجموعة التداخل</th></tr></thead><tbody>${i.sources.map(s=>`<tr class="drill" data-go="driver" data-arg="${esc(s.driver)}"><td>${esc(s.name_ar)}</td><td>${money(s.amount)}</td><td class="muted">${esc(s.group)}</td></tr>`).join("")}</tbody></table></div>${i.overlap_ar?na(i.overlap_ar):""}`)).join("")
+      +(ds.length?"":na("لا أثر مالي قابل للقياس"));}
+  function chainRow(c){return `<div class="chain">${c.nodes.map((x,i)=>`${i?`<span class="carrow">←</span>`:""}<span class="cnode ${c.active_path.includes(x.key)?"on":""}" data-go="driver" data-arg="${esc(x.key)}">${esc(x.name_ar)} ${x.level?lv(x.level):`<span class="muted">—</span>`}</span>`).join("")}</div>`;}
+  function graphSvg(){const g=D.graph,N=g.nodes.length;if(!N)return "";const W=760,Hh=400,cx=W/2,cy=Hh/2+6,pos={};
+    g.nodes.forEach((x,i)=>{const a=2*Math.PI*i/N-Math.PI/2;pos[x.key]=[cx+300*Math.cos(a),cy+165*Math.sin(a)];});
+    return `<svg viewBox="0 0 ${W} ${Hh}" style="width:100%;max-height:420px">${g.edges.map(e=>pos[e.from]&&pos[e.to]?`<line x1="${pos[e.from][0]}" y1="${pos[e.from][1]}" x2="${pos[e.to][0]}" y2="${pos[e.to][1]}" stroke="${e.active?"#ef4444":"#334155"}" stroke-width="${e.active?2.5:1}" opacity="${e.active?.9:.5}"/>`:"").join("")}
+      ${g.nodes.map(x=>`<g style="cursor:pointer" data-go="driver" data-arg="${esc(x.key)}"><circle cx="${pos[x.key][0]}" cy="${pos[x.key][1]}" r="9" fill="${LC[x.level]||"#475569"}"/><text x="${pos[x.key][0]}" y="${pos[x.key][1]-13}" text-anchor="middle" font-size="10" fill="currentColor">${esc(x.name_ar.slice(0,22))}</text></g>`).join("")}</svg>`;}
+  function chainsView(){return panel("سلاسل المخاطر",D.chains.map(c=>`<div style="margin-bottom:12px"><b>${esc(c.ar)}</b> ${c.active?lv("high","نشطة"):`<span class="muted">${esc(c.status_ar)}</span>`}${chainRow(c)}</div>`).join("")+na(D.graph.note_ar))
+      +panel("خريطة الاعتماد بين المخاطر",graphSvg()+`<div class="legend"><span><i style="background:#ef4444"></i>رابط نشط (طرفاه مرتفعان)</span><span><i style="background:#334155"></i>رابط غير نشط</span></div>`);}
+  function rcBody(r){return `<div class="muted">${esc(r.summary_ar)}</div>${r.upstream.map(u=>`<div class="event" style="border-inline-start-color:${LC[u.level]}"><b>${esc(u.name_ar)}</b> ${lv(u.level)} <span class="muted">· ${esc(u.chain_ar)} · ${esc(u.source_ar)}</span> <a href="#driver/${encodeURIComponent(u.key)}" style="color:var(--mint,#10b981)">↗</a></div>`).join("")}${r.module_causes.map(m=>`<div class="event data_quality"><b>${esc(m.module_ar)}:</b> ${esc(m.label)} ${m.amount!=null?"— "+money(m.amount):""} <a href="${esc(m.link)}" style="color:var(--mint,#10b981)">↗</a><div class="muted">${esc(m.note_ar||"")}</div></div>`).join("")}<div class="muted">${esc(r.note_ar)}</div>`;}
+  function rootView(){return D.root_causes.length?D.root_causes.map(r=>panel(`${esc(r.name_ar)} ${lv(r.level)}`,rcBody(r),` <button class="btn ghost" data-go="driver" data-arg="${esc(r.driver)}">التفاصيل</button>`)).join(""):na("لا مخاطر مرتفعة تحتاج تحليلاً");}
+  const cell=c=>c?`<td class="c lv-${c.level}">${n(c.score,0)}</td>`:`<td class="c muted">—</td>`;
+  function branchesView(arg){const b=D.branches;if(arg){const r=b.rows.find(x=>x.key===arg);if(!r)return na("الفرع غير موجود");
+      return `<button class="back" data-go="branches">→ كل الفروع</button>`+panel("🏢 "+esc(r.key)+" — "+(r.score==null?"—":n(r.score,1)),`<div class="tbl"><table><thead><tr><th>المحرك</th><th>قيمة الفرع</th><th>الدرجة</th><th>المستوى</th></tr></thead><tbody>${r.details.map(x=>`<tr class="drill" data-go="driver" data-arg="${esc(x.driver)}"><td>${esc(x.name_ar)}</td><td>${n(x.value,2)} ${esc(x.unit)}</td><td>${n(x.score,1)}</td><td>${lv(x.level)}</td></tr>`).join("")}</tbody></table></div>`)
+        +(r.module_signals.length?panel("إشارات الوحدات لهذا الفرع",r.module_signals.map(s=>`<div>• <b>${esc(s.module_ar)}:</b> ${esc(s.name_ar)} <span class="b ${esc(s.severity)}">${esc(s.severity)}</span></div>`).join("")):"");}
+    return panel("خريطة المخاطر حسب الفرع",b.rows.length?`<div class="tbl"><table class="heat"><thead><tr><th>الفرع</th>${b.categories.map(c=>`<th>${esc(c.ar)}</th>`).join("")}<th>المتوسط</th><th>أعلى محرك</th></tr></thead><tbody>${b.rows.map(r=>`<tr class="drill" data-go="branches" data-arg="${esc(r.key)}"><td><b>${esc(r.key)}</b></td>${b.categories.map(c=>cell(r.cells[c.key])).join("")}${cell(r.score==null?null:{score:r.score,level:r.level})}<td class="muted">${esc((r.top[0]||{}).name_ar||"—")}</td></tr>`).join("")}</tbody></table></div><div class="muted">${esc(b.rule_ar)}</div><div class="muted">${esc(b.company_level_ar)}</div>`:na("لا توجد بيانات مقسّمة على الفروع"));}
+  function deptView(){const d=D.departments;return panel("المخاطر حسب القسم",d.rows.length?`<div class="tbl"><table class="heat"><thead><tr><th>القسم</th><th>الدرجة</th><th>المحركات</th></tr></thead><tbody>${d.rows.map(r=>`<tr><td><b>${esc(r.key)}</b></td>${cell(r.score==null?null:{score:r.score,level:r.level})}<td class="muted" style="white-space:normal">${r.details.map(x=>`${esc(x.name_ar)}: ${n(x.value,1)} ${esc(x.unit)} (${LV[x.level]})`).join(" · ")}</td></tr>`).join("")}</tbody></table></div><div class="muted">${esc(d.rule_ar)}</div>`:na("لا توجد بيانات أقسام (أضف القسم في ملف الموظفين أو الطلبات التشغيلية)"));}
+  function line(series,key,color){const pts=series.filter(p=>p[key]!=null);if(pts.length<2)return "";const W=600,Hh=160,xs=i=>20+i*(W-40)/Math.max(1,series.length-1),ys=v=>Hh-15-(v/100)*(Hh-30);
+    return `<polyline fill="none" stroke="${color}" stroke-width="2" points="${series.map((p,i)=>p[key]==null?null:`${xs(i)},${ys(p[key])}`).filter(Boolean).join(" ")}"/>`;}
+  function trendsView(){const t=D.trends,s=t.series;
+    return `<div class="tiles">${t.windows.map(w=>tile("خلال "+esc(w.ar),w.available?`<span class="${w.change>0?"neg":w.change<0?"pos":""}">${w.change>0?"+":""}${n(w.change,1)}</span>`:`<span class="muted" style="font-size:13px">غير متاح</span>`,w.available?esc(w.direction_ar)+" · من "+esc(w.base_date):`<span class="muted" style="font-size:11px">${esc(w.reason_ar)}</span>`)).join("")}</div>
+      ${panel("الخط الزمني للمؤشر والفئات",s.length>=2?`<svg viewBox="0 0 600 160" class="ch"><line x1="20" x2="580" y1="${160-15-0.4*130}" y2="${160-15-0.4*130}" stroke="#f5b301" stroke-dasharray="4" opacity=".4"/><line x1="20" x2="580" y1="${160-15-0.65*130}" y2="${160-15-0.65*130}" stroke="#f97316" stroke-dasharray="4" opacity=".4"/>${line(s,"index","#e8f1ec")}${line(s,"liquidity","#60a5fa")}${line(s,"customer","#a855f7")}${line(s,"profit","#ef4444")}${line(s,"operational","#f5b301")}${line(s,"compliance","#14b8a6")}</svg><div class="legend"><span><i style="background:#e8f1ec"></i>المؤشر</span><span><i style="background:#60a5fa"></i>السيولة</span><span><i style="background:#a855f7"></i>العملاء</span><span><i style="background:#ef4444"></i>الربح</span><span><i style="background:#f5b301"></i>التشغيل</span><span><i style="background:#14b8a6"></i>الامتثال</span></div><div class="muted">${esc(s[0].date)} → ${esc(s[s.length-1].date)} · ${s.length} تقييم</div>`:na("يُبنى الخط الزمني من لقطة يومية تُحفظ عند كل فتح للمركز (العرض الكامل) — تحتاج تقييمين على الأقل."))}
+      <div class="muted">${esc(t.rule_ar)}</div>`;}
+  function alertsView(){return panel(`🔔 ${n(D.alerts.length,0)} تنبيهات`,D.alerts.length?D.alerts.map((a,i)=>`<div class="event" style="border-inline-start-color:${LC[a.severity]}"><h4>${i+1}. ${esc(a.risk)} ${lv(a.severity)} <span class="muted">${esc(a.category_ar)} · درجة ${n(a.score,1)}</span></h4>
+      <div class="rec"><b>الدليل</b><span>${a.evidence.map(esc).join(" · ")}</span><b>الأثر</b><span>${imps(a.impacts)}</span><b>اكتُشف</b><span>${esc(a.detected)}</span><b>المصدر</b><span><a href="${esc(a.link)}" style="color:var(--mint,#10b981)">${esc(a.source_ar)} ↗</a></span><b>الإجراء المقترح</b><span>${esc(a.action_ar||"")}</span><b>المسؤول</b><span>${esc(a.owner||"—")}</span><b>الاستحقاق</b><span>${esc(a.due_date||"—")}</span><b>الحالة</b><span>${esc(a.status_ar)}${a.decision_id?` · قرار #${a.decision_id}`:""}</span></div>
+      <div class="acts">${D.can_edit&&!a.decision_id?`<button class="btn" data-dec="${esc(a.risk_key)}">قرار + إجراء</button>`:""}<button class="btn ghost" data-go="driver" data-arg="${esc(a.risk_key)}">التفاصيل</button></div><div class="frm" data-frm="${esc(a.risk_key)}"></div></div>`).join(""):na("لا تنبيهات — كل المحركات المقيّمة دون حد «متوسط»"));}
+  function registerView(){const r=D.register;
+    return panel(`📋 سجل المخاطر (${r.length})`,r.length?`<div class="tbl"><table><thead><tr><th>الخطر</th><th>الفئة</th><th>المستوى</th><th>الأثر</th><th>المسؤول</th><th>الحالة</th><th>الاستحقاق</th><th>قبل/بعد</th></tr></thead><tbody>${r.map(x=>`<tr class="drill" data-go="${x.manual?"register":"driver"}" data-arg="${x.manual?"":esc(x.risk_key)}"><td><b>${esc(x.title)}</b>${x.manual?` <span class="b est">يدوي</span>`:""}${x.resolved_candidate?` <span class="b low">عاد منخفضاً</span>`:""}</td><td>${esc(x.category_ar||"")}</td><td>${lv(x.level)}</td><td>${x.impacts&&x.impacts[0]?`${esc(x.impacts[0].type_ar)} ${money(x.impacts[0].amount)}`:"—"}</td><td>${esc(x.owner||"—")}</td><td>${esc(x.status_ar)}</td><td class="${x.overdue?"neg":""}">${esc(x.due_date||"—")}</td><td>${x.before_after?`${n(x.before_after.baseline_score,0)}→${n(x.before_after.current_score,0)} ${esc(x.before_after.result_ar)}`:"—"}</td></tr>`).join("")}</tbody></table></div>`:na("السجل فارغ — لا مخاطر مرتفعة ولا مخاطر محفوظة"),D.can_edit?` <button class="btn ghost" id="addRisk">+ خطر يدوي</button>`:"")
+      +`<div class="muted">المخاطر المكتشفة تُضاف تلقائياً عند تجاوز حد «متوسط». المخاطر اليدوية لا تدخل في حساب المؤشر.</div><div id="addFrm"></div>`;}
+  function mitigationView(){const cols=D.workflow;
+    return panel("مسار القرار: مكتشف ← مراجعة ← قرار ← اعتماد ← تنفيذ ← قياس ← إعادة تقييم",`<div class="kan">${cols.map(c=>`<div class="kcol"><b>${esc(c.ar)}</b> <span class="muted">${c.count}</span>${c.items.map(x=>`<div class="kcard" data-go="driver" data-arg="${esc(x.risk_key)}">${esc(x.title)} ${lv(x.level)}<div class="muted">${esc(x.owner||"—")} · <span class="${x.overdue?"neg":""}">${esc(x.due_date||"")}</span></div></div>`).join("")}</div>`).join("")}</div>`)
+      +panel("خطط المعالجة والإجراءات",D.register.filter(r=>r.decision_id||r.mitigation).map(r=>`<div class="event"><h4>${esc(r.title)} ${lv(r.level)} <span class="muted">${esc(r.status_ar)}</span></h4><div class="rec"><b>الخطة</b><span>${esc(r.mitigation||"—")}</span><b>الإجراءات</b><span>${(r.actions||[]).map(a=>`${esc(a.title)} — ${esc(a.status)} ${n(a.progress,0)}%`).join("<br>")||"—"}</span><b>الإنجاز</b><span>${r.actions_progress!=null?n(r.actions_progress,0)+"%":"—"}</span>${r.before_after?`<b>قبل / بعد</b><span>${n(r.before_after.baseline_score,1)} ← ${n(r.before_after.current_score,1)} — ${esc(r.before_after.result_ar)}<div class="muted">${esc(r.before_after.note_ar)}</div></span>`:""}</div><div class="acts">${D.can_edit?`<button class="btn ghost" data-upd="${esc(r.risk_key)}">تحديث</button>`:""}<a class="btn ghost" href="company-actions.html">مركز الإجراءات</a></div><div class="frm" data-frm="${esc(r.risk_key)}"></div></div>`).join("")||na("لا توجد خطط بعد — أنشئ قراراً من أي تنبيه"));}
+  function briefView(){const b=D.brief;return panel("موجز الرئيس التنفيذي",`<ul class="brief">${b.lines.map(l=>`<li>${esc(l)}</li>`).join("")}</ul><div class="muted">${esc(b.method_ar)}</div>`,` <button class="btn ghost" onclick="window.print()">طباعة</button>`)
+      +panel("قرارات مطلوبة الآن",b.decisions_needed.length?`<div class="tbl"><table><thead><tr><th>الخطر</th><th>الإجراء</th><th>المسؤول</th><th>الاستحقاق</th></tr></thead><tbody>${b.decisions_needed.map(x=>`<tr><td><b>${esc(x.risk)}</b></td><td style="white-space:normal">${esc(x.action_ar||"")}</td><td>${esc(x.owner||"—")}</td><td>${esc(x.due_date||"")}</td></tr>`).join("")}</tbody></table></div>`:na("لا قرارات معلّقة للمخاطر الحرجة/المرتفعة"))+panel("الأثر المالي",impactTiles());}
+  function rulesView(){const c=D.confidence,th=D.rules.thresholds;
+    if(!AUD){fetch("/company/risk/audit",{headers:H}).then(r=>r.ok?r.json():{items:[]}).then(j=>{AUD=j.items||[];if(route()[0]==="rules")render();});}
+    return `<div class="tiles">${tile("ثقة التقييم",n(c.pct,0)+"%",esc(c.sufficiency_ar))}${tile("القطاع",esc(D.sector.ar),esc(D.sector.note_ar))}${tile("محركات مقيّمة",c.evaluated+"/"+c.total,esc(c.rule_ar))}</div>
+      ${c.missing.length?panel("بيانات ناقصة ترفع الثقة",c.missing.map(m=>`<div style="margin:4px 0">• <b>${esc(m.driver)}</b> <span class="muted">(${esc(m.category_ar)} · ${esc(m.source_ar)})</span> — ${esc(m.needs_ar||"")}</div>`).join("")+`<a class="btn" href="company-data-center.html">مركز البيانات</a>`):""}
+      ${panel("قواعد المحركات",`<div class="tbl"><table><thead><tr><th>المحرك</th><th>الاتجاه</th><th>الحدود الفعّالة</th><th>الافتراضي</th><th>المصدر</th><th>مفعّل</th></tr></thead><tbody>${Object.entries(th).map(([k,v])=>`<tr><td>${esc(v.name_ar)}</td><td class="muted">${v.direction==="above"?"الأعلى أسوأ":"الأقل أسوأ"}</td><td>${v.values.map(x=>n(x,1)).join(" / ")} ${esc(v.unit)}</td><td class="muted">${v.default.map(x=>n(x,1)).join(" / ")}</td><td>${esc({default:"افتراضي",sector:"القطاع",company:"شركتك"}[v.source])}</td><td>${v.enabled?"✓":"✗"}</td></tr>`).join("")}</tbody></table></div><div class="muted">${esc(D.rules.severity_rule_ar)}</div>`,D.can_edit_rules?` <button class="btn ghost" data-act="settings">تعديل</button>`:"")}
+      ${panel("أوزان الفئات ("+esc(D.sector.ar)+")",Object.entries(D.rules.weights).map(([k,v])=>`<span class="chip" style="cursor:default">${esc((D.categories.find(c=>c.key===k)||{}).ar||k)}: ${n(v,2)}</span>`).join(" ")+(D.sector.focus.length?`<div class="muted" style="margin-top:8px">تركيز القطاع: ${D.sector.focus.map(f=>esc(f.name_ar)).join("، ")}</div>`:""))}
+      ${panel("الوحدات المقروءة",D.modules.map(m=>`<a class="chip" href="${esc(m.link||"#")}">${m.has_data?"🟢":"⚪"} ${esc(m.ar)}</a>`).join(" "))}
+      ${panel("سجل التدقيق",AUD?(AUD.length?`<div class="tbl"><table><tbody>${AUD.slice(0,60).map(a=>`<tr><td class="muted">${esc(a.when)}</td><td>${esc(a.who)}</td><td>${esc(a.action)}</td><td class="muted">${esc(a.target)}</td><td class="muted" style="white-space:normal;max-width:320px">${esc(a.details)}</td></tr>`).join("")}</tbody></table></div>`:na("لا عمليات بعد")):`<div class="state">…</div>`)}`;}
+  function render(){const d=D;
+    if(!d.has_data){$("tabs").innerHTML="";$("content").innerHTML=`<div class="state"><div style="font-size:16px;margin-bottom:10px">لا توجد بيانات كافية لتقييم المخاطر بعد.</div><div class="muted">المحرك يقرأ من الوحدات: المبيعات، التدفق النقدي والذمم، المشتريات، المخزون، العمليات، الموظفون، المصروفات، الفواتير.</div><div class="cta" style="justify-content:center"><a class="btn" href="company-data-center.html">مركز البيانات</a></div></div>`;return;}
+    const [v,arg]=route();const vv=v==="driver"?"drivers":v;
+    $("tabs").innerHTML=TABS.filter(([k])=>!CATS.includes(k)||d.categories.some(c=>c.key===k)).map(([k,l],i)=>`<button class="tab ${k===vv?"on":""}" data-go="${k}"><span class="muted" style="font-size:10px">${String(TABS.findIndex(x=>x[0]===k)+1).padStart(2,"0")}</span> ${l}${k==="alerts"&&d.alerts.length?` <span class="b high">${d.alerts.length}</span>`:""}</button>`).join("");
+    const views={overview,index:indexView,drivers:()=>driversView(arg),driver:()=>driverDetail(arg),impact:impactView,chains:chainsView,rootcause:rootView,branches:()=>branchesView(arg),departments:deptView,trends:trendsView,alerts:alertsView,register:registerView,mitigation:mitigationView,brief:briefView,rules:rulesView};
+    $("content").innerHTML=CATS.includes(v)?catView(v):(views[v]||overview)();bind();}
+  function bind(){document.querySelectorAll("[data-go]").forEach(el=>el.onclick=e=>{e.stopPropagation();go(el.dataset.go,el.dataset.arg||null);});
+    document.querySelectorAll("#content [data-act='settings']").forEach(el=>el.onclick=settings);
+    document.querySelectorAll("#content [data-dec]").forEach(b=>b.onclick=()=>decision(b));
+    document.querySelectorAll("#content [data-upd]").forEach(b=>b.onclick=()=>updateForm(b));
+    document.querySelectorAll("#content [data-q]").forEach(c=>c.onclick=()=>runAI(c.dataset.q));
+    const ad=$("addRisk");if(ad)ad.onclick=addForm;}
+  const frmOf=k=>document.querySelector(`#content [data-frm="${CSS.escape(k)}"]`);
+  const post=(url,body,box,ok)=>fetch(url,{method:"POST",headers:H,body:JSON.stringify(body)}).then(async r=>{const j=await r.json().catch(()=>({}));if(r.ok){AUD=null;ok&&ok(j);load();}else{box.textContent=typeof j.detail==="string"?j.detail:"HTTP "+r.status;box.className="neg";}});
+  function decision(b){const k=b.dataset.dec,box=frmOf(k);
+    box.innerHTML=`<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap"><input class="f o" placeholder="المسؤول"><input class="f d" type="date"><input class="f t" placeholder="الإجراء (اختياري)"><button class="btn c">إنشاء القرار</button></div><div class="m muted">الأرقام يعاد حسابها في الخادم. يُسجَّل في سجل التدقيق.</div>`;
+    box.querySelector(".c").onclick=()=>{const t=box.querySelector(".t").value;post("/company/risk/to-decision",{risk_key:k,owner:box.querySelector(".o").value,due_date:box.querySelector(".d").value,actions:t?[{title:t}]:undefined},box.querySelector(".m"));};}
+  function updateForm(b){const k=b.dataset.upd,box=frmOf(k),r=REG(k)||{};
+    box.innerHTML=`<div class="fg" style="margin-top:8px"><label>الحالة<select class="s">${STS.map(([v,l])=>`<option value="${v}" ${(r.status||"detected")===v?"selected":""}>${l}</option>`).join("")}</select></label><label>المسؤول<input class="o" value="${esc(r.owner||"")}"></label><label>الاستحقاق<input class="d" type="date" value="${esc(r.due_date||"")}"></label><label>ملاحظة<input class="n"></label></div><label class="muted" style="display:block;margin-top:6px">خطة المعالجة<textarea class="p" style="width:100%;min-height:60px;background:var(--bg,#070b09);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:9px">${esc(r.mitigation||"")}</textarea></label><div class="cta"><button class="btn c">حفظ</button><span class="m muted"></span></div>`;
+    box.querySelector(".c").onclick=()=>post("/company/risk/register/update",{risk_key:k,status:box.querySelector(".s").value,owner:box.querySelector(".o").value,due_date:box.querySelector(".d").value,mitigation:box.querySelector(".p").value,note:box.querySelector(".n").value},box.querySelector(".m"));}
+  function addForm(){const box=$("addFrm");box.innerHTML=`<div class="panel"><div class="fg"><label>العنوان<input class="t"></label><label>الفئة<select class="c">${D.categories.map(c=>`<option value="${c.key}">${esc(c.ar)}</option>`).join("")}</select></label><label>المستوى<select class="l">${Object.entries(LV).map(([k,l])=>`<option value="${k}" ${k==="medium"?"selected":""}>${l}</option>`).join("")}</select></label><label>المسؤول<input class="o"></label><label>الاستحقاق<input class="d" type="date"></label><label>خطة المعالجة<input class="p"></label></div><div class="cta"><button class="btn s">إضافة</button><span class="m muted"></span></div></div>`;
+    box.querySelector(".s").onclick=()=>post("/company/risk/register/add",{title:box.querySelector(".t").value,category:box.querySelector(".c").value,level:box.querySelector(".l").value,owner:box.querySelector(".o").value,due_date:box.querySelector(".d").value,mitigation:box.querySelector(".p").value},box.querySelector(".m"));}
+  function settings(){fetch("/company/risk/settings",{headers:H}).then(r=>r.json()).then(S=>{
+    $("modal").innerHTML=`<h3 style="margin-top:0">قواعد المخاطر — ${esc(D.sector.ar)}</h3><div class="muted">الحدود بالترتيب: متوسط / مرتفع / حرج. فارغ = افتراضي القطاع.</div><div class="tbl" style="max-height:50vh"><table><tbody>${S.drivers.map(x=>{const sv=(S.saved.thresholds||{})[x.key]||[];return `<tr><td style="white-space:normal">${esc(x.name_ar)}<div class="muted">${x.direction==="above"?"الأعلى أسوأ":"الأقل أسوأ"} · ${esc(x.unit)}</div></td>${[0,1,2].map(i=>`<td><input class="f" style="width:64px" data-th="${x.key}" data-i="${i}" inputmode="decimal" placeholder="${x.effective[i]}" value="${sv[i]??""}"></td>`).join("")}<td><input type="checkbox" data-en="${x.key}" ${x.enabled?"checked":""}></td></tr>`;}).join("")}</tbody></table></div>
+      <h4>أوزان الفئات (0–3)</h4><div class="fg">${Object.entries(S.weights).map(([k,v])=>`<label>${esc((D.categories.find(c=>c.key===k)||{}).ar||k)}<input data-w="${k}" inputmode="decimal" value="${(S.saved.weights||{})[k]??""}" placeholder="${v}"></label>`).join("")}</div>
+      <div class="cta"><button class="btn" id="mSave">حفظ</button><button class="btn ghost" id="mCancel">إلغاء</button><span id="mMsg" class="muted"></span></div><div class="muted">كل تعديل يُسجَّل في سجل التدقيق بالقيمة السابقة والجديدة.</div>`;
+    $("ov").classList.add("on");$("mCancel").onclick=()=>$("ov").classList.remove("on");
+    $("mSave").onclick=()=>{const th={},w={},dis=[];document.querySelectorAll("[data-th]").forEach(i=>{(th[i.dataset.th]=th[i.dataset.th]||[null,null,null])[+i.dataset.i]=i.value===""?null:Number(i.value);});
+      Object.keys(th).forEach(k=>{if(th[k].some(v=>v==null))delete th[k];});document.querySelectorAll("[data-w]").forEach(i=>{if(i.value!=="")w[i.dataset.w]=Number(i.value);});
+      document.querySelectorAll("[data-en]").forEach(i=>{if(!i.checked)dis.push(i.dataset.en);});
+      fetch("/company/risk/settings",{method:"POST",headers:H,body:JSON.stringify({thresholds:th,weights:w,disabled:dis})}).then(async r=>{const j=await r.json().catch(()=>({}));if(r.ok){$("ov").classList.remove("on");AUD=null;load();}else{$("mMsg").className="neg";$("mMsg").textContent=typeof j.detail==="string"?j.detail:"HTTP "+r.status;}});};});}
+  function runAI(q){const out=$("aiOut");if(!out)return;out.innerHTML=`<div class="muted">«${esc(q)}» — جارٍ التحليل…</div>`;
+    fetch("/company/risk/ai-insights",{method:"POST",headers:H,body:JSON.stringify({question:q})}).then(async r=>{const j=await r.json().catch(()=>({}));
+      if(!r.ok){out.innerHTML=`<div class="neg">${esc(typeof j.detail==="string"?j.detail:"HTTP "+r.status)}</div>`;return;}
+      const a=j.ai||{},resp=a.response||{},L={FACTS:"الدليل",INTERPRETATION:"القراءة",HYPOTHESES:"عوامل محتملة (ليست أسباباً مؤكدة)",RECOMMENDATIONS:"الإجراء",DATA_GAPS:"بيانات ناقصة"};
+      out.innerHTML=`<div class="muted" style="margin-bottom:6px">«${esc(j.question||q)}» · الأرقام من المحرك — الذكاء الاصطناعي يشرح فقط</div>`+(a.message?`<div class="na">${esc(a.message)}</div>`:"")+Object.keys(L).map(k=>resp[k]&&resp[k].length?`<div class="ai-sec"><b>${L[k]}</b><ul style="margin:0;padding-inline-start:18px">${resp[k].map(x=>`<li>${esc(typeof x==="string"?x:JSON.stringify(x))}</li>`).join("")}</ul></div>`:"").join("");}).catch(e=>{out.innerHTML=`<div class="neg">${esc(e.message||e)}</div>`;});}
+  $("ov").onclick=e=>{if(e.target===$("ov"))$("ov").classList.remove("on");};
+  $("btnSet").onclick=settings;
+  load();
+})();
+</script>
+<script src="nabbah-sidebar.js"></script>
+</body></html>
