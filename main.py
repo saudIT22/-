@@ -761,6 +761,52 @@ class CompanyOpsSetting(SQLModel, table=True):
     updated_at: _DTCOL = Field(default_factory=_now_naive)
 
 
+class CompanyRiskSetting(SQLModel, table=True):
+    """قواعد المخاطر للشركة (3.3): حدود المحركات، أوزان الفئات، القواعد المعطّلة — فوق افتراضي القطاع."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    settings_json: str = "{}"
+    updated_by: str = ""
+    updated_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+class CompanyRisk(SQLModel, table=True):
+    """سجل المخاطر (Risk Register 3.3): عنصر لكل خطر مكتشف أو يدوي. يشير لمصدره (risk_key = محرك الخطر) ولا ينسخ البيانات.
+    المسار: detected → reviewed → decision → approved → action → measurement → reassessment (+ monitoring / closed)."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    risk_key: str = Field(default="", index=True)
+    title: str = ""
+    category: str = ""
+    level: str = ""
+    status: str = "detected"
+    owner: str = ""
+    due_date: str = ""
+    mitigation: str = ""
+    decision_id: Optional[int] = Field(default=None, index=True)
+    baseline_score: Optional[float] = None
+    baseline_value: Optional[float] = None
+    baseline_date: str = ""
+    history_json: str = "[]"
+    created_by: str = ""
+    created_on: str = ""
+    updated_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+class CompanyRiskAssessment(SQLModel, table=True):
+    """لقطة تقييم يومية (Risk Assessment 3.3): المؤشر والفئات ومستوى كل محرك — أساس الخط الزمني والاتجاهات."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    assessed_on: str = Field(default="", index=True)
+    index_score: Optional[float] = None
+    confidence_pct: Optional[float] = None
+    categories_json: str = "{}"
+    driver_levels_json: str = "{}"
+    driver_scores_json: str = "{}"
+    engine_version: str = ""
+    updated_at: _DTCOL = Field(default_factory=_now_naive)
+
+
 class CompanyCashSetting(SQLModel, table=True):
     """مدخلات يدوية للسيولة لا توجد في الملفات: الرصيد الافتتاحي، الالتزامات المتداولة، الحد الأدنى، النقد المقيد."""
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -1350,6 +1396,11 @@ def page_fin_overview():
 @app.get("/company-ops-analytics.html")
 def page_ops_analytics():
     return FileResponse("company-ops-analytics.html")
+
+
+@app.get("/company-risk-intelligence.html")
+def page_risk_intelligence():
+    return FileResponse("company-risk-intelligence.html")
 
 
 @app.get("/company-tax-intelligence.html")
@@ -4215,7 +4266,7 @@ def _load_p24(name):
     """يحمّل محركات 2.4 من المجلد أو من حزمة nabbah_engines."""
     try:
         import sys as _sys, os as _os, importlib
-        for _d in ("phase21", "phase22", "phase23", "phase24", "phase25", "phase26", "phase27", "phase28", "phase29", "phase210", "phase211", "phase30", "phase31", "phase32"):
+        for _d in ("phase21", "phase22", "phase23", "phase24", "phase25", "phase26", "phase27", "phase28", "phase29", "phase210", "phase211", "phase30", "phase31", "phase32", "phase33"):
             _p = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), _d)
             if _p not in _sys.path:
                 _sys.path.insert(0, _p)
@@ -4693,7 +4744,7 @@ def _sales_rows(s, company_id, branch_ids=None):
                      "category": r.category, "quantity": r.quantity, "gross_sales": r.gross_sales,
                      "discounts": r.discounts, "returns": r.returns, "net_sales": r.net_sales,
                      "vat": r.vat, "payment_method": r.payment_method, "dataset_id": r.dataset_id,
-                     "promotion": getattr(r, "promotion", "") or ""})
+                     "promotion": getattr(r, "promotion", "") or "", "customer_name": getattr(r, "customer_name", "") or ""})
     return rows
 
 
@@ -6391,6 +6442,400 @@ def company_tax_ai_insights(data: dict, request: Request, user: User = Depends(g
     return {"period": res["period"], "question": q, "ai": out}
 
 
+# ═══════════════════════════════════════════════════════════
+#  Phase 3.3 — Risk Intelligence Center (محرك مخاطر مركزي واحد فوق نتائج الوحدات)
+#  البيانات الموحّدة → الوحدات (2.5→3.2) → محرك المخاطر → سجل/قرار/إجراء/قياس
+# ═══════════════════════════════════════════════════════════
+# نطاق الفئات حسب الدور (لا ربط مستخدم↔فرع حالياً — مدير الفرع يرى التشغيل والعملاء للشركة)
+_RISK_CATS_BY_ROLE = {"owner": None, "accountant": ["liquidity", "profit", "compliance"], "manager": ["operational", "customer"]}
+_RISK_STATUSES = ("detected", "reviewed", "decision", "approved", "action", "measurement", "reassessment", "monitoring", "closed")
+_RISK_MODS_CACHE = {}
+_RISK_CACHE_TTL = 30
+
+
+def _risk_scope(s, user, need="view"):
+    _ensure_data_tables()
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    company = s.get(Company, user.company_id)
+    role = get_user_role(s, user) if company else None
+    if not company or (role or "staff") not in _RISK_CATS_BY_ROLE:
+        raise HTTPException(403, "غير مصرّح — مركز المخاطر للمالك والمحاسب والمدير")
+    if company.is_active != 1:
+        raise HTTPException(402, "شركتك قيد التفعيل")
+    if need == "edit" and role not in ("owner", "accountant", "manager"):
+        raise HTTPException(403, "غير مصرّح — تعديل سجل المخاطر")
+    if need == "settings" and role != "owner":
+        raise HTTPException(403, "غير مصرّح — قواعد المخاطر يعدّلها المالك فقط")
+    return company, role
+
+
+def _risk_settings(s, company_id):
+    r = s.exec(select(CompanyRiskSetting).where(CompanyRiskSetting.company_id == company_id)).first()
+    try:
+        return json.loads(r.settings_json or "{}") if r else {}
+    except (TypeError, ValueError):
+        return {}
+
+
+def _risk_sector(company):
+    si = _load_p24("sector_intelligence")
+    return si.get_profile(getattr(company, "sector", None))["key"] if si else "other"
+
+
+def _risk_modules(s, company, role):
+    """يجمع نتائج الوحدات التي يسمح بها الدور. كل وحدة تفشل تُسجَّل وتُعرض «غير متاحة» — لا تُبتلع بصمت ولا تصبح صفراً."""
+    cats = _RISK_CATS_BY_ROLE.get(role)
+    key = (company.id, role)
+    hit = _RISK_MODS_CACHE.get(key)
+    if hit and (datetime.now() - hit[0]).total_seconds() < _RISK_CACHE_TTL:
+        return hit[1], hit[2], hit[3]
+    need = lambda *c: cats is None or any(x in cats for x in c)
+    plan = [("cashflow", need("liquidity"), lambda: _cashflow_result(s, company)),
+            ("finance", need("profit"), lambda: _fin_result(s, company)),
+            ("leakage", need("profit"), lambda: _leak_result(s, company, role)),
+            ("purchases", need("profit", "operational"), lambda: _purchases_result(s, company)),
+            ("inventory", need("operational"), lambda: _inventory_result(s, company)),
+            ("operations", need("operational"), lambda: _ops_result(s, company)),
+            ("hr", need("operational"), lambda: _hr_result(s, company, can_see_pay=False)),
+            ("tax", need("compliance"), lambda: _tax_result(s, company))]
+    mods, errors = {}, {}
+    for name, ok, fn_ in plan:
+        if not ok:
+            continue
+        try:
+            mods[name] = fn_()
+        except HTTPException as e:
+            errors[name] = str(e.detail)[:160]
+        except Exception as e:
+            _logger.error(f"risk module {name}: {type(e).__name__}: {str(e)[:160]}")
+            errors[name] = f"خطأ في وحدة {name}: {type(e).__name__}"
+    cust = _sales_rows(s, company.id) if need("customer") else []
+    _RISK_MODS_CACHE[key] = (datetime.now(), mods, cust, errors)
+    return mods, cust, errors
+
+
+def _risk_history(s, company_id):
+    rows = s.exec(select(CompanyRiskAssessment).where(CompanyRiskAssessment.company_id == company_id)
+                  .order_by(CompanyRiskAssessment.assessed_on.desc()).limit(400)).all()
+    out = []
+    for r in reversed(rows):
+        try:
+            out.append({"date": r.assessed_on, "index": r.index_score, "confidence": r.confidence_pct,
+                        "categories": json.loads(r.categories_json or "{}"), "driver_levels": json.loads(r.driver_levels_json or "{}")})
+        except (TypeError, ValueError):
+            _logger.warning(f"risk snapshot {r.id} unreadable")
+    return out
+
+
+def _risk_stored(s, company_id):
+    out = []
+    for r in s.exec(select(CompanyRisk).where(CompanyRisk.company_id == company_id)).all():
+        try:
+            hist = json.loads(r.history_json or "[]")
+        except (TypeError, ValueError):
+            hist = []
+        out.append({"risk_key": r.risk_key, "title": r.title, "category": r.category, "level": r.level or None, "status": r.status,
+                    "owner": r.owner, "due_date": r.due_date, "mitigation": r.mitigation, "decision_id": r.decision_id,
+                    "baseline_score": r.baseline_score, "baseline_value": r.baseline_value, "baseline_date": r.baseline_date,
+                    "created_on": r.created_on, "history": hist[-30:]})
+    return out
+
+
+def _risk_result(s, company, role, *, save_snapshot=True):
+    re_ = _load_p24("risk_engine")
+    if re_ is None:
+        raise HTTPException(503, "محرّك المخاطر غير متاح — " + _p23_diagnostic())
+    mods, cust, errors = _risk_modules(s, company, role)
+    cats = _RISK_CATS_BY_ROLE.get(role)
+    today_ = datetime.now().date()
+    res = re_.analyze_risk(mods, customer_rows=cust, settings=_risk_settings(s, company.id), sector=_risk_sector(company),
+                           history=_risk_history(s, company.id), stored=_risk_stored(s, company.id), today=today_,
+                           currency=getattr(company, "currency", None) or "SAR", categories=cats)
+    res["module_errors"] = errors
+    res["modules"] = [{"key": k, "ar": re_.MODULE_AR.get(k, k), "has_data": bool((m or {}).get("has_data")),
+                       "link": {"cashflow": "company-cashflow-intelligence.html", "finance": "company-financial-intelligence.html",
+                                "leakage": "company-leakage-intelligence.html", "purchases": "company-purchases-intelligence.html",
+                                "inventory": "company-inventory-intelligence.html", "operations": "company-operations-intelligence.html",
+                                "hr": "company-hr-intelligence.html", "tax": "company-tax-intelligence.html"}.get(k)}
+                      for k, m in mods.items()]
+    # لقطة تقييم يومية واحدة (العرض الكامل فقط) — أساس الخط الزمني والاتجاهات وقبل/بعد
+    if save_snapshot and cats is None and res["index"]["score"] is not None:
+        snap = res["snapshot"]
+        row = s.exec(select(CompanyRiskAssessment).where(CompanyRiskAssessment.company_id == company.id,
+                                                         CompanyRiskAssessment.assessed_on == snap["date"])).first() or \
+            CompanyRiskAssessment(company_id=company.id, assessed_on=snap["date"])
+        row.index_score, row.confidence_pct = snap["index"], snap["confidence"]
+        row.categories_json = json.dumps(snap["categories"], ensure_ascii=False)
+        row.driver_levels_json = json.dumps(snap["driver_levels"], ensure_ascii=False)
+        row.driver_scores_json = json.dumps(snap["driver_scores"], ensure_ascii=False)
+        row.engine_version, row.updated_at = res["version"], datetime.now()
+        s.add(row); s.commit()
+    # ربط خطط المعالجة بالإجراءات الفعلية (نفس جدول الإجراءات — لا نسخة)
+    dec_ids = [r["decision_id"] for r in res["register"] if r.get("decision_id")]
+    if dec_ids:
+        acts = s.exec(select(CompanyAction).where(CompanyAction.company_id == company.id, CompanyAction.decision_id.in_(dec_ids))).all()
+        by = {}
+        for a in acts:
+            by.setdefault(a.decision_id, []).append({"id": a.id, "title": a.title, "status": a.status, "progress": a.progress,
+                                                     "owner": a.owner, "due_date": a.due_date})
+        for r in res["register"]:
+            r["actions"] = by.get(r.get("decision_id"), [])
+            if r["actions"]:
+                r["actions_progress"] = round(sum(a["progress"] or 0 for a in r["actions"]) / len(r["actions"]), 1)
+    res["role"] = role
+    res["can_edit"] = role in ("owner", "accountant", "manager")
+    res["can_edit_rules"] = role == "owner"
+    return res
+
+
+@app.get("/company/risk-intelligence")
+def company_risk_intelligence(user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role = _risk_scope(s, user)
+        res = _risk_result(s, company, role)
+        log_audit(company.id, user.id, user.name, "risk_view", "risk", f"index={res['index']['score']} role={role}")
+        return res
+
+
+@app.get("/company/risk/brief")
+def company_risk_brief(user: User = Depends(get_current_user)):
+    """موجز الرئيس التنفيذي — حتمي من نفس الأرقام."""
+    with Session(engine) as s:
+        company, role = _risk_scope(s, user)
+        res = _risk_result(s, company, role)
+        return {"as_of": res["as_of"], "index": res["index"], "confidence": res["confidence"], "brief": res["brief"],
+                "top_risks": res["top_risks"], "impacts": res["impacts"], "scope": res["scope"]}
+
+
+def _risk_row(s, company, key):
+    return s.exec(select(CompanyRisk).where(CompanyRisk.company_id == company.id, CompanyRisk.risk_key == key)).first()
+
+
+def _risk_log(row, user, frm, to, note=""):
+    try:
+        h = json.loads(row.history_json or "[]")
+    except (TypeError, ValueError):
+        h = []
+    h.append({"when": datetime.now().strftime("%Y-%m-%d %H:%M"), "who": user.name or user.email, "from": frm, "to": to, "note": note[:300]})
+    row.history_json = json.dumps(h[-100:], ensure_ascii=False)
+
+
+def _risk_upsert(s, company, user, key, res):
+    """يحفظ عنصر السجل ويثبّت خط الأساس من حساب الخادم (لا من العميل) عند أول حفظ."""
+    re_ = _load_p24("risk_engine")
+    drv = next((d for d in res["drivers"] if d["key"] == key), None)
+    row = _risk_row(s, company, key)
+    if not row:
+        if not drv and not key.startswith("manual-"):
+            raise HTTPException(404, "الخطر غير موجود أو خارج صلاحيتك")
+        row = CompanyRisk(company_id=company.id, risk_key=key, created_by=(user.name or user.email)[:100],
+                          created_on=datetime.now().strftime("%Y-%m-%d"))
+        if drv:
+            row.title, row.category, row.level = drv["name_ar"], drv["category"], drv["level"] or ""
+            row.baseline_score, row.baseline_value = drv["score"], drv["value"] if isinstance(drv["value"], (int, float)) else None
+            row.baseline_date = res["as_of"]
+            row.owner = re_.OWNER_BY_DRIVER.get(key) or re_.OWNER_DEFAULT.get(drv["category"], "")
+    elif drv:
+        row.level = drv["level"] or row.level
+    return row, drv
+
+
+@app.post("/company/risk/register/update")
+def company_risk_register_update(data: dict, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role = _risk_scope(s, user, need="edit")
+        key = str(data.get("risk_key") or "")[:80]
+        res = _risk_result(s, company, role, save_snapshot=False)
+        if key not in {r["risk_key"] for r in res["register"]} and key not in {d["key"] for d in res["drivers"]}:
+            raise HTTPException(404, "الخطر غير موجود أو خارج صلاحيتك")
+        row, drv = _risk_upsert(s, company, user, key, res)
+        before = row.status or "detected"
+        st = str(data.get("status") or before)
+        if st not in _RISK_STATUSES:
+            raise HTTPException(422, "حالة غير صالحة")
+        if st == "approved" and role not in ("owner",):
+            raise HTTPException(403, "اعتماد القرار للمالك فقط")
+        if "due_date" in data:
+            dd = str(data.get("due_date") or "")
+            if dd and not _valid_date(dd):
+                raise HTTPException(422, "تاريخ غير صالح (YYYY-MM-DD)")
+            row.due_date = dd
+        if "owner" in data:
+            row.owner = str(data.get("owner") or "")[:100]
+        if "mitigation" in data:
+            row.mitigation = str(data.get("mitigation") or "")[:1000]
+        if st == "reassessment" and drv:     # إعادة التقييم = قياس جديد على نفس القاعدة
+            data["note"] = (str(data.get("note") or "") + f" · الدرجة الآن {drv['score']} (خط الأساس {row.baseline_score})").strip(" ·")
+        row.status, row.updated_at = st, datetime.now()
+        _risk_log(row, user, before, st, str(data.get("note") or ""))
+        s.add(row); s.commit()
+        log_audit(company.id, user.id, user.name, "risk_register_update", f"risk:{key}", f"{before}->{st} owner={row.owner}")
+        return {"ok": True, "status": st}
+
+
+@app.post("/company/risk/register/add")
+def company_risk_register_add(data: dict, user: User = Depends(get_current_user)):
+    """خطر يدوي (غير مكتشف من البيانات) — يُعلَّم «يدوي» ولا يدخل في حساب المؤشر."""
+    with Session(engine) as s:
+        company, role = _risk_scope(s, user, need="edit")
+        title = str(data.get("title") or "").strip()[:200]
+        cat = str(data.get("category") or "")
+        allowed = _RISK_CATS_BY_ROLE.get(role) or ["liquidity", "customer", "profit", "operational", "compliance"]
+        if not title or cat not in allowed:
+            raise HTTPException(422, "العنوان والفئة مطلوبان (ضمن صلاحيتك)")
+        lv = str(data.get("level") or "medium")
+        if lv not in ("low", "medium", "high", "critical"):
+            raise HTTPException(422, "مستوى غير صالح")
+        dd = str(data.get("due_date") or "")
+        if dd and not _valid_date(dd):
+            raise HTTPException(422, "تاريخ غير صالح (YYYY-MM-DD)")
+        import hashlib
+        key = "manual-" + hashlib.sha1(f"{company.id}|{title}|{datetime.now().isoformat()}".encode()).hexdigest()[:10]
+        row = CompanyRisk(company_id=company.id, risk_key=key, title=title, category=cat, level=lv, status="detected",
+                          owner=str(data.get("owner") or "")[:100], due_date=dd, mitigation=str(data.get("mitigation") or "")[:1000],
+                          created_by=(user.name or user.email)[:100], created_on=datetime.now().strftime("%Y-%m-%d"))
+        _risk_log(row, user, "", "detected", "خطر يدوي")
+        s.add(row); s.commit()
+        log_audit(company.id, user.id, user.name, "risk_register_add", f"risk:{key}", f"{cat}/{lv} {title[:80]}")
+        return {"ok": True, "risk_key": key}
+
+
+@app.post("/company/risk/to-decision")
+def company_risk_to_decision(data: dict, user: User = Depends(get_current_user)):
+    """يحوّل خطراً إلى قرار + إجراء. الأرقام يعاد حسابها في الخادم — قيم العميل تُتجاهل."""
+    with Session(engine) as s:
+        company, role = _risk_scope(s, user, need="edit")
+        _exec_scope(s, user, need="edit")
+        key = str(data.get("risk_key") or "")
+        res = _risk_result(s, company, role, save_snapshot=False)
+        drv = next((d for d in res["drivers"] if d["key"] == key and d["level"] in ("medium", "high", "critical")), None)
+        if not drv:
+            raise HTTPException(404, "الخطر غير موجود أو لم يعد مرتفعاً")
+        re_ = _load_p24("risk_engine")
+        imp = next((i for i in drv["impacts"] if i["type"] in ("actual", "potential", "exposure")), None)
+        d = CompanyDecision(
+            company_id=company.id, title=str(data.get("title") or f"معالجة خطر: {drv['name_ar']}")[:200],
+            detail=" · ".join(drv["evidence"])[:1000], owner=str(data.get("owner") or "")[:100], due_date=str(data.get("due_date") or "")[:20],
+            kpi=key, status="open", baseline_sales=_company_total_sales(s, company.id),
+            expected_impact=(f"{imp['type_ar']} {imp['amount']} {res['currency']}" if imp else "غير قابل للتقدير")[:200],
+            linked_to=f"risk:{key}|{res['as_of']}"[:200], rationale=(re_.ACTIONS.get(key) or "")[:500], metric_id=key,
+            baseline_value=drv["value"] if isinstance(drv["value"], (int, float)) else None,
+            expected_impact_value=imp["amount"] if imp else None, impact_status="expected", source_signal=f"risk:{key}",
+            problem_type=key, decision_type="risk", outcome_status="pending_measurement", created_by=user.name or user.email,
+            data_source="risk_engine", updated_at=datetime.now())
+        s.add(d); s.commit(); s.refresh(d)
+        created = []
+        for a in (data.get("actions") or [{"title": re_.ACTIONS.get(key) or drv["name_ar"]}])[:10]:
+            act = CompanyAction(company_id=company.id, decision_id=d.id, title=str(a.get("title") or "")[:200], owner=str(a.get("owner") or d.owner)[:100],
+                                priority="P1" if drv["level"] in ("critical", "high") else "P2", due_date=str(a.get("due_date") or d.due_date)[:20],
+                                start_date=datetime.now().strftime("%Y-%m-%d"), updated_at=datetime.now())
+            s.add(act); s.commit(); s.refresh(act); created.append(act.id)
+        row, _ = _risk_upsert(s, company, user, key, res)
+        before = row.status or "detected"
+        row.status, row.decision_id, row.updated_at = "decision", d.id, datetime.now()
+        if data.get("owner"):
+            row.owner = str(data["owner"])[:100]
+        if data.get("due_date") and _valid_date(str(data["due_date"])):
+            row.due_date = str(data["due_date"])
+        _risk_log(row, user, before, "decision", f"قرار #{d.id}")
+        s.add(row); s.commit()
+        log_audit(company.id, user.id, user.name, "decision_from_risk", f"risk:{key}", f"decision={d.id} score={drv['score']} actions={created}")
+        return {"ok": True, "decision_id": d.id, "action_ids": created}
+
+
+@app.get("/company/risk/settings")
+def company_risk_settings_get(user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role = _risk_scope(s, user)
+        re_ = _load_p24("risk_engine")
+        if re_ is None:
+            raise HTTPException(503, "محرّك المخاطر غير متاح — " + _p23_diagnostic())
+        st = _risk_settings(s, company.id)
+        sector = _risk_sector(company)
+        th, src = re_.thresholds_for(st.get("thresholds"), sector)
+        return {"sector": sector, "saved": st, "weights": re_.weights_for(sector, st.get("weights")),
+                "drivers": [{"key": k, "name_ar": m["ar"], "category": m["cat"], "unit": m["unit"], "direction": m["dir"],
+                             "default": list(m["t"]), "effective": list(th[k]), "source": src[k], "enabled": k not in (st.get("disabled") or [])}
+                            for k, m in re_.DRIVERS.items()], "can_edit": role == "owner"}
+
+
+@app.post("/company/risk/settings")
+def company_risk_settings_save(data: dict, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role = _risk_scope(s, user, need="settings")
+        re_ = _load_p24("risk_engine")
+        if re_ is None:
+            raise HTTPException(503, "محرّك المخاطر غير متاح — " + _p23_diagnostic())
+        new = {"thresholds": {}, "weights": {}, "disabled": []}
+        for k, v in (data.get("thresholds") or {}).items():
+            if k not in re_.DRIVERS or v in (None, "", []):
+                continue
+            try:
+                vals = [float(x) for x in v][:3]
+            except (TypeError, ValueError):
+                raise HTTPException(422, f"حدود غير رقمية: {re_.DRIVERS[k]['ar']}")
+            asc = re_.DRIVERS[k]["dir"] == "above"
+            if len(vals) != 3 or not ((asc and vals[0] <= vals[1] <= vals[2]) or (not asc and vals[0] >= vals[1] >= vals[2])):
+                raise HTTPException(422, f"ترتيب الحدود غير صحيح: {re_.DRIVERS[k]['ar']} (متوسط ثم مرتفع ثم حرج)")
+            new["thresholds"][k] = vals
+        for k, v in (data.get("weights") or {}).items():
+            if k in re_.CATS and v not in (None, ""):
+                try:
+                    w = float(v)
+                except (TypeError, ValueError):
+                    raise HTTPException(422, "الوزن يجب أن يكون رقماً")
+                if not 0 <= w <= 3:
+                    raise HTTPException(422, "الوزن بين 0 و3")
+                new["weights"][k] = w
+        new["disabled"] = [k for k in (data.get("disabled") or []) if k in re_.DRIVERS]
+        row = s.exec(select(CompanyRiskSetting).where(CompanyRiskSetting.company_id == company.id)).first() or CompanyRiskSetting(company_id=company.id)
+        old = row.settings_json or "{}"
+        row.settings_json, row.updated_by, row.updated_at = json.dumps(new, ensure_ascii=False), (user.name or user.email)[:100], datetime.now()
+        s.add(row); s.commit()
+        log_audit(company.id, user.id, user.name, "risk_settings", "risk", json.dumps({"before": json.loads(old), "after": new}, ensure_ascii=False)[:500])
+        return {"ok": True}
+
+
+@app.get("/company/risk/audit")
+def company_risk_audit(user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role = _risk_scope(s, user)
+        rows = s.exec(select(AuditLog).where(AuditLog.company_id == company.id).order_by(AuditLog.created_at.desc()).limit(500)).all()
+        return {"items": [{"when": r.created_at.isoformat(timespec="minutes") if r.created_at else None, "who": r.user_name, "action": r.action,
+                           "target": r.target, "details": r.details} for r in rows
+                          if (r.action or "").startswith("risk_") and r.action != "risk_view" or r.action == "decision_from_risk"][:200]}
+
+
+@app.post("/company/risk/ai-insights")
+def company_risk_ai_insights(data: dict, request: Request, user: User = Depends(get_current_user)):
+    """الذكاء الاصطناعي يشرح نتائج المحرك فقط — لا يحسب ولا يقرر."""
+    with Session(engine) as s:
+        company, role = _risk_scope(s, user)
+        res = _risk_result(s, company, role, save_snapshot=False)
+    if not res.get("has_data"):
+        raise HTTPException(422, "لا توجد بيانات كافية لتقييم المخاطر")
+    gw = _load_p24("ai_gateway")
+    if gw is None:
+        raise HTTPException(503, "بوابة الذكاء الاصطناعي غير متاحة — " + _p23_diagnostic())
+    q = str(data.get("question") or "ما أكبر مخاطرة يجب أن أتصرف فيها؟")[:300]
+    ctx = {"as_of": res["as_of"], "index": res["index"], "confidence": {k: res["confidence"][k] for k in ("pct", "sufficiency_ar", "missing")},
+           "categories": [{k: c.get(k) for k in ("ar", "score", "level_ar", "formula_ar", "unable_reasons")} for c in res["categories"]],
+           "drivers": [{k: d[k] for k in ("name_ar", "value", "unit", "score", "level_ar", "thresholds", "evidence", "impacts", "source_ar", "score_parts", "reason_ar")}
+                       for d in res["drivers"]],
+           "chains": [{"ar": c["ar"], "status": c["status_ar"]} for c in res["chains"] if c["active"]], "chain_note": res["graph"]["note_ar"],
+           "root_causes": [{k: r[k] for k in ("name_ar", "summary_ar", "module_causes")} for r in res["root_causes"][:6]],
+           "impacts": res["impacts"], "impact_note": res["impact_note_ar"], "trends": res["trends"]["windows"], "rules": {k: res["rules"][k] for k in ("score_rule_ar", "category_rule_ar", "index_rule_ar")}}
+    out = gw.request_ai_analysis(gw.GeminiProvider(company_gemini), ctx,
+                                 q + " — اشرح من نتائج المحرك فقط واذكر الدليل والمصدر لكل رقم. لا تحسب أرقاماً جديدة، ولا تغيّر الدرجات، "
+                                     "ولا تجزم بسبب: الارتباط ليس سببية. إن كانت فئة «تعذّر التحديد» فقل ذلك واذكر البيانات المطلوبة.",
+                                 trust_report={"overall_score": int(res["confidence"]["pct"] or 0), "status": "pass" if (res["confidence"]["pct"] or 0) >= 80 else "warning",
+                                               "has_critical_fail": False, "main_causes": []},
+                                 lang=get_lang(request), company=company)
+    log_audit(company.id, user.id, user.name, "risk_ai_insights", "risk", f"q={q[:80]}")
+    return {"as_of": res["as_of"], "question": q, "ai": out}
+
+
 @app.get("/company/executive-intelligence")
 def company_executive_intelligence(request: Request, user: User = Depends(get_current_user),
                                    period: Optional[str] = None, ai: int = 0):
@@ -6453,6 +6898,17 @@ def company_executive_intelligence(request: Request, user: User = Depends(get_cu
                 if _cf.get("has_data"):
                     result.setdefault("module_signals", {})["cashflow"] = _cf.get("signals", [])[:6]
                     result["risks"] = result["risks"] + [x for x in _cf.get("signals", []) if x["type"] == "risk"][:2]
+            except HTTPException:
+                pass
+            try:   # مركز المخاطر 3.3 — المؤشر العام + أهم المخاطر (نطاق الدور نفسه)
+                if (_role or "") in _RISK_CATS_BY_ROLE:
+                    _rk = _risk_result(s, company, _role, save_snapshot=False)
+                    if _rk.get("has_data"):
+                        result["risk_index"] = {"score": _rk["index"]["score"], "level": _rk["index"]["level"], "level_ar": _rk["index"]["level_ar"],
+                                                "confidence_pct": _rk["confidence"]["pct"], "sufficiency_ar": _rk["confidence"]["sufficiency_ar"],
+                                                "headline": _rk["brief"]["headline"], "scope_note_ar": _rk["scope"]["note_ar"],
+                                                "link": "company-risk-intelligence.html"}
+                        result.setdefault("module_signals", {})["risk"] = _rk.get("signals", [])[:6]
             except HTTPException:
                 pass
             try:   # إشارات المشتريات 2.7
@@ -11780,7 +12236,7 @@ ENGINE_MODULES = ("nabbah_finance", "nabbah_trust", "semantic_layer", "kpi_engin
                   "ai_gateway", "period_aggregation", "legacy_adapters", "platform_bridge",
                   "intelligence_engine", "forecast_engine", "scenario_engine", "decision_memory",
                   "rule_catalog", "canonical_model", "period_model", "metric_registry", "ingestion",
-                  "sales_engine", "inventory_engine", "purchases_engine", "cashflow_engine", "hr_engine", "ops_engine", "finance_engine", "sector_intelligence", "leakage_engine", "tax_engine")
+                  "sales_engine", "inventory_engine", "purchases_engine", "cashflow_engine", "hr_engine", "ops_engine", "finance_engine", "sector_intelligence", "leakage_engine", "tax_engine", "risk_engine")
 
 
 def _runtime_health():
