@@ -1398,6 +1398,11 @@ def page_ops_analytics():
     return FileResponse("company-ops-analytics.html")
 
 
+@app.get("/company-risk-drivers.html")
+def page_risk_drivers():
+    return FileResponse("company-risk-drivers.html")
+
+
 @app.get("/company-risk-intelligence.html")
 def page_risk_intelligence():
     return FileResponse("company-risk-intelligence.html")
@@ -4266,7 +4271,7 @@ def _load_p24(name):
     """يحمّل محركات 2.4 من المجلد أو من حزمة nabbah_engines."""
     try:
         import sys as _sys, os as _os, importlib
-        for _d in ("phase21", "phase22", "phase23", "phase24", "phase25", "phase26", "phase27", "phase28", "phase29", "phase210", "phase211", "phase30", "phase31", "phase32", "phase33"):
+        for _d in ("phase21", "phase22", "phase23", "phase24", "phase25", "phase26", "phase27", "phase28", "phase29", "phase210", "phase211", "phase30", "phase31", "phase32", "phase33", "phase34"):
             _p = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), _d)
             if _p not in _sys.path:
                 _sys.path.insert(0, _p)
@@ -6522,7 +6527,8 @@ def _risk_history(s, company_id):
     for r in reversed(rows):
         try:
             out.append({"date": r.assessed_on, "index": r.index_score, "confidence": r.confidence_pct,
-                        "categories": json.loads(r.categories_json or "{}"), "driver_levels": json.loads(r.driver_levels_json or "{}")})
+                        "categories": json.loads(r.categories_json or "{}"), "driver_levels": json.loads(r.driver_levels_json or "{}"),
+                        "driver_scores": json.loads(r.driver_scores_json or "{}")})
         except (TypeError, ValueError):
             _logger.warning(f"risk snapshot {r.id} unreadable")
     return out
@@ -6767,17 +6773,23 @@ def company_risk_settings_save(data: dict, user: User = Depends(get_current_user
         re_ = _load_p24("risk_engine")
         if re_ is None:
             raise HTTPException(503, "محرّك المخاطر غير متاح — " + _p23_diagnostic())
-        new = {"thresholds": {}, "weights": {}, "disabled": []}
+        metas = dict(re_.DRIVERS)
+        de_ = _load_p24("drivers_engine")
+        if de_ is not None:      # حدود المسببات المساندة (3.4) في نفس الإعدادات
+            metas.update({k: {"ar": m["ar"], "dir": m["dir"]} for k, m in de_.SUPPORT.items()})
+        prev_st = _risk_settings(s, company.id)
+        new = {"thresholds": {k: v for k, v in (prev_st.get("thresholds") or {}).items() if k.startswith("x_") and k not in (data.get("thresholds") or {})},
+               "weights": {}, "disabled": [], "targets": prev_st.get("targets") or {}}
         for k, v in (data.get("thresholds") or {}).items():
-            if k not in re_.DRIVERS or v in (None, "", []):
+            if k not in metas or v in (None, "", []):
                 continue
             try:
                 vals = [float(x) for x in v][:3]
             except (TypeError, ValueError):
-                raise HTTPException(422, f"حدود غير رقمية: {re_.DRIVERS[k]['ar']}")
-            asc = re_.DRIVERS[k]["dir"] == "above"
+                raise HTTPException(422, f"حدود غير رقمية: {metas[k]['ar']}")
+            asc = metas[k]["dir"] == "above"
             if len(vals) != 3 or not ((asc and vals[0] <= vals[1] <= vals[2]) or (not asc and vals[0] >= vals[1] >= vals[2])):
-                raise HTTPException(422, f"ترتيب الحدود غير صحيح: {re_.DRIVERS[k]['ar']} (متوسط ثم مرتفع ثم حرج)")
+                raise HTTPException(422, f"ترتيب الحدود غير صحيح: {metas[k]['ar']} (متوسط ثم مرتفع ثم حرج)")
             new["thresholds"][k] = vals
         for k, v in (data.get("weights") or {}).items():
             if k in re_.CATS and v not in (None, ""):
@@ -6788,7 +6800,7 @@ def company_risk_settings_save(data: dict, user: User = Depends(get_current_user
                 if not 0 <= w <= 3:
                     raise HTTPException(422, "الوزن بين 0 و3")
                 new["weights"][k] = w
-        new["disabled"] = [k for k in (data.get("disabled") or []) if k in re_.DRIVERS]
+        new["disabled"] = [k for k in (data.get("disabled") or []) if k in metas]
         row = s.exec(select(CompanyRiskSetting).where(CompanyRiskSetting.company_id == company.id)).first() or CompanyRiskSetting(company_id=company.id)
         old = row.settings_json or "{}"
         row.settings_json, row.updated_by, row.updated_at = json.dumps(new, ensure_ascii=False), (user.name or user.email)[:100], datetime.now()
@@ -6833,6 +6845,184 @@ def company_risk_ai_insights(data: dict, request: Request, user: User = Depends(
                                                "has_critical_fail": False, "main_causes": []},
                                  lang=get_lang(request), company=company)
     log_audit(company.id, user.id, user.name, "risk_ai_insights", "risk", f"q={q[:80]}")
+    return {"as_of": res["as_of"], "question": q, "ai": out}
+
+
+# ═══════════════════════════════════════════════════════════
+#  Phase 3.4 — Risk Drivers Intelligence (ما الذي يحرّك الخطر وبكم؟)
+#  يقرأ نتيجة محرك المخاطر 3.3 + نفس نتائج الوحدات (مخزّنة مؤقتاً) — لا بيانات جديدة ولا جداول مكررة
+# ═══════════════════════════════════════════════════════════
+def _drivers_result(s, company, role, *, save_snapshot=True):
+    de = _load_p24("drivers_engine")
+    if de is None:
+        raise HTTPException(503, "محرّك المسببات غير متاح — " + _p23_diagnostic())
+    risk = _risk_result(s, company, role, save_snapshot=save_snapshot)
+    mods, cust, errors = _risk_modules(s, company, role)
+    res = de.analyze_drivers(risk, mods, customer_rows=cust, settings=_risk_settings(s, company.id), history=_risk_history(s, company.id),
+                             today=datetime.now().date(), currency=getattr(company, "currency", None) or "SAR", sector=_risk_sector(company))
+    res["module_errors"] = errors
+    res["role"] = role
+    res["can_edit"] = role in ("owner", "accountant", "manager")
+    res["can_edit_rules"] = role == "owner"
+    return res
+
+
+@app.get("/company/risk-drivers-intelligence")
+def company_risk_drivers_intelligence(user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role = _risk_scope(s, user)
+        res = _drivers_result(s, company, role)
+        log_audit(company.id, user.id, user.name, "risk_drivers_view", "risk_drivers", f"role={role}")
+        return res
+
+
+def _driver_register_row(s, company, user, drv, as_of):
+    """صف السجل للمسبب (رئيسي = مفتاحه · مساند = x:مفتاحه) — خط الأساس من حساب الخادم عند أول حفظ."""
+    rk = drv["register_key"]
+    row = _risk_row(s, company, rk)
+    if not row:
+        row = CompanyRisk(company_id=company.id, risk_key=rk, title=drv["name_ar"], category=drv["category"], level=drv["level"] or "",
+                          baseline_score=drv["score"], baseline_value=drv["value"] if isinstance(drv["value"], (int, float)) else None,
+                          baseline_date=as_of, created_by=(user.name or user.email)[:100], created_on=datetime.now().strftime("%Y-%m-%d"))
+    else:
+        row.level = drv["level"] or row.level
+    return row
+
+
+@app.post("/company/risk-drivers/to-decision")
+def company_risk_drivers_to_decision(data: dict, user: User = Depends(get_current_user)):
+    """مسبب → توصية → قرار + إجراء (المسؤول، الاستحقاق، الأثر المتوقع). الأرقام من الخادم فقط."""
+    with Session(engine) as s:
+        company, role = _risk_scope(s, user, need="edit")
+        _exec_scope(s, user, need="edit")
+        key = str(data.get("driver_key") or "")
+        res = _drivers_result(s, company, role, save_snapshot=False)
+        drv = next((d for d in res.get("drivers", []) if d["key"] == key and d["level"] in ("medium", "high", "critical")), None)
+        if not drv:
+            raise HTTPException(404, "المسبب غير موجود أو لم يعد مرتفعاً أو خارج صلاحيتك")
+        rec = drv.get("recommendation") or {}
+        exp = rec.get("expected_impact") or {}
+        d = CompanyDecision(
+            company_id=company.id, title=str(data.get("title") or f"معالجة مسبب: {drv['name_ar']}")[:200],
+            detail=" · ".join(drv["evidence"])[:1000], owner=str(data.get("owner") or "")[:100], due_date=str(data.get("due_date") or "")[:20],
+            kpi=key, status="open", baseline_sales=_company_total_sales(s, company.id), expected_impact=(exp.get("ar") or "غير قابل للتقدير")[:200],
+            linked_to=f"risk_driver:{key}|{res['as_of']}"[:200], rationale=(rec.get("text_ar") or "")[:500], metric_id=key,
+            baseline_value=drv["value"] if isinstance(drv["value"], (int, float)) else None, expected_impact_value=exp.get("amount"),
+            impact_status="expected", source_signal=f"risk_driver:{key}", problem_type=key, decision_type="risk_driver",
+            outcome_status="pending_measurement", created_by=user.name or user.email, data_source="drivers_engine", updated_at=datetime.now())
+        s.add(d); s.commit(); s.refresh(d)
+        pr = (drv.get("priority") or {}).get("code")
+        created = []
+        for a in (data.get("actions") or [{"title": rec.get("text_ar") or drv["name_ar"]}])[:10]:
+            act = CompanyAction(company_id=company.id, decision_id=d.id, title=str(a.get("title") or "")[:200], owner=str(a.get("owner") or d.owner)[:100],
+                                priority="P1" if pr in ("immediate", "high") else "P2", due_date=str(a.get("due_date") or d.due_date)[:20],
+                                start_date=datetime.now().strftime("%Y-%m-%d"), updated_at=datetime.now())
+            s.add(act); s.commit(); s.refresh(act); created.append(act.id)
+        row = _driver_register_row(s, company, user, drv, res["as_of"])
+        before = row.status or "detected"
+        row.status, row.decision_id, row.updated_at = "decision", d.id, datetime.now()
+        if data.get("owner"):
+            row.owner = str(data["owner"])[:100]
+        if data.get("due_date") and _valid_date(str(data["due_date"])):
+            row.due_date = str(data["due_date"])
+        if not row.mitigation:
+            row.mitigation = (rec.get("text_ar") or "")[:1000]
+        _risk_log(row, user, before, "decision", f"قرار #{d.id} من مركز المسببات")
+        s.add(row); s.commit()
+        log_audit(company.id, user.id, user.name, "decision_from_risk_driver", f"risk_driver:{key}",
+                  f"decision={d.id} score={drv['score']} priority={pr} actions={created}")
+        return {"ok": True, "decision_id": d.id, "action_ids": created}
+
+
+@app.post("/company/risk-drivers/update")
+def company_risk_drivers_update(data: dict, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role = _risk_scope(s, user, need="edit")
+        key = str(data.get("driver_key") or "")
+        res = _drivers_result(s, company, role, save_snapshot=False)
+        drv = next((d for d in res.get("drivers", []) if d["key"] == key), None)
+        if not drv or not (drv.get("register") or drv["level"] in ("medium", "high", "critical")):
+            raise HTTPException(404, "المسبب غير موجود أو خارج صلاحيتك")
+        st = str(data.get("status") or (drv.get("register") or {}).get("status") or "detected")
+        if st not in _RISK_STATUSES:
+            raise HTTPException(422, "حالة غير صالحة")
+        if st == "approved" and role != "owner":
+            raise HTTPException(403, "اعتماد القرار للمالك فقط")
+        row = _driver_register_row(s, company, user, drv, res["as_of"])
+        before = row.status or "detected"
+        if "due_date" in data:
+            dd = str(data.get("due_date") or "")
+            if dd and not _valid_date(dd):
+                raise HTTPException(422, "تاريخ غير صالح (YYYY-MM-DD)")
+            row.due_date = dd
+        if "owner" in data:
+            row.owner = str(data.get("owner") or "")[:100]
+        if "mitigation" in data:
+            row.mitigation = str(data.get("mitigation") or "")[:1000]
+        row.status, row.updated_at = st, datetime.now()
+        _risk_log(row, user, before, st, str(data.get("note") or ""))
+        s.add(row); s.commit()
+        log_audit(company.id, user.id, user.name, "risk_driver_update", f"risk_driver:{key}", f"{before}->{st} owner={row.owner}")
+        return {"ok": True, "status": st}
+
+
+@app.post("/company/risk-drivers/targets")
+def company_risk_drivers_targets(data: dict, user: User = Depends(get_current_user)):
+    """أهداف الشركة للمسببات (الحالي مقابل الهدف). فارغ = الحد المقبول الافتراضي."""
+    with Session(engine) as s:
+        company, role = _risk_scope(s, user, need="settings")
+        re_, de = _load_p24("risk_engine"), _load_p24("drivers_engine")
+        if re_ is None or de is None:
+            raise HTTPException(503, "المحرّك غير متاح — " + _p23_diagnostic())
+        allowed = set(re_.DRIVERS) | set(de.SUPPORT)
+        tg = {}
+        for k, v in (data.get("targets") or {}).items():
+            if k not in allowed or v in (None, ""):
+                continue
+            try:
+                tg[k] = float(v)
+            except (TypeError, ValueError):
+                raise HTTPException(422, f"هدف غير رقمي: {k}")
+        row = s.exec(select(CompanyRiskSetting).where(CompanyRiskSetting.company_id == company.id)).first() or CompanyRiskSetting(company_id=company.id)
+        try:
+            cur = json.loads(row.settings_json or "{}")
+        except (TypeError, ValueError):
+            cur = {}
+        old = cur.get("targets") or {}
+        cur["targets"] = tg
+        row.settings_json, row.updated_by, row.updated_at = json.dumps(cur, ensure_ascii=False), (user.name or user.email)[:100], datetime.now()
+        s.add(row); s.commit()
+        log_audit(company.id, user.id, user.name, "risk_driver_targets", "risk_drivers", json.dumps({"before": old, "after": tg}, ensure_ascii=False)[:500])
+        return {"ok": True}
+
+
+@app.post("/company/risk-drivers/ai-insights")
+def company_risk_drivers_ai_insights(data: dict, request: Request, user: User = Depends(get_current_user)):
+    """AI يبدأ من نتائج المحرك (المساهمة، الدليل، الفجوة) ولا يخمّن — يشرح فقط."""
+    with Session(engine) as s:
+        company, role = _risk_scope(s, user)
+        res = _drivers_result(s, company, role, save_snapshot=False)
+    if not res.get("has_data"):
+        raise HTTPException(422, res.get("message_ar") or "لا توجد بيانات كافية")
+    gw = _load_p24("ai_gateway")
+    if gw is None:
+        raise HTTPException(503, "بوابة الذكاء الاصطناعي غير متاحة — " + _p23_diagnostic())
+    q = str(data.get("question") or "ليش الربحية نزلت؟")[:300]
+    el = [d for d in res["drivers"] if d["level"] in ("medium", "high", "critical") or d.get("contribution")]
+    ctx = {"as_of": res["as_of"], "risk_index": res["risk"]["index"], "narratives": res["narratives"], "contribution_rule": res["contribution_rule_ar"],
+           "drivers": [{k: d.get(k) for k in ("name_ar", "kind_ar", "category_ar", "value", "unit", "level_ar", "evidence", "impacts", "gap", "contribution",
+                                              "components", "trend", "persistence", "candidates", "recommendation", "priority")} | {"confidence": d["confidence"]["pct"]}
+                       for d in el][:25],
+           "chains": res["chains"], "executive": res["executive"], "data_needed": res["data"]["data_needed"],
+           "rules": {k: res["rules"][k] for k in ("priority_ar", "candidate_ar")}}
+    out = gw.request_ai_analysis(gw.GeminiProvider(company_gemini), ctx,
+                                 q + " — ابدأ من نتائج المحرك: المسبب الأكثر مساهمة ثم الذي يليه، مع الدليل والأرقام كما هي. "
+                                     "لا تحسب أرقاماً جديدة ولا تخمّن، وقل «سبب مرجّح» لا «السبب المؤكد». اختم بثلاثة إجراءات من توصيات المحرك.",
+                                 trust_report={"overall_score": int(res["risk"]["confidence"]["pct"] or 0),
+                                               "status": "pass" if (res["risk"]["confidence"]["pct"] or 0) >= 80 else "warning",
+                                               "has_critical_fail": False, "main_causes": []},
+                                 lang=get_lang(request), company=company)
+    log_audit(company.id, user.id, user.name, "risk_drivers_ai_insights", "risk_drivers", f"q={q[:80]}")
     return {"as_of": res["as_of"], "question": q, "ai": out}
 
 
@@ -6909,6 +7099,13 @@ def company_executive_intelligence(request: Request, user: User = Depends(get_cu
                                                 "headline": _rk["brief"]["headline"], "scope_note_ar": _rk["scope"]["note_ar"],
                                                 "link": "company-risk-intelligence.html"}
                         result.setdefault("module_signals", {})["risk"] = _rk.get("signals", [])[:6]
+                        _de = _load_p24("drivers_engine")
+                        if _de is not None:      # 3.4: أهم المسببات للعرض التنفيذي (نفس النتائج المخزنة مؤقتاً)
+                            _mods, _cust, _ = _risk_modules(s, company, _role)
+                            _dv = _de.analyze_drivers(_rk, _mods, customer_rows=_cust, settings=_risk_settings(s, company.id),
+                                                      history=_risk_history(s, company.id), today=datetime.now().date(), sector=_risk_sector(company))
+                            if _dv.get("has_data"):
+                                result["risk_drivers"] = {**_dv["executive"], "link": "company-risk-drivers.html"}
             except HTTPException:
                 pass
             try:   # إشارات المشتريات 2.7
@@ -12236,7 +12433,7 @@ ENGINE_MODULES = ("nabbah_finance", "nabbah_trust", "semantic_layer", "kpi_engin
                   "ai_gateway", "period_aggregation", "legacy_adapters", "platform_bridge",
                   "intelligence_engine", "forecast_engine", "scenario_engine", "decision_memory",
                   "rule_catalog", "canonical_model", "period_model", "metric_registry", "ingestion",
-                  "sales_engine", "inventory_engine", "purchases_engine", "cashflow_engine", "hr_engine", "ops_engine", "finance_engine", "sector_intelligence", "leakage_engine", "tax_engine", "risk_engine")
+                  "sales_engine", "inventory_engine", "purchases_engine", "cashflow_engine", "hr_engine", "ops_engine", "finance_engine", "sector_intelligence", "leakage_engine", "tax_engine", "risk_engine", "drivers_engine")
 
 
 def _runtime_health():
