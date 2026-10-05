@@ -647,9 +647,9 @@ def base_score(value, t, direction):
     return round(min(100.0, 85 + 15.0 * (x - c) / span), 1)
 
 
-def score_driver(key, inp, t, *, revenue=None, history_levels=None):
-    """درجة محرك واحد مع تفصيل كل مكوّن («كيف وصلنا لهذا الرقم؟»)."""
-    meta = DRIVERS[key]
+def score_driver(key, inp, t, *, revenue=None, history_levels=None, meta=None):
+    """درجة محرك واحد مع تفصيل كل مكوّن («كيف وصلنا لهذا الرقم؟»). meta: لمسببات 3.4 المساندة بنفس المعادلة."""
+    meta = meta or DRIVERS[key]
     v = inp.get("value")
     if v is None and inp.get("safe_state_ar"):      # حالة آمنة مقاسة (مثل: لا استنزاف) — ليست بيانات ناقصة
         return {"score": 0.0, "level": "low", "parts": [{"code": "safe_state", "ar": inp["safe_state_ar"], "points": 0.0}], "status": "evaluated"}
@@ -1020,7 +1020,8 @@ def register(drivers, stored, history, today):
                       "due_date": due, "overdue": bool(due and due < today.isoformat() and status not in ("closed", "monitoring")),
                       "mitigation": s.get("mitigation") or "", "suggested_action_ar": ACTIONS.get(k), "decision_id": s.get("decision_id"),
                       "detected_on": s.get("created_on") or first_seen(k, history, today), "source_ar": (d or {}).get("source_ar"),
-                      "link": (d or {}).get("link"), "manual": d is None and not k in DRIVERS, "saved": bool(s),
+                      "link": (d or {}).get("link"), "manual": d is None and k not in DRIVERS and not k.startswith("x:"),
+                      "supporting": k.startswith("x:"), "saved": bool(s),
                       "still_elevated": bool(d and d["level"] in ELEVATED), "before_after": ba, "history": s.get("history") or [],
                       "resolved_candidate": bool(s and d and d["level"] == "low")})
     order = {"critical": 0, "high": 1, "medium": 2, "low": 3, None: 4}
