@@ -56,6 +56,7 @@
     ]},
     { icon: "⚠️", label: "المخاطر والامتثال", items: [
       { label: "مركز المخاطر", href: "company-risk-intelligence.html" },
+      { label: "مسببات المخاطر", href: "company-risk-drivers.html" },
       { label: "محرّك المخاطر (السابق)", href: "company-risks.html" },
       { label: "الضريبة والزكاة", href: "company-tax.html" },
       { label: "سجل التدقيق", href: "company-audit.html" },
