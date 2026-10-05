@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>نبّاه · مسببات المخاطر</title>
+<link href="nabbah-design.css" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{background:var(--bg,#070b09);color:var(--txt,#e8f1ec);font-family:Tajawal,Tahoma,Arial,sans-serif;margin:0}
+  .wrap{max-width:1180px;margin:0 auto;padding:70px 16px 60px}
+  h1{margin:0 0 4px;font-size:24px}.sub{color:var(--txt-soft,#8ba396);margin:0 0 16px;font-size:14px}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+  select{background:var(--panel,#101a15);color:var(--txt,#e8f1ec);border:1px solid var(--line,#1d2c24);border-radius:10px;padding:8px 10px;font:inherit;font-size:13px;max-width:190px}
+  .crumbs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;min-height:4px}
+  .chip{background:rgba(16,185,129,.12);color:var(--mint,#10b981);border:1px solid rgba(16,185,129,.35);border-radius:20px;padding:3px 10px;font-size:12px;cursor:pointer}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+  .tile,.panel{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:14px;padding:14px}
+  .tile .l{font-size:12px;color:var(--txt-soft,#8ba396)}.tile .v{font-size:21px;font-weight:800;margin-top:4px}
+  .tile .c{font-size:12px;margin-top:4px}
+  .panel{margin-bottom:14px;min-width:0}.panel h2{margin:0 0 10px;font-size:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .panel h3{margin:12px 0 6px;font-size:13px;color:var(--txt-soft,#8ba396)}
+  .num{font-size:11px;color:var(--txt-soft,#8ba396);font-weight:600;border:1px solid var(--line,#1d2c24);border-radius:8px;padding:1px 6px}
+  .grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+  table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px;border-bottom:1px solid var(--line,#1d2c24);text-align:start;white-space:nowrap}
+  th{color:var(--txt-soft,#8ba396);font-weight:600}.tbl{overflow-x:auto}
+  tr.drill{cursor:pointer}tr.drill:hover td{background:rgba(16,185,129,.06)}
+  .barrow{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:13px}
+  .barrow.drill{cursor:pointer}.barrow.drill:hover{background:rgba(16,185,129,.06);border-radius:6px}
+  .barrow .t{flex:0 0 120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .barrow .g{flex:1;height:10px;background:var(--line,#1d2c24);border-radius:6px;overflow:hidden}
+  .barrow .g i{display:block;height:100%;background:var(--mint,#10b981)}
+  .pos{color:#10b981}.neg{color:#ef4444}.muted{color:var(--txt-soft,#8ba396);font-size:12px}
+  .b{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700;display:inline-block}
+  .high{background:rgba(234,88,12,.16);color:#ea580c}.medium{background:rgba(245,179,1,.15);color:#f5b301}
+  .low{background:rgba(16,185,129,.15);color:#10b981}.critical{background:rgba(239,68,68,.16);color:#ef4444}
+  .est{background:rgba(168,85,247,.15);color:#a855f7}
+  .sig{border-inline-start:4px solid var(--line,#1d2c24);padding:10px 12px;margin:8px 0;background:rgba(255,255,255,.02);border-radius:8px}
+  .sig.risk{border-color:#ef4444}.sig.opportunity{border-color:#10b981}.sig.data_quality{border-color:#f5b301}
+  .btn{background:var(--mint,#10b981);color:#062b1c;border:0;border-radius:10px;padding:7px 13px;font-weight:800;cursor:pointer;font:inherit;font-size:12px;text-decoration:none;display:inline-block}
+  .btn.ghost{background:transparent;color:var(--txt-soft,#8ba396);border:1px solid var(--line,#1d2c24);font-weight:600}
+  .btn:disabled{opacity:.5;cursor:default}
+  .state{padding:36px 16px;text-align:center;color:var(--txt-soft,#8ba396);border:1px dashed var(--line,#1d2c24);border-radius:14px}
+  .na{color:var(--txt-soft,#8ba396);font-size:13px;padding:10px;border:1px dashed var(--line,#1d2c24);border-radius:10px}
+  svg.ch{width:100%;height:170px;display:block}
+  .legend{display:flex;gap:14px;font-size:12px;color:var(--txt-soft,#8ba396);margin-top:6px;flex-wrap:wrap}
+  .legend i{display:inline-block;width:14px;height:3px;vertical-align:middle;margin-inline-end:4px}
+  .ai-sec{margin:8px 0}.ai-sec b{display:block;font-size:13px;margin-bottom:4px}.ai-sec li{font-size:13px;margin:3px 0}
+  input.f{flex:1;min-width:120px;background:var(--panel,#101a15);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:8px;padding:6px}
+  .st{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700;display:inline-block;white-space:nowrap}
+  .st.healthy{background:rgba(16,185,129,.15);color:#10b981}.st.watch{background:rgba(245,179,1,.15);color:#f5b301}
+  .st.low{background:rgba(234,88,12,.16);color:#ea580c}.st.stockout{background:rgba(239,68,68,.16);color:#ef4444}
+  .st.slow{background:rgba(59,130,246,.15);color:#60a5fa}.st.obsolete{background:rgba(148,163,184,.18);color:#cbd5e1}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}.schip{cursor:pointer;border:1px solid var(--line,#1d2c24);border-radius:12px;padding:8px 12px;min-width:120px}
+  .schip b{display:block;font-size:18px}.schip:hover{border-color:var(--mint,#10b981)}
+  .eq{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:13px}.eq .box{border:1px solid var(--line,#1d2c24);border-radius:10px;padding:8px 10px;text-align:center;min-width:90px}
+  .eq .box b{display:block;font-size:16px}
+  .ov{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:50;padding:14px}
+  .ov.on{display:flex}.modal{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:16px;padding:18px;width:min(560px,100%);max-height:90vh;overflow:auto}
+  .fg{display:grid;grid-template-columns:1fr 1fr;gap:10px}.fg label{font-size:12px;color:var(--txt-soft,#8ba396);display:flex;flex-direction:column;gap:4px}
+  .fg input,.fg select{background:var(--bg,#070b09);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:9px;padding:8px;font:inherit;max-width:none}
+  .cta{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  @media(max-width:760px){.fg{grid-template-columns:1fr}.tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.tile{padding:10px}.tile .v{font-size:17px}.grid2,.grid3{grid-template-columns:minmax(0,1fr)}h1{font-size:20px}select{max-width:47%}}
+  @media(max-width:700px){.tiles[style]{grid-template-columns:1fr 1fr!important}}
+</style>
+<style>
+  .tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--line,#1d2c24);margin:6px 0 16px}
+  .tab{background:none;border:0;color:var(--txt-soft,#8ba396);padding:10px 14px;font:inherit;font-size:14px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+  .tab.on{color:var(--txt,#e8f1ec);border-color:#14b8a6;font-weight:800}
+  .hero{display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr;gap:12px;margin-bottom:14px}
+  .hcard{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:16px;padding:16px;cursor:default}
+  .hcard.click{cursor:pointer}.hcard.click:hover{border-color:var(--mint,#10b981)}
+  .hcard .big{font-size:30px;font-weight:900;margin:6px 0}.hstat{font-size:22px;font-weight:900}
+  .hs-stable{color:#10b981}.hs-attention{color:#f5b301}.hs-critical{color:#ef4444}
+  .event{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-inline-start:4px solid #ef4444;border-radius:12px;padding:14px;margin-bottom:10px}
+  .event.opportunity{border-inline-start-color:#10b981}.event.data_quality{border-inline-start-color:#f5b301}
+  .event h4{margin:0 0 6px;font-size:15px}.acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .rec{display:grid;grid-template-columns:110px 1fr;gap:6px 12px;font-size:13px;margin-top:8px}.rec b{color:var(--txt-soft,#8ba396);font-weight:600}
+  .flow{display:flex;align-items:stretch;gap:8px;flex-wrap:wrap;justify-content:center}
+  .fnode{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:14px;padding:14px 18px;text-align:center;min-width:140px}
+  .fnode .big{font-size:22px;font-weight:900}.farrow{align-self:center;font-size:22px;color:var(--txt-soft,#8ba396)}
+  .ptip{background:var(--bg,#070b09);border:1px solid var(--mint,#10b981);border-radius:12px;padding:12px;margin-top:8px;font-size:13px}
+  .search{flex:1;min-width:180px;background:var(--panel,#101a15);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:10px;padding:9px 12px;font:inherit}
+  .perf{display:grid;grid-template-columns:70px 1fr 50px;gap:8px;align-items:center;font-size:13px;margin:8px 0}
+  .perf .g{height:10px;background:var(--line,#1d2c24);border-radius:6px;overflow:hidden}.perf .g i{display:block;height:100%}
+  .life{display:flex;gap:0;align-items:center;flex-wrap:wrap;margin:10px 0}.lstep{text-align:center;min-width:110px}
+  .ldot{width:16px;height:16px;border-radius:50%;margin:0 auto 6px;background:var(--line,#1d2c24)}.ldot.on{background:var(--mint,#10b981)}
+  .lline{flex:1;min-width:30px;height:2px;background:var(--line,#1d2c24);margin-bottom:22px}
+  .back{background:none;border:0;color:var(--mint,#10b981);cursor:pointer;font:inherit;padding:0;margin-bottom:10px}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-inline-end:6px}
+  @media(max-width:900px){.hero{grid-template-columns:1fr 1fr}}
+  @media(max-width:560px){.hero{grid-template-columns:1fr}.tab{padding:8px 10px;font-size:13px}.rec{grid-template-columns:1fr}}
+</style>
+
+<style>
+  .lv-critical{background:rgba(239,68,68,.18);color:#ef4444}.lv-high{background:rgba(234,88,12,.18);color:#f97316}
+  .lv-medium{background:rgba(245,179,1,.16);color:#f5b301}.lv-low{background:rgba(16,185,129,.15);color:#10b981}.lv-none{background:rgba(148,163,184,.15);color:#94a3b8}
+  .gauge{position:relative;height:12px;border-radius:8px;background:linear-gradient(270deg,#10b981 0 40%,#f5b301 40% 65%,#f97316 65% 85%,#ef4444 85% 100%);margin:8px 0 4px}
+  .gauge i{position:absolute;top:-5px;width:4px;height:22px;background:#fff;border-radius:3px;transform:translateX(50%)}
+  .heat td.c{text-align:center;font-weight:800;border-radius:6px}
+  .catgrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:14px}
+  .cat{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:14px;padding:12px;cursor:pointer}
+  .cat:hover{border-color:var(--mint,#10b981)}.cat .s{font-size:26px;font-weight:900;margin:4px 0}
+  .chain{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:8px 0}
+  .cnode{border:1px solid var(--line,#1d2c24);border-radius:10px;padding:6px 10px;font-size:12px;cursor:pointer}
+  .cnode.on{border-color:#ef4444}.carrow{color:var(--txt-soft,#8ba396)}
+  .kan{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.kcol{background:rgba(255,255,255,.02);border:1px solid var(--line,#1d2c24);border-radius:12px;padding:8px;min-height:80px}
+  .kcard{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:10px;padding:8px;margin:6px 0;font-size:12px;cursor:pointer}
+  .imp4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+  .brief li{margin:6px 0;font-size:14px}
+  @media(max-width:900px){.catgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.kan,.imp4{grid-template-columns:1fr 1fr}}
+  @media(max-width:560px){.catgrid,.kan,.imp4{grid-template-columns:1fr}}
+</style>
+<style>
+  .contrib{display:flex;height:22px;border-radius:8px;overflow:hidden;margin:8px 0;background:var(--line,#1d2c24)}
+  .contrib i{display:block;height:100%;border-inline-end:1px solid rgba(0,0,0,.35)}
+  .pr-immediate{background:rgba(239,68,68,.18);color:#ef4444}.pr-high{background:rgba(249,115,22,.18);color:#f97316}
+  .pr-medium{background:rgba(245,179,1,.16);color:#f5b301}.pr-monitor{background:rgba(148,163,184,.15);color:#94a3b8}
+  .tl{border-inline-start:2px solid var(--line,#1d2c24);margin:6px 8px;padding-inline-start:14px}.tl div{position:relative;margin:8px 0;font-size:13px}
+  .tl div::before{content:"";position:absolute;inset-inline-start:-21px;top:5px;width:10px;height:10px;border-radius:50%;background:var(--mint,#10b981)}
+  .step{display:flex;gap:10px;align-items:flex-start;margin:8px 0;flex-wrap:wrap}.step .m{min-width:120px;font-weight:800;color:var(--mint,#10b981)}
+  .ent{display:flex;gap:6px;flex-wrap:wrap}.ent span{border:1px solid var(--line,#1d2c24);border-radius:8px;padding:2px 8px;font-size:12px}
+  .exec4{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:14px}
+  @media(max-width:900px){.exec4{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🧭 مركز مسببات المخاطر</h1>
+  <p class="sub">مركز المخاطر يقول ما هو الخطر. هنا: ما الذي يحرّك الخطر؟ كم يساهم كل مسبب؟ ما الدليل والفجوة والأثر؟ وما الإجراء الأول؟</p>
+  <div class="bar"><a class="btn ghost" href="company-risk-intelligence.html">← مركز المخاطر</a><button class="btn ghost" id="btnSet" style="display:none">🎯 الأهداف والحدود</button><span class="muted" id="asof"></span></div>
+  <div class="na" id="disc" style="margin:6px 0 10px"></div>
+  <nav class="tabs" id="tabs"></nav>
+  <div id="content"><div class="state">…</div></div>
+</div>
+<div class="ov" id="ov"><div class="modal" id="modal"></div></div>
+<script src="i18n.js"></script>
+<script>
+(function(){
+  const TOKEN=localStorage.getItem("nabbah_token")||"";if(!TOKEN){location.href="login.html";return;}
+  const TABS=[["overview","نظرة عامة"],["top","أهم المسببات"],["analysis","تحليل المسببات"],["evidence","الأدلة"],["gaps","فجوات الأداء"],["impact","الأثر المالي"],
+    ["byrisk","المسببات حسب الخطر"],["branches","حسب الفرع"],["departments","حسب الإدارة"],["trends","اتجاهات المسببات"],["correlation","ارتباط المسببات"],
+    ["rootcause","الربط بالأسباب الجذرية"],["recs","توصيات المعالجة"],["alerts","التنبيهات"],["actions","القرارات والإجراءات"],["ai","اسأل نبّاه"]];
+  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const n=(v,d=1)=>v==null?"—":Number(v).toLocaleString("ar-SA",{maximumFractionDigits:d});
+  const H={Authorization:"Bearer "+TOKEN,"Content-Type":"application/json"},$=id=>document.getElementById(id);
+  const LV={critical:"حرج",high:"مرتفع",medium:"متوسط",low:"منخفض"},LC={critical:"#ef4444",high:"#f97316",medium:"#f5b301",low:"#10b981"};
+  const PAL=["#ef4444","#f97316","#f5b301","#14b8a6","#60a5fa","#a855f7","#94a3b8","#10b981"];
+  const STS=[["detected","مكتشف"],["reviewed","تمت المراجعة"],["decision","بانتظار قرار"],["approved","قرار معتمد"],["action","قيد التنفيذ"],["measurement","قياس الأثر"],["reassessment","إعادة تقييم"],["monitoring","مراقبة"],["closed","مغلق"]];
+  let D=null;
+  const route=()=>{const h=decodeURIComponent(location.hash.slice(1)||"overview");const i=h.indexOf("/");return i<0?[h,""]:[h.slice(0,i),h.slice(i+1)];};
+  const go=(v,arg)=>{location.hash=arg?`${v}/${encodeURIComponent(arg)}`:v;};
+  window.addEventListener("hashchange",()=>{if(D){render();window.scrollTo(0,0);}});
+  function load(){$("content").innerHTML=`<div class="state">…</div>`;
+    fetch("/company/risk-drivers-intelligence",{headers:H}).then(async r=>{
+      if(r.status===401){location.href="login.html";return null;}
+      if(r.status===403||r.status===402){let d="";try{d=(await r.json()).detail;}catch(_){}$("content").innerHTML=`<div class="state">🔒 ${esc(d||"ليست لديك صلاحية.")}</div>`;return null;}
+      if(!r.ok){let d="";try{const j=await r.json();d=typeof j.detail==="string"?j.detail:JSON.stringify(j.detail||j);}catch(_){}err(`HTTP ${r.status}${d?" — "+d:""}`);return null;}
+      return r.json();}).then(d=>{if(!d)return;D=d;$("btnSet").style.display=d.can_edit_rules?"":"none";
+        $("disc").textContent="ℹ "+(d.disclaimer_ar||d.message_ar||"")+(d.risk&&d.risk.scope&&d.risk.scope.note_ar?" · "+d.risk.scope.note_ar:"");$("asof").textContent=d.as_of?"التقييم بتاريخ "+d.as_of:"";
+        try{render();}catch(e){console.error(e);err("render: "+(e&&e.message||e));}}).catch(e=>err("network: "+(e&&e.message||e)));}
+  function err(m){$("content").innerHTML=`<div class="state neg">تعذّر تحميل مركز المسببات.<div class="muted" style="margin-top:8px">${esc(m)}</div></div>`;}
+  const panel=(title,body,extra="")=>`<div class="panel"><h2>${title}${extra}</h2>${body}</div>`;
+  const na=m=>`<div class="na">${esc(m)}</div>`;
+  const tile=(l,v,c)=>`<div class="tile"><div class="l">${l}</div><div class="v">${v}</div><div class="c">${c||""}</div></div>`;
+  const lv=(l,txt)=>`<span class="b lv-${l||"none"}">${esc(txt||LV[l]||"تعذّر التحديد")}</span>`;
+  const pr=p=>p?`<span class="b pr-${p.code}">${esc(p.ar)}</span>`:"";
+  const money=v=>v==null?"—":n(v,0)+" "+esc(D.currency||"SAR");
+  const DRV=k=>D.drivers.find(d=>d.key===k);
+  const val=d=>d.value==null?(d.display_ar?`<span class="muted">${esc(d.display_ar)}</span>`:`<span class="muted">تعذّر التحديد</span>`):`${n(d.value,2)} <span class="muted">${esc(d.unit)}</span>`;
+  const imps=list=>(list||[]).length?(list||[]).map(i=>`<div style="margin:3px 0"><span class="b ${i.type==="actual"?"critical":i.type==="potential"?"high":i.type==="exposure"?"medium":"low"}">${esc(i.type_ar)}</span> <b>${money(i.amount)}</b> <span class="muted">${esc(i.basis_ar||"")}</span></div>`).join(""):`<span class="muted">لا أثر مالي قابل للقياس من البيانات — لا نخترع رقماً</span>`;
+  const kind=d=>d.kind==="primary"?`<span class="b est" title="${esc(d.kind_ar)}">رئيسي</span>`:`<span class="b lv-none" title="${esc(d.kind_ar)}">مساند</span>`;
+  function card(c,i){return `<div class="event" style="border-inline-start-color:${LC[c.level]||"#475569"};cursor:pointer" data-go="driver" data-arg="${esc(c.key)}"><h4>${String(i+1).padStart(2,"0")} · ${esc(c.name_ar)} ${lv(c.level)} ${pr(c.priority)}</h4>
+    <div class="rec"><b>الخطر المتأثر</b><span>${esc(c.category_ar)}</span><b>المساهمة</b><span>${c.contribution_pct==null?"—":n(c.contribution_pct,1)+"%"}${c.contribution_via_ar?` <span class="muted">(ضمن ${esc(c.contribution_via_ar)})</span>`:""}</span>
+    <b>الأثر</b><span>${c.impact?`${esc(c.impact.type_ar)} ${money(c.impact.amount)}`:"—"}</span><b>الثقة</b><span>${n(c.confidence_pct,0)}% · ${esc(c.sufficiency_ar)}</span>${c.affected_branches?`<b>فروع متأثرة</b><span>${c.affected_branches}</span>`:""}<b>الاتجاه</b><span>${esc(c.trend_ar)} · ${esc(c.persistence_ar)}</span></div></div>`;}
+  function contribBar(items){const t=items.reduce((a,b)=>a+(b.pct||0),0)||1;return `<div class="contrib">${items.map((x,i)=>`<i title="${esc(x.name_ar)} ${n(x.pct,1)}%" style="width:${100*(x.pct||0)/t}%;background:${PAL[i%PAL.length]}"></i>`).join("")}</div><div class="legend">${items.map((x,i)=>`<span style="cursor:pointer" data-go="driver" data-arg="${esc(x.key)}"><i style="background:${PAL[i%PAL.length]};height:8px"></i>${esc(x.name_ar)} ${n(x.pct,1)}%</span>`).join("")}</div>`;}
+  function overview(){const e=D.executive,r=D.risk;
+    return `<div class="hero"><div class="hcard click" onclick="location.href='company-risk-intelligence.html#index'"><div class="muted">مؤشر المخاطر (من 3.3)</div><div class="big" style="color:${LC[r.index.level]||"inherit"}">${n(r.index.score,1)}</div>${lv(r.index.level,r.index.level_ar)}</div>
+      <div class="hcard click" data-go="top"><div class="muted">مسببات مرتفعة</div><div class="big">${n(D.drivers.filter(d=>["medium","high","critical"].includes(d.level)).length,0)}</div><div class="muted">${n(D.drivers.filter(d=>d.priority&&d.priority.code==="immediate").length,0)} أولوية فورية</div></div>
+      <div class="hcard click" data-go="recs"><div class="muted">توصيات بلا قرار</div><div class="big">${n(D.recommendations.filter(x=>!x.decision_id&&x.priority.code!=="monitor").length,0)}</div><div class="muted">من ${D.recommendations.length} توصية</div></div>
+      <div class="hcard click" data-go="evidence"><div class="muted">بيانات ناقصة</div><div class="big">${n(D.drivers.filter(d=>d.score==null).length+D.data.data_needed.length,0)}</div><div class="muted">مسببات تعذّر تقييمها</div></div></div>
+      <div class="exec4">${panel("💰 أكبر مسبب مالياً",e.biggest_financial?`<b data-go="driver" data-arg="${esc(e.biggest_financial.key)}" style="cursor:pointer">${esc(e.biggest_financial.name_ar)}</b> ${lv(e.biggest_financial.level)}<div class="muted">${e.biggest_financial.actual_potential?"فعلي/محتمل "+money(e.biggest_financial.actual_potential):""} ${e.biggest_financial.exposure?" · تعرّض "+money(e.biggest_financial.exposure):""}</div>`:na("لا أثر مالي مقاس"))}
+        ${panel("📈 المسبب الناشئ",e.emerging?`<b data-go="driver" data-arg="${esc(e.emerging.key)}" style="cursor:pointer">${esc(e.emerging.name_ar)}</b> ${lv(e.emerging.level)}<div class="muted">${esc(e.emerging.rule_ar)}</div>`:na("يحتاج تقييمات محفوظة أو اتجاهاً شهرياً"))}
+        ${panel("⚡ يحتاج إجراءً فورياً",e.immediate?`<b data-go="driver" data-arg="${esc(e.immediate.key)}" style="cursor:pointer">${esc(e.immediate.name_ar)}</b> ${lv(e.immediate.level)}<div class="muted">${esc(e.immediate.action_ar||"")}</div>`:na("لا مسبب فوري بلا قرار"))}</div>
+      ${panel("أعلى 5 مسببات (حسب نقاطها في مؤشر المخاطر)",e.top5.length?`<div class="tbl"><table><tbody>${e.top5.map((t,i)=>`<tr class="drill" data-go="driver" data-arg="${esc(t.key)}"><td><b>${i+1}. ${esc(t.name_ar)} ${t.arrow}</b></td><td>${esc(t.category_ar)}</td><td>${lv(t.level)}</td><td>${n(t.contribution_pct,1)}% من فئته</td><td><b>${n(t.index_points,1)}</b> نقطة من المؤشر</td></tr>`).join("")}</tbody></table></div><div class="muted">${esc(e.rule_ar)}</div>`:na("لا مسببات مرتفعة"))}
+      <div class="grid2">${panel("لماذا؟ (تفسير حتمي من الأرقام)",Object.entries(D.narratives).map(([k,v])=>`<div style="margin-bottom:10px"><b>${esc((D.by_risk.find(x=>x.category===k)||{}).ar||k)}</b><div style="font-size:13px;margin-top:4px">${esc(v.text_ar)}</div></div>`).join(""))}
+        ${panel("مسببات قطاع "+esc(D.sector.ar),D.sector.items.length?D.sector.items.map(x=>`<div class="step"><span class="m">${esc(x.label)}</span><span>${x.type==="data_needed"?`<span class="muted">بيانات غير متوفرة — ${esc(x.needs_ar)}</span>`:x.type==="kpi"?(x.value==null?`<span class="muted">${esc(x.status_ar)}</span>`:`${n(x.value,1)} مقابل ${n(x.baseline,1)} — <span class="${x.elevated?"neg":"pos"}">${esc(x.status_ar)}</span>`):`${x.level?lv(x.level):`<span class="muted">${esc(x.status_ar)}</span>`} ${x.value!=null?n(x.value,2)+" "+esc(x.unit):""} <a href="#driver/${encodeURIComponent(x.key)}" style="color:var(--mint,#10b981)">↗</a>`}</span></div>`).join("")+`<div class="muted">${esc(D.sector.note_ar)}</div>`:na("القواعد العامة"))}</div>`;}
+  function topView(){return panel("أهم مسببات المخاطر",D.top.length?D.top.map(card).join(""):na("لا مسببات مرتفعة وفق القواعد الحالية"));}
+  function analysis(){return D.by_risk.map(r=>{const c=D.contributions[r.category]||{items:[]};const nar=D.narratives[r.category]||{};
+      return panel(`${r.icon} ${esc(r.ar)} — ${r.score==null?"تعذّر التحديد":n(r.score,1)}`,(c.items.length?contribBar(c.items):na("لا مسببات مقيّمة"))
+        +`<div style="margin-top:8px">${esc(nar.text_ar||"")}</div>`+(nar.actions&&nar.actions.length?`<h3>الإجراءات المقترحة</h3><ol style="margin:0;padding-inline-start:18px">${nar.actions.map(a=>`<li style="margin:3px 0">${esc(a)}</li>`).join("")}</ol>`:"")
+        +(r.primary.some(p=>p.components&&p.components.length)?r.primary.filter(p=>p.components&&p.components.length).map(p=>`<h3>مكوّنات «${esc(p.name_ar)}»</h3>${p.components.map(x=>`<div class="barrow drill" data-go="driver" data-arg="${esc(x.key)}"><span class="t">${esc(x.name_ar)}</span><span class="g"><i style="width:${x.share_pct}%"></i></span><b>${n(x.share_pct,1)}%</b><span class="muted">${money(x.amount)}</span></div>`).join("")}`).join(""):"")
+        +(c.unable&&c.unable.length?`<div class="muted" style="margin-top:6px">تعذّر تقييم: ${c.unable.map(esc).join("، ")} — لا تُحسب صفراً</div>`:""));}).join("")+na(D.contribution_rule_ar);}
+  function evidence(){return D.profiles.map(p=>panel(esc(p.ar),p.steps.map((s,i)=>`<div class="step"><span class="m">${i?"↓ ":""}${esc(s.module_ar)}</span><div>${s.items.map(x=>`<div style="cursor:pointer" data-go="driver" data-arg="${esc(x.key)}">${lv(x.level)} <b>${esc(x.name_ar)}</b>: ${n(x.value,2)} ${esc(x.unit)} <span class="muted">— ${esc(x.evidence)}</span></div>`).join("")}</div></div>`).join("")+`<div class="muted">${esc(p.note_ar)}</div>`)).join("")
+      +panel("كفاية البيانات",`<div class="tbl"><table><thead><tr><th>المصدر</th><th>الأشهر</th><th>السجلات</th><th>الكيانات</th></tr></thead><tbody>${Object.entries(D.data.profiles).map(([k,v])=>`<tr><td>${esc(k)}</td><td>${n(v.months,0)}</td><td>${v.records==null?`<span class="muted">لا تعرضه الوحدة</span>`:n(v.records,0)}</td><td class="muted">${esc(v.entities_ar||"")}</td></tr>`).join("")}</tbody></table></div><div class="muted">${esc(D.data.rule_ar)}</div>
+      <h3>مسببات بلا بيانات في نبّاه</h3>${D.data.data_needed.map(x=>`<div class="muted">• <b>${esc(x.ar)}</b> (${esc(x.category_ar)}) — ${esc(x.needs_ar)}</div>`).join("")}
+      <h3>مسببات تعذّر تقييمها</h3>${D.drivers.filter(d=>d.score==null&&!d.display_ar).map(d=>`<div class="muted">• <b>${esc(d.name_ar)}</b>: ${esc(d.reason_ar||"")} — ${esc(d.needs_ar||"")}</div>`).join("")||na("—")}`);}
+  function gaps(){const ds=D.drivers.filter(d=>d.gap&&d.gap.target!=null).sort((a,b)=>(b.score??0)-(a.score??0));
+    return panel("فجوات الأداء — المؤشر ← الحالي ← الهدف ← الفجوة ← المسبب ← الخطر",`<div class="tbl"><table><thead><tr><th>المسبب</th><th>الحالي</th><th>الهدف</th><th>الفجوة</th><th>خط الأساس</th><th>الخطر</th></tr></thead><tbody>${ds.map(d=>`<tr class="drill" data-go="driver" data-arg="${esc(d.key)}"><td><b>${esc(d.name_ar)}</b> ${kind(d)}</td><td>${n(d.gap.current,2)} ${esc(d.unit)}</td><td>${n(d.gap.target,2)} <span class="muted">${esc(d.gap.target_ar)}</span></td><td class="${d.gap.beyond?"neg":"pos"}">${d.gap.gap>0?"+":""}${n(d.gap.gap,2)}</td><td class="muted">${d.gap.baseline==null?"—":n(d.gap.baseline,2)+" ("+esc(d.gap.baseline_ar)+")"}</td><td>${esc(d.category_ar)} ${lv(d.level)}</td></tr>`).join("")}</tbody></table></div><div class="muted">الهدف = هدف الشركة إن حُدّد، وإلا الحد المقبول (حد «متوسط») — حدّث الأهداف من «الأهداف والحدود».</div>`);}
+  function impactView(){const ds=D.drivers.filter(d=>(d.impacts||[]).length).sort((a,b)=>Math.max(...b.impacts.map(i=>i.amount))-Math.max(...a.impacts.map(i=>i.amount)));
+    return panel("الأثر المالي لكل مسبب (أنواع منفصلة)",ds.length?`<div class="tbl"><table><thead><tr><th>المسبب</th><th>فعلي</th><th>محتمل</th><th>تعرّض</th><th>استرداد</th></tr></thead><tbody>${ds.map(d=>{const g=t=>{const x=d.impacts.find(i=>i.type===t);return x?money(x.amount):"—";};return `<tr class="drill" data-go="driver" data-arg="${esc(d.key)}"><td><b>${esc(d.name_ar)}</b> ${kind(d)}</td><td>${g("actual")}</td><td>${g("potential")}</td><td>${g("exposure")}</td><td>${g("recovery")}</td></tr>`;}).join("")}</tbody></table></div><div class="muted">لا تُجمع الأعمدة معاً ولا الصفوف المتداخلة (مثل المصروفات الزائدة ضمن التسرب). المسبب بلا مبلغ = لا بيانات كافية، وليس صفراً.</div>`:na("لا أثر مالي مقاس"));}
+  function byrisk(){return D.by_risk.map(r=>panel(`${r.icon} ${esc(r.ar)}`,`<h3>مسببات رئيسية (تدخل في المؤشر)</h3>${r.primary.map(p=>`<div class="barrow drill" data-go="driver" data-arg="${esc(p.key)}"><span class="t">${esc(p.name_ar)}</span><span class="g"><i style="width:${(p.contribution&&p.contribution.pct)||0}%;background:${LC[p.level]||"#475569"}"></i></span><b>${p.contribution?n(p.contribution.pct,1)+"%":"—"}</b> ${lv(p.level)}</div>`).join("")||na("—")}
+      <h3>مسببات مساندة (تشرح)</h3>${r.support.map(p=>`<div class="step" style="cursor:pointer" data-go="driver" data-arg="${esc(p.key)}">${lv(p.level)} <b>${esc(p.name_ar)}</b> <span class="muted">${p.value==null?esc(p.reason_ar||""):n(p.value,2)+" "+esc(p.unit)}</span></div>`).join("")||na("—")}
+      ${r.cross.length?`<h3>مسببات من فئات أخرى مرتبطة</h3>${r.cross.map(c=>`<div class="step" style="cursor:pointer" data-go="driver" data-arg="${esc(c.key)}">${lv(c.level)} <b>${esc(c.name_ar)}</b> <span class="muted">${esc(c.category_ar)} · عبر «${esc(c.via_ar)}»</span></div>`).join("")}`:""}
+      ${r.data_needed.length?`<h3>بلا بيانات</h3>${r.data_needed.map(x=>`<div class="muted">• ${esc(x.name_ar)} — ${esc(x.needs_ar)}</div>`).join("")}`:""}`)).join("");}
+  function branches(){const b=D.branches;return panel("المسببات حسب الفرع",b.rows.length?b.rows.map(r=>`<div class="event" style="border-inline-start-color:${LC[(r.top[0]||{}).level]||"#475569"}"><h4>🏢 ${esc(r.branch)} <span class="muted">${r.elevated} مسببات مرتفعة</span></h4>${r.top.map((x,i)=>`<div class="step" style="cursor:pointer" data-go="driver" data-arg="${esc(x.key)}"><span class="m">${i+1}. ${esc(x.name_ar)}</span>${lv(x.level)} <span class="muted">${n(x.value,2)} ${esc(x.unit)} · ${esc(x.category_ar)}</span></div>`).join("")}</div>`).join("")+`<div class="muted">${esc(b.rule_ar)}</div>`:na("لا توجد مسببات مقسّمة على الفروع"));}
+  function departments(){const d=D.departments;return panel("المسبب الرئيسي لكل إدارة",`<div class="tbl"><table><thead><tr><th>الإدارة</th><th>المسبب الرئيسي</th><th>المستوى</th><th>مسببات مرتفعة أخرى</th></tr></thead><tbody>${d.functional.map(r=>`<tr ${r.main?`class="drill" data-go="driver" data-arg="${esc(r.main.key)}"`:""}><td><b>${esc(r.department)}</b></td><td>${r.main?esc(r.main.name_ar):`<span class="muted">لا مسبب مرتفع (${r.evaluated}/${r.total} مقيّم)</span>`}</td><td>${r.main?lv(r.main.level):""}</td><td class="muted" style="white-space:normal">${r.elevated.slice(1).map(x=>esc(x.name_ar)).join("، ")}</td></tr>`).join("")}</tbody></table></div><div class="muted">${esc(d.rule_ar)}</div>`)
+      +(d.from_data.length?panel("الأقسام من بياناتك",d.from_data.map(x=>`<div class="step"><span class="m">${esc(x.department)}</span><span>${x.top.map(t=>`${esc(t.name_ar)} ${n(t.value,1)} ${esc(t.unit)} ${lv(t.level)}`).join(" · ")}</span></div>`).join("")):"");}
+  function spark(pts,color){const v=pts.map(p=>p.value).filter(x=>x!=null);if(v.length<2)return "";const mn=Math.min(...v),mx=Math.max(...v),W=220,Hh=44,sx=i=>4+i*(W-8)/(pts.length-1),sy=x=>Hh-4-(mx===mn?0.5:(x-mn)/(mx-mn))*(Hh-8);
+    return `<svg viewBox="0 0 ${W} ${Hh}" style="width:220px;height:44px"><polyline fill="none" stroke="${color}" stroke-width="2" points="${pts.map((p,i)=>p.value==null?null:`${sx(i)},${sy(p.value)}`).filter(Boolean).join(" ")}"/></svg>`;}
+  function trends(){const ds=D.drivers.filter(d=>d.trend.points.length>=2).sort((a,b)=>({accelerating:0,worsening:1,stable:2,improving:3,insufficient:4})[a.trend.direction]-({accelerating:0,worsening:1,stable:2,improving:3,insufficient:4})[b.trend.direction]);
+    return panel("هل المسبب يتحسن أم يسوء؟",ds.length?`<div class="tbl"><table><thead><tr><th>المسبب</th><th>الاتجاه</th><th>الاستمرارية</th><th>المسار</th><th>آخر النقاط</th></tr></thead><tbody>${ds.map(d=>`<tr class="drill" data-go="driver" data-arg="${esc(d.key)}"><td><b>${esc(d.name_ar)}</b></td><td class="${["accelerating","worsening"].includes(d.trend.direction)?"neg":d.trend.direction==="improving"?"pos":""}">${esc(d.trend.ar)}</td><td>${esc(d.persistence.ar)}</td><td>${spark(d.trend.points,LC[d.level]||"#94a3b8")}</td><td class="muted">${d.trend.points.slice(-4).map(p=>esc(p.period)+": "+n(p.value,1)).join(" ← ")} <span>(${esc(d.trend.unit||"")})</span></td></tr>`).join("")}</tbody></table></div><div class="muted">${esc(ds[0].trend.rule_ar)} · «يتسارع» فقط إذا أثبتت البيانات ذلك.</div>`:na("لا توجد سلاسل شهرية كافية بعد — تُبنى من بيانات الوحدات الشهرية ومن لقطات التقييم اليومية"))
+      +panel("استمرارية المسببات المرتفعة",D.drivers.filter(d=>["medium","high","critical"].includes(d.level)).map(d=>`<div class="step" style="cursor:pointer" data-go="driver" data-arg="${esc(d.key)}"><span class="m">${esc(d.persistence.ar)}</span>${lv(d.level)} ${esc(d.name_ar)}</div>`).join("")||na("—"));}
+  function correlation(){const h=D.heatmap;
+    return panel("سلاسل المسببات",D.chains.length?D.chains.map(c=>`<div style="margin-bottom:10px"><b>${esc(c.ar)}</b> <span class="muted">→ ${esc(c.risk_ar)}</span><div class="chain">${c.path.map((x,i)=>`${i?`<span class="carrow">←</span>`:""}<span class="cnode on" data-go="driver" data-arg="${esc(x.key)}">${esc(x.name_ar)} ${lv(x.level)}</span>`).join("")}</div></div>`).join("")+na(D.chains[0].note_ar):na("لا سلاسل نشطة"))
+      +panel("مصفوفة المسبب × الخطر",h.rows.length?`<div class="tbl"><table class="heat"><thead><tr><th>المسبب</th>${h.categories.map(c=>`<th>${esc(c.ar)}</th>`).join("")}</tr></thead><tbody>${h.rows.map(r=>`<tr class="drill" data-go="driver" data-arg="${esc(r.key)}"><td><b>${esc(r.name_ar)}</b></td>${h.categories.map(c=>{const x=r.cells[c.key];return x?`<td class="c lv-${x.level}" title="${esc(x.via_ar||"مباشر")}">${x.type==="direct"?"●":"○"} ${LV[x.level]}</td>`:`<td class="c muted">—</td>`;}).join("")}</tr>`).join("")}</tbody></table></div><div class="muted">● مباشر · ○ غير مباشر — ${esc(h.rule_ar)}</div>`:na("لا مسببات مرتفعة"));}
+  function candList(d){return d.candidates.length?d.candidates.map(c=>`<div class="event" style="border-inline-start-color:${LC[c.level]}"><b style="cursor:pointer" data-go="driver" data-arg="${esc(c.key)}">${esc(c.name_ar)}</b> ${lv(c.level)} <span class="b ${c.confidence==="high"?"critical":c.confidence==="likely"?"high":"medium"}">${esc(c.confidence_ar)}</span><div class="muted">${esc(c.category_ar)} · ${esc(c.source_ar)}${c.shared_entities.length?" · كيانات مشتركة: "+c.shared_entities.map(esc).join("، "):""}</div><div style="font-size:13px">${c.evidence.map(esc).join(" · ")}</div></div>`).join(""):na("لا يوجد سبب مرشّح مرتفع في البيانات — راجع الأدلة المباشرة");}
+  function rootcause(){const ds=D.drivers.filter(d=>["medium","high","critical"].includes(d.level)).sort((a,b)=>b.score-a.score);
+    return ds.map(d=>panel(`${esc(d.category_ar)} ← ${esc(d.name_ar)} ${lv(d.level)}`,`<div class="muted">الخطر ← المسبب ← سبب مرشّح ← الدليل ← الإجراء</div>${candList(d)}${d.recommendation?`<div class="ptip">الإجراء: ${esc(d.recommendation.text_ar)}</div>`:""}`)).join("")+na(D.rules.candidate_ar);}
+  function recs(){return panel("توصيات المعالجة (مرتبة بالأولوية)",D.recommendations.length?D.recommendations.map(r=>`<div class="event" style="border-inline-start-color:${LC[r.level]||"#475569"}"><h4>${pr(r.priority)} ${esc(r.name_ar)} ${lv(r.level)} <span class="muted">${esc(r.category_ar)}</span></h4>
+      <div class="rec"><b>الدليل</b><span>${r.evidence.map(esc).join(" · ")}</span><b>التوصية</b><span>${esc(r.recommendation.text_ar)}</span><b>الأثر المتوقع</b><span>${esc(r.recommendation.expected_impact.ar)}</span><b>الإدارة</b><span>${esc(r.owner_ar||"—")}</span><b>الحالة</b><span>${r.decision_id?`قرار #${r.decision_id} · ${esc(r.status_ar||"")}`:"بلا قرار"}</span></div>
+      <div class="acts">${D.can_edit&&!r.decision_id&&r.priority.code!=="monitor"?`<button class="btn" data-dec="${esc(r.key)}">قرار + إجراء</button>`:""}<button class="btn ghost" data-go="driver" data-arg="${esc(r.key)}">التفاصيل</button></div><div class="frm" data-frm="${esc(r.key)}"></div></div>`).join("")+na(D.rules.priority_ar):na("لا توصيات"));}
+  function alerts(){return panel(`🔔 ${D.alerts.length} تنبيهات من محرك المخاطر`,D.alerts.length?D.alerts.map(a=>{const d=DRV(a.risk_key)||{};const top=(D.contributions[a.category]||{items:[]}).items.find(i=>i.key===a.risk_key);
+      return `<div class="event" style="border-inline-start-color:${LC[a.severity]}"><h4>${esc(a.risk)} ${lv(a.severity)} ${pr(d.priority)}</h4><div class="rec"><b>المساهمة</b><span>${top?n(top.pct,1)+"% من "+esc(a.category_ar):"—"}</span><b>الدليل</b><span>${a.evidence.map(esc).join(" · ")}</span><b>الإجراء</b><span>${esc((d.recommendation||{}).text_ar||a.action_ar||"")}</span><b>المسؤول</b><span>${esc(a.owner||"—")} · ${esc(a.due_date||"")}</span></div><div class="acts"><button class="btn ghost" data-go="driver" data-arg="${esc(a.risk_key)}">تحليل المسبب</button></div></div>`;}).join(""):na("لا تنبيهات"));}
+  function actions(){const ds=D.drivers.filter(d=>d.register);
+    return panel("مسبب ← توصية ← مسؤول ← استحقاق ← حالة ← الأثر",ds.length?`<div class="tbl"><table><thead><tr><th>المسبب</th><th>التوصية</th><th>المسؤول</th><th>الاستحقاق</th><th>الحالة</th><th>الأثر المتوقع</th><th>الفعلي (قبل/بعد)</th></tr></thead><tbody>${ds.map(d=>{const r=d.register;return `<tr class="drill" data-go="driver" data-arg="${esc(d.key)}"><td><b>${esc(d.name_ar)}</b> ${kind(d)}</td><td style="white-space:normal;max-width:260px">${esc(r.mitigation||(d.recommendation||{}).text_ar||"—")}</td><td>${esc(r.owner||"—")}</td><td class="${r.overdue?"neg":""}">${esc(r.due_date||"—")}</td><td>${esc(r.status_ar)}</td><td class="muted">${esc(((d.recommendation||{}).expected_impact||{}).ar||"—")}</td><td>${r.before_after?`${n(r.before_after.baseline_score,0)}→${n(r.before_after.current_score,0)} ${esc(r.before_after.result_ar)}`:"—"}</td></tr>`;}).join("")}</tbody></table></div><div class="muted">الأثر الفعلي = نفس الدرجة قبل القرار وبعده على نفس القاعدة — لا يُثبت أن الإجراء هو السبب.</div>`:na("لا قرارات بعد — أنشئ قراراً من أي توصية"));}
+  function aiView(){return panel("اسأل نبّاه — يبدأ من نتائج المحرك ولا يخمّن",`<div class="chips">${D.ai_questions.map(q=>`<span class="chip" data-q="${esc(q)}">${esc(q)}</span>`).join("")}</div><div style="display:flex;gap:6px;margin-top:10px"><input class="search" id="aiQ" placeholder="اكتب سؤالك…"><button class="btn" id="aiGo">اسأل</button></div><div id="aiOut" style="margin-top:12px"></div>`);}
+  function detail(k){const d=DRV(k);if(!d)return na("المسبب غير موجود أو خارج صلاحيتك");const c=d.contribution||{},g=d.gap,r=d.register;
+    return `<button class="back" data-go="top">→ أهم المسببات</button>
+      <div class="hero"><div class="hcard"><div class="muted">${kind(d)} · الخطر: ${esc(d.category_ar)}</div><div style="font-size:18px;font-weight:800;margin:6px 0">${esc(d.name_ar)}</div>${lv(d.level)} ${pr(d.priority)}</div>
+        <div class="hcard"><div class="muted">المساهمة في الخطر</div><div class="big">${c.pct==null?"—":n(c.pct,1)+"%"}</div><div class="muted">${c.via_ar?"ضمن «"+esc(c.via_ar)+"» ("+n(c.share_of_parent_pct,1)+"% من مبلغه)":c.index_points!=null?n(c.index_points,1)+" نقطة من مؤشر المخاطر":d.kind==="support"?"مسبب مساند — لا يدخل في المؤشر":""}</div></div>
+        <div class="hcard"><div class="muted">القيمة · الدرجة</div><div class="big">${val(d)}</div><div class="muted">درجة ${n(d.score,1)}</div></div>
+        <div class="hcard"><div class="muted">الثقة</div><div class="big">${n(d.confidence.pct,0)}%</div><div class="muted">${esc(d.confidence.sufficiency_ar)} · ${d.confidence.reasons_ar.map(esc).join(" · ")}</div></div></div>
+      ${d.score==null&&!d.display_ar?panel("تعذّر التحديد",na((d.reason_ar||"")+" — المطلوب: "+(d.needs_ar||""))):""}
+      <div class="grid2">${panel("الدليل",(d.evidence||[]).map(e=>`<div style="margin:4px 0">• ${esc(e)}</div>`).join("")+`<div class="acts"><a class="btn ghost" href="${esc(d.link)}">${esc(d.source_ar)} ↗</a></div>`)}
+      ${panel("فجوة الأداء",g?`<div class="rec"><b>الحالي</b><span>${n(g.current,2)} ${esc(d.unit)}</span><b>الهدف</b><span>${n(g.target,2)} <span class="muted">${esc(g.target_ar||"")}</span></span><b>الفجوة</b><span class="${g.beyond?"neg":"pos"}">${g.gap>0?"+":""}${n(g.gap,2)} ${esc(d.unit)} ${g.beyond?"(خارج الهدف)":"(ضمن الهدف)"}</span>${g.baseline!=null?`<b>خط الأساس</b><span>${n(g.baseline,2)} <span class="muted">${esc(g.baseline_ar||"")}</span></span>`:""}</div>`:na("لا قيمة للمقارنة"))}</div>
+      ${panel("كيف حُسبت الدرجة",d.score_parts&&d.score_parts.length?d.score_parts.map(p=>`<div class="step"><span class="m">${p.code==="threshold"?"":p.points>0?"+":""}${n(p.points,1)}</span><span>${esc(p.ar)}</span></div>`).join(""):na("—"))}
+      ${panel("الأثر المالي",imps(d.impacts))}
+      ${d.components&&d.components.length?panel("مكوّنات المسبب",d.components.map(x=>`<div class="barrow drill" data-go="driver" data-arg="${esc(x.key)}"><span class="t">${esc(x.name_ar)}</span><span class="g"><i style="width:${x.share_pct}%"></i></span><b>${n(x.share_pct,1)}%</b><span class="muted">${money(x.amount)}</span></div>`).join("")):""}
+      ${panel("الكيانات المتأثرة",Object.keys(d.entities_ar||{}).length?Object.entries(d.entities_ar).map(([k,v])=>`<div class="step"><span class="m">${esc(k)}</span><span class="ent">${v.map(x=>`<span>${esc(x)}</span>`).join("")}</span></div>`).join(""):na("لا كيانات محددة في البيانات"))}
+      ${panel("الأسباب المرشحة (للتأكيد في 3.6)",candList(d))}
+      ${panel("الاتجاه والاستمرارية",`<div>${esc(d.trend.ar)} · ${esc(d.persistence.ar)}</div>${spark(d.trend.points,LC[d.level]||"#94a3b8")}<div class="muted">${d.trend.points.map(p=>esc(p.period)+": "+n(p.value,1)).join(" · ")}</div>`)}
+      ${d.recommendation?panel("التوصية",`<div class="ptip">${esc(d.recommendation.text_ar)}</div><div class="muted" style="margin-top:6px">الأثر المتوقع: ${esc(d.recommendation.expected_impact.ar)}</div>`):""}
+      ${panel("الإجراء",`${r?`<div class="rec"><b>الحالة</b><span>${esc(r.status_ar)}</span><b>المسؤول</b><span>${esc(r.owner||"—")}</span><b>الاستحقاق</b><span class="${r.overdue?"neg":""}">${esc(r.due_date||"—")}</span><b>القرار</b><span>${r.decision_id?`<a href="company-decisions.html" style="color:var(--mint,#10b981)">#${r.decision_id} ↗</a>`:"—"}</span>${r.before_after?`<b>قبل / بعد</b><span>${n(r.before_after.baseline_score,1)} ← ${n(r.before_after.current_score,1)} (${esc(r.before_after.result_ar)}) <span class="muted">${esc(r.before_after.note_ar)}</span></span>`:""}</div>`:`<div class="muted">لم يُتخذ إجراء بعد.</div>`}
+        <div class="acts">${D.can_edit&&["medium","high","critical"].includes(d.level)&&!(r&&r.decision_id)?`<button class="btn" data-dec="${esc(d.key)}">قرار + إجراء</button>`:""}${D.can_edit&&(r||["medium","high","critical"].includes(d.level))?`<button class="btn ghost" data-upd="${esc(d.key)}">تحديث الحالة</button>`:""}</div><div class="frm" data-frm="${esc(d.key)}"></div>`)}
+      ${panel("تاريخ المسبب",d.history.events.length?`<div class="tl">${d.history.events.map(e=>`<div><b>${esc(e.ar)}</b> ${e.level?lv(e.level):""} <span class="muted">${esc(e.date)} ${esc(e.note_ar||"")}</span></div>`).join("")}</div>${d.history.state_ar?`<b>${esc(d.history.state_ar)}</b>`:""}`:na("يُبنى من لقطات التقييم اليومية وحالات السجل"))}`;}
+  function render(){const d=D;
+    if(!d.has_data){$("tabs").innerHTML="";$("content").innerHTML=`<div class="state"><div style="font-size:16px;margin-bottom:10px">${esc(d.message_ar||"لا توجد بيانات كافية")}</div><div class="cta" style="justify-content:center"><a class="btn" href="company-data-center.html">مركز البيانات</a></div></div>`;return;}
+    const [v,arg]=route();const vv=v==="driver"?"top":v;
+    $("tabs").innerHTML=TABS.map(([k,l],i)=>`<button class="tab ${k===vv?"on":""}" data-go="${k}"><span class="muted" style="font-size:10px">${String(i+1).padStart(2,"0")}</span> ${l}${k==="alerts"&&d.alerts.length?` <span class="b high">${d.alerts.length}</span>`:""}</button>`).join("");
+    const views={overview,top:topView,analysis,evidence,gaps,impact:impactView,byrisk,branches,departments,trends,correlation,rootcause,recs,alerts,actions,ai:aiView,driver:()=>detail(arg)};
+    $("content").innerHTML=(views[v]||overview)();bind();}
+  function bind(){document.querySelectorAll("[data-go]").forEach(el=>el.onclick=e=>{e.stopPropagation();go(el.dataset.go,el.dataset.arg||null);});
+    document.querySelectorAll("#content [data-dec]").forEach(b=>b.onclick=e=>{e.stopPropagation();decision(b);});
+    document.querySelectorAll("#content [data-upd]").forEach(b=>b.onclick=e=>{e.stopPropagation();updateForm(b);});
+    document.querySelectorAll("#content [data-q]").forEach(c=>c.onclick=()=>runAI(c.dataset.q));
+    const ag=$("aiGo");if(ag)ag.onclick=()=>{const q=$("aiQ").value.trim();if(q)runAI(q);};}
+  const frmOf=k=>document.querySelector(`#content [data-frm="${CSS.escape(k)}"]`);
+  const post=(url,body,box)=>fetch(url,{method:"POST",headers:H,body:JSON.stringify(body)}).then(async r=>{const j=await r.json().catch(()=>({}));if(r.ok){load();}else{box.textContent=typeof j.detail==="string"?j.detail:"HTTP "+r.status;box.className="neg";}});
+  function decision(b){const k=b.dataset.dec,box=frmOf(k);const d=DRV(k)||{};
+    box.innerHTML=`<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap"><input class="f o" placeholder="المسؤول (مثلاً ${esc((D.recommendations.find(x=>x.key===k)||{}).owner_ar||"الإدارة")})"><input class="f d" type="date"><input class="f t" placeholder="الإجراء" value="${esc((d.recommendation||{}).text_ar||"")}"><button class="btn c">إنشاء القرار</button></div><div class="m muted">الأثر المتوقع: ${esc(((d.recommendation||{}).expected_impact||{}).ar||"—")} · الأرقام من الخادم.</div>`;
+    box.querySelector(".c").onclick=()=>{const t=box.querySelector(".t").value;post("/company/risk-drivers/to-decision",{driver_key:k,owner:box.querySelector(".o").value,due_date:box.querySelector(".d").value,actions:t?[{title:t}]:undefined},box.querySelector(".m"));};}
+  function updateForm(b){const k=b.dataset.upd,box=frmOf(k),r=(DRV(k)||{}).register||{};
+    box.innerHTML=`<div class="fg" style="margin-top:8px"><label>الحالة<select class="s">${STS.map(([v,l])=>`<option value="${v}" ${(r.status||"detected")===v?"selected":""}>${l}</option>`).join("")}</select></label><label>المسؤول<input class="o" value="${esc(r.owner||"")}"></label><label>الاستحقاق<input class="d" type="date" value="${esc(r.due_date||"")}"></label><label>ملاحظة<input class="n"></label></div><div class="cta"><button class="btn c">حفظ</button><span class="m muted"></span></div>`;
+    box.querySelector(".c").onclick=()=>post("/company/risk-drivers/update",{driver_key:k,status:box.querySelector(".s").value,owner:box.querySelector(".o").value,due_date:box.querySelector(".d").value,note:box.querySelector(".n").value},box.querySelector(".m"));}
+  function settings(){fetch("/company/risk/settings",{headers:H}).then(r=>r.json()).then(S=>{const tg=D.rules.targets||{},st=D.rules.support_thresholds,saved=(S.saved||{});
+    const rows=D.drivers.filter(d=>d.thresholds);
+    $("modal").innerHTML=`<h3 style="margin-top:0">الأهداف والحدود</h3><div class="muted">الهدف يُستخدم في «فجوة الأداء» (فارغ = الحد المقبول). حدود المسببات المساندة بالترتيب: متوسط / مرتفع / حرج.</div>
+      <div class="tbl" style="max-height:55vh"><table><thead><tr><th>المسبب</th><th>الهدف</th><th colspan="3">حدود المساند</th></tr></thead><tbody>${rows.map(d=>`<tr><td style="white-space:normal">${esc(d.name_ar)} ${kind(d)}<div class="muted">${esc(d.unit)} · ${d.direction==="above"?"الأعلى أسوأ":"الأقل أسوأ"}</div></td><td><input class="f" style="width:70px" data-tg="${d.key}" inputmode="decimal" value="${tg[d.key]??""}" placeholder="${d.thresholds[0]}"></td>${d.kind==="support"?[0,1,2].map(i=>`<td><input class="f" style="width:60px" data-th="${d.key}" data-i="${i}" inputmode="decimal" placeholder="${st[d.key].default[i]}" value="${((saved.thresholds||{})[d.key]||[])[i]??""}"></td>`).join(""):`<td colspan="3" class="muted">من مركز المخاطر</td>`}</tr>`).join("")}</tbody></table></div>
+      <div class="cta"><button class="btn" id="mSave">حفظ</button><button class="btn ghost" id="mCancel">إلغاء</button><span id="mMsg" class="muted"></span></div><div class="muted">كل تعديل يُسجَّل في سجل التدقيق.</div>`;
+    $("ov").classList.add("on");$("mCancel").onclick=()=>$("ov").classList.remove("on");
+    $("mSave").onclick=async()=>{const targets={};document.querySelectorAll("[data-tg]").forEach(i=>{if(i.value!=="")targets[i.dataset.tg]=Number(i.value);});
+      const th=Object.assign({},saved.thresholds||{});document.querySelectorAll("[data-th]").forEach(i=>{const k=i.dataset.th;th[k]=th[k]&&th[k].length===3?th[k].slice():[null,null,null];if(i.value!=="")th[k][+i.dataset.i]=Number(i.value);else th[k][+i.dataset.i]=null;});
+      Object.keys(th).forEach(k=>{if(th[k].some(v=>v==null))th[k]=[];});
+      const msg=$("mMsg");const r1=await fetch("/company/risk-drivers/targets",{method:"POST",headers:H,body:JSON.stringify({targets})});
+      if(!r1.ok){const j=await r1.json().catch(()=>({}));msg.className="neg";msg.textContent=j.detail||"HTTP "+r1.status;return;}
+      const r2=await fetch("/company/risk/settings",{method:"POST",headers:H,body:JSON.stringify({thresholds:th,weights:saved.weights||{},disabled:saved.disabled||[]})});
+      if(r2.ok){$("ov").classList.remove("on");load();}else{const j=await r2.json().catch(()=>({}));msg.className="neg";msg.textContent=typeof j.detail==="string"?j.detail:"HTTP "+r2.status;}};});}
+  function runAI(q){if(route()[0]!=="ai"){go("ai");setTimeout(()=>runAI(q),60);return;}const out=$("aiOut");if(!out)return;out.innerHTML=`<div class="muted">«${esc(q)}» — جارٍ التحليل…</div>`;
+    fetch("/company/risk-drivers/ai-insights",{method:"POST",headers:H,body:JSON.stringify({question:q})}).then(async r=>{const j=await r.json().catch(()=>({}));
+      if(!r.ok){out.innerHTML=`<div class="neg">${esc(typeof j.detail==="string"?j.detail:"HTTP "+r.status)}</div>`;return;}
+      const a=j.ai||{},resp=a.response||{},L={FACTS:"الدليل من المحرك",INTERPRETATION:"القراءة",HYPOTHESES:"أسباب مرجّحة (ليست مؤكدة)",RECOMMENDATIONS:"الإجراءات",DATA_GAPS:"بيانات ناقصة"};
+      out.innerHTML=`<div class="muted" style="margin-bottom:6px">«${esc(j.question||q)}» · الأرقام من المحرك — الذكاء الاصطناعي يشرح فقط</div>`+(a.message?`<div class="na">${esc(a.message)}</div>`:"")+Object.keys(L).map(k=>resp[k]&&resp[k].length?`<div class="ai-sec"><b>${L[k]}</b><ul style="margin:0;padding-inline-start:18px">${resp[k].map(x=>`<li>${esc(typeof x==="string"?x:JSON.stringify(x))}</li>`).join("")}</ul></div>`:"").join("");}).catch(e=>{out.innerHTML=`<div class="neg">${esc(e.message||e)}</div>`;});}
+  $("ov").onclick=e=>{if(e.target===$("ov"))$("ov").classList.remove("on");};
+  $("btnSet").onclick=settings;
+  load();
+})();
+</script>
+<script src="nabbah-sidebar.js"></script>
+</body></html>
