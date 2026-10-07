@@ -761,6 +761,73 @@ class CompanyOpsSetting(SQLModel, table=True):
     updated_at: _DTCOL = Field(default_factory=_now_naive)
 
 
+class BenchmarkDataset(SQLModel, table=True):
+    """طبقة المعايير القطاعية (3.5): company_id فارغ = معيار المنصّة (من الإدارة)، وإلا معيار خاص بالشركة.
+    كل معيار بمصدره ومنهجيته وفترته وعيّنته وثقته — لا معيار بلا مصدر."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: Optional[int] = Field(default=None, index=True)
+    metric: str = Field(default="", index=True)
+    sector: str = Field(default="", index=True)
+    sub_sector: Optional[str] = None
+    country: Optional[str] = "SA"
+    region: Optional[str] = None
+    city: Optional[str] = None
+    size_segment: Optional[str] = "all"
+    business_model: Optional[str] = None
+    period: Optional[str] = None
+    period_end: Optional[str] = None
+    basis: Optional[str] = None
+    value: Optional[float] = None
+    p10: Optional[float] = None
+    p25: Optional[float] = None
+    p50: Optional[float] = None
+    p75: Optional[float] = None
+    p90: Optional[float] = None
+    sample_size: Optional[int] = None
+    source: Optional[str] = None
+    source_url: Optional[str] = None
+    methodology: Optional[str] = None
+    confidence: Optional[str] = None
+    published_on: Optional[str] = None
+    version: Optional[str] = None
+    is_active: int = 1
+    created_by: str = ""
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+class CompanyBenchmarkComparison(SQLModel, table=True):
+    """مقارنة الشركة بالمعيار (لقطة شهرية لكل مؤشر) — أساس تاريخ الموقع، ومصدر معيار الأقران المجهّل إن وافقت الشركة (share_ok)."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    period: str = Field(default="", index=True)
+    assessed_on: str = ""
+    metric: str = Field(default="", index=True)
+    company_value: Optional[float] = None
+    benchmark_value: Optional[float] = None
+    benchmark_id: Optional[str] = None
+    origin: Optional[str] = None
+    gap: Optional[float] = None
+    gap_signed: Optional[float] = None
+    gap_pct: Optional[float] = None
+    percentile: Optional[float] = None
+    position: Optional[str] = None
+    confidence: Optional[str] = None
+    sector: str = Field(default="", index=True)
+    size_segment: Optional[str] = None
+    region: Optional[str] = None
+    share_ok: int = 0
+    updated_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+class CompanySectorSetting(SQLModel, table=True):
+    """ملف القطاع للشركة (3.5): القطاع الفرعي، المنطقة، المدينة، نموذج العمل، الحجم، والموافقة على المشاركة المجهّلة."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    settings_json: str = "{}"
+    updated_by: str = ""
+    updated_at: _DTCOL = Field(default_factory=_now_naive)
+
+
 class CompanyRiskSetting(SQLModel, table=True):
     """قواعد المخاطر للشركة (3.3): حدود المحركات، أوزان الفئات، القواعد المعطّلة — فوق افتراضي القطاع."""
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -1396,6 +1463,11 @@ def page_fin_overview():
 @app.get("/company-ops-analytics.html")
 def page_ops_analytics():
     return FileResponse("company-ops-analytics.html")
+
+
+@app.get("/company-sector-benchmark.html")
+def page_sector_benchmark():
+    return FileResponse("company-sector-benchmark.html")
 
 
 @app.get("/company-risk-drivers.html")
@@ -4271,7 +4343,7 @@ def _load_p24(name):
     """يحمّل محركات 2.4 من المجلد أو من حزمة nabbah_engines."""
     try:
         import sys as _sys, os as _os, importlib
-        for _d in ("phase21", "phase22", "phase23", "phase24", "phase25", "phase26", "phase27", "phase28", "phase29", "phase210", "phase211", "phase30", "phase31", "phase32", "phase33", "phase34"):
+        for _d in ("phase21", "phase22", "phase23", "phase24", "phase25", "phase26", "phase27", "phase28", "phase29", "phase210", "phase211", "phase30", "phase31", "phase32", "phase33", "phase34", "phase35"):
             _p = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), _d)
             if _p not in _sys.path:
                 _sys.path.insert(0, _p)
@@ -7026,6 +7098,304 @@ def company_risk_drivers_ai_insights(data: dict, request: Request, user: User = 
     return {"as_of": res["as_of"], "question": q, "ai": out}
 
 
+# ═══════════════════════════════════════════════════════════
+#  Phase 3.5 — Sector Benchmark Intelligence (أين تقف الشركة مقابل معيار قطاعها؟)
+#  طبقة معايير موثّقة (منصّة/شركة/أقران مجهّلون) + نفس نتائج الوحدات والمخاطر والمسببات
+# ═══════════════════════════════════════════════════════════
+_BENCH_FIELDS = ("metric", "sector", "sub_sector", "country", "region", "city", "size_segment", "business_model", "period", "period_end", "basis",
+                 "value", "p10", "p25", "p50", "p75", "p90", "sample_size", "source", "source_url", "methodology", "confidence", "published_on", "version")
+
+
+def _bench_settings(s, company_id):
+    r = s.exec(select(CompanySectorSetting).where(CompanySectorSetting.company_id == company_id)).first()
+    try:
+        return json.loads(r.settings_json or "{}") if r else {}
+    except (TypeError, ValueError):
+        return {}
+
+
+def _bench_profile(s, company):
+    st = _bench_settings(s, company.id)
+    city = st.get("city")
+    if not city:
+        br = s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company.id)).all()
+        cities = [b.city for b in br if getattr(b, "city", "")]
+        city = max(set(cities), key=cities.count) if cities else None
+    return {"sector": _risk_sector(company), "sub_sector": st.get("sub_sector") or None, "country": getattr(company, "country", None) or "SA",
+            "region": st.get("region") or None, "city": city, "business_model": st.get("business_model") or None,
+            "size_segment": st.get("size_segment") or None, "size_override": bool(st.get("size_segment")), "peer_opt_in": bool(st.get("peer_opt_in"))}
+
+
+def _bench_row_dict(b):
+    d = {k: getattr(b, k) for k in _BENCH_FIELDS}
+    d.update({"id": b.id, "origin": "platform" if b.company_id is None else "company", "is_active": bool(b.is_active)})
+    return d
+
+
+def _bench_datasets(s, company):
+    rows = s.exec(select(BenchmarkDataset).where(BenchmarkDataset.is_active == 1)).all()
+    return [_bench_row_dict(b) for b in rows if b.company_id is None or b.company_id == company.id]
+
+
+def _bench_peers(s, company, profile):
+    """أقران نبّاه: آخر قيمة لكل شركة أخرى موافقة في نفس القطاع — تجميع فقط (≥ 5 شركات)، لا تُعاد أي قيمة فردية."""
+    be = _load_p24("benchmark_engine")
+    rows = s.exec(select(CompanyBenchmarkComparison).where(CompanyBenchmarkComparison.sector == profile["sector"],
+                                                           CompanyBenchmarkComparison.share_ok == 1,
+                                                           CompanyBenchmarkComparison.company_id != company.id)).all()
+    latest = {}
+    for r in rows:
+        k = (r.company_id, r.metric)
+        if k not in latest or (r.period or "") > (latest[k].period or ""):
+            latest[k] = r
+    def group(same_size):
+        vals = {}
+        for (cid, m), r in latest.items():
+            if r.company_value is None or (same_size and r.size_segment != profile.get("size_segment")):
+                continue
+            vals.setdefault(m, []).append(r.company_value)
+        return vals
+    out = []
+    if profile.get("size_segment"):
+        out = be.peer_benchmarks(group(True), profile["sector"], profile["size_segment"])
+    got = {p["metric"] for p in out}
+    out += [p for p in be.peer_benchmarks(group(False), profile["sector"], "all") if p["metric"] not in got]
+    return out
+
+
+def _bench_history(s, company_id):
+    rows = s.exec(select(CompanyBenchmarkComparison).where(CompanyBenchmarkComparison.company_id == company_id)
+                  .order_by(CompanyBenchmarkComparison.period.desc()).limit(2000)).all()
+    return [{"metric": r.metric, "period": r.period, "percentile": r.percentile, "gap": r.gap, "gap_signed": r.gap_signed} for r in rows]
+
+
+def _bench_result(s, company, role, *, save=True):
+    be, de = _load_p24("benchmark_engine"), _load_p24("drivers_engine")
+    if be is None or de is None:
+        raise HTTPException(503, "محرّك المقارنة غير متاح — " + _p23_diagnostic())
+    risk = _risk_result(s, company, role, save_snapshot=save)
+    mods, cust, errors = _risk_modules(s, company, role)
+    dv = de.analyze_drivers(risk, mods, customer_rows=cust, settings=_risk_settings(s, company.id), history=_risk_history(s, company.id),
+                            today=datetime.now().date(), sector=_risk_sector(company)) if risk.get("has_data") else {}
+    profile = _bench_profile(s, company)
+    res = be.analyze_benchmark(mods, sales_rows=cust, risk=risk, drivers=dv, datasets=_bench_datasets(s, company), peers=_bench_peers(s, company, profile),
+                               profile=profile, history=_bench_history(s, company.id), today=datetime.now().date(),
+                               categories=_RISK_CATS_BY_ROLE.get(role), currency=getattr(company, "currency", None) or "SAR")
+    # لقطة شهرية لكل مؤشر (العرض الكامل فقط) — أساس تاريخ الموقع، ومصدر معيار الأقران إن وافقت الشركة
+    if save and _RISK_CATS_BY_ROLE.get(role) is None and res.get("snapshot"):
+        per = datetime.now().strftime("%Y-%m")
+        old = {r.metric: r for r in s.exec(select(CompanyBenchmarkComparison).where(CompanyBenchmarkComparison.company_id == company.id,
+                                                                                    CompanyBenchmarkComparison.period == per)).all()}
+        prof = res["profile"]
+        for x in res["snapshot"]:
+            r = old.get(x["metric"]) or CompanyBenchmarkComparison(company_id=company.id, period=per, metric=x["metric"])
+            for k in ("company_value", "benchmark_value", "gap", "gap_signed", "gap_pct", "percentile", "position", "confidence", "origin", "benchmark_id"):
+                setattr(r, k, x.get(k) if k != "benchmark_id" else (str(x.get(k)) if x.get(k) is not None else None))
+            r.sector, r.size_segment, r.region = prof["sector"], prof.get("size_segment"), prof.get("region")
+            r.share_ok = 1 if prof.get("peer_opt_in") else 0
+            r.assessed_on, r.updated_at = datetime.now().strftime("%Y-%m-%d"), datetime.now()
+            s.add(r)
+        s.commit()
+    res["module_errors"] = errors
+    res["role"] = role
+    res["can_edit"] = role in ("owner", "accountant", "manager")
+    res["can_edit_rules"] = role == "owner"
+    return res
+
+
+@app.get("/company/sector-benchmark-intelligence")
+def company_sector_benchmark_intelligence(user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role = _risk_scope(s, user)
+        res = _bench_result(s, company, role)
+        log_audit(company.id, user.id, user.name, "sector_benchmark_view", "sector_benchmark", f"compared={res['summary']['compared']} role={role}")
+        return res
+
+
+@app.post("/company/sector-benchmark/profile")
+def company_sector_benchmark_profile(data: dict, user: User = Depends(get_current_user)):
+    """ملف القطاع: القطاع الفرعي، المنطقة، المدينة، نموذج العمل، الحجم (اختياري)، والموافقة على المشاركة المجهّلة في معيار الأقران."""
+    with Session(engine) as s:
+        company, role = _risk_scope(s, user, need="settings")
+        be = _load_p24("benchmark_engine")
+        st = _bench_settings(s, company.id)
+        old = dict(st)
+        reg = data.get("region") or None
+        if reg and reg not in be.REGIONS:
+            raise HTTPException(422, "منطقة غير معروفة")
+        seg = data.get("size_segment") or None
+        if seg and seg not in be.SIZE_AR:
+            raise HTTPException(422, "الحجم: micro / small / medium / large")
+        st.update({"sub_sector": str(data.get("sub_sector") or "")[:60] or None, "region": reg, "city": str(data.get("city") or "")[:60] or None,
+                   "business_model": str(data.get("business_model") or "")[:60] or None, "size_segment": seg,
+                   "peer_opt_in": bool(data.get("peer_opt_in"))})
+        row = s.exec(select(CompanySectorSetting).where(CompanySectorSetting.company_id == company.id)).first() or CompanySectorSetting(company_id=company.id)
+        row.settings_json, row.updated_by, row.updated_at = json.dumps(st, ensure_ascii=False), (user.name or user.email)[:100], datetime.now()
+        s.add(row)
+        if not st["peer_opt_in"]:          # سحب الموافقة يسحب كل قيم الشركة من معيار الأقران فوراً
+            for r in s.exec(select(CompanyBenchmarkComparison).where(CompanyBenchmarkComparison.company_id == company.id)).all():
+                r.share_ok = 0
+                s.add(r)
+        s.commit()
+        log_audit(company.id, user.id, user.name, "sector_profile", "sector_benchmark", json.dumps({"before": old, "after": st}, ensure_ascii=False)[:500])
+        return {"ok": True}
+
+
+def _bench_clean(data):
+    be = _load_p24("benchmark_engine")
+    b = {k: data.get(k) for k in _BENCH_FIELDS}
+    for k in ("value", "p10", "p25", "p50", "p75", "p90", "sample_size"):
+        if b.get(k) in ("", None):
+            b[k] = None
+    errs = be.validate_benchmark(b)
+    if b.get("metric") and b["metric"] not in be.METRICS and str(b["metric"]).split(":", 1)[-1] not in be.SECTOR_KPI_META:
+        errs.append("مؤشر غير معروف")
+    if errs:
+        raise HTTPException(422, " · ".join(errs))
+    for k in ("value", "p10", "p25", "p50", "p75", "p90"):
+        b[k] = float(b[k]) if b.get(k) is not None else None
+    b["sample_size"] = int(float(b["sample_size"])) if b.get("sample_size") is not None else None
+    for k in ("sector", "sub_sector", "country", "region", "city", "size_segment", "business_model", "period", "period_end", "basis", "source",
+              "source_url", "methodology", "confidence", "published_on", "version", "metric"):
+        b[k] = (str(b[k]).strip()[:500] if b.get(k) not in (None, "") else None)
+    b["country"] = b["country"] or "SA"
+    b["size_segment"] = b["size_segment"] or "all"
+    return b
+
+
+@app.get("/company/sector-benchmark/datasets")
+def company_sector_benchmark_datasets(user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role = _risk_scope(s, user)
+        be = _load_p24("benchmark_engine")
+        mets = [{"code": k, "ar": m["ar"], "unit": m["unit"], "group_ar": be.GROUPS[m["g"]]} for k, m in be.METRICS.items()]
+        mets += [{"code": "sector:" + k, "ar": be.SECTOR_KPI_AR.get(k, k), "unit": "SAR" if k == "revenue_per_employee" else "%", "group_ar": be.GROUPS["sector"]}
+                 for k in be.SECTOR_KPI_META]
+        return {"items": _bench_datasets(s, company), "metrics": mets,
+                "regions": be.REGIONS, "sizes": be.SIZE_AR, "profile": _bench_profile(s, company), "can_edit": role == "owner"}
+
+
+@app.post("/company/sector-benchmark/datasets")
+def company_sector_benchmark_add(data: dict, user: User = Depends(get_current_user)):
+    """معيار خاص بالشركة (من تقرير قطاعي لديها) — المصدر والمنهجية والفترة والثقة إلزامية. يُرى لشركتك فقط."""
+    with Session(engine) as s:
+        company, role = _risk_scope(s, user, need="settings")
+        items = data.get("items") if isinstance(data.get("items"), list) else [data]
+        ids = []
+        for it in items[:200]:
+            b = _bench_clean(it)
+            row = BenchmarkDataset(company_id=company.id, created_by=(user.name or user.email)[:100], **b)
+            s.add(row); s.commit(); s.refresh(row); ids.append(row.id)
+        log_audit(company.id, user.id, user.name, "benchmark_add", "sector_benchmark", f"ids={ids}")
+        return {"ok": True, "ids": ids}
+
+
+@app.post("/company/sector-benchmark/datasets/deactivate")
+def company_sector_benchmark_deactivate(data: dict, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role = _risk_scope(s, user, need="settings")
+        row = s.get(BenchmarkDataset, int(data.get("id") or 0))
+        if not row or row.company_id != company.id:
+            raise HTTPException(404, "المعيار غير موجود (معايير المنصّة تُدار من الإدارة)")
+        row.is_active = 0
+        s.add(row); s.commit()
+        log_audit(company.id, user.id, user.name, "benchmark_deactivate", f"benchmark:{row.id}", row.metric)
+        return {"ok": True}
+
+
+@app.get("/admin/benchmarks")
+def admin_benchmarks_list(_: bool = Depends(verify_admin)):
+    with Session(engine) as s:
+        _ensure_data_tables()
+        rows = s.exec(select(BenchmarkDataset).where(BenchmarkDataset.company_id == None)).all()  # noqa: E711
+        return {"items": [_bench_row_dict(b) for b in rows]}
+
+
+@app.post("/admin/benchmarks")
+def admin_benchmarks_add(data: dict, _: bool = Depends(verify_admin)):
+    """معايير المنصّة (لكل العملاء في القطاع) — من مصادر موثّقة فقط، مع المصدر والمنهجية والعيّنة والثقة."""
+    with Session(engine) as s:
+        _ensure_data_tables()
+        items = data.get("items") if isinstance(data.get("items"), list) else [data]
+        ids = []
+        for it in items[:500]:
+            b = _bench_clean(it)
+            row = BenchmarkDataset(company_id=None, created_by="admin", **b)
+            s.add(row); s.commit(); s.refresh(row); ids.append(row.id)
+        _logger.info(f"admin benchmarks added: {ids}")
+        return {"ok": True, "ids": ids}
+
+
+@app.post("/admin/benchmarks/deactivate")
+def admin_benchmarks_deactivate(data: dict, _: bool = Depends(verify_admin)):
+    with Session(engine) as s:
+        row = s.get(BenchmarkDataset, int(data.get("id") or 0))
+        if not row or row.company_id is not None:
+            raise HTTPException(404, "معيار المنصّة غير موجود")
+        row.is_active = 0
+        s.add(row); s.commit()
+        return {"ok": True}
+
+
+@app.post("/company/sector-benchmark/to-decision")
+def company_sector_benchmark_to_decision(data: dict, user: User = Depends(get_current_user)):
+    """فجوة قطاعية → قرار + إجراء. الأرقام من الخادم؛ الأثر «توضيحي» وليس مضموناً."""
+    with Session(engine) as s:
+        company, role = _risk_scope(s, user, need="edit")
+        _exec_scope(s, user, need="edit")
+        code = str(data.get("metric") or "")
+        res = _bench_result(s, company, role, save=False)
+        x = (res.get("comparisons") or {}).get(code)
+        if not x or x.get("position") not in ("below", "critical"):
+            raise HTTPException(404, "لا توجد فجوة قطاعية لهذا المؤشر أو خارج صلاحيتك")
+        why = x.get("why") or []
+        imp = x.get("impact") or {}
+        d = CompanyDecision(
+            company_id=company.id, title=str(data.get("title") or f"سد فجوة قطاعية: {x['name_ar']}")[:200],
+            detail=f"الشركة {x['company']} مقابل معيار {x['benchmark']} ({x['source'].get('source')} · {x['source'].get('period')}) · الثقة {x['confidence_ar']}"[:1000],
+            owner=str(data.get("owner") or "")[:100], due_date=str(data.get("due_date") or "")[:20], kpi=code, status="open",
+            baseline_sales=_company_total_sales(s, company.id),
+            expected_impact=(f"{imp.get('type_ar')} {imp.get('amount')} — توضيحي وليس مضموناً" if imp.get("amount") else "غير قابل للتقدير")[:200],
+            linked_to=f"sector_gap:{code}|{res['as_of']}"[:200], rationale=(why[0].get("action_ar") if why else "راجع مسببات الفجوة")[:500] or "",
+            metric_id=code, baseline_value=x["company"], expected_impact_value=imp.get("amount"), impact_status="expected",
+            source_signal=f"sector_gap:{code}", problem_type=f"sector_gap:{code}", decision_type="sector_benchmark",
+            outcome_status="pending_measurement", created_by=user.name or user.email, data_source="benchmark_engine", updated_at=datetime.now())
+        s.add(d); s.commit(); s.refresh(d)
+        created = []
+        for a in (data.get("actions") or [{"title": (why[0].get("action_ar") if why else None) or f"خطة لسد فجوة {x['name_ar']}"}])[:10]:
+            act = CompanyAction(company_id=company.id, decision_id=d.id, title=str(a.get("title") or "")[:200], owner=str(a.get("owner") or d.owner)[:100],
+                                priority="P1" if x["position"] == "critical" else "P2", due_date=str(a.get("due_date") or d.due_date)[:20],
+                                start_date=datetime.now().strftime("%Y-%m-%d"), updated_at=datetime.now())
+            s.add(act); s.commit(); s.refresh(act); created.append(act.id)
+        log_audit(company.id, user.id, user.name, "decision_from_sector_gap", f"sector_gap:{code}", f"decision={d.id} gap={x['gap']} actions={created}")
+        return {"ok": True, "decision_id": d.id, "action_ids": created}
+
+
+@app.post("/company/sector-benchmark/ai-insights")
+def company_sector_benchmark_ai(data: dict, request: Request, user: User = Depends(get_current_user)):
+    """AI يشرح فقط: يتلقى المعيار ومصدره وفترته وعيّنته ومنهجيته وثقته — ولا يقرر متوسط القطاع بنفسه."""
+    with Session(engine) as s:
+        company, role = _risk_scope(s, user)
+        res = _bench_result(s, company, role, save=False)
+    gw = _load_p24("ai_gateway")
+    if gw is None:
+        raise HTTPException(503, "بوابة الذكاء الاصطناعي غير متاحة — " + _p23_diagnostic())
+    q = str(data.get("question") or "كيف أداء شركتي مقارنة بالقطاع؟")[:300]
+    comp = {k: {kk: v.get(kk) for kk in ("name_ar", "company", "benchmark", "gap", "gap_unit", "position_ar", "percentile", "confidence_ar", "impact", "why", "company_trend")}
+            | {"source": {kk: (v.get("source") or {}).get(kk) for kk in ("origin_ar", "source", "period", "sample_size", "methodology", "geo_ar", "size_ar", "freshness_ar")}}
+            for k, v in res["comparisons"].items() if v["status"] == "compared"}
+    ctx = {"profile": res["profile"], "summary": res["summary"], "compared": comp,
+           "unavailable": [v["name_ar"] for v in res["comparisons"].values() if v["status"] != "compared"],
+           "opportunities": res["opportunities"], "insights": res["insights"], "branches": res["branches"]["rows"][:6], "rules": res["rules"]}
+    out = gw.request_ai_analysis(gw.GeminiProvider(company_gemini), ctx,
+                                 q + " — استخدم المعايير المعطاة فقط مع مصدرها وفترتها وثقتها. لا تقدّر متوسط السوق بنفسك ولا تذكر أرقاماً غير موجودة. "
+                                     "المؤشر بلا معيار قل إنه «غير متاح». الأثر المالي توضيحي وليس مضموناً.",
+                                 trust_report={"overall_score": int(res["quality"]["coverage_pct"] or 0), "status": "warning", "has_critical_fail": False, "main_causes": []},
+                                 lang=get_lang(request), company=company)
+    log_audit(company.id, user.id, user.name, "sector_benchmark_ai", "sector_benchmark", f"q={q[:80]}")
+    return {"question": q, "ai": out}
+
+
 @app.get("/company/executive-intelligence")
 def company_executive_intelligence(request: Request, user: User = Depends(get_current_user),
                                    period: Optional[str] = None, ai: int = 0):
@@ -7106,6 +7476,15 @@ def company_executive_intelligence(request: Request, user: User = Depends(get_cu
                                                       history=_risk_history(s, company.id), today=datetime.now().date(), sector=_risk_sector(company))
                             if _dv.get("has_data"):
                                 result["risk_drivers"] = {**_dv["executive"], "link": "company-risk-drivers.html"}
+                            _be = _load_p24("benchmark_engine")
+                            if _be is not None:      # 3.5: موقع الشركة مقابل القطاع (فقط حيث يوجد معيار موثّق)
+                                _prof = _bench_profile(s, company)
+                                _bz = _be.analyze_benchmark(_mods, sales_rows=_cust, risk=_rk, drivers=_dv, datasets=_bench_datasets(s, company),
+                                                            peers=_bench_peers(s, company, _prof), profile=_prof, history=_bench_history(s, company.id),
+                                                            today=datetime.now().date(), categories=_RISK_CATS_BY_ROLE.get(_role))
+                                result["sector_position"] = {**{k: _bz["summary"][k] for k in ("compared", "above", "near", "below", "critical", "benchmark_unavailable", "biggest_gap", "biggest_strength")},
+                                                             "link": "company-sector-benchmark.html"}
+                                result.setdefault("module_signals", {})["benchmark"] = _bz.get("signals", [])[:6]
             except HTTPException:
                 pass
             try:   # إشارات المشتريات 2.7
@@ -12433,7 +12812,7 @@ ENGINE_MODULES = ("nabbah_finance", "nabbah_trust", "semantic_layer", "kpi_engin
                   "ai_gateway", "period_aggregation", "legacy_adapters", "platform_bridge",
                   "intelligence_engine", "forecast_engine", "scenario_engine", "decision_memory",
                   "rule_catalog", "canonical_model", "period_model", "metric_registry", "ingestion",
-                  "sales_engine", "inventory_engine", "purchases_engine", "cashflow_engine", "hr_engine", "ops_engine", "finance_engine", "sector_intelligence", "leakage_engine", "tax_engine", "risk_engine", "drivers_engine")
+                  "sales_engine", "inventory_engine", "purchases_engine", "cashflow_engine", "hr_engine", "ops_engine", "finance_engine", "sector_intelligence", "leakage_engine", "tax_engine", "risk_engine", "drivers_engine", "benchmark_engine")
 
 
 def _runtime_health():
