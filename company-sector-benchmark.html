@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>نبّاه · المقارنة بالقطاع</title>
+<link href="nabbah-design.css" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{background:var(--bg,#070b09);color:var(--txt,#e8f1ec);font-family:Tajawal,Tahoma,Arial,sans-serif;margin:0}
+  .wrap{max-width:1180px;margin:0 auto;padding:70px 16px 60px}
+  h1{margin:0 0 4px;font-size:24px}.sub{color:var(--txt-soft,#8ba396);margin:0 0 16px;font-size:14px}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+  select{background:var(--panel,#101a15);color:var(--txt,#e8f1ec);border:1px solid var(--line,#1d2c24);border-radius:10px;padding:8px 10px;font:inherit;font-size:13px;max-width:190px}
+  .crumbs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;min-height:4px}
+  .chip{background:rgba(16,185,129,.12);color:var(--mint,#10b981);border:1px solid rgba(16,185,129,.35);border-radius:20px;padding:3px 10px;font-size:12px;cursor:pointer}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+  .tile,.panel{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:14px;padding:14px}
+  .tile .l{font-size:12px;color:var(--txt-soft,#8ba396)}.tile .v{font-size:21px;font-weight:800;margin-top:4px}
+  .tile .c{font-size:12px;margin-top:4px}
+  .panel{margin-bottom:14px;min-width:0}.panel h2{margin:0 0 10px;font-size:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .panel h3{margin:12px 0 6px;font-size:13px;color:var(--txt-soft,#8ba396)}
+  .num{font-size:11px;color:var(--txt-soft,#8ba396);font-weight:600;border:1px solid var(--line,#1d2c24);border-radius:8px;padding:1px 6px}
+  .grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+  table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px;border-bottom:1px solid var(--line,#1d2c24);text-align:start;white-space:nowrap}
+  th{color:var(--txt-soft,#8ba396);font-weight:600}.tbl{overflow-x:auto}
+  tr.drill{cursor:pointer}tr.drill:hover td{background:rgba(16,185,129,.06)}
+  .barrow{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:13px}
+  .barrow.drill{cursor:pointer}.barrow.drill:hover{background:rgba(16,185,129,.06);border-radius:6px}
+  .barrow .t{flex:0 0 120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .barrow .g{flex:1;height:10px;background:var(--line,#1d2c24);border-radius:6px;overflow:hidden}
+  .barrow .g i{display:block;height:100%;background:var(--mint,#10b981)}
+  .pos{color:#10b981}.neg{color:#ef4444}.muted{color:var(--txt-soft,#8ba396);font-size:12px}
+  .b{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700;display:inline-block}
+  .high{background:rgba(234,88,12,.16);color:#ea580c}.medium{background:rgba(245,179,1,.15);color:#f5b301}
+  .low{background:rgba(16,185,129,.15);color:#10b981}.critical{background:rgba(239,68,68,.16);color:#ef4444}
+  .est{background:rgba(168,85,247,.15);color:#a855f7}
+  .sig{border-inline-start:4px solid var(--line,#1d2c24);padding:10px 12px;margin:8px 0;background:rgba(255,255,255,.02);border-radius:8px}
+  .sig.risk{border-color:#ef4444}.sig.opportunity{border-color:#10b981}.sig.data_quality{border-color:#f5b301}
+  .btn{background:var(--mint,#10b981);color:#062b1c;border:0;border-radius:10px;padding:7px 13px;font-weight:800;cursor:pointer;font:inherit;font-size:12px;text-decoration:none;display:inline-block}
+  .btn.ghost{background:transparent;color:var(--txt-soft,#8ba396);border:1px solid var(--line,#1d2c24);font-weight:600}
+  .btn:disabled{opacity:.5;cursor:default}
+  .state{padding:36px 16px;text-align:center;color:var(--txt-soft,#8ba396);border:1px dashed var(--line,#1d2c24);border-radius:14px}
+  .na{color:var(--txt-soft,#8ba396);font-size:13px;padding:10px;border:1px dashed var(--line,#1d2c24);border-radius:10px}
+  svg.ch{width:100%;height:170px;display:block}
+  .legend{display:flex;gap:14px;font-size:12px;color:var(--txt-soft,#8ba396);margin-top:6px;flex-wrap:wrap}
+  .legend i{display:inline-block;width:14px;height:3px;vertical-align:middle;margin-inline-end:4px}
+  .ai-sec{margin:8px 0}.ai-sec b{display:block;font-size:13px;margin-bottom:4px}.ai-sec li{font-size:13px;margin:3px 0}
+  input.f{flex:1;min-width:120px;background:var(--panel,#101a15);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:8px;padding:6px}
+  .st{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700;display:inline-block;white-space:nowrap}
+  .st.healthy{background:rgba(16,185,129,.15);color:#10b981}.st.watch{background:rgba(245,179,1,.15);color:#f5b301}
+  .st.low{background:rgba(234,88,12,.16);color:#ea580c}.st.stockout{background:rgba(239,68,68,.16);color:#ef4444}
+  .st.slow{background:rgba(59,130,246,.15);color:#60a5fa}.st.obsolete{background:rgba(148,163,184,.18);color:#cbd5e1}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}.schip{cursor:pointer;border:1px solid var(--line,#1d2c24);border-radius:12px;padding:8px 12px;min-width:120px}
+  .schip b{display:block;font-size:18px}.schip:hover{border-color:var(--mint,#10b981)}
+  .eq{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:13px}.eq .box{border:1px solid var(--line,#1d2c24);border-radius:10px;padding:8px 10px;text-align:center;min-width:90px}
+  .eq .box b{display:block;font-size:16px}
+  .ov{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:50;padding:14px}
+  .ov.on{display:flex}.modal{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:16px;padding:18px;width:min(560px,100%);max-height:90vh;overflow:auto}
+  .fg{display:grid;grid-template-columns:1fr 1fr;gap:10px}.fg label{font-size:12px;color:var(--txt-soft,#8ba396);display:flex;flex-direction:column;gap:4px}
+  .fg input,.fg select{background:var(--bg,#070b09);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:9px;padding:8px;font:inherit;max-width:none}
+  .cta{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  @media(max-width:760px){.fg{grid-template-columns:1fr}.tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.tile{padding:10px}.tile .v{font-size:17px}.grid2,.grid3{grid-template-columns:minmax(0,1fr)}h1{font-size:20px}select{max-width:47%}}
+  @media(max-width:700px){.tiles[style]{grid-template-columns:1fr 1fr!important}}
+</style>
+<style>
+  .tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--line,#1d2c24);margin:6px 0 16px}
+  .tab{background:none;border:0;color:var(--txt-soft,#8ba396);padding:10px 14px;font:inherit;font-size:14px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+  .tab.on{color:var(--txt,#e8f1ec);border-color:#14b8a6;font-weight:800}
+  .hero{display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr;gap:12px;margin-bottom:14px}
+  .hcard{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:16px;padding:16px;cursor:default}
+  .hcard.click{cursor:pointer}.hcard.click:hover{border-color:var(--mint,#10b981)}
+  .hcard .big{font-size:30px;font-weight:900;margin:6px 0}.hstat{font-size:22px;font-weight:900}
+  .hs-stable{color:#10b981}.hs-attention{color:#f5b301}.hs-critical{color:#ef4444}
+  .event{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-inline-start:4px solid #ef4444;border-radius:12px;padding:14px;margin-bottom:10px}
+  .event.opportunity{border-inline-start-color:#10b981}.event.data_quality{border-inline-start-color:#f5b301}
+  .event h4{margin:0 0 6px;font-size:15px}.acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .rec{display:grid;grid-template-columns:110px 1fr;gap:6px 12px;font-size:13px;margin-top:8px}.rec b{color:var(--txt-soft,#8ba396);font-weight:600}
+  .flow{display:flex;align-items:stretch;gap:8px;flex-wrap:wrap;justify-content:center}
+  .fnode{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:14px;padding:14px 18px;text-align:center;min-width:140px}
+  .fnode .big{font-size:22px;font-weight:900}.farrow{align-self:center;font-size:22px;color:var(--txt-soft,#8ba396)}
+  .ptip{background:var(--bg,#070b09);border:1px solid var(--mint,#10b981);border-radius:12px;padding:12px;margin-top:8px;font-size:13px}
+  .search{flex:1;min-width:180px;background:var(--panel,#101a15);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:10px;padding:9px 12px;font:inherit}
+  .perf{display:grid;grid-template-columns:70px 1fr 50px;gap:8px;align-items:center;font-size:13px;margin:8px 0}
+  .perf .g{height:10px;background:var(--line,#1d2c24);border-radius:6px;overflow:hidden}.perf .g i{display:block;height:100%}
+  .life{display:flex;gap:0;align-items:center;flex-wrap:wrap;margin:10px 0}.lstep{text-align:center;min-width:110px}
+  .ldot{width:16px;height:16px;border-radius:50%;margin:0 auto 6px;background:var(--line,#1d2c24)}.ldot.on{background:var(--mint,#10b981)}
+  .lline{flex:1;min-width:30px;height:2px;background:var(--line,#1d2c24);margin-bottom:22px}
+  .back{background:none;border:0;color:var(--mint,#10b981);cursor:pointer;font:inherit;padding:0;margin-bottom:10px}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-inline-end:6px}
+  @media(max-width:900px){.hero{grid-template-columns:1fr 1fr}}
+  @media(max-width:560px){.hero{grid-template-columns:1fr}.tab{padding:8px 10px;font-size:13px}.rec{grid-template-columns:1fr}}
+</style>
+
+<style>
+  .lv-critical{background:rgba(239,68,68,.18);color:#ef4444}.lv-high{background:rgba(234,88,12,.18);color:#f97316}
+  .lv-medium{background:rgba(245,179,1,.16);color:#f5b301}.lv-low{background:rgba(16,185,129,.15);color:#10b981}.lv-none{background:rgba(148,163,184,.15);color:#94a3b8}
+  .gauge{position:relative;height:12px;border-radius:8px;background:linear-gradient(270deg,#10b981 0 40%,#f5b301 40% 65%,#f97316 65% 85%,#ef4444 85% 100%);margin:8px 0 4px}
+  .gauge i{position:absolute;top:-5px;width:4px;height:22px;background:#fff;border-radius:3px;transform:translateX(50%)}
+  .heat td.c{text-align:center;font-weight:800;border-radius:6px}
+  .catgrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:14px}
+  .cat{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:14px;padding:12px;cursor:pointer}
+  .cat:hover{border-color:var(--mint,#10b981)}.cat .s{font-size:26px;font-weight:900;margin:4px 0}
+  .chain{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:8px 0}
+  .cnode{border:1px solid var(--line,#1d2c24);border-radius:10px;padding:6px 10px;font-size:12px;cursor:pointer}
+  .cnode.on{border-color:#ef4444}.carrow{color:var(--txt-soft,#8ba396)}
+  .kan{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.kcol{background:rgba(255,255,255,.02);border:1px solid var(--line,#1d2c24);border-radius:12px;padding:8px;min-height:80px}
+  .kcard{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:10px;padding:8px;margin:6px 0;font-size:12px;cursor:pointer}
+  .imp4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+  .brief li{margin:6px 0;font-size:14px}
+  @media(max-width:900px){.catgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.kan,.imp4{grid-template-columns:1fr 1fr}}
+  @media(max-width:560px){.catgrid,.kan,.imp4{grid-template-columns:1fr}}
+</style>
+<style>
+  .contrib{display:flex;height:22px;border-radius:8px;overflow:hidden;margin:8px 0;background:var(--line,#1d2c24)}
+  .contrib i{display:block;height:100%;border-inline-end:1px solid rgba(0,0,0,.35)}
+  .pr-immediate{background:rgba(239,68,68,.18);color:#ef4444}.pr-high{background:rgba(249,115,22,.18);color:#f97316}
+  .pr-medium{background:rgba(245,179,1,.16);color:#f5b301}.pr-monitor{background:rgba(148,163,184,.15);color:#94a3b8}
+  .tl{border-inline-start:2px solid var(--line,#1d2c24);margin:6px 8px;padding-inline-start:14px}.tl div{position:relative;margin:8px 0;font-size:13px}
+  .tl div::before{content:"";position:absolute;inset-inline-start:-21px;top:5px;width:10px;height:10px;border-radius:50%;background:var(--mint,#10b981)}
+  .step{display:flex;gap:10px;align-items:flex-start;margin:8px 0;flex-wrap:wrap}.step .m{min-width:120px;font-weight:800;color:var(--mint,#10b981)}
+  .ent{display:flex;gap:6px;flex-wrap:wrap}.ent span{border:1px solid var(--line,#1d2c24);border-radius:8px;padding:2px 8px;font-size:12px}
+  .exec4{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:14px}
+  @media(max-width:900px){.exec4{grid-template-columns:1fr}}
+</style>
+<style>
+  .pos-above{background:rgba(16,185,129,.15);color:#10b981}.pos-near{background:rgba(96,165,250,.15);color:#60a5fa}
+  .pos-below{background:rgba(249,115,22,.18);color:#f97316}.pos-critical{background:rgba(239,68,68,.18);color:#ef4444}.pos-na{background:rgba(148,163,184,.15);color:#94a3b8}
+  .pbar{position:relative;height:14px;border-radius:8px;background:linear-gradient(270deg,#ef4444,#f5b301 40%,#10b981);margin:10px 0 4px}
+  .pbar i{position:absolute;top:-5px;width:4px;height:24px;background:#fff;border-radius:3px;transform:translateX(50%)}
+  .src{font-size:12px;color:var(--txt-soft,#8ba396);line-height:1.7}
+  .vs{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}.vs b{font-size:22px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🧭 المقارنة بالقطاع</h1>
+  <p class="sub">أين تقف شركتك مقابل معيار قطاعها؟ ما الفجوة، وما أثرها، ولماذا، وما أكبر فرصة؟ — فقط حيث يوجد معيار موثّق بمصدره.</p>
+  <div class="bar"><button class="btn ghost" id="btnSet" style="display:none">⚙ ملف القطاع والمعايير</button><a class="btn ghost" href="company-risk-drivers.html">مسببات المخاطر</a><span class="muted" id="asof"></span></div>
+  <div class="na" id="disc" style="margin:6px 0 10px"></div>
+  <nav class="tabs" id="tabs"></nav>
+  <div id="content"><div class="state">…</div></div>
+</div>
+<div class="ov" id="ov"><div class="modal" id="modal" style="width:min(760px,100%)"></div></div>
+<script src="i18n.js"></script>
+<script>
+(function(){
+  const TOKEN=localStorage.getItem("nabbah_token")||"";if(!TOKEN){location.href="login.html";return;}
+  const TABS=[["overview","نظرة عامة"],["benchmark","معيار القطاع"],["kpis","مقارنة المؤشرات"],["financial","المالية"],["sales","المبيعات"],["operations","العمليات"],
+    ["inventory","المخزون"],["customer","العملاء"],["hr","الموارد البشرية"],["branches","الفروع"],["gaps","فجوات الأداء"],["positioning","التموضع"],
+    ["strengths","نقاط القوة"],["weaknesses","نقاط الضعف"],["opportunities","الفرص"],["trends","اتجاهات القطاع"],["alerts","التنبيهات"],["actions","القرارات والإجراءات"],["ai","اسأل نبّاه"]];
+  const GT={financial:["financial","cash"],sales:["sales"],operations:["operations"],inventory:["inventory"],customer:["customer"],hr:["hr"]};
+  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const n=(v,d=2)=>v==null?"—":Number(v).toLocaleString("ar-SA",{maximumFractionDigits:d});
+  const H={Authorization:"Bearer "+TOKEN,"Content-Type":"application/json"},$=id=>document.getElementById(id);
+  let D=null,DS=null;
+  const route=()=>{const h=decodeURIComponent(location.hash.slice(1)||"overview");const i=h.indexOf("/");return i<0?[h,""]:[h.slice(0,i),h.slice(i+1)];};
+  const go=(v,arg)=>{location.hash=arg?`${v}/${encodeURIComponent(arg)}`:v;};
+  window.addEventListener("hashchange",()=>{if(D){render();window.scrollTo(0,0);}});
+  function load(){$("content").innerHTML=`<div class="state">…</div>`;
+    fetch("/company/sector-benchmark-intelligence",{headers:H}).then(async r=>{
+      if(r.status===401){location.href="login.html";return null;}
+      if(r.status===403||r.status===402){let d="";try{d=(await r.json()).detail;}catch(_){}$("content").innerHTML=`<div class="state">🔒 ${esc(d||"ليست لديك صلاحية.")}</div>`;return null;}
+      if(!r.ok){let d="";try{const j=await r.json();d=typeof j.detail==="string"?j.detail:JSON.stringify(j.detail||j);}catch(_){}err(`HTTP ${r.status}${d?" — "+d:""}`);return null;}
+      return r.json();}).then(d=>{if(!d)return;D=d;$("btnSet").style.display=d.can_edit_rules?"":"none";$("disc").textContent="ℹ "+(d.disclaimer_ar||"");$("asof").textContent=d.as_of?"بتاريخ "+d.as_of:"";
+        try{render();}catch(e){console.error(e);err("render: "+(e&&e.message||e));}}).catch(e=>err("network: "+(e&&e.message||e)));}
+  function err(m){$("content").innerHTML=`<div class="state neg">تعذّر تحميل المقارنة بالقطاع.<div class="muted" style="margin-top:8px">${esc(m)}</div></div>`;}
+  const panel=(title,body,extra="")=>`<div class="panel"><h2>${title}${extra}</h2>${body}</div>`;
+  const na=m=>`<div class="na">${esc(m)}</div>`;
+  const tile=(l,v,c)=>`<div class="tile"><div class="l">${l}</div><div class="v">${v}</div><div class="c">${c||""}</div></div>`;
+  const money=v=>v==null?"—":n(v,0)+" "+esc(D.currency||"SAR");
+  const pos=x=>x.status!=="compared"?`<span class="b pos-na">${esc(x.status_ar)}</span>`:`<span class="b pos-${x.position}">${esc(x.position_ar)}</span>`;
+  const fmt=(v,u)=>v==null?"—":`${n(v,u==="SAR"?0:2)} <span class="muted">${esc(u==="%"?"%":u)}</span>`;
+  const gapTxt=x=>x.gap==null?"—":`<span class="${["below","critical"].includes(x.position)?"neg":x.position==="above"?"pos":""}">${x.gap>0?"+":""}${n(x.gap,2)} ${esc(x.gap_unit)}</span>`;
+  const C=k=>D.comparisons[k];
+  function row(x){return `<tr class="drill" data-go="metric" data-arg="${esc(x.metric)}"><td><b>${esc(x.name_ar)}</b><div class="muted">${esc(x.group_ar)}</div></td><td>${fmt(x.company,x.unit)}</td><td>${x.status==="compared"?fmt(x.benchmark,x.unit):`<span class="muted">${x.status==="benchmark_unavailable"?"المعيار غير متاح":"—"}</span>`}</td><td>${gapTxt(x)}</td><td>${pos(x)}</td><td>${x.percentile!=null?n(x.percentile,0)+" مئين":`<span class="muted">—</span>`}</td><td class="muted">${x.status==="compared"?esc(x.confidence_ar):esc(x.company_reason_ar||"")}</td></tr>`;}
+  const table=list=>list.length?`<div class="tbl"><table><thead><tr><th>المؤشر</th><th>الشركة</th><th>معيار القطاع</th><th>الفجوة</th><th>الموقع</th><th>المئين</th><th>الثقة</th></tr></thead><tbody>${list.map(row).join("")}</tbody></table></div>`:na("لا مؤشرات في هذا القسم ضمن صلاحيتك");
+  const byGroups=gs=>Object.values(D.comparisons).filter(x=>gs.includes(x.group));
+  function overview(){const s=D.summary,p=D.profile,q=D.quality;
+    return `<div class="hero"><div class="hcard click" data-go="benchmark"><div class="muted">ملف المقارنة</div><div style="font-size:17px;font-weight:800;margin:6px 0">${esc(p.sector_ar)}${p.sub_sector?" · "+esc(p.sub_sector):""}</div><div class="muted">${esc(p.city||"")} ${p.region_ar?"· "+esc(p.region_ar):""} · ${esc(p.size_ar)}</div></div>
+      <div class="hcard click" data-go="kpis"><div class="muted">مؤشرات مقارنة بمعيار موثّق</div><div class="big">${n(s.compared,0)}<span class="muted" style="font-size:14px"> / ${n(s.metrics,0)}</span></div><div class="muted">${n(s.benchmark_unavailable,0)} بلا معيار · ${n(s.company_unavailable,0)} بلا بيانات شركة</div></div>
+      <div class="hcard click" data-go="weaknesses"><div class="muted">أقل من القطاع</div><div class="big neg">${n(s.below+s.critical,0)}</div><div class="muted">${n(s.critical,0)} فجوة حرجة</div></div>
+      <div class="hcard click" data-go="strengths"><div class="muted">أفضل من القطاع</div><div class="big pos">${n(s.above,0)}</div><div class="muted">${n(s.near,0)} قريب من القطاع</div></div></div>
+      ${s.compared?"":panel("لا توجد معايير موثّقة لقطاعك بعد",`<div>نبّاه لا يعرض «متوسط سوق» بدون مصدر. لتفعيل المقارنة:</div><ol><li>تضيف إدارة نبّاه معايير موثّقة لقطاعك، أو</li><li>تضيف أنت معياراً من تقرير قطاعي لديك (بمصدره وفترته ومنهجيته)، أو</li><li>توافق على المشاركة المجهّلة — يظهر معيار الأقران عند وجود 5 شركات موافقة على الأقل في قطاعك.</li></ol>${D.can_edit_rules?`<button class="btn" data-act="settings">إعداد المعايير</button>`:""}`)}
+      ${s.biggest_gap?panel("أكبر فجوة",gapCard(C(s.biggest_gap.metric))):""}
+      <div class="grid2">${panel("ترتيب الأداء مقابل القطاع",`<div class="tbl"><table><tbody>${Object.values(D.comparisons).filter(x=>x.status==="compared").sort((a,b)=>(a.rel_gap??0)-(b.rel_gap??0)).map(x=>`<tr class="drill" data-go="metric" data-arg="${esc(x.metric)}"><td>${esc(x.name_ar)}</td><td>${pos(x)}</td><td>${gapTxt(x)}</td></tr>`).join("")||`<tr><td class="muted">لا مقارنات</td></tr>`}</tbody></table></div>`)}
+        ${panel("مؤشرات قطاع "+esc(D.sector_config.ar),D.sector_config.focus.map(f=>`<div class="step" ${C(f.metric)?`style="cursor:pointer" data-go="metric" data-arg="${esc(f.metric)}"`:""}><span class="m">${esc(f.name_ar)}</span>${C(f.metric)?pos(C(f.metric)):`<span class="b pos-na">غير متاح</span>`}</div>`).join("")+(D.sector_config.needs.length?`<h3>تحتاج بيانات</h3>${D.sector_config.needs.map(x=>`<div class="muted">• ${esc(x.ar)} — ${esc(x.needs_ar)}</div>`).join("")}`:"")+`<div class="muted">${esc(D.sector_config.note_ar)}</div>`)}</div>
+      ${D.insights.length?panel("قراءات استراتيجية (اتجاه للبحث وليست أحكاماً)",D.insights.map(i=>`<div class="event data_quality"><div>${esc(i.ar)}</div><div class="muted">${esc(i.look_ar)}</div></div>`).join("")):""}
+      ${panel("جودة المقارنة",`<div class="tiles">${tile("التغطية",n(q.coverage_pct,0)+"%",esc(q.note_ar))}${tile("ثقة مرتفعة",n(q.by_confidence.high,0),"")}${tile("ثقة متوسطة",n(q.by_confidence.medium,0),"")}${tile("ثقة منخفضة",n(q.by_confidence.low,0),q.stale?q.stale+" معايير قديمة":"")}</div>`)}`;}
+  function gapCard(x){if(!x)return "";return `<div class="vs"><span>${esc(x.name_ar)}:</span><b>${fmt(x.company,x.unit)}</b><span class="muted">مقابل معيار</span><b>${fmt(x.benchmark,x.unit)}</b><span>الفجوة ${gapTxt(x)}</span>${pos(x)}</div>
+      ${x.impact&&x.impact.amount?`<div style="margin-top:6px"><span class="b est">${esc(x.impact.type_ar)}</span> <b>${money(x.impact.amount)}</b> <span class="muted">${esc(x.impact.basis_ar)} — ${esc(x.impact.note_ar)}</span></div>`:""}
+      ${x.why&&x.why.length?`<div style="margin-top:6px"><b>لماذا؟</b> ${x.why.map(w=>`<a href="${esc(w.link)}" style="color:var(--mint,#10b981)">${esc(w.name_ar)}</a>`).join(" · ")}</div>`:""}
+      <div class="src">المصدر: ${esc(x.source.source)} · ${esc(x.source.period)} · ${esc(x.source.geo_ar)} · ${esc(x.source.size_ar)} · عيّنة ${x.source.sample_size==null?"غير منشورة":n(x.source.sample_size,0)} · الثقة ${esc(x.confidence_ar)}</div>
+      <div class="acts"><button class="btn ghost" data-go="metric" data-arg="${esc(x.metric)}">التفاصيل</button>${D.can_edit&&["below","critical"].includes(x.position)?`<button class="btn" data-dec="${esc(x.metric)}">قرار + إجراء</button>`:""}</div><div class="frm" data-frm="${esc(x.metric)}"></div>`;}
+  function benchmark(){const p=D.profile,q=D.quality;
+    if(!DS){fetch("/company/sector-benchmark/datasets",{headers:H}).then(r=>r.ok?r.json():{items:[]}).then(j=>{DS=j;if(route()[0]==="benchmark")render();});}
+    return panel("ملف المقارنة",`<div class="rec"><b>القطاع</b><span>${esc(p.sector_ar)}${p.sub_sector?" · "+esc(p.sub_sector):""}</span><b>الدولة/المنطقة/المدينة</b><span>${esc(p.country)} · ${esc(p.region_ar||"—")} · ${esc(p.city||"—")}</span><b>الحجم</b><span>${esc(p.size_ar)} <span class="muted">(${esc(p.size_source_ar)}${p.revenue_ttm?" — إيراد "+money(p.revenue_ttm):""})</span></span><b>نموذج العمل</b><span>${esc(p.business_model||"—")}</span><b>المشاركة المجهّلة</b><span>${p.peer_opt_in?"موافق — قيم شركتك تدخل في معيار الأقران مجمّعةً فقط":"غير موافق"}</span></div><div class="muted">${esc(D.rules.size_ar)}</div>`,D.can_edit_rules?` <button class="btn ghost" data-act="settings">تعديل</button>`:"")
+      +panel("مصادر المعايير المستخدمة",`<div class="tiles">${Object.entries(q.by_origin).map(([k,v])=>tile(esc(k),n(v,0),"مؤشر")).join("")||tile("المصادر","0","")}</div>
+        ${DS?`<div class="tbl" style="margin-top:10px"><table><thead><tr><th>المؤشر</th><th>القيمة</th><th>الفترة</th><th>المستوى</th><th>الحجم</th><th>العيّنة</th><th>المصدر</th><th>المنهجية</th><th>الثقة</th></tr></thead><tbody>${(DS.items||[]).map(b=>`<tr><td>${esc((DS.metrics.find(m=>m.code===b.metric)||{}).ar||b.metric)}</td><td>${n(b.value)}</td><td>${esc(b.period)}</td><td>${esc(b.city||b.region||b.country)}</td><td>${esc(b.size_segment)}</td><td>${b.sample_size==null?"—":n(b.sample_size,0)}</td><td style="white-space:normal">${b.source_url?`<a href="${esc(b.source_url)}" target="_blank" rel="noopener" style="color:var(--mint,#10b981)">${esc(b.source)}</a>`:esc(b.source)} <span class="muted">(${b.origin==="platform"?"المنصّة":"شركتك"})</span></td><td class="muted" style="white-space:normal">${esc(b.methodology)}</td><td>${esc(b.confidence)}</td></tr>`).join("")||`<tr><td colspan="9" class="muted">لا توجد معايير موثّقة لقطاعك بعد</td></tr>`}</tbody></table></div>`:`<div class="state">…</div>`}
+        <div class="muted" style="margin-top:6px">${esc(D.rules.peer_ar)}</div>`)
+      +panel("القواعد",`<div class="muted">${esc(D.rules.position_ar)}<br>${esc(D.rules.rank_ar)}<br>${esc(D.rules.confidence_ar)}<br>${esc(D.rules.impact_ar)}</div>`);}
+  function kpis(){return panel("كل المؤشرات مقابل القطاع",table(Object.values(D.comparisons)))+panel("مؤشرات بلا بيانات في نبّاه",D.data_needed.map(x=>`<div class="muted">• <b>${esc(x.ar)}</b> (${esc(x.group_ar)}) — ${esc(x.needs_ar)}</div>`).join("")||na("—"));}
+  const groupView=g=>panel(esc(TABS.find(t=>t[0]===g)[1])+" مقابل القطاع",table(byGroups(GT[g])))+byGroups(GT[g]).filter(x=>["below","critical"].includes(x.position)).map(x=>panel(esc(x.name_ar),gapCard(x))).join("");
+  function branches(){const b=D.branches;return panel("الفروع مقابل معيار القطاع",b.rows.length?b.rows.map(r=>`<div class="event" style="border-inline-start-color:${r.below?"#ef4444":"#10b981"}"><h4>🏢 ${esc(r.branch)} <span class="muted">${r.below} أقل · ${r.above} أفضل</span></h4><div class="tbl"><table><tbody>${r.items.map(i=>`<tr class="drill" data-go="metric" data-arg="${esc(i.metric)}"><td>${esc(i.name_ar)}</td><td>${fmt(i.value,i.unit)}</td><td class="muted">معيار ${n(i.benchmark)}</td><td><span class="b pos-${i.position}">${esc(i.position_ar)}</span></td></tr>`).join("")}</tbody></table></div></div>`).join("")+`<div class="muted">${esc(b.rule_ar)}</div>`:na("لا قيم فروع لمؤشرات لها معيار"));}
+  function gaps(){const ws=Object.values(D.comparisons).filter(x=>["below","critical"].includes(x.position));
+    return ws.length?ws.map(x=>panel(`${esc(x.name_ar)} ${pos(x)}`,`<div class="muted">الشركة ← المعيار ← الفجوة ← الأثر ← لماذا ← الإجراء</div>${gapCard(x)}`)).join(""):na("لا فجوات سلبية مقابل المعايير المتاحة");}
+  function positioning(){const p=D.positioning;
+    if(p.price_index==null||p.performance_index==null)return panel("التموضع القطاعي",na(p.reason_ar)+`<div class="muted">${esc(p.competitors_note_ar)}</div>`+(p.performance_index!=null?`<div style="margin-top:8px">مؤشر الأداء: <b>${n(p.performance_index,1)}</b> (100 = المعيار، من ${p.metrics_used} مؤشراً)</div>`:""));
+    const W=420,Hh=320,sx=v=>Math.max(10,Math.min(W-10,W/2+(v-100)*3)),sy=v=>Math.max(10,Math.min(Hh-10,Hh/2-(v-100)*3));
+    return panel("التموضع القطاعي: السعر × الأداء",`<svg viewBox="0 0 ${W} ${Hh}" style="width:100%;max-width:520px;display:block;margin:auto"><rect x="0" y="0" width="${W}" height="${Hh}" fill="none" stroke="#1d2c24"/><line x1="${W/2}" y1="0" x2="${W/2}" y2="${Hh}" stroke="#334155" stroke-dasharray="4"/><line x1="0" y1="${Hh/2}" x2="${W}" y2="${Hh/2}" stroke="#334155" stroke-dasharray="4"/>
+      <text x="${W-6}" y="14" text-anchor="end" font-size="11" fill="currentColor" opacity=".6">سعر أعلى · أداء أعلى</text><text x="6" y="14" font-size="11" fill="currentColor" opacity=".6">سعر أقل · أداء أعلى</text><text x="${W-6}" y="${Hh-6}" text-anchor="end" font-size="11" fill="currentColor" opacity=".6">سعر أعلى · أداء أقل</text><text x="6" y="${Hh-6}" font-size="11" fill="currentColor" opacity=".6">سعر أقل · أداء أقل</text>
+      <circle cx="${W/2}" cy="${Hh/2}" r="6" fill="#94a3b8"/><text x="${W/2+8}" y="${Hh/2-8}" font-size="11" fill="currentColor">معيار القطاع</text>
+      <circle cx="${sx(p.price_index)}" cy="${sy(p.performance_index)}" r="9" fill="#10b981"/><text x="${sx(p.price_index)+12}" y="${sy(p.performance_index)+4}" font-size="12" font-weight="700" fill="currentColor">شركتك</text></svg>
+      <div class="rec"><b>مؤشر السعر</b><span>${n(p.price_index,1)} (متوسط الطلب ÷ المعيار)</span><b>مؤشر الأداء</b><span>${n(p.performance_index,1)} (متوسط الأداء النسبي لـ ${p.metrics_used} مؤشراً)</span><b>القراءة</b><span>${esc(p.quadrant_ar)}</span></div><div class="muted">${esc(p.competitors_note_ar)}</div>`);}
+  const list=(xs,empty)=>xs.length?`<div class="tbl"><table><tbody>${xs.map(x=>`<tr class="drill" data-go="metric" data-arg="${esc(x.metric)}"><td><b>${esc(x.name_ar)}</b></td><td>${fmt(x.company,x.unit)}</td><td class="muted">معيار ${fmt(x.benchmark,x.unit)}</td><td>${x.gap>0?"+":""}${n(x.gap,2)} ${esc(x.gap_unit)}</td><td>${x.rel_gap==null?"":(x.rel_gap>0?"+":"")+n(x.rel_gap,1)+"% مقابل القطاع"}</td><td>${`<span class="b pos-${x.position}">${esc(x.position_ar)}</span>`}</td></tr>`).join("")}</tbody></table></div>`:na(empty);
+  const strengths=()=>panel("نقاط القوة مقابل القطاع",list(D.strengths,"لا مؤشر أفضل من القطاع ضمن المعايير المتاحة"));
+  const weaknesses=()=>panel("نقاط الضعف (الفجوات)",list(D.weaknesses,"لا فجوات سلبية ضمن المعايير المتاحة"));
+  function opportunities(){return D.opportunities.length?D.opportunities.map((o,i)=>panel(`الفرصة ${i+1}: ${esc(o.ar)} ${o.priority==="critical"?'<span class="b pos-critical">فجوة حرجة</span>':""}`,`<div class="rec"><b>المجال</b><span>${esc(o.areas_ar)}</span><b>الفجوات</b><span>${o.gaps.map(g=>`${esc(g.name_ar)} ${n(g.company)} مقابل ${n(g.benchmark)} (${g.gap>0?"+":""}${n(g.gap)} ${esc(g.gap_unit)})`).join("<br>")}</span><b>الأثر</b><span>${o.impact&&o.impact.amount?`${esc(o.impact.type_ar)} ${money(o.impact.amount)} <span class="muted">${esc(o.impact.note_ar)}</span>`:"غير قابل للتقدير"}${o.impact_note_ar?`<div class="muted">${esc(o.impact_note_ar)}</div>`:""}</span><b>المسببات من البيانات</b><span>${o.drivers.map(d=>`<a href="${esc(d.link)}" style="color:var(--mint,#10b981)">${esc(d.name_ar)}</a>`).join(" · ")||"—"}</span></div>${o.actions.length?`<h3>إجراءات مقترحة</h3><ol style="margin:0;padding-inline-start:18px">${o.actions.map(a=>`<li>${esc(a)}</li>`).join("")}</ol>`:""}<div class="acts">${o.links.map(l=>`<a class="btn ghost" href="${esc(l)}">الوحدة ↗</a>`).join("")}</div>`)).join(""):na("لا فرص مستخرجة — تحتاج فجوات مقابل معايير موثّقة");}
+  function spark(pts){const v=pts.map(p=>p[1]).filter(x=>x!=null);if(v.length<2)return "";const mn=Math.min(...v),mx=Math.max(...v),W=200,Hh=40,sx=i=>4+i*(W-8)/(pts.length-1),sy=x=>Hh-4-(mx===mn?.5:(x-mn)/(mx-mn))*(Hh-8);return `<svg viewBox="0 0 ${W} ${Hh}" style="width:200px;height:40px"><polyline fill="none" stroke="#14b8a6" stroke-width="2" points="${pts.map((p,i)=>p[1]==null?null:`${sx(i)},${sy(p[1])}`).filter(Boolean).join(" ")}"/></svg>`;}
+  function trends(){const xs=Object.values(D.comparisons).filter(x=>x.status==="compared");
+    return panel("اتجاه الشركة مقابل اتجاه القطاع",xs.length?`<div class="tbl"><table><thead><tr><th>المؤشر</th><th>اتجاه الشركة</th><th>المسار</th><th>اتجاه المعيار</th><th>موقع الشركة عبر الزمن</th></tr></thead><tbody>${xs.map(x=>`<tr class="drill" data-go="metric" data-arg="${esc(x.metric)}"><td><b>${esc(x.name_ar)}</b></td><td>${esc(x.company_trend)}</td><td>${spark(x.series||[])}</td><td class="muted">${x.sector_trend&&x.sector_trend.change!=null?`${x.sector_trend.change>0?"+":""}${n(x.sector_trend.change)} — ${esc(x.sector_trend.note_ar)}`:esc((x.sector_trend||{}).note_ar||"فترة معيار واحدة")}</td><td>${x.history.signal_ar?`<span class="${x.history.signal==="losing"?"neg":"pos"}">${esc(x.history.signal_ar)}</span>`:`<span class="muted">${x.history.points.length} لقطة</span>`}</td></tr>`).join("")}</tbody></table></div><div class="muted">اتجاه القطاع من فترات منشورة متعددة لنفس المصدر والمستوى فقط · موقع الشركة من لقطات شهرية محفوظة (يُبنى مع الوقت).</div>`:na("لا مقارنات"));}
+  function alerts(){return panel(`🔔 ${D.alerts.length} تنبيهات قطاعية`,D.alerts.length?D.alerts.map(a=>`<div class="event ${a.kind==="advantage"?"opportunity":""}"><h4>${esc(a.kind_ar)} — ${esc(a.name_ar)}</h4><div>${esc(a.text_ar)}</div>${a.position_trend_ar?`<div class="neg">${esc(a.position_trend_ar)}</div>`:""}<div class="src">المصدر: ${esc(a.source)} · الثقة ${esc(a.confidence_ar)}</div><div class="acts"><button class="btn ghost" data-go="metric" data-arg="${esc(a.metric)}">التفاصيل</button></div></div>`).join(""):na("لا تنبيهات"));}
+  function actions(){const ws=Object.values(D.comparisons).filter(x=>["below","critical"].includes(x.position));
+    return panel("حوّل الفجوة إلى قرار",ws.length?ws.map(x=>`<div class="event"><h4>${esc(x.name_ar)} ${pos(x)}</h4><div>${fmt(x.company,x.unit)} مقابل ${fmt(x.benchmark,x.unit)} · ${gapTxt(x)}</div><div class="muted">${esc(((x.why||[])[0]||{}).action_ar||"راجع مسببات الفجوة")}</div><div class="acts">${D.can_edit?`<button class="btn" data-dec="${esc(x.metric)}">قرار + إجراء</button>`:""}<a class="btn ghost" href="company-decisions.html">متابعة القرارات</a></div><div class="frm" data-frm="${esc(x.metric)}"></div></div>`).join(""):na("لا فجوات"));}
+  function aiView(){return panel("اسأل نبّاه — يشرح المعايير المعطاة فقط ولا يقدّر متوسط السوق",`<div class="chips">${D.ai_questions.map(q=>`<span class="chip" data-q="${esc(q)}">${esc(q)}</span>`).join("")}</div><div style="display:flex;gap:6px;margin-top:10px"><input class="search" id="aiQ" placeholder="اكتب سؤالك…"><button class="btn" id="aiGo">اسأل</button></div><div id="aiOut" style="margin-top:12px"></div>`);}
+  function metric(k){const x=C(k);if(!x)return na("المؤشر غير موجود أو خارج صلاحيتك");
+    const s=x.source||{};
+    return `<button class="back" data-go="kpis">→ كل المؤشرات</button>`+panel(`${esc(x.name_ar)} ${pos(x)}`,x.status!=="compared"?na(x.status==="benchmark_unavailable"?x.reason_ar:x.company_reason_ar)+(x.company!=null?`<div style="margin-top:8px">قيمة شركتك: <b>${fmt(x.company,x.unit)}</b> <span class="muted">${esc(x.company_basis_ar)}</span></div>`:""):
+      `<div class="tiles">${tile("شركتك",fmt(x.company,x.unit),esc(x.company_basis_ar))}${tile("معيار القطاع",fmt(x.benchmark,x.unit),esc(s.origin_ar))}${tile("الفجوة",gapTxt(x),x.gap_pct==null?"":n(x.gap_pct,1)+"% من المعيار")}${tile("المئين",x.percentile==null?`<span class="muted" style="font-size:13px">غير متاح</span>`:n(x.percentile,0),x.rank_ar||esc(x.rank_reason_ar||""))}</div>
+      ${x.percentile!=null?`<div class="pbar"><i style="right:${x.percentile}%"></i></div><div class="muted" style="display:flex;justify-content:space-between"><span>أفضل</span><span>المتوسط</span><span>أضعف</span></div>`:""}`)
+      +(x.status==="compared"?panel("مصدر المعيار",`<div class="rec"><b>المصدر</b><span>${s.source_url?`<a href="${esc(s.source_url)}" target="_blank" rel="noopener" style="color:var(--mint,#10b981)">${esc(s.source)}</a>`:esc(s.source)}</span><b>الفترة</b><span>${esc(s.period)} · ${esc(s.freshness_ar||"")}${s.age_months!=null?" ("+s.age_months+" شهراً)":""}</span><b>القطاع</b><span>${esc(s.sector)}${s.sub_sector?" · "+esc(s.sub_sector):""}</span><b>الجغرافيا</b><span>${esc(s.geo_ar)} · ${esc(s.geography)}</span><b>الحجم</b><span>${esc(s.size_ar)}</span><b>العيّنة</b><span>${s.sample_size==null?"غير منشورة":n(s.sample_size,0)}</span><b>المنهجية</b><span>${esc(s.methodology)}</span><b>الثقة</b><span>${esc(x.confidence_ar)} ${x.confidence_notes.length?"— "+x.confidence_notes.map(esc).join("، "):""} <span class="muted">(المعيار ${esc(x.benchmark_confidence_ar)} · قيمة الشركة ${esc({high:"مرتفعة",medium:"متوسطة",low:"منخفضة"}[x.company_confidence])})</span></span></div>`)
+      +panel("مستويات المقارنة الجغرافية",`<div class="tbl"><table><thead><tr><th>المستوى</th><th>المعيار</th><th>الفجوة</th><th>الموقع</th><th>المئين</th><th>المصدر</th></tr></thead><tbody>${Object.entries(x.geo_levels).map(([k,l])=>`<tr><td>${esc(l.geo_ar)} <span class="muted">${esc(l.size_ar)}</span></td><td>${n(l.value)}</td><td>${l.gap>0?"+":""}${n(l.gap)}</td><td><span class="b pos-${l.position}">${esc({above:"أفضل",near:"قريب",below:"أقل",critical:"حرج"}[l.position])}</span></td><td>${l.percentile==null?"—":n(l.percentile,0)}</td><td class="muted">${esc(l.source)} · ${esc(l.period)}</td></tr>`).join("")}</tbody></table></div>`)
+      +(x.impact?panel("الأثر المالي للفجوة",x.impact.amount?`<div><span class="b est">${esc(x.impact.type_ar)}</span> <b>${money(x.impact.amount)}</b></div><div class="muted">${esc(x.impact.basis_ar)}</div><div class="na" style="margin-top:6px">${esc(x.impact.note_ar)}</div>`:na(x.impact.reason_ar)):"")
+      +panel("لماذا؟ (من مسببات المخاطر)",x.why.length?x.why.map(w=>`<div class="event"><b><a href="${esc(w.link)}" style="color:var(--mint,#10b981)">${esc(w.name_ar)}</a></b> <span class="b pos-${w.level==="critical"?"critical":"below"}">${esc({critical:"حرج",high:"مرتفع",medium:"متوسط"}[w.level])}</span>${w.contribution_pct!=null?` <span class="muted">مساهمة ${n(w.contribution_pct,1)}%</span>`:""}<div class="muted">${esc(w.evidence)}</div>${w.candidates.length?`<div class="muted">أسباب مرشحة: ${w.candidates.map(c=>esc(c.name_ar)+" ("+esc(c.confidence_ar)+")").join("، ")}</div>`:""}${w.action_ar?`<div>الإجراء: ${esc(w.action_ar)}</div>`:""}</div>`).join(""):na(["below","critical"].includes(x.position)?"لا مسبب مرتفع مرتبط في البيانات الحالية":"لا فجوة سلبية"))
+      +panel("الربط بالمخاطر",`<div>${esc(x.risk_link.category_ar)}: ${x.risk_link.level?`<span class="b lv-${x.risk_link.level}">${esc({critical:"حرج",high:"مرتفع",medium:"متوسط",low:"منخفض"}[x.risk_link.level])}</span> (${n(x.risk_link.score,1)})`:"تعذّر التحديد"} <a href="company-risk-intelligence.html#${esc(x.risk_link.category)}" style="color:var(--mint,#10b981)">↗</a></div>`)
+      +panel("الاتجاه",`<div>الشركة: ${esc(x.company_trend)} ${spark(x.series||[])}</div><div class="muted">القطاع: ${x.sector_trend?esc(x.sector_trend.note_ar):"—"}</div><div class="muted">الموقع عبر الزمن: ${x.history.points.map(p=>esc(p.period)+": "+(p.percentile!=null?n(p.percentile,0)+" مئين":n(p.gap))).join(" ← ")||"يُبنى مع اللقطات الشهرية"} ${x.history.signal_ar?`— <b>${esc(x.history.signal_ar)}</b>`:""}</div>`)
+      +(D.can_edit&&["below","critical"].includes(x.position)?panel("الإجراء",`<button class="btn" data-dec="${esc(x.metric)}">قرار + إجراء</button><div class="frm" data-frm="${esc(x.metric)}"></div>`):""):"");}
+  function render(){const d=D;
+    if(!d.has_data){$("tabs").innerHTML="";$("content").innerHTML=`<div class="state"><div style="font-size:16px;margin-bottom:10px">لا توجد بيانات كافية للمقارنة بعد.</div><div class="cta" style="justify-content:center"><a class="btn" href="company-data-center.html">مركز البيانات</a></div></div>`;return;}
+    const [v,arg]=route();const vv=v==="metric"?"kpis":v;
+    $("tabs").innerHTML=TABS.filter(([k])=>!GT[k]||byGroups(GT[k]).length).map(([k,l])=>`<button class="tab ${k===vv?"on":""}" data-go="${k}"><span class="muted" style="font-size:10px">${String(TABS.findIndex(t=>t[0]===k)+1).padStart(2,"0")}</span> ${l}${k==="alerts"&&d.alerts.length?` <span class="b high">${d.alerts.length}</span>`:""}</button>`).join("");
+    const views={overview,benchmark,kpis,branches,gaps,positioning,strengths,weaknesses,opportunities,trends,alerts,actions,ai:aiView,metric:()=>metric(arg)};
+    $("content").innerHTML=GT[v]?groupView(v):(views[v]||overview)();bind();}
+  function bind(){document.querySelectorAll("[data-go]").forEach(el=>el.onclick=e=>{e.stopPropagation();go(el.dataset.go,el.dataset.arg||null);});
+    document.querySelectorAll("#content [data-act='settings']").forEach(el=>el.onclick=settings);
+    document.querySelectorAll("#content [data-dec]").forEach(b=>b.onclick=e=>{e.stopPropagation();decision(b);});
+    document.querySelectorAll("#content [data-q]").forEach(c=>c.onclick=()=>runAI(c.dataset.q));
+    const ag=$("aiGo");if(ag)ag.onclick=()=>{const q=$("aiQ").value.trim();if(q)runAI(q);};}
+  function decision(b){const k=b.dataset.dec,box=document.querySelector(`#content [data-frm="${CSS.escape(k)}"]`);if(!box)return;const x=C(k);
+    box.innerHTML=`<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap"><input class="f o" placeholder="المسؤول"><input class="f d" type="date"><input class="f t" placeholder="الإجراء" value="${esc(((x.why||[])[0]||{}).action_ar||"")}"><button class="btn c">إنشاء القرار</button></div><div class="m muted">الأثر المسجّل توضيحي من فجوة المعيار — ليس مضموناً.</div>`;
+    box.querySelector(".c").onclick=()=>{const t=box.querySelector(".t").value;fetch("/company/sector-benchmark/to-decision",{method:"POST",headers:H,body:JSON.stringify({metric:k,owner:box.querySelector(".o").value,due_date:box.querySelector(".d").value,actions:t?[{title:t}]:undefined})}).then(async r=>{const j=await r.json().catch(()=>({}));const m=box.querySelector(".m");m.textContent=r.ok?"تم إنشاء القرار والإجراء ✓":(typeof j.detail==="string"?j.detail:"HTTP "+r.status);m.className=r.ok?"pos":"neg";});};}
+  function settings(){fetch("/company/sector-benchmark/datasets",{headers:H}).then(r=>r.json()).then(S=>{DS=S;const p=S.profile;
+    const own=(S.items||[]).filter(b=>b.origin==="company");
+    $("modal").innerHTML=`<h3 style="margin-top:0">ملف القطاع</h3><div class="fg"><label>القطاع الفرعي<input id="pSub" value="${esc(p.sub_sector||"")}" placeholder="مثلاً: وجبات سريعة"></label><label>المنطقة<select id="pReg"><option value="">تلقائي من المدينة</option>${Object.entries(S.regions).map(([k,v])=>`<option value="${k}" ${p.region===k?"selected":""}>${esc(v)}</option>`).join("")}</select></label><label>المدينة<input id="pCity" value="${esc(p.city||"")}"></label><label>نموذج العمل<input id="pBm" value="${esc(p.business_model||"")}" placeholder="مثلاً: B2C / B2B"></label><label>الحجم<select id="pSize"><option value="">تلقائي من الإيراد</option>${Object.entries(S.sizes).map(([k,v])=>`<option value="${k}" ${p.size_override&&p.size_segment===k?"selected":""}>${esc(v)}</option>`).join("")}</select></label></div>
+      <label style="display:flex;gap:8px;margin:10px 0;font-size:13px"><input type="checkbox" id="pPeer" ${p.peer_opt_in?"checked":""}> أوافق على مشاركة قيم مؤشرات شركتي <b>مجمّعةً ومجهّلةً</b> في معيار الأقران لقطاعي (لا تُعرض قيمة أي شركة، ويظهر المعيار فقط عند 5 شركات موافقة على الأقل). يمكن سحب الموافقة في أي وقت.</label>
+      <div class="cta"><button class="btn" id="pSave">حفظ الملف</button><span id="pMsg" class="muted"></span></div>
+      <h3>إضافة معيار من مصدر لديك</h3><div class="muted">المصدر والمنهجية والفترة والثقة إلزامية — المعيار يُرى لشركتك فقط.</div>
+      <div class="fg"><label>المؤشر<select id="bM">${S.metrics.map(m=>`<option value="${m.code}">${esc(m.ar)} (${esc(m.unit)})</option>`).join("")}</select></label><label>القيمة (الوسيط/المتوسط)<input id="bV" inputmode="decimal"></label><label>الفترة<input id="bP" placeholder="2025"></label><label>نهاية الفترة<input id="bPE" type="date"></label><label>المصدر<input id="bS" placeholder="اسم التقرير والجهة"></label><label>رابط المصدر<input id="bU"></label><label>المنهجية<input id="bMe" placeholder="مثلاً: وسيط 120 منشأة"></label><label>حجم العيّنة<input id="bN" inputmode="numeric"></label><label>الثقة<select id="bC"><option value="medium">متوسطة</option><option value="high">مرتفعة</option><option value="low">منخفضة</option></select></label><label>المنطقة (اختياري)<select id="bR"><option value="">وطني</option>${Object.entries(S.regions).map(([k,v])=>`<option value="${k}">${esc(v)}</option>`).join("")}</select></label><label>الحجم<select id="bZ"><option value="all">كل الأحجام</option>${Object.entries(S.sizes).map(([k,v])=>`<option value="${k}">${esc(v)}</option>`).join("")}</select></label><label>المئين 25 / 50 / 75 (اختياري)<input id="bQ" placeholder="مثلاً 28,35,42"></label></div>
+      <div class="cta"><button class="btn" id="bAdd">إضافة المعيار</button><span id="bMsg" class="muted"></span></div>
+      ${own.length?`<h3>معايير شركتك</h3>${own.map(b=>`<div class="step"><span class="m">${esc((S.metrics.find(m=>m.code===b.metric)||{}).ar||b.metric)}</span><span>${n(b.value)} · ${esc(b.period)} · ${esc(b.source)} <button class="btn ghost" data-off="${b.id}">إيقاف</button></span></div>`).join("")}`:""}
+      <div class="cta"><button class="btn ghost" id="mClose">إغلاق</button></div>`;
+    $("ov").classList.add("on");$("mClose").onclick=()=>{$("ov").classList.remove("on");DS=null;load();};
+    $("pSave").onclick=()=>fetch("/company/sector-benchmark/profile",{method:"POST",headers:H,body:JSON.stringify({sub_sector:$("pSub").value,region:$("pReg").value,city:$("pCity").value,business_model:$("pBm").value,size_segment:$("pSize").value,peer_opt_in:$("pPeer").checked})}).then(async r=>{const j=await r.json().catch(()=>({}));$("pMsg").textContent=r.ok?"تم الحفظ ✓":(j.detail||"HTTP "+r.status);$("pMsg").className=r.ok?"pos":"neg";});
+    $("bAdd").onclick=()=>{const q=$("bQ").value.split(/[,،]/).map(x=>x.trim()).filter(Boolean);const body={metric:$("bM").value,sector:D.profile.sector,value:$("bV").value,period:$("bP").value,period_end:$("bPE").value,source:$("bS").value,source_url:$("bU").value,methodology:$("bMe").value,sample_size:$("bN").value,confidence:$("bC").value,region:$("bR").value,size_segment:$("bZ").value};
+      if(q.length===3){body.p25=q[0];body.p50=q[1];body.p75=q[2];}
+      fetch("/company/sector-benchmark/datasets",{method:"POST",headers:H,body:JSON.stringify(body)}).then(async r=>{const j=await r.json().catch(()=>({}));$("bMsg").textContent=r.ok?"تمت الإضافة ✓":(typeof j.detail==="string"?j.detail:"HTTP "+r.status);$("bMsg").className=r.ok?"pos":"neg";if(r.ok)settings();});};
+    document.querySelectorAll("[data-off]").forEach(b=>b.onclick=()=>fetch("/company/sector-benchmark/datasets/deactivate",{method:"POST",headers:H,body:JSON.stringify({id:Number(b.dataset.off)})}).then(()=>settings()));});}
+  function runAI(q){if(route()[0]!=="ai"){go("ai");setTimeout(()=>runAI(q),60);return;}const out=$("aiOut");if(!out)return;out.innerHTML=`<div class="muted">«${esc(q)}» — جارٍ التحليل…</div>`;
+    fetch("/company/sector-benchmark/ai-insights",{method:"POST",headers:H,body:JSON.stringify({question:q})}).then(async r=>{const j=await r.json().catch(()=>({}));
+      if(!r.ok){out.innerHTML=`<div class="neg">${esc(typeof j.detail==="string"?j.detail:"HTTP "+r.status)}</div>`;return;}
+      const a=j.ai||{},resp=a.response||{},L={FACTS:"من المعايير الموثّقة",INTERPRETATION:"القراءة",HYPOTHESES:"عوامل مرجّحة",RECOMMENDATIONS:"الإجراءات",DATA_GAPS:"معايير/بيانات ناقصة"};
+      out.innerHTML=`<div class="muted" style="margin-bottom:6px">«${esc(j.question||q)}» · المعايير من المحرك بمصادرها — الذكاء الاصطناعي يشرح فقط</div>`+(a.message?`<div class="na">${esc(a.message)}</div>`:"")+Object.keys(L).map(k=>resp[k]&&resp[k].length?`<div class="ai-sec"><b>${L[k]}</b><ul style="margin:0;padding-inline-start:18px">${resp[k].map(x=>`<li>${esc(typeof x==="string"?x:JSON.stringify(x))}</li>`).join("")}</ul></div>`:"").join("");}).catch(e=>{out.innerHTML=`<div class="neg">${esc(e.message||e)}</div>`;});}
+  $("ov").onclick=e=>{if(e.target===$("ov"))$("ov").classList.remove("on");};
+  $("btnSet").onclick=settings;
+  load();
+})();
+</script>
+<script src="nabbah-sidebar.js"></script>
+</body></html>
