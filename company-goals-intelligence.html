@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>نبّاه · الأهداف والنتائج</title>
+<link href="nabbah-design.css" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{background:var(--bg,#070b09);color:var(--txt,#e8f1ec);font-family:Tajawal,Tahoma,Arial,sans-serif;margin:0}
+  .wrap{max-width:1180px;margin:0 auto;padding:70px 16px 60px}
+  h1{margin:0 0 4px;font-size:24px}.sub{color:var(--txt-soft,#8ba396);margin:0 0 16px;font-size:14px}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+  select{background:var(--panel,#101a15);color:var(--txt,#e8f1ec);border:1px solid var(--line,#1d2c24);border-radius:10px;padding:8px 10px;font:inherit;font-size:13px;max-width:190px}
+  .crumbs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;min-height:4px}
+  .chip{background:rgba(16,185,129,.12);color:var(--mint,#10b981);border:1px solid rgba(16,185,129,.35);border-radius:20px;padding:3px 10px;font-size:12px;cursor:pointer}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+  .tile,.panel{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:14px;padding:14px}
+  .tile .l{font-size:12px;color:var(--txt-soft,#8ba396)}.tile .v{font-size:21px;font-weight:800;margin-top:4px}
+  .tile .c{font-size:12px;margin-top:4px}
+  .panel{margin-bottom:14px;min-width:0}.panel h2{margin:0 0 10px;font-size:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .panel h3{margin:12px 0 6px;font-size:13px;color:var(--txt-soft,#8ba396)}
+  .num{font-size:11px;color:var(--txt-soft,#8ba396);font-weight:600;border:1px solid var(--line,#1d2c24);border-radius:8px;padding:1px 6px}
+  .grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+  table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px;border-bottom:1px solid var(--line,#1d2c24);text-align:start;white-space:nowrap}
+  th{color:var(--txt-soft,#8ba396);font-weight:600}.tbl{overflow-x:auto}
+  tr.drill{cursor:pointer}tr.drill:hover td{background:rgba(16,185,129,.06)}
+  .barrow{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:13px}
+  .barrow.drill{cursor:pointer}.barrow.drill:hover{background:rgba(16,185,129,.06);border-radius:6px}
+  .barrow .t{flex:0 0 120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .barrow .g{flex:1;height:10px;background:var(--line,#1d2c24);border-radius:6px;overflow:hidden}
+  .barrow .g i{display:block;height:100%;background:var(--mint,#10b981)}
+  .pos{color:#10b981}.neg{color:#ef4444}.muted{color:var(--txt-soft,#8ba396);font-size:12px}
+  .b{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700;display:inline-block}
+  .high{background:rgba(234,88,12,.16);color:#ea580c}.medium{background:rgba(245,179,1,.15);color:#f5b301}
+  .low{background:rgba(16,185,129,.15);color:#10b981}.critical{background:rgba(239,68,68,.16);color:#ef4444}
+  .est{background:rgba(168,85,247,.15);color:#a855f7}
+  .sig{border-inline-start:4px solid var(--line,#1d2c24);padding:10px 12px;margin:8px 0;background:rgba(255,255,255,.02);border-radius:8px}
+  .sig.risk{border-color:#ef4444}.sig.opportunity{border-color:#10b981}.sig.data_quality{border-color:#f5b301}
+  .btn{background:var(--mint,#10b981);color:#062b1c;border:0;border-radius:10px;padding:7px 13px;font-weight:800;cursor:pointer;font:inherit;font-size:12px;text-decoration:none;display:inline-block}
+  .btn.ghost{background:transparent;color:var(--txt-soft,#8ba396);border:1px solid var(--line,#1d2c24);font-weight:600}
+  .btn:disabled{opacity:.5;cursor:default}
+  .state{padding:36px 16px;text-align:center;color:var(--txt-soft,#8ba396);border:1px dashed var(--line,#1d2c24);border-radius:14px}
+  .na{color:var(--txt-soft,#8ba396);font-size:13px;padding:10px;border:1px dashed var(--line,#1d2c24);border-radius:10px}
+  svg.ch{width:100%;height:170px;display:block}
+  .legend{display:flex;gap:14px;font-size:12px;color:var(--txt-soft,#8ba396);margin-top:6px;flex-wrap:wrap}
+  .legend i{display:inline-block;width:14px;height:3px;vertical-align:middle;margin-inline-end:4px}
+  .ai-sec{margin:8px 0}.ai-sec b{display:block;font-size:13px;margin-bottom:4px}.ai-sec li{font-size:13px;margin:3px 0}
+  input.f{flex:1;min-width:120px;background:var(--panel,#101a15);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:8px;padding:6px}
+  .st{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700;display:inline-block;white-space:nowrap}
+  .st.healthy{background:rgba(16,185,129,.15);color:#10b981}.st.watch{background:rgba(245,179,1,.15);color:#f5b301}
+  .st.low{background:rgba(234,88,12,.16);color:#ea580c}.st.stockout{background:rgba(239,68,68,.16);color:#ef4444}
+  .st.slow{background:rgba(59,130,246,.15);color:#60a5fa}.st.obsolete{background:rgba(148,163,184,.18);color:#cbd5e1}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}.schip{cursor:pointer;border:1px solid var(--line,#1d2c24);border-radius:12px;padding:8px 12px;min-width:120px}
+  .schip b{display:block;font-size:18px}.schip:hover{border-color:var(--mint,#10b981)}
+  .eq{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:13px}.eq .box{border:1px solid var(--line,#1d2c24);border-radius:10px;padding:8px 10px;text-align:center;min-width:90px}
+  .eq .box b{display:block;font-size:16px}
+  .ov{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:50;padding:14px}
+  .ov.on{display:flex}.modal{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:16px;padding:18px;width:min(560px,100%);max-height:90vh;overflow:auto}
+  .fg{display:grid;grid-template-columns:1fr 1fr;gap:10px}.fg label{font-size:12px;color:var(--txt-soft,#8ba396);display:flex;flex-direction:column;gap:4px}
+  .fg input,.fg select{background:var(--bg,#070b09);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:9px;padding:8px;font:inherit;max-width:none}
+  .cta{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  @media(max-width:760px){.fg{grid-template-columns:1fr}.tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.tile{padding:10px}.tile .v{font-size:17px}.grid2,.grid3{grid-template-columns:minmax(0,1fr)}h1{font-size:20px}select{max-width:47%}}
+  @media(max-width:700px){.tiles[style]{grid-template-columns:1fr 1fr!important}}
+</style>
+<style>
+  .tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--line,#1d2c24);margin:6px 0 16px}
+  .tab{background:none;border:0;color:var(--txt-soft,#8ba396);padding:10px 14px;font:inherit;font-size:14px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+  .tab.on{color:var(--txt,#e8f1ec);border-color:#14b8a6;font-weight:800}
+  .hero{display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr;gap:12px;margin-bottom:14px}
+  .hcard{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:16px;padding:16px;cursor:default}
+  .hcard.click{cursor:pointer}.hcard.click:hover{border-color:var(--mint,#10b981)}
+  .hcard .big{font-size:30px;font-weight:900;margin:6px 0}.hstat{font-size:22px;font-weight:900}
+  .hs-stable{color:#10b981}.hs-attention{color:#f5b301}.hs-critical{color:#ef4444}
+  .event{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-inline-start:4px solid #ef4444;border-radius:12px;padding:14px;margin-bottom:10px}
+  .event.opportunity{border-inline-start-color:#10b981}.event.data_quality{border-inline-start-color:#f5b301}
+  .event h4{margin:0 0 6px;font-size:15px}.acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .rec{display:grid;grid-template-columns:110px 1fr;gap:6px 12px;font-size:13px;margin-top:8px}.rec b{color:var(--txt-soft,#8ba396);font-weight:600}
+  .flow{display:flex;align-items:stretch;gap:8px;flex-wrap:wrap;justify-content:center}
+  .fnode{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:14px;padding:14px 18px;text-align:center;min-width:140px}
+  .fnode .big{font-size:22px;font-weight:900}.farrow{align-self:center;font-size:22px;color:var(--txt-soft,#8ba396)}
+  .ptip{background:var(--bg,#070b09);border:1px solid var(--mint,#10b981);border-radius:12px;padding:12px;margin-top:8px;font-size:13px}
+  .search{flex:1;min-width:180px;background:var(--panel,#101a15);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:10px;padding:9px 12px;font:inherit}
+  .perf{display:grid;grid-template-columns:70px 1fr 50px;gap:8px;align-items:center;font-size:13px;margin:8px 0}
+  .perf .g{height:10px;background:var(--line,#1d2c24);border-radius:6px;overflow:hidden}.perf .g i{display:block;height:100%}
+  .life{display:flex;gap:0;align-items:center;flex-wrap:wrap;margin:10px 0}.lstep{text-align:center;min-width:110px}
+  .ldot{width:16px;height:16px;border-radius:50%;margin:0 auto 6px;background:var(--line,#1d2c24)}.ldot.on{background:var(--mint,#10b981)}
+  .lline{flex:1;min-width:30px;height:2px;background:var(--line,#1d2c24);margin-bottom:22px}
+  .back{background:none;border:0;color:var(--mint,#10b981);cursor:pointer;font:inherit;padding:0;margin-bottom:10px}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-inline-end:6px}
+  @media(max-width:900px){.hero{grid-template-columns:1fr 1fr}}
+  @media(max-width:560px){.hero{grid-template-columns:1fr}.tab{padding:8px 10px;font-size:13px}.rec{grid-template-columns:1fr}}
+</style>
+
+<style>
+  .lv-critical{background:rgba(239,68,68,.18);color:#ef4444}.lv-high{background:rgba(234,88,12,.18);color:#f97316}
+  .lv-medium{background:rgba(245,179,1,.16);color:#f5b301}.lv-low{background:rgba(16,185,129,.15);color:#10b981}.lv-none{background:rgba(148,163,184,.15);color:#94a3b8}
+  .gauge{position:relative;height:12px;border-radius:8px;background:linear-gradient(270deg,#10b981 0 40%,#f5b301 40% 65%,#f97316 65% 85%,#ef4444 85% 100%);margin:8px 0 4px}
+  .gauge i{position:absolute;top:-5px;width:4px;height:22px;background:#fff;border-radius:3px;transform:translateX(50%)}
+  .heat td.c{text-align:center;font-weight:800;border-radius:6px}
+  .catgrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:14px}
+  .cat{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:14px;padding:12px;cursor:pointer}
+  .cat:hover{border-color:var(--mint,#10b981)}.cat .s{font-size:26px;font-weight:900;margin:4px 0}
+  .chain{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:8px 0}
+  .cnode{border:1px solid var(--line,#1d2c24);border-radius:10px;padding:6px 10px;font-size:12px;cursor:pointer}
+  .cnode.on{border-color:#ef4444}.carrow{color:var(--txt-soft,#8ba396)}
+  .kan{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.kcol{background:rgba(255,255,255,.02);border:1px solid var(--line,#1d2c24);border-radius:12px;padding:8px;min-height:80px}
+  .kcard{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:10px;padding:8px;margin:6px 0;font-size:12px;cursor:pointer}
+  .imp4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+  .brief li{margin:6px 0;font-size:14px}
+  @media(max-width:900px){.catgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.kan,.imp4{grid-template-columns:1fr 1fr}}
+  @media(max-width:560px){.catgrid,.kan,.imp4{grid-template-columns:1fr}}
+</style>
+<style>
+  .contrib{display:flex;height:22px;border-radius:8px;overflow:hidden;margin:8px 0;background:var(--line,#1d2c24)}
+  .contrib i{display:block;height:100%;border-inline-end:1px solid rgba(0,0,0,.35)}
+  .pr-immediate{background:rgba(239,68,68,.18);color:#ef4444}.pr-high{background:rgba(249,115,22,.18);color:#f97316}
+  .pr-medium{background:rgba(245,179,1,.16);color:#f5b301}.pr-monitor{background:rgba(148,163,184,.15);color:#94a3b8}
+  .tl{border-inline-start:2px solid var(--line,#1d2c24);margin:6px 8px;padding-inline-start:14px}.tl div{position:relative;margin:8px 0;font-size:13px}
+  .tl div::before{content:"";position:absolute;inset-inline-start:-21px;top:5px;width:10px;height:10px;border-radius:50%;background:var(--mint,#10b981)}
+  .step{display:flex;gap:10px;align-items:flex-start;margin:8px 0;flex-wrap:wrap}.step .m{min-width:120px;font-weight:800;color:var(--mint,#10b981)}
+  .ent{display:flex;gap:6px;flex-wrap:wrap}.ent span{border:1px solid var(--line,#1d2c24);border-radius:8px;padding:2px 8px;font-size:12px}
+  .exec4{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:14px}
+  @media(max-width:900px){.exec4{grid-template-columns:1fr}}
+</style>
+<style>
+  .pos-above{background:rgba(16,185,129,.15);color:#10b981}.pos-near{background:rgba(96,165,250,.15);color:#60a5fa}
+  .pos-below{background:rgba(249,115,22,.18);color:#f97316}.pos-critical{background:rgba(239,68,68,.18);color:#ef4444}.pos-na{background:rgba(148,163,184,.15);color:#94a3b8}
+  .pbar{position:relative;height:14px;border-radius:8px;background:linear-gradient(270deg,#ef4444,#f5b301 40%,#10b981);margin:10px 0 4px}
+  .pbar i{position:absolute;top:-5px;width:4px;height:24px;background:#fff;border-radius:3px;transform:translateX(50%)}
+  .src{font-size:12px;color:var(--txt-soft,#8ba396);line-height:1.7}
+  .vs{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}.vs b{font-size:22px}
+</style>
+<style>
+  .fc svg{width:100%;height:auto;display:block}
+  .fc .tip{position:fixed;pointer-events:none;background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:8px;padding:6px 9px;font-size:12px;display:none;z-index:60}
+  .conf-h{color:#10b981}.conf-m{color:#f5b301}.conf-l{color:#ef4444}
+  .wf{display:flex;align-items:flex-end;gap:10px;height:150px;margin:10px 0}
+  .wf div{flex:1;text-align:center;font-size:11px}.wf i{display:block;border-radius:4px 4px 0 0;margin:0 auto 4px;width:70%}
+  .sc{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+  @media(max-width:760px){.sc{grid-template-columns:1fr 1fr}}
+</style>
+<style>
+  .gbar{position:relative;height:10px;border-radius:6px;background:var(--line,#1d2c24);margin:6px 0 2px;overflow:visible}
+  .gbar>b{display:block;height:100%;border-radius:6px;max-width:100%}
+  .gbar>i{position:absolute;top:-4px;width:3px;height:18px;background:#e2e8f0;border-radius:2px;transform:translateX(50%)}
+  .st-on_track{background:rgba(16,185,129,.15);color:#10b981}.st-at_risk{background:rgba(249,115,22,.18);color:#f97316}
+  .st-behind,.st-missed{background:rgba(239,68,68,.18);color:#ef4444}.st-completed{background:rgba(96,165,250,.15);color:#60a5fa}
+  .st-not_started,.st-unavailable,.st-cancelled,.st-paused{background:rgba(148,163,184,.15);color:#94a3b8}
+  .gcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
+  .gcard{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:14px;padding:12px;cursor:pointer;min-width:0}
+  .gcard:hover{border-color:var(--mint,#10b981)}.gcard h4{margin:0 0 6px;font-size:14px;display:flex;justify-content:space-between;gap:6px}
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:12px}.kv b{color:var(--txt-soft,#8ba396);font-weight:600}
+  .quad{display:grid;grid-template-columns:1fr 1fr;gap:10px}.quad>div{border:1px solid var(--line,#1d2c24);border-radius:12px;padding:10px;min-height:90px}
+  .quad h5{margin:0 0 6px;font-size:13px}.q-intervene{border-color:#ef4444!important}.q-watch{border-color:#f5b301!important}
+  .tree{margin:0;padding-inline-start:16px;list-style:none}.tree li{margin:6px 0;border-inline-start:2px solid var(--line,#1d2c24);padding-inline-start:10px}
+  .ov4{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:12px}
+  .frmrow{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.frmrow input,.frmrow select{min-width:0;flex:1 1 140px}
+  .modal .fg{display:grid;grid-template-columns:1fr 1fr;gap:8px}.modal .fg label{display:flex;flex-direction:column;font-size:12px;gap:3px}
+  .modal .fg input,.modal .fg select,.modal .fg textarea{width:100%;box-sizing:border-box}
+  @media(max-width:900px){.ov4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  @media(max-width:560px){.quad,.modal .fg{grid-template-columns:1fr}.ov4{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🎯 مركز الأهداف والنتائج</h1>
+  <p class="sub">أين نريد أن نصل، وهل سنصل؟ كل هدف مربوط بمؤشر حقيقي: الفعلي والتوقع والفجوة والمسؤول والإجراء — والحالة تُحسب آلياً.</p>
+  <div class="bar"><button class="btn" id="btnNew" style="display:none">＋ هدف جديد</button><button class="btn ghost" id="btnStrat" style="display:none">🧭 الإطار الاستراتيجي</button><button class="btn ghost" id="btnScope" style="display:none">👥 نطاق المستخدمين</button><a class="btn ghost" href="company-performance-prediction.html">التنبؤ بالأداء</a><span class="muted" id="asof"></span></div>
+  <div class="na" id="disc" style="margin:6px 0 10px"></div>
+  <nav class="tabs" id="tabs"></nav>
+  <div id="content"><div class="state">…</div></div>
+</div>
+<div class="ov" id="ov"><div class="modal" id="modal"></div></div>
+<script src="i18n.js"></script>
+<script>
+(function(){
+  const TOKEN=localStorage.getItem("nabbah_token")||"";if(!TOKEN){location.href="login.html";return;}
+  const TABS=[["strategy","الاستراتيجية"],["active","الأهداف النشطة"],["okrs","OKRs"],["company","أهداف الشركة"],["branches","أهداف الفروع"],["departments","أهداف الأقسام"],
+    ["gva","الهدف مقابل الفعلي"],["gap","فجوة الأداء"],["milestones","المراحل"],["actions","الإجراءات"],["late","المتأخر / المعرّض للخطر"],["forecast","التوقع مقابل الهدف"],
+    ["cascade","تسلسل الأهداف"],["deps","اعتماديات الأهداف"],["history","سجل الأهداف"],["collab","التعاون"],["alerts","التنبيهات"],["decisions","القرارات والإجراءات"],["ai","اسأل نبّاه"]];
+  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const n=(v,d=0)=>v==null?"—":Number(v).toLocaleString("ar-SA",{maximumFractionDigits:d});
+  const H={Authorization:"Bearer "+TOKEN,"Content-Type":"application/json"},$=id=>document.getElementById(id);
+  const SC={on_track:"#10b981",at_risk:"#f97316",behind:"#ef4444",missed:"#ef4444",completed:"#60a5fa",not_started:"#94a3b8",unavailable:"#94a3b8",cancelled:"#94a3b8",paused:"#94a3b8"};
+  const CC={red:"#ef4444",orange:"#f97316",yellow:"#f5b301",blue:"#60a5fa",grey:"#94a3b8"};
+  const LVC={critical:"#ef4444",high:"#f97316",medium:"#f5b301",low:"#10b981"};
+  let D=null,BR=null;
+  const route=()=>{const h=decodeURIComponent(location.hash.slice(1)||"active");const i=h.indexOf("/");return i<0?[h,""]:[h.slice(0,i),h.slice(i+1)];};
+  const go=(v,arg)=>{location.hash=arg?`${v}/${encodeURIComponent(arg)}`:v;};
+  window.addEventListener("hashchange",()=>{if(D){render();window.scrollTo(0,0);}});
+  const api=(path,body)=>fetch(path,{method:"POST",headers:H,body:JSON.stringify(body)}).then(async r=>{const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(typeof j.detail==="string"?j.detail:"HTTP "+r.status);return j;});
+  function load(){$("content").innerHTML=`<div class="state">…</div>`;
+    fetch("/company/goals-intelligence",{headers:H}).then(async r=>{
+      if(r.status===401){location.href="login.html";return null;}
+      if(r.status===403||r.status===402){let d="";try{d=(await r.json()).detail;}catch(_){}$("content").innerHTML=`<div class="state">🔒 ${esc(d||"ليست لديك صلاحية.")}</div>`;return null;}
+      if(!r.ok){let d="";try{const j=await r.json();d=typeof j.detail==="string"?j.detail:JSON.stringify(j.detail||j);}catch(_){}err(`HTTP ${r.status}${d?" — "+d:""}`);return null;}
+      return r.json();}).then(d=>{if(!d)return;D=d;
+        $("btnNew").style.display=d.can_create?"":"none";$("btnStrat").style.display=d.can_strategy?"":"none";$("btnScope").style.display=d.can_scope?"":"none";
+        $("disc").textContent="ℹ "+(d.disclaimer_ar||"")+" · نطاقك: "+((d.scope||{}).ar||"");
+        $("asof").textContent=d.as_of?"آخر تحديث "+d.as_of+(d.data_end?" · آخر بيانات "+d.data_end:"")+" · "+(d.version||""):"";
+        try{render();}catch(e){console.error(e);err("render: "+(e&&e.message||e));}}).catch(e=>err("network: "+(e&&e.message||e)));}
+  function err(m){$("content").innerHTML=`<div class="state neg">تعذّر تحميل مركز الأهداف.<div class="muted" style="margin-top:8px">${esc(m)}</div></div>`;}
+  const panel=(title,body,extra="")=>`<div class="panel"><h2>${title}${extra}</h2>${body}</div>`;
+  const na=m=>`<div class="na">${esc(m)}</div>`;
+  const tile=(l,v,c)=>`<div class="tile"><div class="l">${l}</div><div class="v">${v}</div><div class="c">${c||""}</div></div>`;
+  const cur=()=>esc(D.currency||"SAR");
+  const val=(v,u)=>v==null?`<span class="muted">غير متاح</span>`:(u==="SAR"?n(v,0)+" "+cur():u==="%"?n(v,1)+"%":n(v,1)+(u?" "+esc(u):""));
+  const st=(s,ar)=>`<span class="b st-${esc(s)}">${esc(ar||s)}</span>`;
+  const pr=v=>v==null?"—":n(v,1)+"%";
+  const prob=(p,ar)=>p?`<span class="b ${p==="high"?"st-on_track":p==="medium"?"st-at_risk":"st-behind"}">احتمال ${esc(ar)}</span>`:`<span class="muted">—</span>`;
+  const conf=c=>c?`<span class="${c.level==="high"?"conf-h":c.level==="medium"?"conf-m":"conf-l"}">ثقة ${esc(c.level_ar)}</span>`:"";
+  const bar=g=>{const p=Math.max(0,Math.min(100,g.progress_pct||0)),e=g.expected_pct;return `<div class="gbar" title="التقدم ${pr(g.progress_pct)} · المفترض ${pr(e)}"><b style="width:${p}%;background:${SC[g.status]||"#94a3b8"}"></b>${e!=null?`<i style="right:${Math.min(100,e)}%"></i>`:""}</div><div class="muted" style="font-size:11px">التقدم ${pr(g.progress_pct)} · المفترض حتى الآن ${pr(e)} · مضى ${pr(g.time_pct)} من المدة</div>`;};
+  const G=id=>D.goals.find(x=>String(x.id)===String(id));
+  function card(g){return `<div class="gcard" data-go="goal" data-arg="${esc(g.id)}"><h4><span>${esc(g.name)}</span>${st(g.status,(g.icon||"")+" "+g.status_ar)}</h4>
+    <div class="muted" style="font-size:11px">${esc(g.metric_ar||"OKR")} · ${esc(g.level_ar)}${g.branch?" · "+esc(g.branch):""}${g.owner?" · 👤 "+esc(g.owner):" · <span class='neg'>بلا مسؤول</span>"}</div>
+    ${bar(g)}<div class="kv" style="margin-top:6px"><b>الفعلي</b><span>${val(g.actual,g.unit)}</span><b>المستهدف</b><span>${val(g.target,g.unit)}</span><b>الإسقاط</b><span>${g.forecast!=null?val(g.forecast,g.unit):`<span class="muted">${esc(g.forecast_reason_ar?"غير متاح":"—")}</span>`}</span></div>
+    <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">${prob(g.probability,g.probability_ar)} ${conf(g.confidence)} ${g.score!=null?`<span class="muted">درجة الهدف ${n(g.score,0)}</span>`:""}</div></div>`;}
+  const cards=gs=>gs.length?`<div class="gcards">${gs.map(card).join("")}</div>`:na("لا أهداف هنا ضمن نطاقك");
+  function table(rows){return rows.length?`<div class="tbl"><table><thead><tr><th>الهدف</th><th>المستهدف</th><th>الفعلي</th><th>التقدم</th><th>المفترض</th><th>الإسقاط</th><th>الفجوة المتوقعة</th><th>الحالة</th></tr></thead><tbody>${rows.map(g=>`<tr class="drill" data-go="goal" data-arg="${esc(g.id)}"><td><b>${esc(g.name)}</b><div class="muted">${esc(g.metric_ar||"")}${g.branch?" · "+esc(g.branch):""}</div></td><td>${val(g.target,g.unit)}</td><td>${val(g.actual,g.unit)}</td><td>${pr(g.progress_pct)}</td><td>${pr(g.expected_pct)}</td><td>${val(g.forecast,g.unit)}</td><td class="${(g.expected_gap||g.gap||0)>0?"neg":"pos"}">${val(g.expected_gap!=null?g.expected_gap:g.gap,g.unit)}</td><td>${st(g.status,g.status_ar)}</td></tr>`).join("")}</tbody></table></div>`:na("لا أهداف");}
+  // ── 01 الاستراتيجية
+  function strategy(){const s=D.strategy;
+    const pil=s.pillars.map(p=>`<div class="cat" style="cursor:default"><div>${esc(p.icon)} <b>${esc(p.ar)}</b> <span class="muted">· ${p.goals} هدف</span></div><div class="s" style="font-size:18px">${p.health?st(p.health,{behind:"فيها أهداف متأخرة",at_risk:"فيها أهداف معرّضة",on_track:"على المسار",completed:"مكتملة"}[p.health]):'<span class="muted">—</span>'}</div>
+      ${p.warning_ar?na(p.warning_ar):p.chain.map(c=>`<div class="chain" style="font-size:12px"><span class="cnode" data-go="goal" data-arg="${esc(c.id)}">${esc(c.goal)}</span><span class="carrow">←</span><span>${esc(c.kpi||"")}</span><span class="carrow">←</span><span>الفعلي ${val(c.actual,c.unit)}</span><span class="carrow">←</span><span>المستهدف ${val(c.target,c.unit)}</span><span class="carrow">←</span>${c.gap==null?'<span class="muted">الفجوة غير متاحة</span>':c.gap>0?`<span class="neg">الفجوة ${val(c.gap,c.unit)}</span>`:`<span class="pos">متجاوز بـ ${val(-c.gap,c.unit)}</span>`}</div>`).join("")}</div>`).join("");
+    const sug=D.suggestions.length?panel("أهداف موجودة في نبّاه — استوردها بقرارك",`<div class="tbl"><table><thead><tr><th></th><th>الهدف</th><th>المستهدف</th><th>المدة</th><th>المصدر</th></tr></thead><tbody>${D.suggestions.map((x,i)=>`<tr><td><input type="checkbox" data-sug="${i}"></td><td>${esc(x.name)}${x.branch?" · "+esc(x.branch):""}</td><td>${n(x.target,1)}</td><td>${esc(x.start)} → ${esc(x.end)}</td><td class="muted">${esc(x.from_ar)}</td></tr>`).join("")}</tbody></table></div>${D.can_strategy?`<button class="btn" id="impGo">استيراد المحدد</button> <span id="impMsg" class="muted"></span>`:""}`):"";
+    const sec=D.sector;
+    const tpl=panel(`قوالب قطاع ${esc(sec.sector_ar)} — مستهدفات مقترحة`,`<div class="tbl"><table><thead><tr><th>المؤشر</th><th>الركيزة</th><th>الحالي</th><th>المقترح</th><th>الأساس</th><th></th></tr></thead><tbody>${sec.templates.map((t,i)=>`<tr><td><b>${esc(t.metric_ar)}</b></td><td>${esc(t.pillar_ar)}</td><td>${t.current==null?'<span class="muted">—</span>':val(t.current,t.unit)}</td><td>${t.available?val(t.recommended_target,t.unit):'<span class="muted">غير متاح</span>'}</td><td class="muted" style="white-space:normal">${esc(t.basis_ar||"")}</td><td>${D.can_create?`<button class="btn ghost" data-tpl="${i}">استخدم</button>`:""}</td></tr>`).join("")}</tbody></table></div><div class="muted">${esc(sec.note_ar)}</div><div class="chips" style="margin-top:8px">${sec.objectives.map(o=>`<span class="chip">${esc(o)}</span>`).join("")}</div>`);
+    return panel("الإطار الاستراتيجي",`<div class="grid2"><div><div class="muted">الرؤية</div><div style="font-size:16px;margin:4px 0 10px">${s.vision?esc(s.vision):'<span class="muted">لم تُحدد</span>'}</div></div><div><div class="muted">الرسالة</div><div style="font-size:16px;margin:4px 0 10px">${s.mission?esc(s.mission):'<span class="muted">لم تُحدد</span>'}</div></div></div>${s.missing_ar.length?na("ناقص: "+s.missing_ar.join("، ")):""}${s.updated_by?`<div class="muted">آخر تحديث ${esc(s.updated_at||"")} بواسطة ${esc(s.updated_by)}</div>`:""}`)
+      +panel("الركائز الاستراتيجية — كل ركيزة مربوطة بأهداف فعلية",`<div class="catgrid" style="grid-template-columns:repeat(auto-fill,minmax(260px,1fr))">${pil}</div>`)+sug+tpl;}
+  // ── 02 الأهداف النشطة (نظرة عامة + مصفوفة التدخل)
+  function active(){const o=D.overview,c=o.counts;
+    if(!c.total)return panel("ابدأ بأهدافك",`<div class="state" style="padding:16px"><div style="font-size:16px;margin-bottom:8px">لا توجد أهداف ضمن نطاقك بعد.</div><div class="muted">أنشئ هدفاً مربوطاً بمؤشر حقيقي، أو استورد أهدافاً موجودة في نبّاه، أو استخدم قالب قطاعك من تبويب الاستراتيجية.</div><div class="cta" style="justify-content:center">${D.can_create?`<button class="btn" data-act="new">＋ هدف جديد</button>`:""}<button class="btn ghost" data-go="strategy">القوالب والاستيراد</button></div></div>`);
+    const q=D.matrix,QS=["intervene","watch","sustain","maintain"];
+    return `<div class="ov4">${tile("الأهداف النشطة",n(c.active),`من ${n(c.total)} · مكتمل ${n(c.completed)}`)}${tile("🟢 على المسار",n(c.on_track))}${tile("🟠 معرّضة للخطر",n(c.at_risk))}${tile("🔴 متأخرة",n(c.behind),c.missed?`لم تتحقق ${n(c.missed)}`:"")}${tile("❔ بلا بيانات",n(c.unavailable),c.not_started?`لم تبدأ ${n(c.not_started)}`:"")}</div>`
+      +panel(esc(o.headline_ar),`${o.top_risk.length?`<div class="muted" style="margin-bottom:6px">أين الخطر؟</div>`+o.top_risk.map(t=>`<div class="event" style="border-inline-start-color:${SC[t.status]}"><h4 class="drill" data-go="goal" data-arg="${esc(t.id)}">${esc(t.icon)} ${esc(t.name)} ${st(t.status,t.status_ar)} ${t.gap!=null&&t.gap>0?`<span class="neg">فجوة ${val(t.gap,t.unit)}</span>`:""}</h4><div class="muted">${t.why.map(esc).join(" · ")}${t.owner?" · 👤 "+esc(t.owner):""}</div></div>`).join(""):na("لا أهداف متأخرة أو معرّضة للخطر")}
+        <div class="chips" style="margin-top:8px">${["pillar","branch","department"].flatMap(k=>o.where[k].slice(0,3).map(w=>`<span class="chip">${esc({pillar:"ركيزة",branch:"فرع",department:"قسم"}[k])}: ${esc((D.pillars_catalog||{})[w.key]||(D.departments_catalog||{})[w.key]||w.key)} — 🔴${w.behind} 🟠${w.at_risk}</span>`)).join("")}</div>`)
+      +panel("مصفوفة أداء الأهداف — أين تتدخل؟",`<div class="quad">${QS.map(k=>`<div class="q-${k}"><h5>${esc(q.quadrants[k])}</h5>${q.points.filter(p=>p.quadrant===k).map(p=>`<div class="drill" data-go="goal" data-arg="${esc(p.id)}" style="font-size:12px;margin:3px 0">${esc(p.icon)} ${esc(p.name)} <span class="muted">· أداء ${n(p.performance,0)}%${p.money_gap?" · فجوة "+n(p.money_gap,0):""}</span></div>`).join("")||'<span class="muted">—</span>'}</div>`).join("")}</div><div class="muted" style="margin-top:6px">${esc(q.rule_ar)}</div>`)
+      +panel("كل الأهداف",cards(D.goals))+dq();}
+  function dq(){const q=D.data_quality;return panel("جودة البيانات والثقة",`<div class="kv"><b>آخر بيانات</b><span>${esc(q.data_end||"—")}${q.stale?' <span class="neg">قديمة</span>':""}</span><b>أشهر المبيعات</b><span>${n(q.sales_months)}</span><b>أشهر المالية</b><span>${n(q.finance_months)}</span><b>بلا بيانات</b><span>${q.unavailable.map(x=>esc(x.name)+": "+esc(x.reason_ar)).join(" · ")||"—"}</span><b>ثقة محدودة</b><span>${q.limited.map(x=>esc(x.name)).join("، ")||"—"}</span><b>قيم يدوية</b><span>${q.manual.map(x=>esc(x.name)).join("، ")||"—"}</span></div>${q.needs_ar.length?na("لإكمال القياس: "+q.needs_ar.join(" · ")):""}<div class="muted" style="margin-top:6px">${esc(q.rule_ar)}</div>`);}
+  // ── 03 OKRs
+  function okrs(){return panel("OKRs — غاية + نتائج رئيسية قابلة للقياس",D.okrs.length?D.okrs.map(o=>`<div class="event" style="border-inline-start-color:${SC[o.status]}"><h4 class="drill" data-go="goal" data-arg="${esc(o.id)}">🎯 ${esc(o.objective||o.name)} ${st(o.status,o.status_ar)} <span class="muted">تقدم ${pr(o.progress_pct)}</span></h4>${krTable(o)}</div>`).join(""):na("لا توجد OKRs — أنشئ هدفاً بلا مؤشر ثم أضف نتائجه الرئيسية"));}
+  function krTable(o){return `<div class="tbl"><table><thead><tr><th>النتيجة الرئيسية</th><th>المؤشر</th><th>خط الأساس</th><th>المستهدف</th><th>الحالي</th><th>التقدم</th><th>المصدر</th><th>الفترة</th><th>الحالة</th></tr></thead><tbody>${(o.key_results||[]).map(k=>k.valid===false?`<tr><td colspan="8" class="neg">${esc(k.name||"—")}: ${esc(k.why[0])}</td><td>${st("unavailable","غير قابلة للقياس")}</td></tr>`:`<tr><td><b>${esc(k.name)}</b></td><td>${esc(k.metric_ar)}</td><td>${val(k.baseline_used!=null?k.baseline_used:k.baseline,k.unit)}</td><td>${val(k.target,k.unit)}</td><td>${val(k.actual,k.unit)}</td><td>${pr(k.progress_pct)}</td><td class="muted">${esc(k.source_ar||"")}</td><td class="muted">${esc(k.period||"")}</td><td>${st(k.status,k.status_ar)}</td></tr>`).join("")||`<tr><td colspan="9" class="muted">لا نتائج رئيسية بعد</td></tr>`}</tbody></table></div>`;}
+  const company=()=>panel("أهداف الشركة",cards(D.company));
+  // ── 05 الفروع
+  function branches(arg){const bs=D.branches;if(!bs.length)return na("لا توجد فروع في البيانات");const cur_=arg||BR||bs[0].branch;BR=cur_;const b=bs.find(x=>x.branch===cur_)||bs[0];
+    return panel("أهداف الفروع",`<div class="chips">${bs.map(x=>`<span class="chip ${x.branch===b.branch?"on":""}" data-go="branches" data-arg="${esc(x.branch)}">${esc(x.branch)}${x.worst?" "+({behind:"🔴",at_risk:"🟠",on_track:"🟢"}[x.worst]||""):""}</span>`).join("")}</div>
+      <div class="muted" style="margin:6px 0">${b.share_pct!=null?"حصة الفرع من مبيعات آخر 12 شهراً "+n(b.share_pct,1)+"%":""}</div>${cards(b.goals)}
+      ${b.implied.length?`<h3 style="font-size:14px;margin:14px 0 6px">أهداف ضمنية مستمدة من أهداف الشركة (غير محفوظة)</h3><div class="tbl"><table><thead><tr><th>الهدف</th><th>المستهدف</th><th>الفعلي</th><th>التقدم</th><th>الإسقاط</th><th>الحالة</th><th>الأساس</th></tr></thead><tbody>${b.implied.map(g=>`<tr><td>${esc(g.metric_ar)}</td><td>${val(g.target,g.unit)}</td><td>${val(g.actual,g.unit)}</td><td>${pr(g.progress_pct)}</td><td>${val(g.forecast,g.unit)}</td><td>${st(g.status,g.status_ar)}</td><td class="muted" style="white-space:normal">${esc(g.implied_ar)}</td></tr>`).join("")}</tbody></table></div><div class="muted">لتحويلها لأهداف معتمدة استخدم «توزيع على الفروع» من صفحة هدف الشركة (تلقائي) أو أنشئ هدف فرع (يدوي).</div>`:""}`);}
+  function departments(){return D.departments.length?D.departments.map(d=>panel(`${esc(d.ar)} <span class="muted">· ${d.goals.length} هدف</span>`,cards(d.goals))).join(""):na("لا أهداف");}
+  const gva=()=>panel("الهدف مقابل الفعلي",table(D.goal_vs_actual)+`<div class="muted">${esc(D.methodology.status_rule_ar)}</div>`);
+  // ── 08 الفجوة
+  function gapBlock(x){return `<div class="event" style="border-inline-start-color:#f97316"><h4 class="drill" data-go="goal" data-arg="${esc(x.id)}">${esc(x.icon||"")} ${esc(x.name)} ${x.gap_pct!=null?`<span class="neg">${n(x.gap_pct,1)}% من الهدف</span>`:""}</h4>
+    <div>${esc(x.sentence_ar||"")}</div>
+    ${x.required_rate?`<div class="muted">المطلوب شهرياً ${val(x.required_rate,x.unit)} مقابل متوسط آخر 3 أشهر ${val(x.recent_rate,x.unit)}${x.rate_change_pct!=null?` (${x.rate_change_pct>0?"+":""}${n(x.rate_change_pct,0)}%)`:""}</div>`:""}
+    ${x.branches.length?`<div class="tbl"><table><thead><tr><th>الفرع</th><th>المستهدف</th><th>الإسقاط</th><th>الفجوة</th><th>الأساس</th></tr></thead><tbody>${x.branches.map(b=>`<tr><td>${esc(b.branch)}</td><td>${val(b.target,x.unit)}</td><td>${val(b.forecast,x.unit)}</td><td class="${b.gap>0?"neg":"pos"}">${val(b.gap,x.unit)}</td><td class="muted" style="white-space:normal">${esc(b.basis_ar)}</td></tr>`).join("")}</tbody></table></div><div class="muted">${esc(x.branches_note_ar||"")}</div>`:""}
+    ${x.drivers.length?`<div class="rec"><b>مرتبط بـ (3.3/3.4)</b><span>${x.drivers.map(d=>`<a href="${esc(d.link||"#")}" style="color:inherit">${esc(d.ar)}</a> <span class="b" style="background:rgba(0,0,0,.2);color:${LVC[{"حرج":"critical","مرتفع":"high","متوسط":"medium"}[d.level_ar]]||"#94a3b8"}">${esc(d.level_ar)}</span> ${d.evidence.map(esc).join(" · ")}${d.impacts.map(i=>` · ${esc(i.type_ar)} ${val(i.amount,"SAR")}`).join("")}`).join("<br>")}</span></div>`:""}
+    ${x.forecast_drivers.length?`<div class="rec"><b>عوامل التوقع (3.7)</b><span>${x.forecast_drivers.map(d=>esc(d.ar)+(d.evidence[0]?": "+esc(d.evidence[0]):"")).join("<br>")}</span></div>`:""}
+    ${x.leakage?`<div class="rec"><b>التسرب (3.1)</b><span>${val(x.leakage.amount,"SAR")} ${esc(x.leakage.type_ar)}</span></div>`:""}
+    ${x.close_options.length?`<div class="rec"><b>خيارات لتقليص الفجوة</b><span>${x.close_options.map(c=>`${esc(c.ar)}${c.amount?` — ${val(c.amount,"SAR")} <span class="muted">(${esc(c.type_ar||"")})</span>`:""} <span class="muted">[${esc(c.source)}]</span>`).join("<br>")}</span></div>`:""}
+    ${x.actions_coverage_pct!=null?`<div class="muted">الإجراءات المفتوحة تغطي ${n(x.actions_coverage_pct,0)}% من الفجوة المتوقعة</div>`:""}
+    <div class="muted">${esc(x.root_cause_note_ar)}</div></div>`;}
+  const gap=()=>panel("فجوة الأداء — لماذا قد لا نصل؟",D.gaps.length?D.gaps.map(gapBlock).join(""):na("لا فجوات متوقعة"));
+  // ── 09 المراحل
+  const MSC={achieved:"on_track",overdue:"behind",at_risk:"at_risk",upcoming:"not_started",unavailable:"unavailable"};
+  const milestones=()=>panel("المراحل (Milestones)",D.milestones.length?`<div class="tbl"><table><thead><tr><th>الهدف</th><th>المرحلة</th><th>الموعد</th><th>المؤشر</th><th>المستهدف</th><th>الفعلي</th><th>المسؤول</th><th>الحالة</th><th>الدليل</th></tr></thead><tbody>${D.milestones.map(m=>`<tr><td class="drill" data-go="goal" data-arg="${esc(m.goal_id)}">${esc(m.goal)}</td><td>${esc(m.title)}</td><td>${esc(m.due)}</td><td>${esc(m.kpi||"")}</td><td>${val(m.target,m.unit)}</td><td>${val(m.actual,m.unit)}</td><td>${esc(m.owner||"—")}</td><td>${st(MSC[m.status],m.status_ar)}</td><td class="muted" style="white-space:normal">${m.evidence.map(esc).join(" · ")}</td></tr>`).join("")}</tbody></table></div>`:na("لا مراحل — افتح هدفاً واقترح مراحل ربعية"));
+  // ── 10 الإجراءات
+  const ASC={open:"not_started",in_progress:"at_risk",blocked:"behind",done:"on_track",cancelled:"cancelled"};
+  function actRows(xs,withGoal){return xs.length?`<div class="tbl"><table><thead><tr>${withGoal?"<th>الهدف</th>":""}<th>الإجراء</th><th>المسؤول</th><th>الاستحقاق</th><th>الأثر المتوقع</th><th>الأثر الفعلي</th><th>الحالة</th><th>تحديث</th></tr></thead><tbody>${xs.map(a=>`<tr>${withGoal?`<td class="drill" data-go="goal" data-arg="${esc(a.goal_id)}">${esc(a.goal)}</td>`:""}<td>${esc(a.action)}${a.decision_id?` <span class="muted">· قرار #${a.decision_id}</span>`:""}</td><td>${esc(a.owner||"—")}</td><td class="${a.overdue?"neg":""}">${esc(a.due||"—")}${a.overdue?" ⚠":""}</td><td>${val(a.expected_impact,"SAR")}</td><td>${val(a.actual_impact,"SAR")}${a.realisation_pct!=null?` <span class="muted">(${n(a.realisation_pct,0)}%)</span>`:""}</td><td>${st(ASC[a.status],a.status_ar)}</td><td><select class="f" data-ast="${esc(a.goal_id)}:${esc(a.id)}">${["open","in_progress","blocked","done","cancelled"].map(s=>`<option value="${s}" ${s===a.status?"selected":""}>${{open:"مفتوح",in_progress:"قيد التنفيذ",blocked:"متوقف",done:"منجز",cancelled:"ملغى"}[s]}</option>`).join("")}</select></td></tr>`).join("")}</tbody></table></div>`:na("لا إجراءات");}
+  const actions=()=>panel("الإجراءات (Action Items) — النتيجة الفعلية تعود للهدف",actRows(D.actions,true)+`<div class="muted">عند «منجز» يُطلب الأثر الفعلي لقياس المتوقع مقابل الفعلي.</div>`);
+  // ── 11 المتأخر/المعرّض
+  function chainView(rc){return rc.map(r=>`<div class="chain"><span class="cnode">🎯 الهدف</span><span class="carrow">←</span><span class="cnode on">${esc(r.risk.ar||"")} ${r.risk.score!=null?n(r.risk.score,0)+"/100":""}</span><span class="carrow">←</span><span class="cnode">${esc(r.driver.name_ar)} ${esc(r.driver.level_ar)}</span><span class="carrow">←</span><span class="cnode">${r.candidates.length?r.candidates.map(c=>esc(c.name_ar)).join("، "):"لا سبب مرشح"}</span><span class="carrow">←</span><span class="cnode">${esc(r.action||"—")}</span></div>`).join("")+(rc.length?`<div class="muted">${esc(rc[0].candidates_note_ar)}</div>`:"");}
+  function decForm(g){return (g.decision_options||[]).length&&g.can_edit?(g.decision_options.map(o=>`<div class="event opportunity"><h4>⚡ ${esc(o.title)}</h4><div class="rec"><b>أثر على المؤشر</b><span>${esc(o.expected_kpi_impact_ar)}</span><b>أثر مالي</b><span>${o.expected_financial_impact?val(o.expected_financial_impact,"SAR")+" ("+esc(o.impact_type_ar)+")":"غير قابل للتقدير"}</span><b>الأساس</b><span class="muted">${esc(o.basis_ar)}</span></div><div class="frmrow"><input class="f" data-do="${esc(g.id)}|${esc(o.code)}|o" placeholder="المسؤول" value="${esc(g.owner||"")}"><input class="f" type="date" data-do="${esc(g.id)}|${esc(o.code)}|d"><button class="btn" data-dec="${esc(g.id)}|${esc(o.code)}">إنشاء القرار</button></div><div class="muted" data-dm="${esc(g.id)}|${esc(o.code)}"></div></div>`).join("")):"";}
+  const late=()=>panel("الأهداف المتأخرة والمعرّضة للخطر",D.late.length?D.late.map(g=>`<div class="event" style="border-inline-start-color:${SC[g.status]}"><h4 class="drill" data-go="goal" data-arg="${esc(g.id)}">${esc(g.icon)} ${esc(g.name)} ${st(g.status,g.status_ar)} ${g.gap>0?`<span class="neg">فجوة ${val(g.gap,g.unit)}</span>`:""} ${g.probability_ar?`<span class="muted">احتمال التحقيق: ${esc(g.probability_ar)}</span>`:""}</h4><div class="muted">${g.why.map(esc).join(" · ")}${g.owner?" · 👤 "+esc(g.owner):""} · إجراءات مفتوحة ${n(g.actions_open||0)}</div>${chainView(g.risk_chain||[])}${decForm({...G(g.id),decision_options:g.decision_options})}</div>`).join(""):na("لا أهداف متأخرة أو معرّضة للخطر 👏"));
+  // ── 12 التوقع مقابل الهدف
+  const forecast=()=>panel("التوقع مقابل الهدف (من محرك 3.7)",D.forecast_vs_goal.length?`<div class="tbl"><table><thead><tr><th>الهدف</th><th>المستهدف</th><th>الفعلي</th><th>الإسقاط</th><th>النطاق 80%</th><th>الفجوة</th><th>احتمال التحقيق</th><th>ثقة التوقع</th><th>الطريقة</th></tr></thead><tbody>${D.forecast_vs_goal.map(f=>`<tr class="drill" data-go="goal" data-arg="${esc(f.id)}"><td><b>${esc(f.name)}</b> ${st(f.status,f.status_ar)}</td><td>${val(f.target,f.unit)}</td><td>${val(f.actual,f.unit)}</td><td>${val(f.forecast,f.unit)}</td><td class="muted">${f.lower!=null?n(f.lower,0)+" – "+n(f.upper,0):"—"}</td><td class="${(f.gap||0)>0?"neg":"pos"}">${val(f.gap,f.unit)}</td><td>${prob(f.probability,f.probability_ar)}</td><td>${f.confidence!=null?n(f.confidence,0)+"%":"—"}</td><td class="muted" style="white-space:normal">${esc(f.method_ar||"")}</td></tr>`).join("")}</tbody></table></div><div class="muted">${esc(D.methodology.probability_ar)} — تقدير قاعدي وليس احتمالاً إحصائياً.</div>`:na("لا أهداف"));
+  // ── 13 التسلسل
+  function node(t){return `<li><span class="drill" data-go="goal" data-arg="${esc(t.id)}">${esc(t.icon||"")} <b>${esc(t.name)}</b></span> <span class="muted">${esc(t.level_ar)}${t.branch?" · "+esc(t.branch):""}${t.owner?" · 👤 "+esc(t.owner):""} · ${esc(t.distribution_ar)}</span> ${st(t.status,t.status_ar)} <span class="muted">${val(t.actual,t.unit)} / ${val(t.target,t.unit)}</span>
+    ${t.allocation?`<div class="muted" style="font-size:12px">موزّع على الأبناء ${val(t.allocation.children_target,t.unit)} (${n(t.allocation.coverage_pct,1)}%) · ${esc(t.allocation.state_ar)}${t.allocation.unallocated?` · غير موزّع ${val(t.allocation.unallocated,t.unit)}`:""}${t.allocation.unassigned_actual!=null?` · فعلي غير منسوب لفرع ${val(t.allocation.unassigned_actual,t.unit)}`:""}</div>`:""}
+    ${t.children.length?`<ul class="tree">${t.children.map(node).join("")}</ul>`:""}</li>`;}
+  const cascade=()=>panel("تسلسل الأهداف: "+esc(D.cascade.levels_ar),(D.cascade.roots.length?`<ul class="tree">${D.cascade.roots.map(node).join("")}</ul>`:na("لا أهداف"))+(D.cascade.issues.length?na("⚠ "+D.cascade.issues.join(" · ")):"")+`<div class="muted">${esc(D.cascade.note_ar)}</div>`);
+  // ── 14 الاعتماديات
+  function depChain(c){return `<div class="chain"><span class="cnode">🎯 الهدف</span>${c.map(n_=>`<span class="carrow">←</span><span class="cnode ${n_.risk?"on":""}" title="${esc(n_.drivers.map(d=>d.name_ar+": "+(d.evidence[0]||"")).join(" | "))}">${esc(n_.ar)} · ${esc(n_.level_ar)}</span>`).join("")}</div>`;}
+  const deps=()=>panel("اعتماديات الأهداف",D.dependencies.goals.length?D.dependencies.goals.map(x=>`<div class="event" style="border-inline-start-color:${x.at_risk?"#f97316":"#1d2c24"}"><h4 class="drill" data-go="goal" data-arg="${esc(x.id)}">${esc(x.icon)} ${esc(x.name)} ${x.at_risk?'<span class="b st-at_risk">اعتماد مرتفع الخطورة</span>':""}</h4>${x.chain&&x.chain.length?depChain(x.chain):""}${x.upstream&&x.upstream.length?`<div class="muted">يعتمد على أهداف: ${x.upstream.map(u=>esc(u.name)+(u.status_ar?" ("+esc(u.status_ar)+")":"")).join("، ")}</div>`:""}</div>`).join("")+(D.dependencies.issues.length?na("⚠ "+D.dependencies.issues.join(" · ")):"")+`<div class="muted">${esc(D.dependencies.rule_ar)}</div>`:na("لا اعتماديات"));
+  // ── 15 السجل
+  const history=()=>panel("سجل الأهداف (حوكمة)",D.history.length?`<div class="tbl"><table><thead><tr><th>متى</th><th>الهدف</th><th>الحقل</th><th>القديم</th><th>الجديد</th><th>بواسطة</th><th>السبب</th></tr></thead><tbody>${D.history.map(h=>`<tr><td>${esc(h.changed_at)}</td><td>${esc(h.goal||"")}</td><td>${esc(h.field_ar)}</td><td class="muted" style="white-space:normal">${esc(h.old_value)}</td><td style="white-space:normal">${esc(h.new_value)}</td><td>${h.system?"⚙ آلي":esc(h.changed_by)}</td><td style="white-space:normal">${esc(h.reason||"—")}</td></tr>`).join("")}</tbody></table></div>`:na("لا تغييرات مسجلة بعد"));
+  // ── 16 التعاون
+  const KA={comment:"💬 تعليق",mention:"@ إشارة",evidence:"📎 دليل",request_update:"🔄 طلب تحديث",escalate:"⬆ تصعيد",assign_owner:"👤 تعيين مسؤول",approve:"✅ اعتماد",reject:"⛔ رفض"};
+  function comments(xs){return xs.length?xs.map(c=>`<div class="event"><h4>${esc(KA[c.kind]||c.kind)} <span class="muted">· ${esc(c.by)} · ${esc(c.at)}</span>${c.goal_id&&!route()[1]?` <span class="muted drill" data-go="goal" data-arg="${esc(c.goal_id)}">· ${esc((G(c.goal_id)||{}).name||"")}</span>`:""}</h4><div>${esc(c.text)}</div>${c.mentions.length?`<div class="muted">@${c.mentions.map(esc).join(" @")}</div>`:""}${c.attachment_url?`<a href="${esc(c.attachment_url)}" target="_blank" rel="noopener" style="color:var(--mint,#10b981)">📎 ${esc(c.attachment_name||c.attachment_url)}</a>`:""}</div>`).join(""):na("لا مشاركات بعد");}
+  const collab=()=>panel("التعاون — آخر المشاركات ضمن نطاقك",comments(D.comments)+`<div class="muted">التعليق والإشارة والدليل وطلب التحديث والتصعيد متاحة لكل من يرى الهدف · تعيين المسؤول لمحرر الهدف · الاعتماد والرفض لغير صاحب الهدف.</div>`);
+  // ── 17 التنبيهات
+  const alerts=()=>panel(`🔔 ${D.alerts.length} تنبيهات`,D.alerts.length?D.alerts.map(a=>`<div class="event" style="border-inline-start-color:${CC[a.color]}"><h4>${esc(a.icon)} ${esc(a.title_ar)} — <span class="drill" data-go="goal" data-arg="${esc(a.goal_id)}">${esc(a.goal||"")}</span></h4><div class="muted">${esc(a.detail_ar||"")}${a.owner?" · 👤 "+esc(a.owner):""}</div></div>`).join(""):na("لا تنبيهات"));
+  // ── 18 القرارات
+  const decisions=()=>{const x=D.decisions;return panel("قرارات مقترحة للأهداف المعرّضة للخطر",x.options.length?x.options.map(o=>`<div class="event"><h4 class="drill" data-go="goal" data-arg="${esc(o.goal_id)}">${esc(o.goal)} ${st((G(o.goal_id)||{}).status,o.status_ar)}</h4>${decForm({...G(o.goal_id),decision_options:o.options})||'<div class="muted">إنشاء القرار لمحرر الهدف</div>'}</div>`).join(""):na("لا أهداف تحتاج قراراً الآن"))
+    +panel("قبل / بعد — قرارات الأهداف",x.measured.length?`<div class="tbl"><table><thead><tr><th>القرار</th><th>الهدف</th><th>قبل</th><th>بعد</th><th>تغيّر الفجوة</th><th>تغيّر التقدم</th><th>القراءة</th></tr></thead><tbody>${x.measured.map(m=>`<tr><td>#${m.decision_id} ${esc(m.title)}<div class="muted">${esc(m.owner||"")} · ${esc(m.created_on)}</div></td><td>${esc(m.goal)}</td><td>${esc((m.before||{}).status||"")} · فجوة ${val((m.before||{}).expected_gap,m.unit)}</td><td>${esc(m.after.status)} · فجوة ${val(m.after.expected_gap,m.unit)}</td><td class="${(m.gap_change||0)<0?"pos":"neg"}">${val(m.gap_change,m.unit)}</td><td>${m.progress_change_pp!=null?n(m.progress_change_pp,1)+" نقطة":"—"}</td><td>${esc(m.verdict_ar)}</td></tr>`).join("")}</tbody></table></div><div class="muted">${esc(x.measured[0].note_ar)}</div>`:na("لا قرارات أهداف مقاسة بعد"))
+    +panel("الأثر الفعلي للإجراءات المنجزة",x.actions_measured.length?actRows(x.actions_measured,true):na("لا إجراءات منجزة بعد"))+`<div class="muted">${esc(x.next_ar)} — <a href="company-decisions.html" style="color:var(--mint,#10b981)">القرارات ↗</a></div>`;};
+  const aiView=()=>panel("اسأل نبّاه — يفسّر نتائج محرك الأهداف ولا يخترع أهدافاً أو أرقاماً",`<div class="chips">${D.ai_questions.map(q=>`<span class="chip" data-q="${esc(q)}">${esc(q)}</span>`).join("")}</div><div style="display:flex;gap:6px;margin-top:10px"><input class="search" id="aiQ" placeholder="اكتب سؤالك…"><button class="btn" id="aiGo">اسأل</button></div><div id="aiOut" style="margin-top:12px"></div>`);
+  // ── صفحة الهدف (تعمّق): الدليل · السلسلة · النتائج · المراحل · الإجراءات · التعاون · السجل · القرار
+  function goalView(id){const g=G(id);if(!g)return na("الهدف غير موجود ضمن نطاقك");const ev=g.evidence||{};
+    const canC=k=>(g.collab||[]).includes(k);
+    const hist=D.history.filter(h=>String(h.goal_id)===String(g.id));
+    const com=D.comments.filter(c=>String(c.goal_id)===String(g.id));
+    const meta=(D.catalog||[]).find(c=>c.code===g.metric)||{};
+    return `<div class="bar"><button class="btn ghost" data-go="active">→ كل الأهداف</button>${g.can_edit?`<button class="btn ghost" data-act="edit" data-id="${esc(g.id)}">✏ تعديل</button>`:""}${g.can_edit&&meta.branch&&g.kind==="flow"&&g.level==="company"?`<button class="btn ghost" data-act="cascade" data-id="${esc(g.id)}">⤵ توزيع على الفروع</button>`:""}${(meta.manual||g.metric==="leakage_recovery")&&(g.can_edit||g.collab.includes("comment"))?`<button class="btn ghost" data-act="value" data-id="${esc(g.id)}">✍ تحديث القيمة</button>`:""}${g.can_edit?`<button class="btn ghost" data-act="archive" data-id="${esc(g.id)}">🗄 أرشفة</button>`:""}</div>
+    ${panel(`${esc(g.icon||"")} ${esc(g.name)} ${st(g.status,g.status_ar)}`,`${g.objective?`<div class="muted" style="margin-bottom:6px">${esc(g.objective)}</div>`:""}
+      <div class="tiles">${tile("الفعلي",val(g.actual,g.unit),g.as_of?"حتى "+esc(g.as_of):(g.actual_reason_ar?esc(g.actual_reason_ar):""))}${tile("المستهدف",val(g.target,g.unit),g.baseline_used!=null?"خط الأساس "+val(g.baseline_used,g.unit)+(g.baseline_note_ar?" ("+esc(g.baseline_note_ar)+")":""):"")}${tile("الإسقاط لنهاية المدة",val(g.forecast,g.unit),g.forecast_lower!=null?"النطاق "+n(g.forecast_lower,0)+" – "+n(g.forecast_upper,0):esc(g.forecast_reason_ar||""))}${tile("الفجوة المتوقعة",val(g.expected_gap,g.unit),g.gap_pct!=null?n(g.gap_pct,1)+"% من الهدف":"")}</div>
+      ${g.progress_pct!=null?bar(g):""}
+      <div class="kv" style="margin-top:8px"><b>المؤشر</b><span>${esc(g.metric_ar||"OKR")}</span><b>المستوى</b><span>${esc(g.level_ar)}${g.branch?" · "+esc(g.branch):""}${g.department?" · "+esc((D.departments_catalog||{})[g.department]||g.department):""}</span><b>المدة</b><span>${esc(g.start)} → ${esc(g.end)}</span><b>المسؤول</b><span>${esc(g.owner||"—")}</span><b>الركيزة</b><span>${esc((D.pillars_catalog||{})[g.pillar]||g.pillar||"—")}</span><b>احتمال التحقيق</b><span>${prob(g.probability,g.probability_ar)} <span class="muted">${esc(g.probability_note_ar||"")}</span></span><b>الثقة</b><span>${conf(g.confidence)} <span class="muted">${esc((g.confidence||{}).reasons_ar?(g.confidence.reasons_ar||[]).join(" · "):"")}</span></span><b>درجة الهدف</b><span>${g.score!=null?n(g.score,0)+"/100":"—"} <span class="muted">(خاصة بالهدف — منفصلة عن صحة الشركة)</span></span>${g.required_rate?`<b>المعدل المطلوب</b><span>${val(g.required_rate,g.unit)} شهرياً مقابل ${val(g.recent_rate,g.unit)} حالياً</span>`:""}</div>
+      <div class="na" style="margin-top:8px">لماذا هذه الحالة؟ ${g.why.map(esc).join(" · ")}</div>`)}
+    ${panel("الدليل — لماذا الرقم الحالي صحيح؟",`<div class="kv"><b>المصدر</b><span>${ev.link?`<a href="${esc(ev.link)}" style="color:var(--mint,#10b981)">${esc(ev.source_ar||"")} ↗</a>`:esc(ev.source_ar||"—")}</span><b>الحساب</b><span>${esc(ev.calculation_ar||"—")}</span><b>المدة</b><span>${esc(ev.period_ar||"")}${ev.covered?" · المغطّى "+esc(ev.covered.join(" → ")):""}</span><b>آخر تحديث</b><span>${esc(ev.last_update||"—")}</span><b>السجلات</b><span>${ev.records!=null?n(ev.records):"—"}</span><b>المسار</b><span>${esc(ev.trajectory_ar||"")}</span><b>التقدم</b><span>${esc(ev.progress_rule_ar||"")}</span><b>التوقع</b><span>${esc(ev.forecast_ar||"—")}</span><b>قاعدة الحالة</b><span class="muted">${esc(ev.status_rule_ar||"")}</span></div>`)}
+    ${(g.risk_chain||[]).length?panel("سلسلة المخاطر: الهدف ← الخطر ← المسبب ← السبب المرشح ← الإجراء",chainView(g.risk_chain)):""}
+    ${(g.dependencies||[]).length||(g.upstream||[]).length?panel("الاعتماديات",(g.dependencies.length?depChain(g.dependencies):"")+((g.upstream||[]).length?`<div class="muted">يعتمد على: ${g.upstream.map(u=>esc(u.name)+(u.status_ar?" ("+esc(u.status_ar)+")":"")).join("، ")}</div>`:"")):""}
+    ${g.gap&&((g.gap.expected_gap||0)>0||(g.gap.trajectory_gap||0)>0)?panel("تحليل الفجوة",gapBlock({...g.gap,id:g.id,name:g.name,icon:g.icon})):""}
+    ${g.is_okr||g.can_edit?panel("النتائج الرئيسية (OKR)",krTable(g)+(g.can_edit?`<div class="frmrow"><input class="f" id="krN" placeholder="اسم النتيجة"><select class="f" id="krM">${(D.catalog||[]).map(c=>`<option value="${esc(c.code)}">${esc(c.ar)}</option>`).join("")}</select><input class="f" id="krB" placeholder="خط الأساس" inputmode="decimal"><input class="f" id="krT" placeholder="المستهدف" inputmode="decimal"><input class="f" id="krA" placeholder="الحالي (يدوي فقط)" inputmode="decimal"><button class="btn" data-act="kr" data-id="${esc(g.id)}">إضافة</button></div><div class="muted" id="krMsg"></div>`:"")):""}
+    ${panel("المراحل",(g.milestones.length?`<div class="tbl"><table><thead><tr><th>المرحلة</th><th>الموعد</th><th>المستهدف</th><th>الفعلي</th><th>الحالة</th><th>الدليل</th></tr></thead><tbody>${g.milestones.map(m=>`<tr><td>${esc(m.title)}</td><td>${esc(m.due)}</td><td>${val(m.target,g.unit)}</td><td>${val(m.actual,g.unit)}</td><td>${st(MSC[m.status],m.status_ar)}</td><td class="muted" style="white-space:normal">${m.evidence.map(esc).join(" · ")}</td></tr>`).join("")}</tbody></table></div>`:na("لا مراحل"))+(g.can_edit&&g.metric?`<div class="frmrow"><button class="btn ghost" data-act="msgen" data-id="${esc(g.id)}">اقتراح مراحل ربعية</button><input class="f" id="msT" placeholder="عنوان"><input class="f" id="msD" type="date"><input class="f" id="msV" placeholder="المستهدف (تراكمي)" inputmode="decimal"><button class="btn" data-act="ms" data-id="${esc(g.id)}">إضافة مرحلة</button></div><div id="msOut" class="muted"></div>`:""))}
+    ${panel("الإجراءات",actRows((g.actions||{}).items||[],false).replace(/data-ast="[^"]*:/g,`data-ast="${esc(g.id)}:`)+`<div class="muted">${esc((g.actions||{}).note_ar||"")}${(g.actions||{}).gap_coverage_pct!=null?" · تغطي "+n(g.actions.gap_coverage_pct,0)+"% من الفجوة":""}</div>`+(g.can_edit||(g.collab||[]).includes("assign_owner")?`<div class="frmrow"><input class="f" id="acA" placeholder="الإجراء"><input class="f" id="acO" placeholder="المسؤول"><input class="f" id="acD" type="date"><input class="f" id="acE" placeholder="الأثر المتوقع" inputmode="decimal"><button class="btn" data-act="addact" data-id="${esc(g.id)}">إضافة إجراء</button></div><div class="muted" id="acMsg"></div>`:""))}
+    ${(g.decision_options||[]).length?panel("قرار لإعادة الهدف للمسار → متابعة القرارات (3.9)",decForm(g)||na("إنشاء القرار لمحرر الهدف")):""}
+    ${panel("التعاون",comments(com)+`<div class="frmrow"><select class="f" id="coK">${Object.keys(KA).filter(canC).map(k=>`<option value="${k}">${KA[k]}</option>`).join("")}</select><input class="f" id="coT" placeholder="النص / السبب"><input class="f" id="coM" placeholder="@إشارة (أسماء مفصولة بفاصلة)"><input class="f" id="coU" placeholder="رابط الدليل https://"><input class="f" id="coO" placeholder="المسؤول الجديد (للتعيين)"><button class="btn" data-act="collab" data-id="${esc(g.id)}">إرسال</button></div><div class="muted" id="coMsg"></div>`)}
+    ${panel("سجل الهدف",hist.length?`<div class="tl">${hist.map(h=>`<div><b>${esc(h.field_ar)}</b>: ${esc(h.old_value||"—")} ← ${esc(h.new_value)} <span class="muted">· ${h.system?"⚙ آلي":esc(h.changed_by)} · ${esc(h.changed_at)}${h.reason?" · السبب: "+esc(h.reason):""}</span></div>`).join("")}</div>`:na("لا تغييرات"))}`;}
+  // ── النماذج
+  function modal(html){$("modal").innerHTML=html;$("ov").classList.add("on");const c=$("mC");if(c)c.onclick=()=>$("ov").classList.remove("on");}
+  function goalForm(g,preset){g=g||{};const p=preset||{};const v=k=>g[k]!=null?g[k]:(p[k]!=null?p[k]:"");const y=new Date().getFullYear();
+    const opts=(arr,cur)=>arr.map(([k,l])=>`<option value="${esc(k)}" ${String(k)===String(cur)?"selected":""}>${esc(l)}</option>`).join("");
+    modal(`<h3 style="margin-top:0">${g.id?"تعديل هدف":"هدف جديد"}</h3><div class="fg">
+      <label>اسم الهدف<input id="fN" value="${esc(v("name"))}"></label><label>الغاية<input id="fO" value="${esc(v("objective"))}"></label>
+      <label>المؤشر (مصدر الفعلي)<select id="fMe"><option value="">— OKR بلا مؤشر (أضف نتائج رئيسية) —</option>${opts((D.catalog||[]).map(c=>[c.code,c.ar+" · "+c.src_ar]),v("metric"))}</select></label>
+      <label>المستهدف<input id="fT" inputmode="decimal" value="${esc(v("target"))}"></label><label>خط الأساس (لمؤشرات المستوى)<input id="fB" inputmode="decimal" value="${esc(v("baseline")!==""?v("baseline"):(g.baseline_used??""))}"></label>
+      <label>الوحدة (للمخصص)<input id="fU" value="${esc(v("unit"))}"></label>
+      <label>البداية<input id="fS" type="date" value="${esc(v("start")||y+"-01-01")}"></label><label>النهاية<input id="fE" type="date" value="${esc(v("end")||y+"-12-31")}"></label>
+      <label>المستوى<select id="fL">${opts(Object.entries(D.levels),v("level")||"company")}</select></label>
+      <label>الفرع<select id="fBr"><option value="">—</option>${opts((D.branches_list||[]).map(b=>[b,b]),v("branch"))}</select></label>
+      <label>القسم<select id="fD"><option value="">—</option>${opts(Object.entries(D.departments_catalog||{}),v("department"))}</select></label>
+      <label>الركيزة<select id="fP"><option value="">—</option>${opts(Object.entries(D.pillars_catalog||{}),v("pillar"))}</select></label>
+      <label>المسؤول<input id="fOw" value="${esc(v("owner"))}"></label><label>الأولوية<select id="fPr">${opts([["high","مرتفعة"],["medium","متوسطة"],["low","منخفضة"]],v("priority")||"medium")}</select></label>
+      <label>الهدف الأعلى (تسلسل)<select id="fPa"><option value="">—</option>${opts(D.goal_names.filter(x=>x.id!==g.id).map(x=>[x.id,x.name]),v("parent_id"))}</select></label>
+      <label>حالة يدوية<select id="fSo">${opts([["","تُحسب آلياً"],["paused","موقوف"],["cancelled","ملغى"]],v("status_override")||"")}</select></label>
+      <label style="grid-column:1/-1">يعتمد على أهداف (Ctrl لاختيار عدة)<select id="fDe" multiple size="3">${D.goal_names.filter(x=>x.id!==g.id).map(x=>`<option value="${x.id}" ${(g.depends_on||[]).includes(x.id)?"selected":""}>${esc(x.name)}</option>`).join("")}</select></label>
+      ${g.id?`<label style="grid-column:1/-1">سبب التغيير (مطلوب لتعديل المستهدف/المدة/المؤشر)<input id="fR"></label>`:""}</div>
+      <div class="muted">الفعلي والحالة تُحسب من بيانات نبّاه تلقائياً — لا تُدخل يدوياً إلا لمؤشر لا تملك نبّاه مصدره.</div>
+      <div class="cta"><button class="btn" id="fGo">حفظ</button><button class="btn ghost" id="mC">إلغاء</button><span id="fM" class="muted"></span></div>`);
+    $("fGo").onclick=()=>{const body={id:g.id||undefined,name:$("fN").value,objective:$("fO").value,metric:$("fMe").value||null,target:$("fT").value,baseline:$("fB").value,unit:$("fU").value,
+      start:$("fS").value,end:$("fE").value,level:$("fL").value,branch:$("fBr").value,department:$("fD").value||null,pillar:$("fP").value||null,owner:$("fOw").value,
+      priority:$("fPr").value,parent_id:$("fPa").value||null,status_override:$("fSo").value||null,depends_on:[...$("fDe").selectedOptions].map(o=>Number(o.value)),
+      reason:$("fR")?$("fR").value:"",has_krs:!$("fMe").value,source:p.source||undefined};
+      api("/company/goals-center/save",body).then(j=>{$("ov").classList.remove("on");load();setTimeout(()=>go("goal",j.id),300);}).catch(e=>{$("fM").className="neg";$("fM").textContent=e.message;});};}
+  function stratForm(){const s=D.strategy;modal(`<h3 style="margin-top:0">الإطار الاستراتيجي</h3><div class="fg"><label style="grid-column:1/-1">الرؤية<input id="sV" value="${esc(s.vision||"")}"></label><label style="grid-column:1/-1">الرسالة<input id="sM" value="${esc(s.mission||"")}"></label>
+      <label style="grid-column:1/-1">الركائز<div>${Object.entries(D.pillars_catalog).map(([k,l])=>`<label style="display:inline-flex;flex-direction:row;gap:4px;margin:3px 8px"><input type="checkbox" data-pl="${k}" ${s.pillars.some(p=>p.key===k)?"checked":""}> ${esc(l)}</label>`).join("")}</div></label></div>
+      <div class="cta"><button class="btn" id="sGo">حفظ</button><button class="btn ghost" id="mC">إلغاء</button><span id="sMsg" class="muted"></span></div>`);
+    $("sGo").onclick=()=>api("/company/goals-center/strategy",{vision:$("sV").value,mission:$("sM").value,pillars:[...document.querySelectorAll("[data-pl]:checked")].map(x=>x.dataset.pl)}).then(()=>{$("ov").classList.remove("on");load();}).catch(e=>{$("sMsg").className="neg";$("sMsg").textContent=e.message;});}
+  function scopeForm(){fetch("/company/goals-center/scope",{headers:H}).then(r=>r.json()).then(j=>{const T=[["","—"],["ceo","رئيس تنفيذي"],["dept_manager","مدير قسم"],["branch_manager","مدير فرع"],["employee","موظف"]];
+    modal(`<h3 style="margin-top:0">نطاق رؤية الأهداف لكل مستخدم</h3><div class="tbl"><table><thead><tr><th>المستخدم</th><th>الدور</th><th>المسمّى</th><th>الفرع</th><th>القسم</th><th></th></tr></thead><tbody>${(j.users||[]).map(u=>`<tr><td>${esc(u.name)}<div class="muted">${esc(u.email)}</div></td><td>${esc(u.role)}</td><td><select class="f" data-su="${u.id}" data-k="title">${T.map(([k,l])=>`<option value="${k}" ${k===u.title?"selected":""}>${l}</option>`).join("")}</select></td><td><select class="f" data-su="${u.id}" data-k="branch"><option value="">—</option>${(D.branches_list||[]).map(b=>`<option ${b===u.branch?"selected":""}>${esc(b)}</option>`).join("")}</select></td><td><select class="f" data-su="${u.id}" data-k="department"><option value="">—</option>${Object.entries(D.departments_catalog).map(([k,l])=>`<option value="${k}" ${k===u.department?"selected":""}>${esc(l)}</option>`).join("")}</select></td><td><button class="btn ghost" data-sus="${u.id}">حفظ</button></td></tr>`).join("")}</tbody></table></div><div class="muted" id="suMsg">الموظف يرى أهدافه والإجراءات المسندة إليه فقط · مدير الفرع أهداف فرعه · مدير القسم أهداف قسمه · الرئيس التنفيذي الأهداف التنفيذية.</div><div class="cta"><button class="btn ghost" id="mC">إغلاق</button></div>`);
+    document.querySelectorAll("[data-sus]").forEach(b=>b.onclick=()=>{const id=b.dataset.sus,gv=k=>document.querySelector(`[data-su="${id}"][data-k="${k}"]`).value;
+      api("/company/goals-center/scope",{user_id:Number(id),title:gv("title"),branch:gv("branch"),department:gv("department")}).then(()=>{$("suMsg").className="pos";$("suMsg").textContent="تم الحفظ ✓";}).catch(e=>{$("suMsg").className="neg";$("suMsg").textContent=e.message;});});});}
+  function render(){const d=D;const [v,arg]=route();
+    $("tabs").innerHTML=TABS.map(([k,l],i)=>`<button class="tab ${k===v?"on":""}" data-go="${k}"><span class="muted" style="font-size:10px">${String(i+1).padStart(2,"0")}</span> ${l}${k==="alerts"&&d.alerts.length?` <span class="b high">${d.alerts.length}</span>`:""}${k==="late"&&d.late.length?` <span class="b high">${d.late.length}</span>`:""}</button>`).join("");
+    const views={strategy,active,okrs,company,branches:()=>branches(arg),departments,gva,gap,milestones,actions,late,forecast,cascade,deps,history,collab,alerts,decisions,ai:aiView,goal:()=>goalView(arg)};
+    $("content").innerHTML=(views[v]||active)();bind();}
+  const msg=(id,ok,t)=>{const m=$(id);if(m){m.className=ok?"pos":"neg";m.textContent=t;}};
+  const num=v=>v===""||v==null?null:v;
+  function bind(){document.querySelectorAll("[data-go]").forEach(el=>el.onclick=e=>{e.stopPropagation();go(el.dataset.go,el.dataset.arg||null);});
+    document.querySelectorAll("#content [data-q]").forEach(c=>c.onclick=()=>runAI(c.dataset.q));
+    const ag=$("aiGo");if(ag)ag.onclick=()=>{const q=$("aiQ").value.trim();if(q)runAI(q);};
+    document.querySelectorAll("#content [data-act]").forEach(b=>b.onclick=e=>{e.stopPropagation();act(b.dataset.act,b.dataset.id);});
+    document.querySelectorAll("#content [data-tpl]").forEach(b=>b.onclick=()=>{const t=D.sector.templates[Number(b.dataset.tpl)];goalForm(null,{name:t.metric_ar,metric:t.metric,target:t.recommended_target,pillar:t.pillar,source:"template"});});
+    document.querySelectorAll("#content [data-dec]").forEach(b=>b.onclick=e=>{e.stopPropagation();const [gid,code]=b.dataset.dec.split("|");const q=k=>document.querySelector(`[data-do="${CSS.escape(gid+"|"+code+"|"+k)}"]`).value;
+      const m=document.querySelector(`[data-dm="${CSS.escape(gid+"|"+code)}"]`);api("/company/goals-center/to-decision",{goal_id:Number(gid),code,owner:q("o"),due_date:q("d")}).then(j=>{m.className="pos";m.textContent=`تم إنشاء القرار #${j.decision_id} والإجراء ✓ — يُتابع في متابعة القرارات`;}).catch(er=>{m.className="neg";m.textContent=er.message;});});
+    document.querySelectorAll("#content [data-ast]").forEach(s=>s.onchange=()=>{const [gid,aid]=s.dataset.ast.split(":");const body={goal_id:Number(gid),id:Number(aid),status:s.value};
+      if(s.value==="done"){const a=prompt("الأثر الفعلي المقاس (رقم) — اتركه فارغاً إن لم يكن للإجراء أثر مالي");if(a!==null&&a!=="")body.actual_impact=a;}
+      api("/company/goals-center/action",body).then(load).catch(e=>alert(e.message));});
+    const ig=$("impGo");if(ig)ig.onclick=()=>{const items=[...document.querySelectorAll("[data-sug]:checked")].map(x=>D.suggestions[Number(x.dataset.sug)]);if(!items.length)return;api("/company/goals-center/import",{items}).then(load).catch(e=>msg("impMsg",false,e.message));};}
+  function act(k,id){const g=G(id);
+    if(k==="new")return goalForm();
+    if(k==="edit")return goalForm(g);
+    if(k==="kr")return api("/company/goals-center/kr",{goal_id:Number(id),name:$("krN").value,metric:$("krM").value,baseline:num($("krB").value),target:num($("krT").value),actual:num($("krA").value)}).then(load).catch(e=>msg("krMsg",false,e.message));
+    if(k==="ms")return api("/company/goals-center/milestone",{goal_id:Number(id),title:$("msT").value,due:$("msD").value,target:num($("msV").value)}).then(load).catch(e=>msg("msOut",false,e.message));
+    if(k==="msgen")return api("/company/goals-center/milestone",{goal_id:Number(id),generate:true}).then(j=>{$("msOut").innerHTML=`<div class="tbl"><table><tbody>${j.proposals.map(p=>`<tr><td>${esc(p.title)}</td><td>${val(p.target,g.unit)}</td><td class="muted">${esc(p.basis_ar)}</td></tr>`).join("")}</tbody></table></div><button class="btn" id="msSave">اعتماد المراحل</button>`;$("msSave").onclick=()=>api("/company/goals-center/milestone",{goal_id:Number(id),generate:true,save:true}).then(load).catch(e=>msg("msOut",false,e.message));}).catch(e=>msg("msOut",false,e.message));
+    if(k==="addact")return api("/company/goals-center/action",{goal_id:Number(id),action:$("acA").value,owner:$("acO").value,due:$("acD").value,expected_impact:num($("acE").value)}).then(load).catch(e=>msg("acMsg",false,e.message));
+    if(k==="collab"){const body={goal_id:Number(id),kind:$("coK").value,text:$("coT").value,mentions:$("coM").value.split(/[,،]/).map(x=>x.trim().replace(/^@/,"")).filter(Boolean),attachment_url:$("coU").value,owner:$("coO").value};
+      return api("/company/goals-center/collab",body).then(load).catch(e=>msg("coMsg",false,e.message));}
+    if(k==="cascade")return api("/company/goals-center/cascade",{goal_id:Number(id)}).then(j=>{if(j.status!=="ok"){alert(j.reason_ar);return;}
+      modal(`<h3 style="margin-top:0">توزيع «${esc(g.name)}» على الفروع</h3><div class="tbl"><table><thead><tr><th>الفرع</th><th>الحصة</th><th>المستهدف</th></tr></thead><tbody>${j.rows.map(r=>`<tr><td>${esc(r.branch)}</td><td>${n(r.share_pct,1)}%</td><td>${val(r.target,g.unit)}</td></tr>`).join("")}</tbody></table></div><div class="muted">${esc(j.basis_ar)} · المجموع ${val(j.total,g.unit)} · ${esc(j.note_ar)}</div><div class="cta"><button class="btn" id="cgo">اعتماد التوزيع التلقائي</button><button class="btn ghost" id="mC">إلغاء</button><span id="cm" class="muted"></span></div>`);
+      $("cgo").onclick=()=>api("/company/goals-center/cascade",{goal_id:Number(id),save:true}).then(r=>{$("ov").classList.remove("on");load();}).catch(e=>msg("cm",false,e.message));}).catch(e=>alert(e.message));
+    if(k==="value"){const v=prompt("القيمة الحالية (رقم)");if(v===null||v==="")return;const src=prompt("مصدر القيمة (مثال: استبيان العملاء سبتمبر)")||"";return api("/company/goals-center/value",{id:Number(id),value:v,source:src}).then(load).catch(e=>alert(e.message));}
+    if(k==="archive"){const r=prompt("سبب الأرشفة (مطلوب)");if(!r)return;return api("/company/goals-center/archive",{id:Number(id),reason:r}).then(()=>{go("active");load();}).catch(e=>alert(e.message));}}
+  function runAI(q){if(route()[0]!=="ai"){go("ai");setTimeout(()=>runAI(q),60);return;}const out=$("aiOut");if(!out)return;out.innerHTML=`<div class="muted">«${esc(q)}» — جارٍ التحليل…</div>`;
+    fetch("/company/goals-center/ai-insights",{method:"POST",headers:H,body:JSON.stringify({question:q})}).then(async r=>{const j=await r.json().catch(()=>({}));
+      if(!r.ok){out.innerHTML=`<div class="neg">${esc(typeof j.detail==="string"?j.detail:"HTTP "+r.status)}</div>`;return;}
+      const a=j.ai||{},resp=a.response||{},L={FACTS:"من محرك الأهداف",INTERPRETATION:"القراءة",HYPOTHESES:"عوامل مرتبطة",RECOMMENDATIONS:"الإجراءات",DATA_GAPS:"بيانات ناقصة"};
+      out.innerHTML=`<div class="muted" style="margin-bottom:6px">«${esc(j.question||q)}» · الأرقام من المحرك — الذكاء الاصطناعي يشرح فقط</div>`+(a.message?`<div class="na">${esc(a.message)}</div>`:"")+Object.keys(L).map(k=>resp[k]&&resp[k].length?`<div class="ai-sec"><b>${L[k]}</b><ul style="margin:0;padding-inline-start:18px">${resp[k].map(x=>`<li>${esc(typeof x==="string"?x:JSON.stringify(x))}</li>`).join("")}</ul></div>`:"").join("");}).catch(e=>{out.innerHTML=`<div class="neg">${esc(e.message||e)}</div>`;});}
+  $("ov").onclick=e=>{if(e.target===$("ov"))$("ov").classList.remove("on");};
+  $("btnNew").onclick=()=>goalForm();$("btnStrat").onclick=stratForm;$("btnScope").onclick=scopeForm;
+  load();
+})();
+</script>
+<script src="nabbah-sidebar.js"></script>
+</body>
+</html>
