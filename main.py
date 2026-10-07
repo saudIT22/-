@@ -799,6 +799,150 @@ class CompanyPredictionSetting(SQLModel, table=True):
     updated_at: _DTCOL = Field(default_factory=_now_naive)
 
 
+# ═══ Phase 3.8 — Goals & Results: طبقة الأهداف فقط (الفعلي يُقرأ من المحركات — لا جداول بيانات مكررة) ═══
+class CompanyStrategy(SQLModel, table=True):
+    """الإطار الاستراتيجي: الرؤية والرسالة والركائز + لقطة آخر مراجعة للأهداف (لمعرفة ما تغيّر)."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    vision: str = ""
+    mission: str = ""
+    pillars_json: str = "[]"
+    pillar_names_json: str = "{}"
+    snapshot_json: str = "{}"
+    snapshot_at: str = ""
+    updated_by: str = ""
+    updated_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+class CompanyGoal(SQLModel, table=True):
+    """هدف مرتبط بمؤشر حقيقي — الحالة محسوبة (status = آخر حالة محسوبة؛ status_override للإلغاء/الإيقاف فقط)."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    parent_goal_id: Optional[int] = Field(default=None, index=True)
+    name: str = ""
+    objective: str = ""
+    pillar: str = ""
+    level: str = "company"            # company | department | branch | manager | employee
+    branch: str = ""
+    department: str = ""
+    owner: str = ""
+    owner_user_id: Optional[int] = Field(default=None, index=True)
+    metric: str = ""
+    unit: str = ""
+    baseline: Optional[float] = None
+    target: Optional[float] = None
+    start_date: str = ""
+    end_date: str = ""
+    status: str = ""                  # آخر حالة محسوبة (للتقارير) — ليست إدخالاً يدوياً
+    status_override: str = ""         # "" | cancelled | paused
+    source: str = "manual"            # manual | template | import | cascade_auto | cascade_manual
+    distribution: str = ""            # manual | auto (لأهداف الفروع المستمدة)
+    priority: str = "medium"
+    depends_on: str = ""              # معرّفات أهداف يعتمد عليها مفصولة بفاصلة
+    manual_value: Optional[float] = None
+    manual_at: str = ""
+    manual_by: str = ""
+    manual_source: str = ""
+    phase_link: str = ""              # 3.1 / 3.2 / 3.3 / 3.4 / 3.5 ...
+    approval: str = ""                # "" | pending | approved | rejected
+    archived: int = 0
+    created_by: str = ""
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+    updated_at: Optional[_DTCOL] = None
+
+
+class CompanyKeyResult(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    goal_id: int = Field(index=True)
+    name: str = ""
+    metric: str = ""
+    unit: str = ""
+    baseline: Optional[float] = None
+    target: Optional[float] = None
+    actual: Optional[float] = None    # يدوي فقط لمؤشر لا تملك نبّاه مصدره
+    actual_at: str = ""
+    actual_by: str = ""
+    progress: Optional[float] = None  # آخر قيمة محسوبة
+    status: str = ""
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+class CompanyGoalMilestone(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    goal_id: int = Field(index=True)
+    title: str = ""
+    due_date: str = ""
+    target: Optional[float] = None
+    actual: Optional[float] = None    # يدوي اختياري — وإلا يُحسب من المصدر
+    owner: str = ""
+    evidence_note: str = ""
+    status: str = ""                  # آخر حالة محسوبة
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+class CompanyGoalAction(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    goal_id: int = Field(index=True)
+    kr_id: Optional[int] = None
+    action: str = ""
+    owner: str = ""
+    owner_user_id: Optional[int] = Field(default=None, index=True)
+    due_date: str = ""
+    expected_impact: Optional[float] = None
+    actual_impact: Optional[float] = None
+    impact_type: str = "potential"    # potential | recovery | actual
+    status: str = "open"              # open | in_progress | blocked | done | cancelled
+    decision_id: Optional[int] = Field(default=None, index=True)
+    baseline_json: str = ""           # لقطة الهدف وقت القرار (قبل/بعد)
+    created_by: str = ""
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+    updated_at: Optional[_DTCOL] = None
+    done_at: str = ""
+
+
+class CompanyGoalHistory(SQLModel, table=True):
+    """سجل حوكمة: كل تغيير بقيمته القديمة والجديدة ومن غيّره ومتى ولماذا."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    goal_id: int = Field(index=True)
+    field: str = ""
+    old_value: str = ""
+    new_value: str = ""
+    changed_by: str = ""
+    changed_at: _DTCOL = Field(default_factory=_now_naive)
+    reason: str = ""
+
+
+class CompanyGoalComment(SQLModel, table=True):
+    """التعاون: تعليق/إشارة/دليل/طلب تحديث/تصعيد/اعتماد/رفض/تعيين مسؤول."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    goal_id: int = Field(index=True)
+    kind: str = "comment"
+    text: str = ""
+    mentions: str = ""
+    attachment_name: str = ""
+    attachment_url: str = ""
+    by_user_id: Optional[int] = None
+    by_name: str = ""
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+class CompanyUserScope(SQLModel, table=True):
+    """ربط المستخدم بمسمّاه وفرعه وقسمه — يحدد نطاق رؤية الأهداف (رئيس تنفيذي/مدير قسم/مدير فرع/موظف)."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    user_id: int = Field(index=True)
+    title: str = ""                   # ceo | dept_manager | branch_manager | employee | ""
+    branch: str = ""
+    department: str = ""
+    updated_by: str = ""
+    updated_at: _DTCOL = Field(default_factory=_now_naive)
+
+
 class BenchmarkDataset(SQLModel, table=True):
     """طبقة المعايير القطاعية (3.5): company_id فارغ = معيار المنصّة (من الإدارة)، وإلا معيار خاص بالشركة.
     كل معيار بمصدره ومنهجيته وفترته وعيّنته وثقته — لا معيار بلا مصدر."""
@@ -1506,6 +1650,11 @@ def page_ops_analytics():
 @app.get("/company-performance-prediction.html")
 def page_performance_prediction():
     return FileResponse("company-performance-prediction.html")
+
+
+@app.get("/company-goals-intelligence.html")
+def page_goals_intelligence():
+    return FileResponse("company-goals-intelligence.html")
 
 
 @app.get("/company-sector-benchmark.html")
@@ -4386,7 +4535,7 @@ def _load_p24(name):
     """يحمّل محركات 2.4 من المجلد أو من حزمة nabbah_engines."""
     try:
         import sys as _sys, os as _os, importlib
-        for _d in ("phase21", "phase22", "phase23", "phase24", "phase25", "phase26", "phase27", "phase28", "phase29", "phase210", "phase211", "phase30", "phase31", "phase32", "phase33", "phase34", "phase35", "phase37"):
+        for _d in ("phase21", "phase22", "phase23", "phase24", "phase25", "phase26", "phase27", "phase28", "phase29", "phase210", "phase211", "phase30", "phase31", "phase32", "phase33", "phase34", "phase35", "phase37", "phase38"):
             _p = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), _d)
             if _p not in _sys.path:
                 _sys.path.insert(0, _p)
@@ -7663,6 +7812,722 @@ def company_prediction_ai(data: dict, request: Request, user: User = Depends(get
     return {"question": q, "ai": out}
 
 
+# ═══════════════════════════════════════════════════════════
+#  Phase 3.8 — Goals & Results Intelligence (هدف → فعلي → توقع → فجوة → إجراء → مسؤول → مرحلة → نتيجة → قبل/بعد)
+#  طبقة أهداف فقط: الفعلي والتوقع والمخاطر تُقرأ من محركات 3.3/3.4/3.5/3.7 — لا جداول بيانات مكررة
+# ═══════════════════════════════════════════════════════════
+_GOAL_TITLES = ("", "ceo", "dept_manager", "branch_manager", "employee")
+_GOAL_COLLAB_KINDS = ("comment", "mention", "evidence", "request_update", "escalate", "assign_owner", "approve", "reject")
+
+
+def _goals_scope(s, user):
+    """كل أعضاء الشركة يصلون للمركز — ما يرونه يحدده نطاقهم (المحرك يرشّح الأهداف). لا وصول عبر الشركات."""
+    _ensure_data_tables()
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    company = s.get(Company, user.company_id)
+    if not company:
+        raise HTTPException(403, "غير مصرّح")
+    if company.is_active != 1:
+        raise HTTPException(402, "شركتك قيد التفعيل")
+    role = get_user_role(s, user) or "staff"
+    sc = s.exec(select(CompanyUserScope).where(CompanyUserScope.company_id == company.id, CompanyUserScope.user_id == user.id)).first()
+    title, branch, dept = (sc.title, sc.branch, sc.department) if sc else ("", "", "")
+    if not sc and role == "manager":
+        m = s.exec(select(CompanyMember).where(CompanyMember.company_id == company.id, CompanyMember.email == user.email)).first()
+        if m and m.branch_id:
+            b = s.get(CompanyBranch, m.branch_id)
+            if b and b.company_id == company.id:
+                title, branch = "branch_manager", b.name
+    if role == "staff" and not title:
+        title = "employee"
+    viewer = {"role": role, "user_id": user.id, "name": user.name or "", "email": user.email or "", "title": title or None,
+              "branch": branch or None, "department": dept or None}
+    return company, role, viewer
+
+
+def _goal_dict(g):
+    return {"id": g.id, "parent_id": g.parent_goal_id, "name": g.name, "objective": g.objective, "pillar": g.pillar or None, "level": g.level or "company",
+            "branch": g.branch or None, "department": g.department or None, "owner": g.owner or None, "owner_user_id": g.owner_user_id, "metric": g.metric or None,
+            "unit": g.unit or None, "baseline": g.baseline, "target": g.target, "start": g.start_date, "end": g.end_date, "status_override": g.status_override or None,
+            "source": g.source, "distribution": g.distribution or None, "priority": g.priority or "medium",
+            "depends_on": [int(x) for x in (g.depends_on or "").split(",") if x.strip().isdigit()], "manual_value": g.manual_value, "manual_at": g.manual_at,
+            "manual_by": g.manual_by, "manual_source": g.manual_source, "phase_link": g.phase_link or None, "created_by": g.created_by, "approval": g.approval or None,
+            "computed_status": g.status}
+
+
+def _goals_rows(s, cid):
+    goals = s.exec(select(CompanyGoal).where(CompanyGoal.company_id == cid, CompanyGoal.archived == 0).limit(2000)).all()
+    ids = {g.id for g in goals}
+    krs = [k for k in s.exec(select(CompanyKeyResult).where(CompanyKeyResult.company_id == cid).limit(5000)).all() if k.goal_id in ids]
+    ms = [m for m in s.exec(select(CompanyGoalMilestone).where(CompanyGoalMilestone.company_id == cid).limit(5000)).all() if m.goal_id in ids]
+    acts = [a for a in s.exec(select(CompanyGoalAction).where(CompanyGoalAction.company_id == cid).limit(5000)).all() if a.goal_id in ids]
+    hist = s.exec(select(CompanyGoalHistory).where(CompanyGoalHistory.company_id == cid).order_by(CompanyGoalHistory.changed_at.desc()).limit(600)).all()
+    com = s.exec(select(CompanyGoalComment).where(CompanyGoalComment.company_id == cid).order_by(CompanyGoalComment.created_at.desc()).limit(600)).all()
+    strat = s.exec(select(CompanyStrategy).where(CompanyStrategy.company_id == cid)).first()
+    return {"goals": goals, "krs": krs, "ms": ms, "acts": acts, "hist": hist, "com": com, "strat": strat}
+
+
+def _goals_data(s, company):
+    """نتائج المحركات السابقة بنطاق كامل (المحرك يرشّح الأهداف حسب المستخدم — من يرى الهدف يرى رقمه فقط)."""
+    de, pe, be = _load_p24("drivers_engine"), _load_p24("prediction_engine"), _load_p24("benchmark_engine")
+    risk = _risk_result(s, company, "owner", save_snapshot=False)
+    mods, cust, errors = _risk_modules(s, company, "owner")
+    today_ = datetime.now().date()
+    dv, bz, pz = {}, None, None
+    if risk.get("has_data") and de is not None:
+        dv = de.analyze_drivers(risk, mods, customer_rows=cust, settings=_risk_settings(s, company.id), history=_risk_history(s, company.id),
+                                today=today_, sector=_risk_sector(company))
+        if be is not None:
+            prof = _bench_profile(s, company)
+            bz = be.analyze_benchmark(mods, sales_rows=cust, risk=risk, drivers=dv, datasets=_bench_datasets(s, company), peers=_bench_peers(s, company, prof),
+                                      profile=prof, history=_bench_history(s, company.id), today=today_)
+    st = _pred_settings(s, company)
+    if pe is not None and cust:
+        pz = pe.analyze_prediction(mods, sales_rows=cust, risk=risk, drivers=dv, bench=bz, settings={"targets": st["targets"], "fy_start": st["fy_start"]},
+                                   sector=_risk_sector(company), today=today_, currency=getattr(company, "currency", None) or "SAR")
+    brs = s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company.id)).all()
+    existing = {"annual_revenue": st["targets"].get("annual_revenue"), "revenue_source_ar": st["targets"].get("source_ar"),
+                "annual_profit": st["targets"].get("annual_profit"), "target_margin": getattr(company, "target_margin", None) or None,
+                "branch_targets": {b.name: b.target_sales for b in brs if b.target_sales}}
+    return {"mods": mods, "cust": cust, "risk": risk, "drivers": dv, "bench": bz, "pred": pz, "errors": errors, "fy_start": st["fy_start"], "existing": existing, "today": today_}
+
+
+def _goals_ctx(s, company, data=None):
+    ge = _load_p24("goals_engine")
+    d = data or _goals_data(s, company)
+    return ge.build_context(d["mods"], d["cust"], risk=d["risk"], drivers=d["drivers"], bench=d["bench"], pred=d["pred"], today=d["today"], fy_start=d["fy_start"]), d
+
+
+def _goal_decisions(s, cid, acts):
+    out, ids = [], [a.decision_id for a in acts if a.decision_id and a.baseline_json]
+    decs = {d.id: d for d in s.exec(select(CompanyDecision).where(CompanyDecision.company_id == cid, CompanyDecision.decision_type == "goal")).all()} if ids else {}
+    for a in acts:
+        if a.decision_id in decs:
+            d = decs[a.decision_id]
+            try:
+                bl = json.loads(a.baseline_json or "{}")
+            except (TypeError, ValueError):
+                bl = {}
+            out.append({"id": d.id, "goal_id": a.goal_id, "title": d.title, "owner": d.owner, "status": d.status,
+                        "created_on": d.created_at.strftime("%Y-%m-%d") if d.created_at else "", "baseline": bl})
+    return out
+
+
+def _goals_result(s, company, role, viewer, *, save=True):
+    ge = _load_p24("goals_engine")
+    if ge is None:
+        raise HTTPException(503, "محرّك الأهداف غير متاح — " + _p23_diagnostic())
+    R_ = _goals_rows(s, company.id)
+    ctx, d = _goals_ctx(s, company)
+    st = R_["strat"]
+    try:
+        prev = json.loads(st.snapshot_json or "{}") if st else {}
+        strategy = {"vision": st.vision, "mission": st.mission, "pillars": json.loads(st.pillars_json or "[]") or None,
+                    "pillar_names": json.loads(st.pillar_names_json or "{}"), "updated_at": st.updated_at.strftime("%Y-%m-%d") if st.updated_at else None,
+                    "updated_by": st.updated_by} if st else {}
+    except (TypeError, ValueError):
+        prev, strategy = {}, {}
+    goals = [_goal_dict(g) for g in R_["goals"]]
+    krs = [{"id": k.id, "goal_id": k.goal_id, "name": k.name, "metric": k.metric or None, "baseline": k.baseline, "target": k.target, "actual": k.actual,
+            "actual_at": k.actual_at, "actual_by": k.actual_by, "unit": k.unit} for k in R_["krs"]]
+    ms = [{"id": m.id, "goal_id": m.goal_id, "title": m.title, "due": m.due_date, "target": m.target, "actual": m.actual, "owner": m.owner,
+           "evidence_note": m.evidence_note} for m in R_["ms"]]
+    acts = [{"id": a.id, "goal_id": a.goal_id, "kr_id": a.kr_id, "action": a.action, "owner": a.owner, "owner_user_id": a.owner_user_id, "due": a.due_date,
+             "expected_impact": a.expected_impact, "actual_impact": a.actual_impact, "impact_type": a.impact_type, "status": a.status, "decision_id": a.decision_id}
+            for a in R_["acts"]]
+    hist = [{"id": h.id, "goal_id": h.goal_id, "field": h.field, "old_value": h.old_value, "new_value": h.new_value, "changed_by": h.changed_by,
+             "changed_at": h.changed_at.strftime("%Y-%m-%d %H:%M") if h.changed_at else "", "reason": h.reason} for h in R_["hist"]]
+    com = [{"id": c.id, "goal_id": c.goal_id, "kind": c.kind, "text": c.text, "mentions": [x for x in (c.mentions or "").split(",") if x],
+            "attachment_name": c.attachment_name, "attachment_url": c.attachment_url, "by": c.by_name,
+            "at": c.created_at.strftime("%Y-%m-%d %H:%M") if c.created_at else ""} for c in R_["com"]]
+    res = ge.analyze_goals(goals, krs=krs, milestones=ms, actions=acts, strategy=strategy, history=hist, comments=com, previous=prev,
+                           decisions=_goal_decisions(s, company.id, R_["acts"]), existing=d["existing"], sector=_risk_sector(company), today=d["today"],
+                           viewer=viewer, currency=getattr(company, "currency", None) or "SAR", fy_start=d["fy_start"], ctx=ctx)
+    full = res["scope"]["kind"] == "all"
+    if save and full:
+        rows = {g.id: g for g in R_["goals"]}
+        dirty = False
+        for e in res["goals"]:
+            g = rows.get(e["id"])
+            if g and g.status != e["status"]:
+                g.status = e["status"]; s.add(g); dirty = True
+        kr_ev = {k["id"]: k for e in res["goals"] for k in e.get("key_results") or [] if k.get("valid")}
+        for k in R_["krs"]:
+            v = kr_ev.get(k.id)
+            if v and (k.status != v["status"] or k.progress != v.get("progress")):
+                k.status, k.progress = v["status"], v.get("progress"); s.add(k); dirty = True
+        ms_ev = {m["id"]: m for m in res["milestones"]}
+        for m in R_["ms"]:
+            v = ms_ev.get(m.id)
+            if v and m.status != v["status"]:
+                m.status = v["status"]; s.add(m); dirty = True
+        # لقطة المراجعة: تُدوَّر أسبوعياً — تغيّر الحالة يُسجَّل في التاريخ آلياً (system)
+        age_ok = True
+        if st and st.snapshot_at:
+            try:
+                age_ok = (d["today"] - datetime.strptime(st.snapshot_at[:10], "%Y-%m-%d").date()).days >= 7
+            except ValueError:
+                age_ok = True
+        if age_ok and res["goals"]:
+            st = st or CompanyStrategy(company_id=company.id)
+            for h in res.get("auto_history") or []:
+                s.add(CompanyGoalHistory(company_id=company.id, goal_id=h["goal_id"], field=h["field"], old_value=str(h["old_value"])[:200],
+                                         new_value=str(h["new_value"])[:200], changed_by="system", reason=h["reason"][:300]))
+            st.snapshot_json, st.snapshot_at = json.dumps(res["snapshot"], ensure_ascii=False)[:60000], d["today"].isoformat()
+            s.add(st); dirty = True
+        if dirty:
+            s.commit()
+    if res["scope"]["kind"] not in ("all", "executive"):
+        res["sector"] = {**res["sector"], "templates": [{**t, "current": None, "current_basis_ar": None} for t in res["sector"]["templates"]]}
+        res["suggestions"] = []
+    res["role"] = role
+    res["module_errors"] = d["errors"]
+    res["can_create"] = role == "owner" or (viewer.get("title") in ("ceo", "dept_manager", "branch_manager")) or (role in ("manager", "accountant") and viewer.get("title") != "employee")
+    res["can_strategy"] = role == "owner" or viewer.get("title") == "ceo"
+    res["can_scope"] = role == "owner"
+    res["branches_list"] = sorted({b.name for b in s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company.id)).all()} | set(ctx["branches"]))
+    res["goal_names"] = [{"id": g["id"], "name": g["name"], "level": g["level"], "metric": g["metric"]} for g in res["goals"]]
+    return res
+
+
+@app.get("/company/goals-intelligence")
+def company_goals_intelligence(user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role, viewer = _goals_scope(s, user)
+        res = _goals_result(s, company, role, viewer)
+        log_audit(company.id, user.id, user.name, "goals_view", "goals", f"scope={res['scope']['kind']} goals={len(res['goals'])}")
+        return res
+
+
+def _goal_row(s, company, gid):
+    try:
+        gid = int(gid)
+    except (TypeError, ValueError):
+        raise HTTPException(422, "معرّف الهدف غير صالح")
+    g = s.get(CompanyGoal, gid)
+    if not g or g.company_id != company.id or g.archived:
+        raise HTTPException(404, "الهدف غير موجود")
+    return g
+
+
+def _goal_hist(s, company, gid, changes, by, reason):
+    for c in changes:
+        s.add(CompanyGoalHistory(company_id=company.id, goal_id=gid, field=c["field"], old_value=json.dumps(c["old"], ensure_ascii=False)[:300] if not isinstance(c["old"], str) else c["old"][:300],
+                                 new_value=json.dumps(c["new"], ensure_ascii=False)[:300] if not isinstance(c["new"], str) else c["new"][:300],
+                                 changed_by=by[:100], reason=(reason or "")[:300]))
+
+
+def _fnum(v, label):
+    if v in (None, ""):
+        return None
+    try:
+        x = float(v)
+    except (TypeError, ValueError):
+        raise HTTPException(422, f"{label} يجب أن يكون رقماً")
+    if x != x or abs(x) > 1e13:
+        raise HTTPException(422, f"{label} غير صالح")
+    return x
+
+
+@app.post("/company/goals-center/save")
+def company_goal_save(data: dict, user: User = Depends(get_current_user)):
+    """إنشاء/تعديل هدف: يُتحقق من عقد البيانات، وكل تغيير يُسجَّل (القيمة القديمة/الجديدة/من/متى/لماذا)."""
+    with Session(engine) as s:
+        company, role, viewer = _goals_scope(s, user)
+        ge = _load_p24("goals_engine")
+        known = {g.id for g in s.exec(select(CompanyGoal).where(CompanyGoal.company_id == company.id, CompanyGoal.archived == 0)).all()}
+        new = {"name": str(data.get("name") or "").strip()[:200], "objective": str(data.get("objective") or "")[:500], "pillar": data.get("pillar") or None,
+               "level": data.get("level") or "company", "branch": (str(data.get("branch") or "").strip() or None), "department": data.get("department") or None,
+               "owner": (str(data.get("owner") or "").strip()[:100] or None), "metric": data.get("metric") or None, "unit": (str(data.get("unit") or "")[:30] or None),
+               "baseline": _fnum(data.get("baseline"), "خط الأساس"), "target": _fnum(data.get("target"), "المستهدف"),
+               "start": str(data.get("start") or "")[:10], "end": str(data.get("end") or "")[:10], "status_override": data.get("status_override") or None,
+               "priority": data.get("priority") or "medium", "distribution": data.get("distribution") or None, "phase_link": data.get("phase_link") or None,
+               "parent_id": int(data["parent_id"]) if str(data.get("parent_id") or "").isdigit() else None,
+               "depends_on": [int(x) for x in (data.get("depends_on") or []) if str(x).isdigit()]}
+        ou = data.get("owner_user_id")
+        if str(ou or "").isdigit():
+            u2 = s.get(User, int(ou))
+            if not u2 or u2.company_id != company.id:
+                raise HTTPException(422, "المسؤول ليس من فريق شركتك")
+            new["owner_user_id"], new["owner"] = u2.id, new["owner"] or u2.name
+        if new["status_override"] not in (None, "cancelled", "paused"):
+            raise HTTPException(422, "الحالة اليدوية المسموحة: ملغى أو موقوف فقط — بقية الحالات تُحسب آلياً")
+        gid = data.get("id")
+        row = _goal_row(s, company, gid) if gid else None
+        has_krs = bool(data.get("has_krs")) or (row is not None and bool(s.exec(select(CompanyKeyResult).where(CompanyKeyResult.goal_id == row.id)).first()))
+        errs = ge.validate_goal({**new, "id": row.id if row else None}, known_ids=known, has_krs=has_krs)
+        if errs:
+            raise HTTPException(422, " · ".join(errs))
+        if new["parent_id"]:
+            seen, p = set(), new["parent_id"]
+            while p:
+                if row and p == row.id or p in seen:
+                    raise HTTPException(422, "التسلسل يُنشئ حلقة (الهدف يصبح أباً لنفسه)")
+                seen.add(p)
+                pr = s.get(CompanyGoal, p)
+                p = pr.parent_goal_id if pr and pr.company_id == company.id else None
+        by = (user.name or user.email)[:100]
+        reason = str(data.get("reason") or "").strip()
+        if row:
+            old = _goal_dict(row)
+            if not ge.can_edit(old, viewer) or not ge.can_edit({**old, **new}, viewer):
+                raise HTTPException(403, "غير مصرّح بتعديل هذا الهدف")
+            ch = ge.diff_goal(old, {**new, **({"owner_user_id": new["owner_user_id"]} if "owner_user_id" in new else {})})
+            if not ch:
+                return {"ok": True, "id": row.id, "changes": 0}
+            if ge.requires_reason(ch) and not reason:
+                raise HTTPException(422, "سبب التغيير مطلوب عند تعديل المستهدف أو المدة أو المؤشر (حوكمة)")
+        else:
+            if not ge.can_edit(new, viewer):
+                raise HTTPException(403, "غير مصرّح بإنشاء هدف بهذا المستوى/النطاق")
+            row = CompanyGoal(company_id=company.id, created_by=by, source=data.get("source") if data.get("source") in ("manual", "template", "import") else "manual")
+            ch = [{"field": "created", "old": "", "new": new["name"]}]
+        row.parent_goal_id, row.name, row.objective, row.pillar = new["parent_id"], new["name"], new["objective"], new["pillar"] or ""
+        row.level, row.branch, row.department, row.owner = new["level"], new["branch"] or "", new["department"] or "", new["owner"] or ""
+        if "owner_user_id" in new:
+            row.owner_user_id = new["owner_user_id"]
+        row.metric, row.unit, row.baseline, row.target = new["metric"] or "", new["unit"] or "", new["baseline"], new["target"]
+        row.start_date, row.end_date, row.status_override, row.priority = new["start"], new["end"], new["status_override"] or "", new["priority"]
+        row.distribution, row.phase_link = new["distribution"] or "", new["phase_link"] or ""
+        row.depends_on = ",".join(str(x) for x in new["depends_on"])
+        row.updated_at = datetime.now()
+        s.add(row); s.commit(); s.refresh(row)
+        _goal_hist(s, company, row.id, ch, by, reason)
+        s.commit()
+        log_audit(company.id, user.id, user.name, "goal_save", f"goal:{row.id}", json.dumps([c["field"] for c in ch], ensure_ascii=False)[:300])
+        return {"ok": True, "id": row.id, "changes": len(ch)}
+
+
+@app.post("/company/goals-center/archive")
+def company_goal_archive(data: dict, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role, viewer = _goals_scope(s, user)
+        ge = _load_p24("goals_engine")
+        row = _goal_row(s, company, data.get("id"))
+        if not ge.can_edit(_goal_dict(row), viewer):
+            raise HTTPException(403, "غير مصرّح")
+        reason = str(data.get("reason") or "").strip()
+        if not reason:
+            raise HTTPException(422, "سبب الأرشفة مطلوب")
+        row.archived, row.updated_at = 1, datetime.now()
+        s.add(row)
+        _goal_hist(s, company, row.id, [{"field": "archived", "old": "0", "new": "1"}], (user.name or user.email), reason)
+        s.commit()
+        log_audit(company.id, user.id, user.name, "goal_archive", f"goal:{row.id}", reason[:200])
+        return {"ok": True}
+
+
+@app.post("/company/goals-center/kr")
+def company_goal_kr(data: dict, user: User = Depends(get_current_user)):
+    """نتيجة رئيسية (OKR): مؤشر + خط أساس + مستهدف + مصدر — لا نتائج وصفية. delete=true للحذف."""
+    with Session(engine) as s:
+        company, role, viewer = _goals_scope(s, user)
+        ge = _load_p24("goals_engine")
+        g = _goal_row(s, company, data.get("goal_id"))
+        if not ge.can_edit(_goal_dict(g), viewer):
+            raise HTTPException(403, "غير مصرّح")
+        by = (user.name or user.email)[:100]
+        if data.get("id"):
+            k = s.get(CompanyKeyResult, int(data["id"]))
+            if not k or k.company_id != company.id or k.goal_id != g.id:
+                raise HTTPException(404, "النتيجة غير موجودة")
+            if data.get("delete"):
+                _goal_hist(s, company, g.id, [{"field": "kr_deleted", "old": k.name or k.metric, "new": ""}], by, str(data.get("reason") or ""))
+                s.delete(k); s.commit()
+                return {"ok": True}
+        else:
+            k = CompanyKeyResult(company_id=company.id, goal_id=g.id)
+        kd = {"metric": data.get("metric") or None, "baseline": _fnum(data.get("baseline"), "خط الأساس"), "target": _fnum(data.get("target"), "المستهدف")}
+        errs = ge.validate_kr(kd)
+        if errs:
+            raise HTTPException(422, " · ".join(errs))
+        old = {"target": k.target, "baseline": k.baseline, "metric": k.metric}
+        k.name, k.metric, k.baseline, k.target = str(data.get("name") or "")[:200], kd["metric"], kd["baseline"], kd["target"]
+        k.unit = str(data.get("unit") or "")[:30]
+        av = _fnum(data.get("actual"), "القيمة الحالية")
+        if av is not None:
+            if (ge.metric_meta(kd["metric"]) or {}).get("src") != "manual":
+                raise HTTPException(422, "قيمة هذا المؤشر تُقرأ من بيانات نبّاه — لا تُدخل يدوياً")
+            k.actual, k.actual_at, k.actual_by = av, datetime.now().strftime("%Y-%m-%d"), by
+        s.add(k); s.commit(); s.refresh(k)
+        _goal_hist(s, company, g.id, [{"field": f"kr:{k.id}", "old": old, "new": kd}], by, str(data.get("reason") or ""))
+        s.commit()
+        log_audit(company.id, user.id, user.name, "goal_kr", f"goal:{g.id}", f"kr={k.id}")
+        return {"ok": True, "id": k.id}
+
+
+@app.post("/company/goals-center/milestone")
+def company_goal_milestone(data: dict, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role, viewer = _goals_scope(s, user)
+        ge = _load_p24("goals_engine")
+        g = _goal_row(s, company, data.get("goal_id"))
+        gd = _goal_dict(g)
+        if not ge.can_edit(gd, viewer):
+            raise HTTPException(403, "غير مصرّح")
+        by = (user.name or user.email)[:100]
+        if data.get("generate"):
+            ctx, _d = _goals_ctx(s, company)
+            prop = ge.generate_milestones(gd, ctx)
+            if not data.get("save"):
+                return {"ok": True, "proposals": prop}
+            for p in prop:
+                s.add(CompanyGoalMilestone(company_id=company.id, goal_id=g.id, title=p["title"][:200], due_date=p["due"], target=p["target"], owner=p.get("owner") or ""))
+            _goal_hist(s, company, g.id, [{"field": "milestones_generated", "old": "", "new": len(prop)}], by, prop[0]["basis_ar"] if prop else "")
+            s.commit()
+            return {"ok": True, "created": len(prop)}
+        if data.get("id"):
+            m = s.get(CompanyGoalMilestone, int(data["id"]))
+            if not m or m.company_id != company.id or m.goal_id != g.id:
+                raise HTTPException(404, "المرحلة غير موجودة")
+            if data.get("delete"):
+                s.delete(m); _goal_hist(s, company, g.id, [{"field": "milestone_deleted", "old": m.title, "new": ""}], by, str(data.get("reason") or "")); s.commit()
+                return {"ok": True}
+        else:
+            m = CompanyGoalMilestone(company_id=company.id, goal_id=g.id)
+        md = {"title": str(data.get("title") or "").strip()[:200], "due": str(data.get("due") or "")[:10], "target": _fnum(data.get("target"), "مستهدف المرحلة")}
+        errs = ge.validate_milestone(md, gd)
+        if errs:
+            raise HTTPException(422, " · ".join(errs))
+        old = {"due": m.due_date, "target": m.target}
+        m.title, m.due_date, m.target = md["title"], md["due"], md["target"]
+        m.owner, m.evidence_note = str(data.get("owner") or "")[:100], str(data.get("evidence_note") or "")[:500]
+        m.actual = _fnum(data.get("actual"), "الفعلي")
+        s.add(m); s.commit(); s.refresh(m)
+        _goal_hist(s, company, g.id, [{"field": f"milestone:{m.id}", "old": old, "new": {"due": m.due_date, "target": m.target}}], by, str(data.get("reason") or ""))
+        s.commit()
+        return {"ok": True, "id": m.id}
+
+
+@app.post("/company/goals-center/action")
+def company_goal_action(data: dict, user: User = Depends(get_current_user)):
+    """إجراء للهدف: محرر الهدف ينشئ ويعدّل؛ المُسند إليه يحدّث الحالة والأثر الفعلي فقط."""
+    with Session(engine) as s:
+        company, role, viewer = _goals_scope(s, user)
+        ge = _load_p24("goals_engine")
+        g = _goal_row(s, company, data.get("goal_id"))
+        gd = _goal_dict(g)
+        editor = ge.can_edit(gd, viewer) or ge._is_mine(gd, viewer)
+        by = (user.name or user.email)[:100]
+        if data.get("id"):
+            a = s.get(CompanyGoalAction, int(data["id"]))
+            if not a or a.company_id != company.id or a.goal_id != g.id:
+                raise HTTPException(404, "الإجراء غير موجود")
+            assignee = ge._is_mine({"owner": a.owner, "owner_user_id": a.owner_user_id}, viewer)
+            if not editor and not assignee:
+                raise HTTPException(403, "غير مصرّح")
+        else:
+            if not editor:
+                raise HTTPException(403, "غير مصرّح بإضافة إجراء لهذا الهدف")
+            a, assignee = CompanyGoalAction(company_id=company.id, goal_id=g.id, created_by=by), False
+        old = {"status": a.status, "actual_impact": a.actual_impact, "expected_impact": a.expected_impact, "owner": a.owner, "due": a.due_date}
+        if editor:
+            a.action = str(data.get("action") if data.get("action") is not None else a.action or "").strip()[:300]
+            a.owner = str(data.get("owner") if data.get("owner") is not None else a.owner or "")[:100]
+            if str(data.get("owner_user_id") or "").isdigit():
+                u2 = s.get(User, int(data["owner_user_id"]))
+                if not u2 or u2.company_id != company.id:
+                    raise HTTPException(422, "المسؤول ليس من فريق شركتك")
+                a.owner_user_id, a.owner = u2.id, a.owner or u2.name
+            a.due_date = str(data.get("due") if data.get("due") is not None else a.due_date or "")[:10]
+            if "expected_impact" in data:
+                a.expected_impact = _fnum(data.get("expected_impact"), "الأثر المتوقع")
+            if data.get("impact_type") in ("potential", "recovery", "actual"):
+                a.impact_type = data["impact_type"]
+            if str(data.get("kr_id") or "").isdigit():
+                a.kr_id = int(data["kr_id"])
+        if "status" in data:
+            a.status = str(data["status"])
+        if "actual_impact" in data:
+            a.actual_impact = _fnum(data.get("actual_impact"), "الأثر الفعلي")
+        errs = ge.validate_action({"action": a.action, "status": a.status, "due": a.due_date, "expected_impact": a.expected_impact, "actual_impact": a.actual_impact})
+        if errs:
+            raise HTTPException(422, " · ".join(errs))
+        if a.status == "done" and not a.done_at:
+            a.done_at = datetime.now().strftime("%Y-%m-%d")
+        a.updated_at = datetime.now()
+        s.add(a); s.commit(); s.refresh(a)
+        new = {"status": a.status, "actual_impact": a.actual_impact, "expected_impact": a.expected_impact, "owner": a.owner, "due": a.due_date}
+        if new != old:
+            _goal_hist(s, company, g.id, [{"field": f"action:{a.id}", "old": old, "new": new}], by, str(data.get("reason") or ""))
+            s.commit()
+        log_audit(company.id, user.id, user.name, "goal_action", f"goal:{g.id}", f"action={a.id} status={a.status}")
+        return {"ok": True, "id": a.id}
+
+
+@app.post("/company/goals-center/value")
+def company_goal_value(data: dict, user: User = Depends(get_current_user)):
+    """قيمة يدوية فقط لمؤشر لا تملك نبّاه مصدره (NPS/ساعات التدريب...) — موسومة بمن أدخلها ومتى ومن أين."""
+    with Session(engine) as s:
+        company, role, viewer = _goals_scope(s, user)
+        ge = _load_p24("goals_engine")
+        g = _goal_row(s, company, data.get("id"))
+        gd = _goal_dict(g)
+        if not (ge.can_edit(gd, viewer) or ge._is_mine(gd, viewer)):
+            raise HTTPException(403, "غير مصرّح")
+        meta = ge.metric_meta(g.metric) or {}
+        if meta.get("src") not in ("manual", "actions"):
+            raise HTTPException(422, "قيمة هذا المؤشر تُحسب من بيانات نبّاه تلقائياً — لا تُعدّل يدوياً")
+        v = _fnum(data.get("value"), "القيمة")
+        if v is None:
+            raise HTTPException(422, "القيمة مطلوبة")
+        old = g.manual_value
+        g.manual_value, g.manual_at, g.manual_by = v, datetime.now().strftime("%Y-%m-%d"), (user.name or user.email)[:100]
+        g.manual_source = str(data.get("source") or "")[:200]
+        s.add(g)
+        _goal_hist(s, company, g.id, [{"field": "manual_value", "old": old, "new": v}], (user.name or user.email), str(data.get("reason") or g.manual_source))
+        s.commit()
+        log_audit(company.id, user.id, user.name, "goal_value", f"goal:{g.id}", f"{old}→{v}")
+        return {"ok": True}
+
+
+@app.post("/company/goals-center/collab")
+def company_goal_collab(data: dict, user: User = Depends(get_current_user)):
+    """التعاون بصلاحيات: تعليق/إشارة/دليل/طلب تحديث/تصعيد للكل ضمن النطاق · تعيين مسؤول لمحرر الهدف · اعتماد/رفض لغير صاحب الهدف."""
+    with Session(engine) as s:
+        company, role, viewer = _goals_scope(s, user)
+        ge = _load_p24("goals_engine")
+        g = _goal_row(s, company, data.get("goal_id"))
+        gd = _goal_dict(g)
+        kind = str(data.get("kind") or "comment")
+        if kind not in _GOAL_COLLAB_KINDS:
+            raise HTTPException(422, "نوع غير معروف")
+        assigned = {a.goal_id for a in s.exec(select(CompanyGoalAction).where(CompanyGoalAction.company_id == company.id, CompanyGoalAction.owner_user_id == user.id)).all()}
+        if not ge.can_collab(kind, gd, viewer, assigned):
+            raise HTTPException(403, "غير مصرّح بهذا الإجراء على هذا الهدف")
+        text = str(data.get("text") or "").strip()[:2000]
+        url = str(data.get("attachment_url") or "").strip()[:500]
+        if url and not url.lower().startswith(("https://", "http://")):
+            raise HTTPException(422, "رابط الدليل يجب أن يبدأ بـ https://")
+        by = (user.name or user.email)[:100]
+        if kind == "assign_owner":
+            ou = data.get("owner_user_id")
+            nm = str(data.get("owner") or "").strip()[:100]
+            if str(ou or "").isdigit():
+                u2 = s.get(User, int(ou))
+                if not u2 or u2.company_id != company.id:
+                    raise HTTPException(422, "المسؤول ليس من فريق شركتك")
+                g.owner_user_id, nm = u2.id, nm or u2.name
+            if not nm:
+                raise HTTPException(422, "حدد المسؤول")
+            _goal_hist(s, company, g.id, [{"field": "owner", "old": g.owner, "new": nm}], by, text)
+            g.owner = nm
+            text = text or f"تعيين المسؤول: {nm}"
+        elif kind in ("approve", "reject"):
+            if kind == "reject" and not text:
+                raise HTTPException(422, "سبب الرفض مطلوب")
+            _goal_hist(s, company, g.id, [{"field": "approval", "old": g.approval, "new": "approved" if kind == "approve" else "rejected"}], by, text)
+            g.approval = "approved" if kind == "approve" else "rejected"
+        elif kind in ("comment", "mention", "escalate", "request_update") and not text:
+            raise HTTPException(422, "النص مطلوب")
+        elif kind == "evidence" and not (url or text):
+            raise HTTPException(422, "أرفق رابط الدليل أو وصفه")
+        g.updated_at = datetime.now()
+        s.add(g)
+        mentions = [str(x)[:60] for x in (data.get("mentions") or [])][:10]
+        c = CompanyGoalComment(company_id=company.id, goal_id=g.id, kind=kind, text=text, mentions=",".join(mentions),
+                               attachment_name=str(data.get("attachment_name") or "")[:200], attachment_url=url, by_user_id=user.id, by_name=by)
+        s.add(c); s.commit(); s.refresh(c)
+        log_audit(company.id, user.id, user.name, f"goal_{kind}", f"goal:{g.id}", text[:200])
+        return {"ok": True, "id": c.id}
+
+
+@app.post("/company/goals-center/cascade")
+def company_goal_cascade(data: dict, user: User = Depends(get_current_user)):
+    """توزيع هدف الشركة على الفروع: مقترح (حسب الحصة أو بالتساوي) → يُحفظ باعتماد المستخدم ويُوسم «موزّع تلقائياً»."""
+    with Session(engine) as s:
+        company, role, viewer = _goals_scope(s, user)
+        ge = _load_p24("goals_engine")
+        g = _goal_row(s, company, data.get("goal_id"))
+        gd = _goal_dict(g)
+        if not ge.can_edit(gd, viewer):
+            raise HTTPException(403, "غير مصرّح")
+        ctx, _d = _goals_ctx(s, company)
+        prop = ge.auto_cascade(gd, ctx, "equal" if data.get("basis") == "equal" else "share")
+        if prop["status"] != "ok" or not data.get("save"):
+            return prop
+        kids = s.exec(select(CompanyGoal).where(CompanyGoal.company_id == company.id, CompanyGoal.parent_goal_id == g.id, CompanyGoal.archived == 0)).all()
+        have = {k.branch for k in kids if k.metric == g.metric}
+        created, skipped = [], []
+        by = (user.name or user.email)[:100]
+        for r in prop["rows"]:
+            if r["branch"] in have:
+                skipped.append(r["branch"]); continue
+            c = CompanyGoal(company_id=company.id, parent_goal_id=g.id, name=f"{g.name} — {r['branch']}", objective=g.objective, pillar=g.pillar, level="branch",
+                            branch=r["branch"], department=g.department, metric=g.metric, unit=g.unit, target=r["target"], start_date=g.start_date,
+                            end_date=g.end_date, source="cascade_auto", distribution="auto", priority=g.priority, created_by=by, updated_at=datetime.now())
+            s.add(c); s.commit(); s.refresh(c)
+            _goal_hist(s, company, c.id, [{"field": "created", "old": "", "new": c.name}], by, prop["basis_ar"])
+            created.append(c.id)
+        _goal_hist(s, company, g.id, [{"field": "cascade", "old": "", "new": f"{len(created)} فرع"}], by, prop["basis_ar"])
+        s.commit()
+        log_audit(company.id, user.id, user.name, "goal_cascade", f"goal:{g.id}", f"created={created} skipped={skipped}")
+        return {**prop, "created": created, "skipped": skipped}
+
+
+@app.post("/company/goals-center/import")
+def company_goals_import(data: dict, user: User = Depends(get_current_user)):
+    """استيراد أهداف موجودة في نبّاه (موازنة/التنبؤ/أهداف الفروع/الهامش) أو قالب قطاع — بقرار المستخدم فقط."""
+    with Session(engine) as s:
+        company, role, viewer = _goals_scope(s, user)
+        if not (role == "owner" or viewer.get("title") == "ceo"):
+            raise HTTPException(403, "الاستيراد للمالك أو الرئيس التنفيذي")
+        ge = _load_p24("goals_engine")
+        items = data.get("items") or []
+        if not isinstance(items, list) or not items or len(items) > 30:
+            raise HTTPException(422, "اختر من 1 إلى 30 هدفاً")
+        known = {g.id for g in s.exec(select(CompanyGoal).where(CompanyGoal.company_id == company.id)).all()}
+        by = (user.name or user.email)[:100]
+        ids = []
+        for it in items:
+            gd = {"name": str(it.get("name") or "")[:200], "metric": it.get("metric"), "target": _fnum(it.get("target"), "المستهدف"), "start": str(it.get("start") or "")[:10],
+                  "end": str(it.get("end") or "")[:10], "level": it.get("level") or "company", "branch": it.get("branch") or None, "pillar": it.get("pillar") or None,
+                  "baseline": _fnum(it.get("baseline"), "خط الأساس")}
+            errs = ge.validate_goal(gd, known_ids=known)
+            if errs:
+                raise HTTPException(422, f"«{gd['name']}»: " + " · ".join(errs))
+            c = CompanyGoal(company_id=company.id, name=gd["name"], metric=gd["metric"], target=gd["target"], baseline=gd["baseline"], start_date=gd["start"],
+                            end_date=gd["end"], level=gd["level"], branch=gd["branch"] or "", pillar=gd["pillar"] or "",
+                            source="template" if it.get("from") == "template" else "import", created_by=by, updated_at=datetime.now())
+            s.add(c); s.commit(); s.refresh(c)
+            _goal_hist(s, company, c.id, [{"field": "created", "old": "", "new": c.name}], by, str(it.get("from_ar") or it.get("basis_ar") or "استيراد")[:300])
+            ids.append(c.id)
+        s.commit()
+        log_audit(company.id, user.id, user.name, "goals_import", "goals", f"ids={ids}")
+        return {"ok": True, "ids": ids}
+
+
+@app.post("/company/goals-center/strategy")
+def company_goals_strategy(data: dict, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role, viewer = _goals_scope(s, user)
+        if not (role == "owner" or viewer.get("title") == "ceo"):
+            raise HTTPException(403, "الإطار الاستراتيجي يعدّله المالك أو الرئيس التنفيذي")
+        ge = _load_p24("goals_engine")
+        pillars = [p for p in (data.get("pillars") or []) if p in ge.PILLARS]
+        if data.get("pillars") is not None and not pillars:
+            raise HTTPException(422, "اختر ركيزة واحدة على الأقل")
+        names = {k: str(v)[:60] for k, v in (data.get("pillar_names") or {}).items() if k in ge.PILLARS and str(v).strip()}
+        st = s.exec(select(CompanyStrategy).where(CompanyStrategy.company_id == company.id)).first() or CompanyStrategy(company_id=company.id)
+        old = {"vision": st.vision, "mission": st.mission, "pillars": st.pillars_json}
+        st.vision, st.mission = str(data.get("vision") or "")[:1000], str(data.get("mission") or "")[:1000]
+        st.pillars_json, st.pillar_names_json = json.dumps(pillars or ge.DEFAULT_PILLARS, ensure_ascii=False), json.dumps(names, ensure_ascii=False)
+        st.updated_by, st.updated_at = (user.name or user.email)[:100], datetime.now()
+        s.add(st); s.commit()
+        log_audit(company.id, user.id, user.name, "goals_strategy", "goals", json.dumps({"before": old, "after": {"vision": st.vision, "pillars": pillars}}, ensure_ascii=False)[:400])
+        return {"ok": True}
+
+
+@app.get("/company/goals-center/scope")
+def company_goals_scope_list(user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role, viewer = _goals_scope(s, user)
+        if role != "owner":
+            raise HTTPException(403, "ربط المستخدمين بالنطاق للمالك فقط")
+        users = s.exec(select(User).where(User.company_id == company.id)).all()
+        sc = {x.user_id: x for x in s.exec(select(CompanyUserScope).where(CompanyUserScope.company_id == company.id)).all()}
+        return {"users": [{"id": u.id, "name": u.name, "email": u.email, "role": get_user_role(s, u), "title": (sc.get(u.id).title if sc.get(u.id) else ""),
+                           "branch": (sc.get(u.id).branch if sc.get(u.id) else ""), "department": (sc.get(u.id).department if sc.get(u.id) else "")} for u in users]}
+
+
+@app.post("/company/goals-center/scope")
+def company_goals_scope_set(data: dict, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role, viewer = _goals_scope(s, user)
+        if role != "owner":
+            raise HTTPException(403, "ربط المستخدمين بالنطاق للمالك فقط")
+        ge = _load_p24("goals_engine")
+        u2 = s.get(User, int(data.get("user_id") or 0)) if str(data.get("user_id") or "").isdigit() else None
+        if not u2 or u2.company_id != company.id:
+            raise HTTPException(404, "المستخدم ليس من شركتك")
+        title = str(data.get("title") or "")
+        if title not in _GOAL_TITLES:
+            raise HTTPException(422, "المسمّى غير صالح")
+        br, dp = str(data.get("branch") or "")[:100], str(data.get("department") or "")
+        if title == "branch_manager" and not br:
+            raise HTTPException(422, "مدير الفرع يحتاج فرعاً")
+        if title == "dept_manager" and dp not in ge.DEPARTMENTS:
+            raise HTTPException(422, "مدير القسم يحتاج قسماً صالحاً")
+        row = s.exec(select(CompanyUserScope).where(CompanyUserScope.company_id == company.id, CompanyUserScope.user_id == u2.id)).first() \
+            or CompanyUserScope(company_id=company.id, user_id=u2.id)
+        old = {"title": row.title, "branch": row.branch, "department": row.department}
+        row.title, row.branch, row.department, row.updated_by, row.updated_at = title, br, dp if dp in ge.DEPARTMENTS else "", (user.name or user.email)[:100], datetime.now()
+        s.add(row); s.commit()
+        log_audit(company.id, user.id, user.name, "goals_scope", f"user:{u2.id}", json.dumps({"before": old, "after": {"title": title, "branch": br, "department": dp}}, ensure_ascii=False))
+        return {"ok": True}
+
+
+@app.post("/company/goals-center/to-decision")
+def company_goal_to_decision(data: dict, user: User = Depends(get_current_user)):
+    """هدف معرّض للخطر → قرار (مسؤول، موعد، أثر متوقع على المؤشر وأثر مالي مصنّف) + إجراء → متابعة القرارات (3.9).
+    خط الأساس = لقطة الهدف وقت القرار لقياس قبل/بعد. الأرقام تُعاد حسابها في الخادم."""
+    with Session(engine) as s:
+        company, role, viewer = _goals_scope(s, user)
+        ge = _load_p24("goals_engine")
+        g = _goal_row(s, company, data.get("goal_id"))
+        if not ge.can_edit(_goal_dict(g), viewer):
+            raise HTTPException(403, "غير مصرّح بإنشاء قرار لهذا الهدف")
+        res = _goals_result(s, company, role, viewer, save=False)
+        e = next((x for x in res["goals"] if x["id"] == g.id), None)
+        if not e:
+            raise HTTPException(404, "الهدف خارج نطاقك")
+        code = str(data.get("code") or "")
+        opt = next((o for o in e.get("decision_options") or [] if o["code"] == code), None)
+        if not opt:
+            raise HTTPException(422, "لا يوجد قرار مقترح بهذا الرمز — الهدف ليس معرّضاً للخطر أو تغيّرت حالته")
+        owner = str(data.get("owner") or e.get("owner") or "")[:100]
+        due = str(data.get("due_date") or "")[:10]
+        if due and not _valid_date(due):
+            raise HTTPException(422, "تاريخ غير صالح")
+        if not owner or not due:
+            raise HTTPException(422, "القرار يحتاج مسؤولاً وموعداً")
+        amt = opt.get("expected_financial_impact")
+        d = CompanyDecision(
+            company_id=company.id, title=str(data.get("title") or opt["title"])[:200],
+            detail=(f"الهدف: {e['name']} · الحالة: {e['status_ar']} · " + "؛ ".join(e.get("why") or []))[:1000],
+            owner=owner, due_date=due, kpi=(e.get("metric") or "")[:50], status="open", baseline_sales=_company_total_sales(s, company.id),
+            expected_impact=(f"{opt['expected_kpi_impact_ar']} · " + (f"{amt:,.0f} {res.get('currency')} ({opt.get('impact_type_ar')})" if amt else "أثر مالي غير قابل للتقدير"))[:200],
+            linked_to=f"goal:{g.id}"[:200], rationale=(opt.get("basis_ar") or "")[:500], metric_id=(e.get("metric") or "")[:50], baseline_value=e.get("actual"),
+            expected_impact_value=amt, impact_status="expected", source_signal=f"goal:{g.id}:{code}"[:200], problem_type=f"goal:{e['status']}",
+            decision_type="goal", outcome_status="pending_measurement", created_by=user.name or user.email, data_source="goals_engine", updated_at=datetime.now())
+        s.add(d); s.commit(); s.refresh(d)
+        ca = CompanyAction(company_id=company.id, decision_id=d.id, title=str(data.get("action") or opt["title"])[:200], owner=owner,
+                           priority="P1" if e["status"] == "behind" else "P2", due_date=due, start_date=datetime.now().strftime("%Y-%m-%d"), updated_at=datetime.now())
+        s.add(ca)
+        ga = CompanyGoalAction(company_id=company.id, goal_id=g.id, action=str(data.get("action") or opt["title"])[:300], owner=owner, due_date=due,
+                               expected_impact=amt, impact_type=opt.get("impact_type") or "potential", status="open", decision_id=d.id,
+                               baseline_json=json.dumps(ge.decision_baseline(e), ensure_ascii=False, default=str)[:4000], created_by=(user.name or user.email)[:100])
+        s.add(ga)
+        _goal_hist(s, company, g.id, [{"field": "decision", "old": "", "new": f"قرار #{d.id}: {d.title}"}], (user.name or user.email), opt.get("basis_ar") or "")
+        s.commit(); s.refresh(ca); s.refresh(ga)
+        log_audit(company.id, user.id, user.name, "decision_from_goal", f"goal:{g.id}", f"decision={d.id} code={code} impact={amt}")
+        return {"ok": True, "decision_id": d.id, "action_ids": [ca.id], "goal_action_id": ga.id}
+
+
+@app.post("/company/goals-center/ai-insights")
+def company_goals_ai(data: dict, request: Request, user: User = Depends(get_current_user)):
+    """AI يفسر نتائج محرك الأهداف فقط (ضمن نطاق المستخدم) — لا يخترع أهدافاً ولا أرقاماً."""
+    with Session(engine) as s:
+        company, role, viewer = _goals_scope(s, user)
+        res = _goals_result(s, company, role, viewer, save=False)
+    ge, gw = _load_p24("goals_engine"), _load_p24("ai_gateway")
+    if gw is None:
+        raise HTTPException(503, "بوابة الذكاء الاصطناعي غير متاحة — " + _p23_diagnostic())
+    if not res["goals"]:
+        raise HTTPException(422, "لا توجد أهداف ضمن نطاقك لتفسيرها")
+    q = str(data.get("question") or ge.AI_QUESTIONS[0])[:300]
+    ctx = ge.ai_context(res)
+    lim = sum(1 for g in res["goals"] if (g.get("confidence") or {}).get("level") == "limited")
+    out = gw.request_ai_analysis(gw.GeminiProvider(company_gemini), ctx,
+                                 q + " — فسّر من أرقام محرك الأهداف كما هي (الحالة والإسقاط والفجوة والثقة). لا تخترع أهدافاً أو أرقاماً، "
+                                     "ولا تقل إن مخاطرة «سببت» الفجوة — قل «مرتبطة». إن كانت البيانات غير متاحة فقل ذلك.",
+                                 trust_report={"overall_score": max(40, 90 - lim * 10), "status": "warning" if lim else "pass", "has_critical_fail": False, "main_causes": []},
+                                 lang=get_lang(request), company=company)
+    log_audit(company.id, user.id, user.name, "goals_ai", "goals", f"q={q[:80]}")
+    return {"question": q, "ai": out}
+
+
 @app.get("/company/executive-intelligence")
 def company_executive_intelligence(request: Request, user: User = Depends(get_current_user),
                                    period: Optional[str] = None, ai: int = 0):
@@ -7752,7 +8617,7 @@ def company_executive_intelligence(request: Request, user: User = Depends(get_cu
                                 result["sector_position"] = {**{k: _bz["summary"][k] for k in ("compared", "above", "near", "below", "critical", "benchmark_unavailable", "biggest_gap", "biggest_strength")},
                                                              "link": "company-sector-benchmark.html"}
                                 result.setdefault("module_signals", {})["benchmark"] = _bz.get("signals", [])[:6]
-                            _pe = _load_p24("prediction_engine")
+                            _pe, _pz = _load_p24("prediction_engine"), None
                             if _pe is not None:      # 3.7: النظرة المستقبلية (نفس البيانات المخزنة مؤقتاً — بلا حفظ)
                                 _ps = _pred_settings(s, company)
                                 _pz = _pe.analyze_prediction(_mods, sales_rows=_cust, risk=_rk, drivers=_dv, settings={"targets": _ps["targets"], "fy_start": _ps["fy_start"]},
@@ -7761,6 +8626,20 @@ def company_executive_intelligence(request: Request, user: User = Depends(get_cu
                                     result["prediction"] = {"outlook": _pz["outlook"], "headline": _pz["brief"]["headline"], "risks": _pz["risks"][:3],
                                                             "link": "company-performance-prediction.html"}
                                     result.setdefault("module_signals", {})["prediction"] = _pz.get("signals", [])[:6]
+                            _ge = _load_p24("goals_engine")
+                            if _ge is not None:      # 3.8: الأهداف والنتائج (نطاق المستخدم نفسه — نفس البيانات)
+                                _gr = _goals_rows(s, company.id)
+                                if _gr["goals"]:
+                                    _gc, _gco, _gv = _goals_scope(s, user)
+                                    _gz = _ge.analyze_goals([_goal_dict(g) for g in _gr["goals"]],
+                                                            milestones=[{"id": m.id, "goal_id": m.goal_id, "title": m.title, "due": m.due_date, "target": m.target, "actual": m.actual} for m in _gr["ms"]],
+                                                            actions=[{"id": a.id, "goal_id": a.goal_id, "action": a.action, "owner": a.owner, "owner_user_id": a.owner_user_id, "due": a.due_date,
+                                                                      "expected_impact": a.expected_impact, "actual_impact": a.actual_impact, "status": a.status} for a in _gr["acts"]],
+                                                            mods=_mods, sales_rows=_cust, risk=_rk, drivers=_dv, pred=_pz, sector=_risk_sector(company),
+                                                            today=datetime.now().date(), viewer=_gv, currency=getattr(company, "currency", None) or "SAR")
+                                    result["goals"] = {"counts": _gz["overview"]["counts"], "headline": _gz["overview"]["headline_ar"], "top_risk": _gz["overview"]["top_risk"][:3],
+                                                       "link": "company-goals-intelligence.html"}
+                                    result.setdefault("module_signals", {})["goals"] = _gz.get("signals", [])[:6]
             except HTTPException:
                 pass
             try:   # إشارات المشتريات 2.7
@@ -13088,7 +13967,7 @@ ENGINE_MODULES = ("nabbah_finance", "nabbah_trust", "semantic_layer", "kpi_engin
                   "ai_gateway", "period_aggregation", "legacy_adapters", "platform_bridge",
                   "intelligence_engine", "forecast_engine", "scenario_engine", "decision_memory",
                   "rule_catalog", "canonical_model", "period_model", "metric_registry", "ingestion",
-                  "sales_engine", "inventory_engine", "purchases_engine", "cashflow_engine", "hr_engine", "ops_engine", "finance_engine", "sector_intelligence", "leakage_engine", "tax_engine", "risk_engine", "drivers_engine", "benchmark_engine", "prediction_engine")
+                  "sales_engine", "inventory_engine", "purchases_engine", "cashflow_engine", "hr_engine", "ops_engine", "finance_engine", "sector_intelligence", "leakage_engine", "tax_engine", "risk_engine", "drivers_engine", "benchmark_engine", "prediction_engine", "goals_engine")
 
 
 def _runtime_health():
