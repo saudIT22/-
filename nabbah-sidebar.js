@@ -71,7 +71,8 @@
       { label: "المقارنة القطاعية (السابقة)", href: "company-benchmark.html" },
     ]},
     { icon: "🤖", label: "ذكاء نبّاه", items: [
-      { label: "التنبؤ بالأداء", href: "company-predictions.html" },
+      { label: "التنبؤ بالأداء", href: "company-performance-prediction.html" },
+      { label: "التنبؤ (السابق)", href: "company-predictions.html" },
       { label: "محاكاة السيناريوهات", href: "company-whatif.html" },
       { label: "السيناريوهات المحفوظة", href: "company-scenarios.html" },
       { label: "الأسباب الجذرية", href: "company-root-cause.html" },
