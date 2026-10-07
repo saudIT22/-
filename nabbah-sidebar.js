@@ -16,7 +16,7 @@
     { icon: "🎯", label: "مركز القيادة", items: [
       { label: "مركز القيادة التنفيذي", href: "company-command-center.html" },
       { label: "صحة الشركة", href: "company-health.html" },
-      { label: "الأهداف والنتائج", href: "company-goals.html" },
+      { label: "الأهداف والنتائج", href: "company-goals-intelligence.html" },
       { label: "عرض مجلس الإدارة", href: "company-board.html" },
     ]},
     { icon: "💰", label: "المالية", items: [
@@ -52,7 +52,8 @@
       { label: "إدخال بيانات المشتريات", href: "company-procurement.html" },
     ]},
     { icon: "🎯", label: "الاستراتيجية", items: [
-      { label: "الأهداف والنتائج", href: "company-goals.html" },
+      { label: "مركز الأهداف والنتائج", href: "company-goals-intelligence.html" },
+      { label: "الأهداف (السابقة)", href: "company-goals.html" },
     ]},
     { icon: "⚠️", label: "المخاطر والامتثال", items: [
       { label: "مركز المخاطر", href: "company-risk-intelligence.html" },
