@@ -57,6 +57,7 @@
     { icon: "⚠️", label: "المخاطر والامتثال", items: [
       { label: "مركز المخاطر", href: "company-risk-intelligence.html" },
       { label: "مسببات المخاطر", href: "company-risk-drivers.html" },
+      { label: "المقارنة بالقطاع", href: "company-sector-benchmark.html" },
       { label: "محرّك المخاطر (السابق)", href: "company-risks.html" },
       { label: "الضريبة والزكاة", href: "company-tax.html" },
       { label: "سجل التدقيق", href: "company-audit.html" },
@@ -66,7 +67,8 @@
     { icon: "🌍", label: "السوق", items: [
       { label: "المنافسون", href: "company-competitors.html" },
       { label: "الأحداث المؤثرة", href: "company-events.html" },
-      { label: "المقارنة القطاعية", href: "company-benchmark.html" },
+      { label: "المقارنة بالقطاع", href: "company-sector-benchmark.html" },
+      { label: "المقارنة القطاعية (السابقة)", href: "company-benchmark.html" },
     ]},
     { icon: "🤖", label: "ذكاء نبّاه", items: [
       { label: "التنبؤ بالأداء", href: "company-predictions.html" },
