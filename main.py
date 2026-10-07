@@ -761,6 +761,44 @@ class CompanyOpsSetting(SQLModel, table=True):
     updated_at: _DTCOL = Field(default_factory=_now_naive)
 
 
+class CompanyPredictionRun(SQLModel, table=True):
+    """تشغيل تنبؤ (3.7): واحد لكل شهر بيانات جديد — يحفظ نسخة النموذج والثقة والمسببات. التوقعات الأصلية لا تُعدّل (لقياس الدقة)."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    base_period: str = Field(default="", index=True)
+    model_version: str = ""
+    horizon: int = 6
+    confidence: Optional[float] = None
+    drivers_json: str = "[]"
+    made_on: str = Field(default="", index=True)
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+class CompanyPrediction(SQLModel, table=True):
+    """قيمة متوقعة لمؤشر/نطاق/شهر ضمن تشغيل — مع النطاق والثقة. تُقارن لاحقاً بالفعلي (الدقة، قبل/بعد)."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    run_id: int = Field(index=True)
+    metric: str = Field(default="", index=True)
+    scope: str = "company"
+    period: str = Field(default="", index=True)
+    h: int = 1
+    value: Optional[float] = None
+    lower: Optional[float] = None
+    upper: Optional[float] = None
+    confidence: Optional[float] = None
+    made_on: str = ""
+
+
+class CompanyPredictionSetting(SQLModel, table=True):
+    """أهداف التنبؤ (3.7): الهدف السنوي للإيراد والربح — وإلا تُقرأ من الموازنة أو أهداف الفروع."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    settings_json: str = "{}"
+    updated_by: str = ""
+    updated_at: _DTCOL = Field(default_factory=_now_naive)
+
+
 class BenchmarkDataset(SQLModel, table=True):
     """طبقة المعايير القطاعية (3.5): company_id فارغ = معيار المنصّة (من الإدارة)، وإلا معيار خاص بالشركة.
     كل معيار بمصدره ومنهجيته وفترته وعيّنته وثقته — لا معيار بلا مصدر."""
@@ -1463,6 +1501,11 @@ def page_fin_overview():
 @app.get("/company-ops-analytics.html")
 def page_ops_analytics():
     return FileResponse("company-ops-analytics.html")
+
+
+@app.get("/company-performance-prediction.html")
+def page_performance_prediction():
+    return FileResponse("company-performance-prediction.html")
 
 
 @app.get("/company-sector-benchmark.html")
@@ -4343,7 +4386,7 @@ def _load_p24(name):
     """يحمّل محركات 2.4 من المجلد أو من حزمة nabbah_engines."""
     try:
         import sys as _sys, os as _os, importlib
-        for _d in ("phase21", "phase22", "phase23", "phase24", "phase25", "phase26", "phase27", "phase28", "phase29", "phase210", "phase211", "phase30", "phase31", "phase32", "phase33", "phase34", "phase35"):
+        for _d in ("phase21", "phase22", "phase23", "phase24", "phase25", "phase26", "phase27", "phase28", "phase29", "phase210", "phase211", "phase30", "phase31", "phase32", "phase33", "phase34", "phase35", "phase37"):
             _p = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), _d)
             if _p not in _sys.path:
                 _sys.path.insert(0, _p)
@@ -7396,6 +7439,230 @@ def company_sector_benchmark_ai(data: dict, request: Request, user: User = Depen
     return {"question": q, "ai": out}
 
 
+# ═══════════════════════════════════════════════════════════
+#  Phase 3.7 — Performance Prediction (توقع → سيناريو → قرار → إجراء → قياس)
+#  يقرأ نفس البيانات الموحّدة ونتائج 3.3/3.4/3.5 — طبقة تنبؤ فقط (تشغيلات + توقعات محفوظة للدقة)
+# ═══════════════════════════════════════════════════════════
+def _pred_settings(s, company):
+    r = s.exec(select(CompanyPredictionSetting).where(CompanyPredictionSetting.company_id == company.id)).first()
+    try:
+        st = json.loads(r.settings_json or "{}") if r else {}
+    except (TypeError, ValueError):
+        st = {}
+    tg = dict(st.get("targets") or {})
+    if tg.get("annual_revenue"):
+        tg["source_ar"] = "هدف التنبؤ (إعدادات الصفحة)"
+    else:
+        bud = ((_fin_settings(s, company.id).get("budget") or {}).get("revenue_monthly"))
+        if bud:
+            tg.update({"annual_revenue": float(bud) * 12, "source_ar": "موازنة الإيراد الشهرية في الوحدة المالية × 12"})
+        else:
+            bt = sum((b.target_sales or 0) for b in s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company.id)).all())
+            if bt:
+                tg.update({"annual_revenue": bt * 12, "source_ar": "مجموع أهداف الفروع الشهرية × 12"})
+    return {"targets": tg, "fy_start": int(getattr(company, "fiscal_year_start", 1) or 1), "saved": st}
+
+
+def _pred_stored(s, company_id):
+    rows = s.exec(select(CompanyPrediction).where(CompanyPrediction.company_id == company_id).limit(20000)).all()
+    return [{"metric": r.metric, "scope": r.scope, "period": r.period, "h": r.h, "value": r.value, "lower": r.lower, "upper": r.upper,
+             "confidence": r.confidence, "made_on": r.made_on, "run_id": r.run_id} for r in rows]
+
+
+def _pred_decisions(s, company_id):
+    out = []
+    for d in s.exec(select(CompanyDecision).where(CompanyDecision.company_id == company_id, CompanyDecision.decision_type == "prediction")).all():
+        out.append({"id": d.id, "title": d.title, "created_on": d.created_at.strftime("%Y-%m-%d") if d.created_at else "",
+                    "metric": "net_profit" if (d.kpi or "").startswith("profit") else "revenue", "owner": d.owner, "status": d.status})
+    return out
+
+
+def _pred_result(s, company, role, *, save=True):
+    pe, de, be = _load_p24("prediction_engine"), _load_p24("drivers_engine"), _load_p24("benchmark_engine")
+    if pe is None or de is None:
+        raise HTTPException(503, "محرّك التنبؤ غير متاح — " + _p23_diagnostic())
+    risk = _risk_result(s, company, role, save_snapshot=save)
+    mods, cust, errors = _risk_modules(s, company, role)
+    today_ = datetime.now().date()
+    dv = de.analyze_drivers(risk, mods, customer_rows=cust, settings=_risk_settings(s, company.id), history=_risk_history(s, company.id),
+                            today=today_, sector=_risk_sector(company)) if risk.get("has_data") else {}
+    bz = None
+    if be is not None and risk.get("has_data"):
+        prof = _bench_profile(s, company)
+        bz = be.analyze_benchmark(mods, sales_rows=cust, risk=risk, drivers=dv, datasets=_bench_datasets(s, company), peers=_bench_peers(s, company, prof),
+                                  profile=prof, history=_bench_history(s, company.id), today=today_, categories=_RISK_CATS_BY_ROLE.get(role))
+    st = _pred_settings(s, company)
+    res = pe.analyze_prediction(mods, sales_rows=cust, risk=risk, drivers=dv, bench=bz, settings={"targets": st["targets"], "fy_start": st["fy_start"]},
+                                stored=_pred_stored(s, company.id), decisions=_pred_decisions(s, company.id), sector=_risk_sector(company), today=today_,
+                                categories=_RISK_CATS_BY_ROLE.get(role), currency=getattr(company, "currency", None) or "SAR")
+    # حفظ تشغيل واحد لكل شهر بيانات جديد (العرض الكامل) — التوقع الأصلي يبقى كما هو لقياس الدقة لاحقاً
+    snap = res.get("snapshot")
+    if save and snap and _RISK_CATS_BY_ROLE.get(role) is None:
+        exists = s.exec(select(CompanyPredictionRun).where(CompanyPredictionRun.company_id == company.id, CompanyPredictionRun.base_period == snap["base_period"],
+                                                           CompanyPredictionRun.model_version == snap["model"])).first()
+        if not exists:
+            run = CompanyPredictionRun(company_id=company.id, base_period=snap["base_period"], model_version=snap["model"], horizon=snap["horizon"],
+                                       confidence=snap["confidence"], drivers_json=json.dumps(snap["drivers"], ensure_ascii=False)[:20000],
+                                       made_on=today_.isoformat())
+            s.add(run); s.commit(); s.refresh(run)
+            for p in snap["predictions"]:
+                s.add(CompanyPrediction(company_id=company.id, run_id=run.id, made_on=today_.isoformat(), **p))
+            s.commit()
+    runs = s.exec(select(CompanyPredictionRun).where(CompanyPredictionRun.company_id == company.id).order_by(CompanyPredictionRun.made_on.desc()).limit(24)).all()
+    res["runs"] = [{"id": r.id, "base_period": r.base_period, "model": r.model_version, "confidence": r.confidence, "made_on": r.made_on} for r in runs]
+    res["targets_source"] = st["targets"].get("source_ar")
+    res["saved_settings"] = st["saved"]
+    res["module_errors"] = errors
+    res["role"] = role
+    res["can_edit"] = role in ("owner", "accountant", "manager")
+    res["can_edit_rules"] = role == "owner"
+    return res
+
+
+@app.get("/company/performance-prediction")
+def company_performance_prediction(user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role = _risk_scope(s, user)
+        res = _pred_result(s, company, role)
+        res.pop("scenario_baseline", None)
+        log_audit(company.id, user.id, user.name, "prediction_view", "prediction", f"status={res.get('status')} role={role}")
+        return res
+
+
+@app.post("/company/performance-prediction/scenario")
+def company_prediction_scenario(data: dict, user: User = Depends(get_current_user)):
+    """محاكاة «ماذا لو» على خط الأساس المتوقع — نسخة حسابية مؤقتة لا تعدّل أي بيانات. الحفظ اختياري."""
+    with Session(engine) as s:
+        company, role = _risk_scope(s, user)
+        pe = _load_p24("prediction_engine")
+        a, errs = pe.validate_assumptions(data.get("assumptions") or {})
+        if errs:
+            raise HTTPException(422, " · ".join(errs))
+        res = _pred_result(s, company, role, save=False)
+        base = res.get("scenario_baseline")
+        if not base:
+            raise HTTPException(422, "المحاكاة تحتاج توقع الربح (تكلفة المنتجات والمصروفات) وصلاحية الاطلاع على الربح")
+        name = str(data.get("name") or "سيناريو مخصص")[:120]
+        b0 = pe.simulate(base, {}, "الأساس")
+        r = pe.simulate(base, a, name)
+        r.update({"delta_revenue": round(r["revenue"] - b0["revenue"], 2), "delta_profit": round(r["net_profit"] - b0["net_profit"], 2),
+                  "delta_cash": round((r["cash_end"] or 0) - (b0["cash_end"] or 0), 2) if r["cash_end"] is not None else None, "base": b0})
+        sid = None
+        if data.get("save"):
+            if role not in ("owner", "accountant", "manager"):
+                raise HTTPException(403, "غير مصرّح بحفظ السيناريو")
+            sc = CompanyScenario(company_id=company.id, created_by=(user.name or user.email)[:100], name=name, scenario_type="prediction",
+                                 base_period=res["snapshot"]["base_period"], assumptions=json.dumps(a, ensure_ascii=False),
+                                 baseline_values=json.dumps({"revenue": b0["revenue"], "net_profit": b0["net_profit"], "cash_end": b0["cash_end"]}, ensure_ascii=False),
+                                 results=json.dumps({k: v for k, v in r.items() if k != "base"}, ensure_ascii=False)[:20000], status="ran",
+                                 updated_at=datetime.now(), ran_at=datetime.now())
+            s.add(sc); s.commit(); s.refresh(sc); sid = sc.id
+        log_audit(company.id, user.id, user.name, "prediction_scenario", "prediction", json.dumps({"assumptions": a, "saved": sid}, ensure_ascii=False)[:400])
+        return {"ok": True, "scenario": r, "saved_id": sid}
+
+
+@app.get("/company/performance-prediction/scenarios")
+def company_prediction_scenarios(user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role = _risk_scope(s, user)
+        rows = s.exec(select(CompanyScenario).where(CompanyScenario.company_id == company.id, CompanyScenario.scenario_type == "prediction")
+                      .order_by(CompanyScenario.created_at.desc()).limit(50)).all()
+        out = []
+        for r in rows:
+            try:
+                res = json.loads(r.results or "{}")
+            except (TypeError, ValueError):
+                res = {}
+            out.append({"id": r.id, "name": r.name, "created_by": r.created_by, "base_period": r.base_period, "assumptions": json.loads(r.assumptions or "{}"),
+                        "revenue": res.get("revenue"), "net_profit": res.get("net_profit"), "delta_profit": res.get("delta_profit"),
+                        "cash_end": res.get("cash_end"), "created_at": r.created_at.isoformat() if r.created_at else None})
+        return {"items": out}
+
+
+@app.post("/company/performance-prediction/settings")
+def company_prediction_settings(data: dict, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role = _risk_scope(s, user, need="settings")
+        tg = {}
+        for k in ("annual_revenue", "annual_profit"):
+            v = data.get(k)
+            if v not in (None, ""):
+                try:
+                    tg[k] = float(v)
+                except (TypeError, ValueError):
+                    raise HTTPException(422, "الهدف يجب أن يكون رقماً")
+                if k == "annual_revenue" and tg[k] <= 0:
+                    raise HTTPException(422, "هدف الإيراد يجب أن يكون موجباً")
+        row = s.exec(select(CompanyPredictionSetting).where(CompanyPredictionSetting.company_id == company.id)).first() or CompanyPredictionSetting(company_id=company.id)
+        old = row.settings_json or "{}"
+        row.settings_json, row.updated_by, row.updated_at = json.dumps({"targets": tg}, ensure_ascii=False), (user.name or user.email)[:100], datetime.now()
+        s.add(row); s.commit()
+        log_audit(company.id, user.id, user.name, "prediction_settings", "prediction", json.dumps({"before": json.loads(old), "after": tg}, ensure_ascii=False)[:400])
+        return {"ok": True}
+
+
+@app.post("/company/performance-prediction/to-decision")
+def company_prediction_to_decision(data: dict, user: User = Depends(get_current_user)):
+    """توقع (خطر/فرصة) → قرار + إجراء. خط الأساس = التوقع المحفوظ قبل القرار؛ القياس لاحقاً قبل/بعد."""
+    with Session(engine) as s:
+        company, role = _risk_scope(s, user, need="edit")
+        _exec_scope(s, user, need="edit")
+        code = str(data.get("code") or "")
+        res = _pred_result(s, company, role, save=True)
+        item = next((p for p in res.get("plan") or [] if p["code"] == code), None)
+        opp = next((o for o in res.get("opportunities") or [] if o["code"] == code), None)
+        if not item and not opp:
+            raise HTTPException(404, "التوقع غير موجود أو لم يعد قائماً")
+        title = (item or {}).get("prediction_ar") or opp["ar"]
+        impact = ((item or {}).get("impact") or {}).get("amount") if item else ((opp.get("range") or [None, None])[1])
+        kpi = "profit" if code.split(":")[0] in ("profit_decline", "margin_decline") or code.startswith("recovery") else "revenue"
+        d = CompanyDecision(
+            company_id=company.id, title=str(data.get("title") or f"معالجة توقع: {title}")[:200],
+            detail=" · ".join(((item or {}).get("cause") and [c.get("ar", "") + ": " + c.get("evidence_ar", "") for c in item["cause"]]) or (opp or {}).get("evidence") or [])[:1000],
+            owner=str(data.get("owner") or (item or {}).get("owner_ar") or "")[:100], due_date=str(data.get("due_date") or (item or {}).get("due") or "")[:20],
+            kpi=kpi, status="open", baseline_sales=_company_total_sales(s, company.id),
+            expected_impact=(f"{impact:,.0f} {res.get('currency')} (تقديري من التوقع)" if impact else "غير قابل للتقدير")[:200],
+            linked_to=f"prediction:{code}|{(res.get('snapshot') or {}).get('base_period')}"[:200], rationale=((item or {}).get("action_ar") or (opp or {}).get("action_ar") or "")[:500],
+            metric_id=kpi, expected_impact_value=impact, impact_status="expected", source_signal=f"prediction:{code}", problem_type=f"prediction:{code}",
+            decision_type="prediction", outcome_status="pending_measurement", created_by=user.name or user.email, data_source="prediction_engine", updated_at=datetime.now())
+        s.add(d); s.commit(); s.refresh(d)
+        act = CompanyAction(company_id=company.id, decision_id=d.id, title=str(data.get("action") or d.rationale or title)[:200], owner=d.owner,
+                            priority="P1" if (item or {}).get("level") in ("critical", "high") else "P2", due_date=d.due_date,
+                            start_date=datetime.now().strftime("%Y-%m-%d"), updated_at=datetime.now())
+        s.add(act); s.commit(); s.refresh(act)
+        log_audit(company.id, user.id, user.name, "decision_from_prediction", f"prediction:{code}", f"decision={d.id} impact={impact}")
+        return {"ok": True, "decision_id": d.id, "action_ids": [act.id]}
+
+
+@app.post("/company/performance-prediction/ai-insights")
+def company_prediction_ai(data: dict, request: Request, user: User = Depends(get_current_user)):
+    """AI يقرأ نتائج محرك التنبؤ ولا يخترع أرقاماً — لا يحسب توقعاً بنفسه."""
+    with Session(engine) as s:
+        company, role = _risk_scope(s, user)
+        res = _pred_result(s, company, role, save=False)
+    if res.get("status") != "ok":
+        raise HTTPException(422, res.get("message_ar") or "لا يوجد توقع")
+    gw = _load_p24("ai_gateway")
+    if gw is None:
+        raise HTTPException(503, "بوابة الذكاء الاصطناعي غير متاحة — " + _p23_diagnostic())
+    q = str(data.get("question") or "ما المتوقع للمبيعات خلال 6 أشهر؟")[:300]
+    ctx = {"outlook": res["outlook"], "sales": {k: res["sales"].get(k) for k in ("points", "slope_per_month", "seasonality_ar", "backtest", "confidence", "sufficiency_ar")},
+           "profit": {k: res["profit"].get(k) for k in ("status", "total", "now", "forecast_avg", "bridge", "bridge_note_ar")},
+           "cash": {k: res["cash"].get(k) for k in ("status", "start_balance", "end_balance", "first_negative")},
+           "branches": [{k: b.get(k) for k in ("branch", "current_avg", "forecast_m3", "change_pct", "confidence")} for b in res["branches"]],
+           "growth": res["growth"], "drivers": res["drivers"][:12], "gap": res["gap"], "risks": res["risks"], "opportunities": res["opportunities"],
+           "scenarios": [{k: x.get(k) for k in ("name", "assumptions", "revenue", "net_profit", "delta_profit", "cash_end")} for x in res["scenarios"]],
+           "accuracy": res["accuracy"].get("overall"), "methodology": res["methodology"]}
+    out = gw.request_ai_analysis(gw.GeminiProvider(company_gemini), ctx,
+                                 q + " — استخدم أرقام محرك التنبؤ كما هي مع الثقة والنطاق. لا تحسب توقعاً جديداً ولا تقل إن الرقم مؤكد. "
+                                     "السيناريو محاكاة وليس وعداً. إن لم يُحسب شيء فقل ذلك.",
+                                 trust_report={"overall_score": int(res["outlook"]["confidence"]["score"]), "status": "pass" if res["outlook"]["confidence"]["score"] >= 75 else "warning",
+                                               "has_critical_fail": False, "main_causes": []},
+                                 lang=get_lang(request), company=company)
+    log_audit(company.id, user.id, user.name, "prediction_ai", "prediction", f"q={q[:80]}")
+    return {"question": q, "ai": out}
+
+
 @app.get("/company/executive-intelligence")
 def company_executive_intelligence(request: Request, user: User = Depends(get_current_user),
                                    period: Optional[str] = None, ai: int = 0):
@@ -7485,6 +7752,15 @@ def company_executive_intelligence(request: Request, user: User = Depends(get_cu
                                 result["sector_position"] = {**{k: _bz["summary"][k] for k in ("compared", "above", "near", "below", "critical", "benchmark_unavailable", "biggest_gap", "biggest_strength")},
                                                              "link": "company-sector-benchmark.html"}
                                 result.setdefault("module_signals", {})["benchmark"] = _bz.get("signals", [])[:6]
+                            _pe = _load_p24("prediction_engine")
+                            if _pe is not None:      # 3.7: النظرة المستقبلية (نفس البيانات المخزنة مؤقتاً — بلا حفظ)
+                                _ps = _pred_settings(s, company)
+                                _pz = _pe.analyze_prediction(_mods, sales_rows=_cust, risk=_rk, drivers=_dv, settings={"targets": _ps["targets"], "fy_start": _ps["fy_start"]},
+                                                             sector=_risk_sector(company), today=datetime.now().date(), categories=_RISK_CATS_BY_ROLE.get(_role))
+                                if _pz.get("status") == "ok":
+                                    result["prediction"] = {"outlook": _pz["outlook"], "headline": _pz["brief"]["headline"], "risks": _pz["risks"][:3],
+                                                            "link": "company-performance-prediction.html"}
+                                    result.setdefault("module_signals", {})["prediction"] = _pz.get("signals", [])[:6]
             except HTTPException:
                 pass
             try:   # إشارات المشتريات 2.7
@@ -12812,7 +13088,7 @@ ENGINE_MODULES = ("nabbah_finance", "nabbah_trust", "semantic_layer", "kpi_engin
                   "ai_gateway", "period_aggregation", "legacy_adapters", "platform_bridge",
                   "intelligence_engine", "forecast_engine", "scenario_engine", "decision_memory",
                   "rule_catalog", "canonical_model", "period_model", "metric_registry", "ingestion",
-                  "sales_engine", "inventory_engine", "purchases_engine", "cashflow_engine", "hr_engine", "ops_engine", "finance_engine", "sector_intelligence", "leakage_engine", "tax_engine", "risk_engine", "drivers_engine", "benchmark_engine")
+                  "sales_engine", "inventory_engine", "purchases_engine", "cashflow_engine", "hr_engine", "ops_engine", "finance_engine", "sector_intelligence", "leakage_engine", "tax_engine", "risk_engine", "drivers_engine", "benchmark_engine", "prediction_engine")
 
 
 def _runtime_health():
