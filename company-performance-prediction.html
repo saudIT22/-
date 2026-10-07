@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>نبّاه · التنبؤ بالأداء</title>
+<link href="nabbah-design.css" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{background:var(--bg,#070b09);color:var(--txt,#e8f1ec);font-family:Tajawal,Tahoma,Arial,sans-serif;margin:0}
+  .wrap{max-width:1180px;margin:0 auto;padding:70px 16px 60px}
+  h1{margin:0 0 4px;font-size:24px}.sub{color:var(--txt-soft,#8ba396);margin:0 0 16px;font-size:14px}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+  select{background:var(--panel,#101a15);color:var(--txt,#e8f1ec);border:1px solid var(--line,#1d2c24);border-radius:10px;padding:8px 10px;font:inherit;font-size:13px;max-width:190px}
+  .crumbs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;min-height:4px}
+  .chip{background:rgba(16,185,129,.12);color:var(--mint,#10b981);border:1px solid rgba(16,185,129,.35);border-radius:20px;padding:3px 10px;font-size:12px;cursor:pointer}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+  .tile,.panel{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:14px;padding:14px}
+  .tile .l{font-size:12px;color:var(--txt-soft,#8ba396)}.tile .v{font-size:21px;font-weight:800;margin-top:4px}
+  .tile .c{font-size:12px;margin-top:4px}
+  .panel{margin-bottom:14px;min-width:0}.panel h2{margin:0 0 10px;font-size:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .panel h3{margin:12px 0 6px;font-size:13px;color:var(--txt-soft,#8ba396)}
+  .num{font-size:11px;color:var(--txt-soft,#8ba396);font-weight:600;border:1px solid var(--line,#1d2c24);border-radius:8px;padding:1px 6px}
+  .grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+  table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px;border-bottom:1px solid var(--line,#1d2c24);text-align:start;white-space:nowrap}
+  th{color:var(--txt-soft,#8ba396);font-weight:600}.tbl{overflow-x:auto}
+  tr.drill{cursor:pointer}tr.drill:hover td{background:rgba(16,185,129,.06)}
+  .barrow{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:13px}
+  .barrow.drill{cursor:pointer}.barrow.drill:hover{background:rgba(16,185,129,.06);border-radius:6px}
+  .barrow .t{flex:0 0 120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .barrow .g{flex:1;height:10px;background:var(--line,#1d2c24);border-radius:6px;overflow:hidden}
+  .barrow .g i{display:block;height:100%;background:var(--mint,#10b981)}
+  .pos{color:#10b981}.neg{color:#ef4444}.muted{color:var(--txt-soft,#8ba396);font-size:12px}
+  .b{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700;display:inline-block}
+  .high{background:rgba(234,88,12,.16);color:#ea580c}.medium{background:rgba(245,179,1,.15);color:#f5b301}
+  .low{background:rgba(16,185,129,.15);color:#10b981}.critical{background:rgba(239,68,68,.16);color:#ef4444}
+  .est{background:rgba(168,85,247,.15);color:#a855f7}
+  .sig{border-inline-start:4px solid var(--line,#1d2c24);padding:10px 12px;margin:8px 0;background:rgba(255,255,255,.02);border-radius:8px}
+  .sig.risk{border-color:#ef4444}.sig.opportunity{border-color:#10b981}.sig.data_quality{border-color:#f5b301}
+  .btn{background:var(--mint,#10b981);color:#062b1c;border:0;border-radius:10px;padding:7px 13px;font-weight:800;cursor:pointer;font:inherit;font-size:12px;text-decoration:none;display:inline-block}
+  .btn.ghost{background:transparent;color:var(--txt-soft,#8ba396);border:1px solid var(--line,#1d2c24);font-weight:600}
+  .btn:disabled{opacity:.5;cursor:default}
+  .state{padding:36px 16px;text-align:center;color:var(--txt-soft,#8ba396);border:1px dashed var(--line,#1d2c24);border-radius:14px}
+  .na{color:var(--txt-soft,#8ba396);font-size:13px;padding:10px;border:1px dashed var(--line,#1d2c24);border-radius:10px}
+  svg.ch{width:100%;height:170px;display:block}
+  .legend{display:flex;gap:14px;font-size:12px;color:var(--txt-soft,#8ba396);margin-top:6px;flex-wrap:wrap}
+  .legend i{display:inline-block;width:14px;height:3px;vertical-align:middle;margin-inline-end:4px}
+  .ai-sec{margin:8px 0}.ai-sec b{display:block;font-size:13px;margin-bottom:4px}.ai-sec li{font-size:13px;margin:3px 0}
+  input.f{flex:1;min-width:120px;background:var(--panel,#101a15);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:8px;padding:6px}
+  .st{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700;display:inline-block;white-space:nowrap}
+  .st.healthy{background:rgba(16,185,129,.15);color:#10b981}.st.watch{background:rgba(245,179,1,.15);color:#f5b301}
+  .st.low{background:rgba(234,88,12,.16);color:#ea580c}.st.stockout{background:rgba(239,68,68,.16);color:#ef4444}
+  .st.slow{background:rgba(59,130,246,.15);color:#60a5fa}.st.obsolete{background:rgba(148,163,184,.18);color:#cbd5e1}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}.schip{cursor:pointer;border:1px solid var(--line,#1d2c24);border-radius:12px;padding:8px 12px;min-width:120px}
+  .schip b{display:block;font-size:18px}.schip:hover{border-color:var(--mint,#10b981)}
+  .eq{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:13px}.eq .box{border:1px solid var(--line,#1d2c24);border-radius:10px;padding:8px 10px;text-align:center;min-width:90px}
+  .eq .box b{display:block;font-size:16px}
+  .ov{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:50;padding:14px}
+  .ov.on{display:flex}.modal{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:16px;padding:18px;width:min(560px,100%);max-height:90vh;overflow:auto}
+  .fg{display:grid;grid-template-columns:1fr 1fr;gap:10px}.fg label{font-size:12px;color:var(--txt-soft,#8ba396);display:flex;flex-direction:column;gap:4px}
+  .fg input,.fg select{background:var(--bg,#070b09);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:9px;padding:8px;font:inherit;max-width:none}
+  .cta{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  @media(max-width:760px){.fg{grid-template-columns:1fr}.tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.tile{padding:10px}.tile .v{font-size:17px}.grid2,.grid3{grid-template-columns:minmax(0,1fr)}h1{font-size:20px}select{max-width:47%}}
+  @media(max-width:700px){.tiles[style]{grid-template-columns:1fr 1fr!important}}
+</style>
+<style>
+  .tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--line,#1d2c24);margin:6px 0 16px}
+  .tab{background:none;border:0;color:var(--txt-soft,#8ba396);padding:10px 14px;font:inherit;font-size:14px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+  .tab.on{color:var(--txt,#e8f1ec);border-color:#14b8a6;font-weight:800}
+  .hero{display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr;gap:12px;margin-bottom:14px}
+  .hcard{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:16px;padding:16px;cursor:default}
+  .hcard.click{cursor:pointer}.hcard.click:hover{border-color:var(--mint,#10b981)}
+  .hcard .big{font-size:30px;font-weight:900;margin:6px 0}.hstat{font-size:22px;font-weight:900}
+  .hs-stable{color:#10b981}.hs-attention{color:#f5b301}.hs-critical{color:#ef4444}
+  .event{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-inline-start:4px solid #ef4444;border-radius:12px;padding:14px;margin-bottom:10px}
+  .event.opportunity{border-inline-start-color:#10b981}.event.data_quality{border-inline-start-color:#f5b301}
+  .event h4{margin:0 0 6px;font-size:15px}.acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .rec{display:grid;grid-template-columns:110px 1fr;gap:6px 12px;font-size:13px;margin-top:8px}.rec b{color:var(--txt-soft,#8ba396);font-weight:600}
+  .flow{display:flex;align-items:stretch;gap:8px;flex-wrap:wrap;justify-content:center}
+  .fnode{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:14px;padding:14px 18px;text-align:center;min-width:140px}
+  .fnode .big{font-size:22px;font-weight:900}.farrow{align-self:center;font-size:22px;color:var(--txt-soft,#8ba396)}
+  .ptip{background:var(--bg,#070b09);border:1px solid var(--mint,#10b981);border-radius:12px;padding:12px;margin-top:8px;font-size:13px}
+  .search{flex:1;min-width:180px;background:var(--panel,#101a15);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:10px;padding:9px 12px;font:inherit}
+  .perf{display:grid;grid-template-columns:70px 1fr 50px;gap:8px;align-items:center;font-size:13px;margin:8px 0}
+  .perf .g{height:10px;background:var(--line,#1d2c24);border-radius:6px;overflow:hidden}.perf .g i{display:block;height:100%}
+  .life{display:flex;gap:0;align-items:center;flex-wrap:wrap;margin:10px 0}.lstep{text-align:center;min-width:110px}
+  .ldot{width:16px;height:16px;border-radius:50%;margin:0 auto 6px;background:var(--line,#1d2c24)}.ldot.on{background:var(--mint,#10b981)}
+  .lline{flex:1;min-width:30px;height:2px;background:var(--line,#1d2c24);margin-bottom:22px}
+  .back{background:none;border:0;color:var(--mint,#10b981);cursor:pointer;font:inherit;padding:0;margin-bottom:10px}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-inline-end:6px}
+  @media(max-width:900px){.hero{grid-template-columns:1fr 1fr}}
+  @media(max-width:560px){.hero{grid-template-columns:1fr}.tab{padding:8px 10px;font-size:13px}.rec{grid-template-columns:1fr}}
+</style>
+
+<style>
+  .lv-critical{background:rgba(239,68,68,.18);color:#ef4444}.lv-high{background:rgba(234,88,12,.18);color:#f97316}
+  .lv-medium{background:rgba(245,179,1,.16);color:#f5b301}.lv-low{background:rgba(16,185,129,.15);color:#10b981}.lv-none{background:rgba(148,163,184,.15);color:#94a3b8}
+  .gauge{position:relative;height:12px;border-radius:8px;background:linear-gradient(270deg,#10b981 0 40%,#f5b301 40% 65%,#f97316 65% 85%,#ef4444 85% 100%);margin:8px 0 4px}
+  .gauge i{position:absolute;top:-5px;width:4px;height:22px;background:#fff;border-radius:3px;transform:translateX(50%)}
+  .heat td.c{text-align:center;font-weight:800;border-radius:6px}
+  .catgrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:14px}
+  .cat{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:14px;padding:12px;cursor:pointer}
+  .cat:hover{border-color:var(--mint,#10b981)}.cat .s{font-size:26px;font-weight:900;margin:4px 0}
+  .chain{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:8px 0}
+  .cnode{border:1px solid var(--line,#1d2c24);border-radius:10px;padding:6px 10px;font-size:12px;cursor:pointer}
+  .cnode.on{border-color:#ef4444}.carrow{color:var(--txt-soft,#8ba396)}
+  .kan{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.kcol{background:rgba(255,255,255,.02);border:1px solid var(--line,#1d2c24);border-radius:12px;padding:8px;min-height:80px}
+  .kcard{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:10px;padding:8px;margin:6px 0;font-size:12px;cursor:pointer}
+  .imp4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+  .brief li{margin:6px 0;font-size:14px}
+  @media(max-width:900px){.catgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.kan,.imp4{grid-template-columns:1fr 1fr}}
+  @media(max-width:560px){.catgrid,.kan,.imp4{grid-template-columns:1fr}}
+</style>
+<style>
+  .contrib{display:flex;height:22px;border-radius:8px;overflow:hidden;margin:8px 0;background:var(--line,#1d2c24)}
+  .contrib i{display:block;height:100%;border-inline-end:1px solid rgba(0,0,0,.35)}
+  .pr-immediate{background:rgba(239,68,68,.18);color:#ef4444}.pr-high{background:rgba(249,115,22,.18);color:#f97316}
+  .pr-medium{background:rgba(245,179,1,.16);color:#f5b301}.pr-monitor{background:rgba(148,163,184,.15);color:#94a3b8}
+  .tl{border-inline-start:2px solid var(--line,#1d2c24);margin:6px 8px;padding-inline-start:14px}.tl div{position:relative;margin:8px 0;font-size:13px}
+  .tl div::before{content:"";position:absolute;inset-inline-start:-21px;top:5px;width:10px;height:10px;border-radius:50%;background:var(--mint,#10b981)}
+  .step{display:flex;gap:10px;align-items:flex-start;margin:8px 0;flex-wrap:wrap}.step .m{min-width:120px;font-weight:800;color:var(--mint,#10b981)}
+  .ent{display:flex;gap:6px;flex-wrap:wrap}.ent span{border:1px solid var(--line,#1d2c24);border-radius:8px;padding:2px 8px;font-size:12px}
+  .exec4{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:14px}
+  @media(max-width:900px){.exec4{grid-template-columns:1fr}}
+</style>
+<style>
+  .pos-above{background:rgba(16,185,129,.15);color:#10b981}.pos-near{background:rgba(96,165,250,.15);color:#60a5fa}
+  .pos-below{background:rgba(249,115,22,.18);color:#f97316}.pos-critical{background:rgba(239,68,68,.18);color:#ef4444}.pos-na{background:rgba(148,163,184,.15);color:#94a3b8}
+  .pbar{position:relative;height:14px;border-radius:8px;background:linear-gradient(270deg,#ef4444,#f5b301 40%,#10b981);margin:10px 0 4px}
+  .pbar i{position:absolute;top:-5px;width:4px;height:24px;background:#fff;border-radius:3px;transform:translateX(50%)}
+  .src{font-size:12px;color:var(--txt-soft,#8ba396);line-height:1.7}
+  .vs{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}.vs b{font-size:22px}
+</style>
+<style>
+  .fc svg{width:100%;height:auto;display:block}
+  .fc .tip{position:fixed;pointer-events:none;background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:8px;padding:6px 9px;font-size:12px;display:none;z-index:60}
+  .conf-h{color:#10b981}.conf-m{color:#f5b301}.conf-l{color:#ef4444}
+  .wf{display:flex;align-items:flex-end;gap:10px;height:150px;margin:10px 0}
+  .wf div{flex:1;text-align:center;font-size:11px}.wf i{display:block;border-radius:4px 4px 0 0;margin:0 auto 4px;width:70%}
+  .sc{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+  @media(max-width:760px){.sc{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🔮 التنبؤ بالأداء</h1>
+  <p class="sub">رؤية استباقية لأداء الشركة خلال الأشهر القادمة، مع تفسير أسباب التوقع ودرجة الثقة والسيناريوهات المحتملة.</p>
+  <div class="bar"><button class="btn ghost" id="btnSet" style="display:none">🎯 الأهداف</button><a class="btn ghost" href="company-risk-drivers.html">مسببات المخاطر</a><span class="muted" id="asof"></span></div>
+  <div class="na" id="disc" style="margin:6px 0 10px"></div>
+  <nav class="tabs" id="tabs"></nav>
+  <div id="content"><div class="state">…</div></div>
+</div>
+<div class="ov" id="ov"><div class="modal" id="modal"></div></div>
+<div class="tip" id="tip" style="position:fixed;pointer-events:none;background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:8px;padding:6px 9px;font-size:12px;display:none;z-index:60"></div>
+<script src="i18n.js"></script>
+<script>
+(function(){
+  const TOKEN=localStorage.getItem("nabbah_token")||"";if(!TOKEN){location.href="login.html";return;}
+  const TABS=[["outlook","نظرة مستقبلية"],["sales","توقع المبيعات"],["profit","توقع الأرباح"],["branches","توقع الفروع"],["growth","توقع النمو"],["cash","توقع السيولة"],
+    ["drivers","العوامل المؤثرة"],["confidence","درجة الثقة"],["gap","فجوة الأداء"],["whatif","ماذا لو؟"],["bestworst","أفضل / أسوأ سيناريو"],["risks","المخاطر المستقبلية"],
+    ["opps","الفرص المستقبلية"],["plan","خطة التدخل"],["alerts","التنبيهات"],["actions","القرارات والإجراءات"],["history","سجل التوقعات"],["ai","اسأل نبّاه"]];
+  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const n=(v,d=0)=>v==null?"—":Number(v).toLocaleString("ar-SA",{maximumFractionDigits:d});
+  const H={Authorization:"Bearer "+TOKEN,"Content-Type":"application/json"},$=id=>document.getElementById(id);
+  const LC={critical:"#ef4444",high:"#f97316",medium:"#f5b301",low:"#10b981"},LV={critical:"حرج",high:"مرتفع",medium:"متوسط",low:"منخفض"};
+  let D=null,SAVED=null,LAST=null;
+  const route=()=>{const h=decodeURIComponent(location.hash.slice(1)||"outlook");const i=h.indexOf("/");return i<0?[h,""]:[h.slice(0,i),h.slice(i+1)];};
+  const go=(v,arg)=>{location.hash=arg?`${v}/${encodeURIComponent(arg)}`:v;};
+  window.addEventListener("hashchange",()=>{if(D){render();window.scrollTo(0,0);}});
+  function load(){$("content").innerHTML=`<div class="state">…</div>`;
+    fetch("/company/performance-prediction",{headers:H}).then(async r=>{
+      if(r.status===401){location.href="login.html";return null;}
+      if(r.status===403||r.status===402){let d="";try{d=(await r.json()).detail;}catch(_){}$("content").innerHTML=`<div class="state">🔒 ${esc(d||"ليست لديك صلاحية.")}</div>`;return null;}
+      if(!r.ok){let d="";try{const j=await r.json();d=typeof j.detail==="string"?j.detail:JSON.stringify(j.detail||j);}catch(_){}err(`HTTP ${r.status}${d?" — "+d:""}`);return null;}
+      return r.json();}).then(d=>{if(!d)return;D=d;$("btnSet").style.display=d.can_edit_rules?"":"none";
+        $("disc").textContent="ℹ "+(d.disclaimer_ar||d.message_ar||"")+(d.scope&&d.scope.note_ar?" · "+d.scope.note_ar:"");$("asof").textContent=d.as_of?"آخر تحديث "+d.as_of+" · "+((d.methodology||{}).model||""):"";
+        try{render();}catch(e){console.error(e);err("render: "+(e&&e.message||e));}}).catch(e=>err("network: "+(e&&e.message||e)));}
+  function err(m){$("content").innerHTML=`<div class="state neg">تعذّر تحميل التنبؤ.<div class="muted" style="margin-top:8px">${esc(m)}</div></div>`;}
+  const panel=(title,body,extra="")=>`<div class="panel"><h2>${title}${extra}</h2>${body}</div>`;
+  const na=m=>`<div class="na">${esc(m)}</div>`;
+  const tile=(l,v,c)=>`<div class="tile"><div class="l">${l}</div><div class="v">${v}</div><div class="c">${c||""}</div></div>`;
+  const money=v=>v==null?"—":n(v,0)+" "+esc(D.currency||"SAR");
+  const pct=v=>v==null?"—":`<span class="${v>0?"pos":v<0?"neg":""}">${v>0?"+":""}${n(v,1)}%</span>`;
+  const cf=c=>c==null?"—":`<span class="${c>=75?"conf-h":c>=55?"conf-m":"conf-l"}">${n(c,0)}%</span>`;
+  const lv=l=>`<span class="b lv-${l||"none"}">${esc(LV[l]||l||"")}</span>`;
+  // ── رسم: الفعلي (خط متصل) + التوقع (متقطع) + نطاق 80% + خط مرجعي اختياري — محور واحد
+  function chart(hist,fc,opts={}){const W=720,Hh=260,P={l:58,r:34,t:18,b:34};
+    const all=hist.map(p=>p.value).concat(fc.flatMap(p=>[p.lower,p.upper,p.value])).concat(opts.ref!=null?[opts.ref]:[]).filter(v=>v!=null);
+    if(!all.length)return na("لا توجد بيانات للرسم");
+    let mn=Math.min(...all,opts.zero===false?Infinity:0),mx=Math.max(...all);if(mn===mx){mx+=1;}
+    const pad=(mx-mn)*.06;mn-=opts.zero===false?pad:0;mx+=pad;
+    const N=hist.length+fc.length,x=i=>P.l+i*(W-P.l-P.r)/Math.max(1,N-1),y=v=>P.t+(1-(v-mn)/(mx-mn))*(Hh-P.t-P.b);
+    const ticks=[0,.25,.5,.75,1].map(t=>mn+t*(mx-mn));
+    const hp=hist.map((p,i)=>`${x(i)},${y(p.value)}`).join(" ");
+    const off=hist.length-1,fp=[hist.length?`${x(off)},${y(hist[off].value)}`:null].concat(fc.map((p,i)=>`${x(off+1+i)},${y(p.value)}`)).filter(Boolean).join(" ");
+    const band=fc.length?`${fc.map((p,i)=>`${x(off+1+i)},${y(p.upper)}`).join(" ")} ${fc.slice().reverse().map((p,i)=>`${x(off+fc.length-i)},${y(p.lower)}`).join(" ")}`:"";
+    const pts=hist.map((p,i)=>({i,period:p.period,v:p.value,t:"فعلي"})).concat(fc.map((p,i)=>({i:off+1+i,period:p.period,v:p.value,lo:p.lower,hi:p.upper,c:p.confidence,t:"متوقع"})));
+    const lbl=pts.filter((p,k)=>k%Math.ceil(N/8)===0||k===N-1);
+    return `<div class="fc"><svg viewBox="0 0 ${W} ${Hh}" style="direction:ltr" role="img" aria-label="${esc(opts.title||"")}">
+      ${ticks.map(t=>`<line x1="${P.l}" x2="${W-P.r}" y1="${y(t)}" y2="${y(t)}" stroke="currentColor" opacity=".08"/><text x="${P.l-6}" y="${y(t)+4}" text-anchor="end" font-size="10" fill="currentColor" opacity=".55">${n(t,0)}</text>`).join("")}
+      ${mn<0&&mx>0?`<line x1="${P.l}" x2="${W-P.r}" y1="${y(0)}" y2="${y(0)}" stroke="currentColor" opacity=".35"/>`:""}
+      ${band?`<polygon points="${band}" fill="#60a5fa" opacity=".16"/>`:""}
+      ${opts.ref!=null?`<line x1="${P.l}" x2="${W-P.r}" y1="${y(opts.ref)}" y2="${y(opts.ref)}" stroke="#f5b301" stroke-dasharray="6 4" stroke-width="1.5"/><text x="${W-P.r}" y="${y(opts.ref)-5}" text-anchor="end" font-size="10" fill="#f5b301">${esc(opts.refLabel||"الهدف")}</text>`:""}
+      <polyline fill="none" stroke="#10b981" stroke-width="2" points="${hp}"/>
+      <polyline fill="none" stroke="#60a5fa" stroke-width="2" stroke-dasharray="6 4" points="${fp}"/>
+      ${fc.map((p,i)=>`<circle cx="${x(off+1+i)}" cy="${y(p.value)}" r="4" fill="#60a5fa"/>`).join("")}
+      ${lbl.map(p=>`<text x="${x(p.i)}" y="${Hh-12}" text-anchor="middle" font-size="10" fill="currentColor" opacity=".6">${esc(p.period)}</text>`).join("")}
+      ${pts.map(p=>`<rect x="${x(p.i)-(W-P.l-P.r)/(2*Math.max(1,N-1))}" y="${P.t}" width="${(W-P.l-P.r)/Math.max(1,N-1)}" height="${Hh-P.t-P.b}" fill="transparent" data-tip="${esc(`${p.period} · ${p.t}: ${n(p.v,0)}${p.lo!=null?` · النطاق ${n(p.lo,0)}–${n(p.hi,0)} · ثقة ${n(p.c,0)}%`:""}`)}"/>`).join("")}
+    </svg><div class="legend"><span><i style="background:#10b981"></i>فعلي</span><span><i style="background:#60a5fa"></i>متوقع</span><span><i style="background:rgba(96,165,250,.35);height:8px"></i>نطاق 80%</span>${opts.ref!=null?`<span><i style="background:#f5b301"></i>${esc(opts.refLabel||"الهدف")}</span>`:""}</div></div>`;}
+  function fcTable(points,extra){return `<div class="tbl"><table><thead><tr><th>الشهر</th><th>المتوقع</th><th>النطاق 80%</th>${extra?extra.h:""}<th>الثقة</th></tr></thead><tbody>${points.map((p,i)=>`<tr><td>+${p.h} · ${esc(p.period)}</td><td><b>${n(p.value!=null?p.value:p.revenue,0)}</b></td><td class="muted">${n(p.lower,0)} – ${n(p.upper,0)}</td>${extra?extra.r(p):""}<td>${cf(p.confidence)}</td></tr>`).join("")}</tbody></table></div>`;}
+  const confBox=c=>`<div class="muted">الثقة ${cf(c.score)} (${esc(c.label_ar)}) — ${esc(D.sales.sufficiency_ar)}</div>`;
+  function outlook(){const o=D.outlook,s=D.sales;const tgtM=D.gap&&D.gap.target?D.gap.target/12:null;
+    return `<div class="hero"><div class="hcard"><div class="muted">الإيراد (آخر ${D.horizon} أشهر)</div><div class="big">${money(o.current_revenue)}</div><div class="muted">فعلي</div></div>
+      <div class="hcard click" data-go="sales"><div class="muted">المتوقع للأشهر ${D.horizon} القادمة</div><div class="big">${money(o.forecast_revenue)}</div><div>${pct(o.growth_pct)} نمو متوقع</div></div>
+      <div class="hcard click" data-go="profit"><div class="muted">صافي الربح المتوقع</div><div class="big">${o.forecast_profit==null?`<span class="muted" style="font-size:14px">${esc(D.profit.reason_ar||"غير متاح")}</span>`:money(o.forecast_profit)}</div><div>${o.profit_growth_pct!=null?pct(o.profit_growth_pct)+" مقابل آخر "+D.horizon+" أشهر":""}</div></div>
+      <div class="hcard click" data-go="confidence"><div class="muted">ثقة التوقع</div><div class="big">${cf(o.confidence.score)}</div><div class="muted">${esc(o.basis_ar)}</div></div></div>
+      ${D.data.partial_note_ar?na(D.data.partial_note_ar):""}
+      ${panel("توقع الإيراد — 6 أشهر",chart(s.history,s.points,{ref:tgtM,refLabel:"الهدف الشهري",title:"توقع الإيراد"})+confBox(s.confidence))}
+      <div class="grid2">${panel("أكبر العوامل المؤثرة",D.drivers.slice().sort((a,b)=>(["sales","margin","profit","recovery"].includes(a.effect)?0:1)-(["sales","margin","profit","recovery"].includes(b.effect)?0:1)).slice(0,5).map((d,i)=>`<div class="step"><span class="m">${i+1}. ${esc(d.ar)}</span><span>${d.direction==="up"?"↑":d.direction==="down"?"↓":"→"} ${esc(d.evidence_ar)}</span></div>`).join("")||na("—"),` <button class="btn ghost" data-go="drivers">الكل</button>`)}
+        ${panel("مخاطر مستقبلية",D.risks.slice(0,4).map(r=>`<div class="step"><span class="m">${lv(r.level)}</span><span><b>${esc(r.ar)}</b> <span class="muted">${esc(r.horizon_ar)}</span></span></div>`).join("")||na("لا مخاطر متوقعة وفق القواعد"),` <button class="btn ghost" data-go="risks">الكل</button>`)}</div>
+      <div class="grid2">${panel("فرص مستقبلية",D.opportunities.slice(0,4).map(o=>`<div style="margin:6px 0">🟢 <b>${esc(o.ar)}</b> <span class="muted">${o.range?money(o.range[0])+" – "+money(o.range[1]):""}</span></div>`).join("")||na("لا فرص مستخرجة"))}
+        ${panel("ماذا لو؟",D.scenarios.length?`<div class="tbl"><table><tbody>${D.scenarios.map(x=>`<tr><td>${esc(x.name)}</td><td>${money(x.net_profit)}</td><td class="${x.delta_profit>0?"pos":x.delta_profit<0?"neg":""}">${x.delta_profit?(x.delta_profit>0?"+":"")+n(x.delta_profit,0):"—"}</td></tr>`).join("")}</tbody></table></div><button class="btn" data-go="whatif">شغّل سيناريو</button>`:na(D.profit.reason_ar||"المحاكاة تحتاج توقع الربح"))}</div>
+      ${panel("الموجز التنفيذي",`<ul class="brief">${D.brief.lines.map(l=>`<li>${esc(l)}</li>`).join("")}</ul><div class="muted">${esc(D.brief.method_ar)}</div>`)}
+      ${panel("القرارات الموصى بها",D.plan.slice(0,4).map((p,i)=>`<div class="step"><span class="m">${i+1}. ${lv(p.level)}</span><span>${esc(p.action_ar)} <span class="muted">— ${esc(p.owner_ar)} · خلال ${p.due_days} يوماً</span></span></div>`).join("")||na("—"),` <button class="btn ghost" data-go="plan">خطة التدخل</button>`)}`;}
+  function sales(){const s=D.sales,o=D.orders;
+    return panel("توقع المبيعات",chart(s.history,s.points,{title:"المبيعات"})+fcTable(s.points))
+      +`<div class="tiles">${tile("الاتجاه الشهري",n(s.slope_per_month,0),"ميل Theil–Sen")}${tile("الموسمية",s.seasonality_applied?"مطبّقة":"غير مطبّقة",esc(s.seasonality_ar))}${tile("التذبذب (σ)",n(s.sigma,0),"انحراف معياري مقاوم للبواقي")}${tile("الاختبار الرجعي",s.backtest?n(s.backtest.mape,1)+"% MAPE":"—",s.backtest?`${s.backtest.n} توقعاً سابقاً`:"يحتاج 6 أشهر")}</div>`
+      +(o&&o.status==="ok"?panel(`توقع ${esc(D.sector.metrics[0].ar)}`,chart(o.history,o.points,{title:"الطلبات"})):"")
+      +(s.warnings&&s.warnings.length?panel("تنبيهات البيانات",s.warnings.map(w=>`<div class="muted">• ${esc(w)}</div>`).join("")):"")
+      +panel("مؤشرات القطاع المتوقعة — "+esc(D.sector.ar),D.sector.metrics.map(m=>`<div class="step"><span class="m">${esc(m.ar)}</span><span>${m.forecast.status==="ok"?`${n(m.forecast.last_actual.value,1)} ← ${n(m.forecast.points[2].value,1)} بعد 3 أشهر · ثقة ${cf(m.forecast.points[2].confidence)}`:`<span class="muted">${esc(m.forecast.sufficiency_ar)}</span>`}</span></div>`).join("")+(D.sector.needs.length?`<h3>تحتاج بيانات</h3>${D.sector.needs.map(x=>`<div class="muted">• ${esc(x.ar)} — ${esc(x.needs_ar)}</div>`).join("")}`:"")+`<div class="muted">${esc(D.sector.note_ar)}</div>`);}
+  function profit(){const p=D.profit;if(p.status!=="ok")return na(p.reason_ar||"توقع الربح غير متاح");
+    const hist=p.history||[];return panel("توقع صافي الربح",chart(hist,p.points.map(x=>({period:x.period,value:x.net_profit,lower:x.lower,upper:x.upper,confidence:x.confidence})),{zero:false,title:"صافي الربح"})+fcTable(p.points.map(x=>({...x,value:x.revenue})),{h:"<th>الهامش الإجمالي</th><th>المصروفات</th><th>صافي الربح</th>",r:x=>`<td>${n(x.gross_margin,1)}%</td><td>${n(x.opex,0)}</td><td><b>${n(x.net_profit,0)}</b></td>`}))
+      +((p.warnings||[]).length?na(p.warnings.join(" · ")):"")+panel("لماذا يختلف نمو الربح عن نمو الإيراد؟",`<div class="tiles">${tile("نمو الإيراد",pct(p.revenue_growth_pct),"متوسط شهري")}${tile("نمو صافي الربح",pct(p.profit_growth_pct),"متوسط شهري")}${tile("الهامش الإجمالي",n(p.now.gross_margin,1)+"% ← "+n(p.forecast_avg.gross_margin,1)+"%","")}${tile("المصروفات الشهرية",n(p.now.opex,0)+" ← "+n(p.forecast_avg.opex,0),"")}</div>
+        <h3>جسر صافي الربح الشهري</h3>${p.bridge.map(b=>`<div class="barrow"><span class="t">${esc(b.ar)}</span><span class="g"><i style="width:${Math.min(100,Math.abs(b.amount)/Math.max(...p.bridge.map(x=>Math.abs(x.amount)),1)*100)}%;background:${b.amount>=0?"#10b981":"#ef4444"}"></i></span><b class="${b.amount>=0?"pos":"neg"}">${b.amount>0?"+":""}${n(b.amount,0)}</b></div>`).join("")}<div class="muted">${esc(p.bridge_note_ar)}</div>
+        <h3>المسببات المرتبطة</h3>${D.drivers.filter(d=>["margin","profit"].includes(d.effect)&&d.kind==="risk_driver").map(d=>`<div class="step"><span class="m">${esc(d.ar)}</span><span>${esc(d.evidence_ar)} <a href="${esc(d.link)}" style="color:var(--mint,#10b981)">↗</a></span></div>`).join("")||na("لا مسببات مرتفعة مرتبطة")}`);}
+  function branches(arg){if(arg)return branchDeep(arg);const bs=D.branches;
+    return panel("ماذا سيحدث لكل فرع؟",`<div class="tbl"><table><thead><tr><th>الفرع</th><th>الحالي (متوسط 3 أشهر)</th><th>بعد 3 أشهر</th><th>المؤشر</th><th>الاتجاه</th><th>الثقة</th></tr></thead><tbody>${bs.map(b=>b.status!=="ok"?`<tr><td><b>${esc(b.branch)}</b></td><td colspan="5" class="muted">${esc(b.reason_ar)}</td></tr>`:`<tr class="drill" data-go="branches" data-arg="${esc(b.branch)}"><td><b>${esc(b.branch)}</b></td><td>${money(b.current_avg)}</td><td>${money(b.forecast_m3)}</td><td>100 ← ${n(b.index_m3,0)}</td><td class="${b.direction==="up"?"pos":b.direction==="down"?"neg":""}">${b.arrow} ${pct(b.change_pct)}</td><td>${cf(b.confidence)}</td></tr>`).join("")}</tbody></table></div><div class="muted">المؤشر: الحالي = 100. اضغط الفرع للتفاصيل.</div>`);}
+  function branchDeep(name){const b=D.branches.find(x=>x.branch===name);if(!b||b.status!=="ok")return na("الفرع غير متاح");const acc=(D.accuracy.by_branch||{})[name];
+    const risk=D.risks.find(r=>r.code==="branch_decline:"+name),opp=D.opportunities.find(o=>o.code==="branch_growth:"+name);
+    return `<button class="back" data-go="branches">→ كل الفروع</button>`+panel("🏢 "+esc(name)+" — توقع المبيعات",chart([],b.points,{title:name})+fcTable(b.points))
+      +`<div class="tiles">${tile("التغير بعد 3 أشهر",pct(b.change_pct),b.arrow)}${tile("ثقة التوقع",cf(b.confidence),"")}${tile("الاختبار الرجعي",b.backtest?n(b.backtest.mape,1)+"% MAPE":"—","")}${tile("دقة التوقعات السابقة",acc?n(acc.accuracy,0)+"%":"—",acc?acc.n+" توقعاً":"تُبنى مع الوقت")}</div>`
+      +(risk?panel("خطر متوقع",`<b>${esc(risk.ar)}</b> ${lv(risk.level)}<div class="muted">${risk.evidence.map(esc).join(" · ")}</div>${risk.impact?`<div>${esc(risk.impact.type_ar)}: ${money(risk.impact.amount)}</div>`:""}`):"")
+      +(opp?panel("فرصة متوقعة",`<b>${esc(opp.ar)}</b><div class="muted">${opp.evidence.map(esc).join(" · ")}</div><div>${money(opp.range[0])} – ${money(opp.range[1])} · ${esc(opp.capacity_ar)}</div>`):"")
+      +panel("تعمّق في الفرع",`<div class="acts"><a class="btn ghost" href="company-risk-drivers.html#branches">مسببات الفرع</a><a class="btn ghost" href="company-sector-benchmark.html#branches">الفرع مقابل القطاع</a><a class="btn ghost" href="company-inventory-intelligence.html">المخزون</a><a class="btn ghost" href="company-leakage-intelligence.html#branches">التسرب</a><a class="btn ghost" href="company-operations-intelligence.html">العمليات</a></div>`);}
+  function growth(){const g=D.growth;if(!g)return na("لا يمكن تفكيك النمو");
+    return panel(`النمو المتوقع ${pct(g.growth_pct)}`,`<div class="muted">${esc(g.window_ar)}: ${money(g.base_total)} ← ${money(g.forecast_total)}</div>
+      <h3>من أين يأتي النمو؟</h3>${g.components.length?g.components.map(c=>`<div class="barrow"><span class="t">${esc(c.ar)}</span><span class="g"><i style="width:${Math.min(100,Math.abs(c.pct)/Math.max(...g.components.map(x=>Math.abs(x.pct)),1)*100)}%;background:${c.pct>=0?"#10b981":"#ef4444"}"></i></span><b>${pct(c.pct)}</b><span class="muted">${esc(c.detail_ar)}</span></div>`).join("")+`<div class="muted">تفكيك لوغاريتمي: حجم الطلبات + متوسط قيمة الطلب = النمو بالضبط</div>`:na("يحتاج رقم الطلب في المبيعات لتفكيك الحجم والسعر")}
+      <h3>مساهمة الفروع</h3>${g.branches.map(b=>`<div class="barrow drill" data-go="branches" data-arg="${esc(b.branch)}"><span class="t">${esc(b.branch)} ${b.arrow}</span><span class="g"><i style="width:${Math.min(100,Math.abs(b.pct)/Math.max(...g.branches.map(x=>Math.abs(x.pct)),1)*100)}%;background:${b.pct>=0?"#10b981":"#ef4444"}"></i></span><b>${pct(b.pct)}</b></div>`).join("")}${g.branch_residual_pct!=null?`<div class="muted">فرق غير موزع: ${pct(g.branch_residual_pct)} — ${esc(g.branch_note_ar)}</div>`:""}`);}
+  function cash(){const c=D.cash;if(c.status!=="ok")return na(c.reason_ar||"توقع السيولة غير متاح");
+    return panel("توقع الرصيد النقدي",chart([{period:"الآن",value:c.start_balance}],c.points.map(p=>({period:p.period,value:p.balance,lower:p.lower,upper:p.upper,confidence:p.confidence})),{zero:false,ref:c.min_cash||null,refLabel:"الحد الأدنى",title:"الرصيد"})
+      +fcTable(c.points.map(p=>({...p,value:p.balance})),{h:"<th>صافي التدفق</th>",r:p=>`<td class="${p.net<0?"neg":"pos"}">${n(p.net,0)}</td>`}))
+      +`<div class="tiles">${tile("الرصيد الحالي",money(c.start_balance),"")}${tile("بعد 6 أشهر",money(c.end_balance),"")}${tile("أول رصيد سالب",esc(c.first_negative||"لا يوجد"),"")}${tile("دون الحد الأدنى",esc(c.first_below_min||(c.min_cash?"لا يوجد":"الحد غير محدد")),"")}</div>`;}
+  function drivers(){return panel("العوامل المؤثرة في التوقع",D.drivers.length?`<div class="tbl"><table><thead><tr><th>العامل</th><th>يؤثر على</th><th>الاتجاه</th><th>الدليل</th><th>المصدر</th></tr></thead><tbody>${D.drivers.map(d=>`<tr><td><b>${esc(d.ar)}</b>${d.level?" "+lv(d.level):""}</td><td>${esc({sales:"المبيعات",margin:"الهامش",profit:"الربح",cash:"السيولة",capacity:"الطاقة",recovery:"فرصة استرداد"}[d.effect])}</td><td>${d.direction==="up"?"↑":d.direction==="down"?"↓":"→"}</td><td style="white-space:normal">${esc(d.evidence_ar)}${d.note_ar?`<div class="muted">${esc(d.note_ar)}${d.trend_ar?" · "+esc(d.trend_ar):""}</div>`:""}</td><td>${d.link?`<a href="${esc(d.link)}" style="color:var(--mint,#10b981)">${esc(d.source_ar)} ↗</a>`:esc(d.source_ar)}</td></tr>`).join("")}</tbody></table></div><div class="muted">العوامل من نموذج التنبؤ (الاتجاه، الموسمية، الفروع، جسر الربح) ومن مسببات المخاطر 3.4 — علاقة لا سببية.</div>`:na("—"));}
+  function confidence(){const c=D.sales.confidence,m=D.methodology;
+    return panel(`ثقة التوقع ${cf(c.score)} — ${esc(c.label_ar)}`,`${Object.entries(c.components).map(([k,v])=>`<div class="barrow"><span class="t">${esc({history:"طول التاريخ",completeness:"اكتمال الأشهر",recency:"حداثة البيانات",stability:"استقرار السلسلة",backtest:"دقة الاختبار الرجعي",seasonality:"توفر الموسمية",outliers:"قلة القيم الشاذة"}[k])}</span><span class="g"><i style="width:${v*100}%"></i></span><b>${n(v*c.weights[k],1)} / ${c.weights[k]}</b></div>`).join("")}<div class="muted">${esc(c.rule_ar)}</div>`)
+      +panel("المنهجية",`<ol style="margin:0;padding-inline-start:18px">${m.steps_ar.map(x=>`<li style="margin:4px 0">${esc(x)}</li>`).join("")}</ol><div class="rec" style="margin-top:8px"><b>النموذج</b><span>${esc(m.model)}</span><b>النافذة</b><span>${esc(m.window)}</span><b>الموسمية</b><span>${esc(m.seasonality_ar)}</span><b>الاختبار الرجعي</b><span>${m.backtest?`MAPE ${n(m.backtest.mape,1)}% على ${m.backtest.n} توقعاً · حسب المدى: ${Object.entries(m.backtest.by_horizon).map(([h,v])=>"+"+h+": "+n(v,1)+"%").join("، ")}`:"غير متاح"}</span><b>آخر تحديث</b><span>${esc(m.updated)}</span><b>الذكاء الاصطناعي</b><span>لا يحسب أي رقم — يشرح فقط</span></div>`)
+      +panel("كفاية البيانات",`<div class="rec"><b>الأشهر المتاحة</b><span>${D.data.months_available}</span><b>آخر بيانات</b><span>${esc(D.data.data_end)}</span><b>الحالة</b><span>${esc(D.data.sufficiency_ar)}</span>${D.data.missing_months.length?`<b>أشهر مفقودة</b><span>${D.data.missing_months.map(esc).join("، ")} — لم تُعامل كصفر</span>`:""}</div>`);}
+  function gap(){const g=D.gap;if(g.status!=="ok")return na(g.reason_ar||"غير متاح");
+    return panel("المسار الحالي مقابل الهدف",`<div class="tiles">${tile("الفعلي منذ بداية السنة",money(g.ytd_actual),esc(g.fiscal_year))}${tile("المتوقع للأشهر المتبقية",money(g.remaining_forecast),g.remaining_months+" أشهر")}${tile("إسقاط نهاية السنة",money(g.projection),"النطاق "+money(g.projection_range[0])+" – "+money(g.projection_range[1]))}${tile("الهدف",g.target?money(g.target):"غير محدد",esc(g.target_source_ar||""))}</div>
+      ${g.target?`<div class="ptip" style="margin-top:10px">${esc(g.sentence_ar)} (${n(g.gap_pct,1)}%)</div>`:na(g.reason_ar)}${g.beyond_6_note_ar?`<div class="muted">${esc(g.beyond_6_note_ar)}</div>`:""}`,D.can_edit_rules?` <button class="btn ghost" data-act="settings">تحديد الهدف</button>`:"")
+      +(g.recovery?panel("ما المطلوب لتقليل الفجوة؟",`${g.recovery.items.map(r=>`<div class="barrow"><span class="t">${esc(r.ar)}</span><span class="g"><i style="width:${Math.min(100,r.amount/Math.max(...g.recovery.items.map(x=>x.amount),1)*100)}%"></i></span><b>${money(r.amount)}</b></div><div class="muted" style="margin:-4px 0 6px">${esc(r.basis_ar)}</div>`).join("")}
+        <div class="tiles" style="margin-top:8px">${tile("الفجوة",money(g.gap),"")}${tile("فرص التحسين",money(g.recovery.total),"")}${tile("الفجوة المتبقية",money(g.recovery.remaining_gap),"")}</div><div class="muted">${esc(g.recovery.note_ar)}</div>`):"")
+      +(D.profit_gap?panel("هدف الربح",`<div class="rec"><b>الهدف السنوي</b><span>${money(D.profit_gap.target)}</span><b>المعدل السنوي المتوقع</b><span>${money(D.profit_gap.run_rate_annual)}</span><b>الفجوة</b><span>${money(D.profit_gap.gap)}</span></div><div class="muted">${esc(D.profit_gap.note_ar)}</div>`):"");}
+  function whatif(){if(!D.scenario_base_available)return na(D.profit.reason_ar||"المحاكاة تحتاج توقع الربح وصلاحية الاطلاع عليه");const L=D.assumption_limits;
+    if(!SAVED)fetch("/company/performance-prediction/scenarios",{headers:H}).then(r=>r.ok?r.json():{items:[]}).then(j=>{SAVED=j.items||[];if(route()[0]==="whatif")render();});
+    return panel("ماذا لو؟ — محاكاة لا تعدّل أي بيانات",`<div class="fg">${Object.entries(L).map(([k,v])=>`<label>${esc(v.ar)}<input data-a="${k}" inputmode="decimal" placeholder="${k==="leakage_recovery"?"مثلاً 200000":"مثلاً 10"}"></label>`).join("")}<label>اسم السيناريو<input id="scName" placeholder="سيناريو مخصص"></label></div>
+      <div class="cta"><button class="btn" id="scRun">شغّل السيناريو</button><label class="muted" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="scSave"> حفظ</label><span id="scMsg" class="muted"></span></div>
+      <div class="muted">الحجم يحرّك الإيراد والتكلفة معاً · السعر يحرّك الإيراد فقط · الأساس → الافتراض → المحاكاة → النتيجة</div><div id="scOut">${LAST?scResult(LAST):""}</div>`)
+      +panel("السيناريوهات الجاهزة",scTable(D.scenarios))+(SAVED&&SAVED.length?panel("سيناريوهات محفوظة",`<div class="tbl"><table><thead><tr><th>الاسم</th><th>الافتراضات</th><th>صافي الربح</th><th>الفرق</th><th>بواسطة</th></tr></thead><tbody>${SAVED.map(x=>`<tr><td>${esc(x.name)}</td><td class="muted">${esc(Object.entries(x.assumptions).map(([k,v])=>(L[k]||{}).ar+" "+v).join("، "))}</td><td>${money(x.net_profit)}</td><td>${x.delta_profit!=null?(x.delta_profit>0?"+":"")+n(x.delta_profit,0):"—"}</td><td class="muted">${esc(x.created_by)}</td></tr>`).join("")}</tbody></table></div>`):"");}
+  function scTable(xs){return `<div class="tbl"><table><thead><tr><th>السيناريو</th><th>الإيراد</th><th>صافي الربح</th><th>الفرق في الربح</th><th>الرصيد النهائي</th><th>استخدام الطاقة</th></tr></thead><tbody>${xs.map(x=>`<tr><td><b>${esc(x.name)}</b></td><td>${money(x.revenue)}</td><td>${money(x.net_profit)}</td><td class="${x.delta_profit>0?"pos":x.delta_profit<0?"neg":""}">${x.delta_profit?(x.delta_profit>0?"+":"")+n(x.delta_profit,0):"—"}</td><td class="${x.cash_negative?"neg":""}">${x.cash_end==null?"—":money(x.cash_end)}</td><td class="${x.capacity_warning?"neg":""}">${x.utilization==null?"—":n(x.utilization,1)+"%"}</td></tr>`).join("")}</tbody></table></div>`;}
+  function scResult(r){return `<div class="sc" style="margin-top:10px">${tile("الإيراد",money(r.revenue),(r.delta_revenue>0?"+":"")+n(r.delta_revenue,0))}${tile("صافي الربح",money(r.net_profit),`<span class="${r.delta_profit>=0?"pos":"neg"}">${(r.delta_profit>0?"+":"")+n(r.delta_profit,0)}</span>`)}${tile("الرصيد النهائي",r.cash_end==null?"—":money(r.cash_end),r.delta_cash!=null?(r.delta_cash>0?"+":"")+n(r.delta_cash,0):"")}${tile("المخزون/الطاقة",r.inventory_need?money(r.inventory_need):"—",r.utilization!=null?`طاقة ${n(r.utilization,1)}%${r.capacity_warning?" ⚠ تتجاوز 100%":""}`:"")}</div>${r.cash_negative?na("⚠ الرصيد يصبح سالباً في هذا السيناريو"):""}`;}
+  function bestworst(){const s=D.sales,p=D.profit;const sum=(xs,k)=>xs.reduce((a,b)=>a+(b[k]||0),0);
+    return panel("نطاق النتيجة (80%)",`<div class="tiles">${tile("أسوأ — الإيراد",money(sum(s.points,"lower")),"الحد الأدنى للنطاق")}${tile("الأساس — الإيراد",money(sum(s.points,"value")),"")}${tile("أفضل — الإيراد",money(sum(s.points,"upper")),"الحد الأعلى للنطاق")}${p.status==="ok"?tile("صافي الربح",money(sum(p.points,"lower"))+" – "+money(sum(p.points,"upper")),"نطاق الأشهر الستة"):""}</div><div class="muted">النطاق من تذبذب الشركة نفسها — ليس افتراضاً ثابتاً.</div>`)
+      +(D.scenarios.length?panel("مقارنة السيناريوهات",scTable(D.scenarios)+`<div class="wf">${D.scenarios.map(x=>{const mx=Math.max(...D.scenarios.map(y=>Math.abs(y.net_profit)),1);return `<div><b>${n(x.net_profit,0)}</b><i style="height:${Math.max(4,Math.abs(x.net_profit)/mx*110)}px;background:${x.net_profit>=0?"#10b981":"#ef4444"}"></i>${esc(x.name)}</div>`;}).join("")}</div>`):"");}
+  function risks(){return panel("المخاطر المتوقعة مستقبلاً",D.risks.length?D.risks.map(r=>`<div class="event" style="border-inline-start-color:${LC[r.level]}"><h4>${esc(r.ar)} ${lv(r.level)} <span class="muted">${esc(r.horizon_ar)}</span></h4><div class="rec"><b>الدليل</b><span>${r.evidence.map(esc).join(" · ")}</span>${r.impact?`<b>الأثر</b><span>${esc(r.impact.type_ar)} ${money(r.impact.amount)}</span>`:""}</div>${r.links.length?`<div class="acts">${r.links.map(l=>`<a class="btn ghost" href="${esc(l)}">التفاصيل ↗</a>`).join("")}</div>`:""}</div>`).join("")+`<div class="muted">مستوى الخطر المتوقع بقواعد معلنة من التوقع — ليس احتمالاً إحصائياً.</div>`:na("لا مخاطر متوقعة وفق القواعد"));}
+  function opps(){return panel("الفرص المستقبلية",D.opportunities.length?D.opportunities.map(o=>`<div class="event opportunity"><h4>🟢 ${esc(o.ar)}</h4><div class="rec"><b>الدليل</b><span>${o.evidence.map(esc).join(" · ")}</span><b>الأثر التقديري</b><span>${o.range?money(o.range[0])+" – "+money(o.range[1]):"—"}${o.note_ar?` <span class="muted">${esc(o.note_ar)}</span>`:""}</span><b>الثقة</b><span>${o.confidence!=null?cf(o.confidence):"—"}</span><b>الإجراء</b><span>${esc(o.action_ar||"")}</span></div><div class="acts">${D.can_edit?`<button class="btn" data-dec="${esc(o.code)}">قرار + إجراء</button>`:""}</div><div class="frm" data-frm="${esc(o.code)}"></div></div>`).join(""):na("لا فرص مستخرجة"));}
+  function plan(){return panel("خطة التدخل: توقع ← سبب ← أثر ← إجراء ← مسؤول ← استحقاق ← قياس",D.plan.length?D.plan.map(p=>`<div class="event" style="border-inline-start-color:${LC[p.level]}"><h4>${esc(p.prediction_ar)} ${lv(p.level)}</h4><div class="rec"><b>السبب</b><span>${p.cause.map(c=>esc(c.ar)+(c.evidence_ar?": "+esc(c.evidence_ar):"")).join("<br>")}</span><b>الأثر</b><span>${p.impact?esc(p.impact.type_ar)+" "+money(p.impact.amount):"—"}</span><b>الإجراء</b><span>${esc(p.action_ar)}</span><b>المسؤول</b><span>${esc(p.owner_ar)}</span><b>الاستحقاق</b><span>${esc(p.due)} (${p.due_days} يوماً)</span><b>القياس</b><span>${esc(p.measurement_ar)}</span></div><div class="acts">${D.can_edit?`<button class="btn" data-dec="${esc(p.code)}">قرار + إجراء</button>`:""}</div><div class="frm" data-frm="${esc(p.code)}"></div></div>`).join(""):na("لا تدخلات مطلوبة"));}
+  function alerts(){return panel(`🔔 ${D.alerts.length} تنبيهات`,D.alerts.length?D.alerts.map(a=>`<div class="event" style="border-inline-start-color:${LC[a.kind]||"#475569"}"><h4>${esc(a.ar)} ${lv(a.kind)}</h4><div class="muted">${a.evidence.map(esc).join(" · ")} · ${esc(a.horizon_ar)}</div></div>`).join(""):na("لا تنبيهات"));}
+  function actions(){const ms=D.decisions_measured;
+    return panel("قبل / بعد: الفعلي مقابل التوقع الأساسي قبل القرار",ms.length?`<div class="tbl"><table><thead><tr><th>القرار</th><th>التاريخ</th><th>الحالة</th><th>التوقع الأساسي</th><th>الفعلي</th><th>الفرق</th></tr></thead><tbody>${ms.map(m=>`<tr><td><b>${esc(m.title||"#"+m.id)}</b></td><td>${esc(m.created_on)}</td><td>${esc(m.status_ar||"تم القياس")}</td><td>${m.baseline_forecast!=null?money(m.baseline_forecast):m.baseline_total!=null?money(m.baseline_total):"—"}</td><td>${m.actual!=null?money(m.actual):"—"}</td><td class="${(m.difference||0)>=0?"pos":"neg"}">${m.difference!=null?(m.difference>0?"+":"")+n(m.difference,0):"—"}</td></tr>`).join("")}</tbody></table></div><div class="muted">مقارنة بخط أساس التوقع — لا تُثبت أن القرار وحده هو السبب.</div>`:na("لا قرارات من التنبؤ بعد — أنشئ قراراً من خطة التدخل أو الفرص"))
+      +panel("أنشئ قراراً من توقع",D.plan.concat(D.opportunities).slice(0,8).map(p=>`<div class="step"><span class="m">${esc(p.prediction_ar||p.ar)}</span><span>${D.can_edit?`<button class="btn ghost" data-dec="${esc(p.code)}">قرار + إجراء</button>`:""}</span></div><div class="frm" data-frm="${esc(p.code)}"></div>`).join("")||na("—"));}
+  function history(){const a=D.accuracy;
+    return panel("دقة التوقعات السابقة",a.overall?`<div class="tiles">${tile("الدقة",n(a.overall.accuracy,1)+"%","100 − MAPE")}${tile("MAPE",n(a.overall.mape,1)+"%","")}${tile("الانحياز",(a.overall.bias_pct>0?"+":"")+n(a.overall.bias_pct,1)+"%",a.overall.bias_pct>0?"التوقع أعلى من الفعلي":"التوقع أقل من الفعلي")}${tile("داخل النطاق",n(a.overall.in_range_pct,0)+"%",a.overall.n+" توقعاً قُيّم")}</div>
+      <h3>حسب المدى</h3>${Object.entries(a.by_horizon).map(([h,v])=>`<div class="barrow"><span class="t">+${h} شهر</span><span class="g"><i style="width:${v.accuracy}%"></i></span><b>${n(v.accuracy,0)}%</b></div>`).join("")}
+      ${Object.keys(a.by_branch).length?`<h3>حسب الفرع</h3>${Object.entries(a.by_branch).map(([b,v])=>`<div class="barrow"><span class="t">${esc(b)}</span><span class="g"><i style="width:${v.accuracy}%;background:${v.accuracy<70?"#ef4444":"#10b981"}"></i></span><b>${n(v.accuracy,0)}%</b></div>`).join("")}`:""}
+      ${a.table.length?`<h3>التوقع مقابل الفعلي (شهر للأمام)</h3><div class="tbl"><table><thead><tr><th>الشهر</th><th>المتوقع</th><th>الفعلي</th><th>الفرق</th></tr></thead><tbody>${a.table.map(r=>`<tr><td>${esc(r.period)}</td><td>${money(r.forecast)}</td><td>${money(r.actual)}</td><td>${pct(r.variance_pct)}</td></tr>`).join("")}</tbody></table></div>`:""}<div class="muted">${esc(a.rule_ar)}</div>`:na(a.note_ar))
+      +panel("سجل تشغيلات التنبؤ",D.runs.length?`<div class="tbl"><table><thead><tr><th>بتاريخ</th><th>آخر شهر بيانات</th><th>النموذج</th><th>الثقة</th></tr></thead><tbody>${D.runs.map(r=>`<tr><td>${esc(r.made_on)}</td><td>${esc(r.base_period)}</td><td>${esc(r.model)}</td><td>${cf(r.confidence)}</td></tr>`).join("")}</tbody></table></div><div class="muted">يُحفظ تشغيل واحد لكل شهر بيانات جديد، ولا يُعدّل لاحقاً — ليُقاس على الفعلي.</div>`:na("لا تشغيلات محفوظة بعد"));}
+  function aiView(){return panel("اسأل نبّاه — يقرأ نتائج محرك التنبؤ ولا يخترع أرقاماً",`<div class="chips">${D.ai_questions.map(q=>`<span class="chip" data-q="${esc(q)}">${esc(q)}</span>`).join("")}</div><div style="display:flex;gap:6px;margin-top:10px"><input class="search" id="aiQ" placeholder="اكتب سؤالك…"><button class="btn" id="aiGo">اسأل</button></div><div id="aiOut" style="margin-top:12px"></div>`);}
+  function render(){const d=D;
+    if(d.status!=="ok"){$("tabs").innerHTML="";$("content").innerHTML=`<div class="state"><div style="font-size:16px;margin-bottom:10px">${esc(d.message_ar||"لا توجد بيانات كافية للتنبؤ")}</div><div class="muted">المتاح: ${n(d.months_available||0)} أشهر · الحد الأدنى: 3 أشهر متصلة · الثقة الكاملة تحتاج 24 شهراً</div><div class="cta" style="justify-content:center"><a class="btn" href="company-data-center.html">مركز البيانات</a></div></div>`;return;}
+    const [v,arg]=route();
+    $("tabs").innerHTML=TABS.map(([k,l],i)=>`<button class="tab ${k===v?"on":""}" data-go="${k}"><span class="muted" style="font-size:10px">${String(i+1).padStart(2,"0")}</span> ${l}${k==="alerts"&&d.alerts.length?` <span class="b high">${d.alerts.length}</span>`:""}</button>`).join("");
+    const views={outlook,sales,profit,branches:()=>branches(arg),growth,cash,drivers,confidence,gap,whatif,bestworst,risks,opps,plan,alerts,actions,history,ai:aiView};
+    $("content").innerHTML=(views[v]||outlook)();bind();}
+  function bind(){document.querySelectorAll("[data-go]").forEach(el=>el.onclick=e=>{e.stopPropagation();go(el.dataset.go,el.dataset.arg||null);});
+    document.querySelectorAll("#content [data-act='settings']").forEach(el=>el.onclick=settings);
+    document.querySelectorAll("#content [data-dec]").forEach(b=>b.onclick=e=>{e.stopPropagation();decision(b);});
+    document.querySelectorAll("#content [data-q]").forEach(c=>c.onclick=()=>runAI(c.dataset.q));
+    const ag=$("aiGo");if(ag)ag.onclick=()=>{const q=$("aiQ").value.trim();if(q)runAI(q);};
+    const sr=$("scRun");if(sr)sr.onclick=runScenario;
+    document.querySelectorAll("#content [data-tip]").forEach(r=>{r.onmousemove=e=>{const t=$("tip");t.textContent=r.dataset.tip;t.style.display="block";t.style.left=(e.clientX+12)+"px";t.style.top=(e.clientY+12)+"px";};r.onmouseleave=()=>{$("tip").style.display="none";};});}
+  function runScenario(){const a={};document.querySelectorAll("[data-a]").forEach(i=>{if(i.value!=="")a[i.dataset.a]=Number(i.value);});const m=$("scMsg");m.textContent="…";m.className="muted";
+    fetch("/company/performance-prediction/scenario",{method:"POST",headers:H,body:JSON.stringify({assumptions:a,name:$("scName").value||"سيناريو مخصص",save:$("scSave").checked})}).then(async r=>{const j=await r.json().catch(()=>({}));
+      if(!r.ok){m.textContent=typeof j.detail==="string"?j.detail:"HTTP "+r.status;m.className="neg";return;}LAST=j.scenario;m.textContent=j.saved_id?"تم الحفظ ✓":"محاكاة فقط — لم تُعدّل أي بيانات";m.className="pos";if(j.saved_id)SAVED=null;$("scOut").innerHTML=scResult(LAST);});}
+  function decision(b){const k=b.dataset.dec,box=document.querySelector(`#content [data-frm="${CSS.escape(k)}"]`);if(!box)return;const p=D.plan.find(x=>x.code===k)||{};
+    box.innerHTML=`<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap"><input class="f o" placeholder="المسؤول" value="${esc(p.owner_ar||"")}"><input class="f d" type="date" value="${esc(p.due||"")}"><input class="f t" placeholder="الإجراء" value="${esc(p.action_ar||"")}"><button class="btn c">إنشاء القرار</button></div><div class="m muted">خط الأساس = التوقع المحفوظ الآن، ويُقاس الفعلي مقابله لاحقاً.</div>`;
+    box.querySelector(".c").onclick=()=>fetch("/company/performance-prediction/to-decision",{method:"POST",headers:H,body:JSON.stringify({code:k,owner:box.querySelector(".o").value,due_date:box.querySelector(".d").value,action:box.querySelector(".t").value})}).then(async r=>{const j=await r.json().catch(()=>({}));const m=box.querySelector(".m");m.textContent=r.ok?"تم إنشاء القرار والإجراء ✓":(typeof j.detail==="string"?j.detail:"HTTP "+r.status);m.className=r.ok?"pos":"neg";});}
+  function settings(){const t=(D.saved_settings||{}).targets||{};
+    $("modal").innerHTML=`<h3 style="margin-top:0">أهداف التنبؤ</h3><div class="fg"><label>هدف الإيراد السنوي<input id="tR" inputmode="decimal" value="${esc(t.annual_revenue??"")}"></label><label>هدف صافي الربح السنوي<input id="tP" inputmode="decimal" value="${esc(t.annual_profit??"")}"></label></div><div class="muted">فارغ = يُقرأ من موازنة الوحدة المالية أو أهداف الفروع إن وُجدت. المصدر الحالي: ${esc(D.targets_source||"لا يوجد")}</div><div class="cta"><button class="btn" id="tS">حفظ</button><button class="btn ghost" id="tC">إلغاء</button><span id="tM" class="muted"></span></div>`;
+    $("ov").classList.add("on");$("tC").onclick=()=>$("ov").classList.remove("on");
+    $("tS").onclick=()=>fetch("/company/performance-prediction/settings",{method:"POST",headers:H,body:JSON.stringify({annual_revenue:$("tR").value,annual_profit:$("tP").value})}).then(async r=>{const j=await r.json().catch(()=>({}));if(r.ok){$("ov").classList.remove("on");load();}else{$("tM").className="neg";$("tM").textContent=typeof j.detail==="string"?j.detail:"HTTP "+r.status;}});}
+  function runAI(q){if(route()[0]!=="ai"){go("ai");setTimeout(()=>runAI(q),60);return;}const out=$("aiOut");if(!out)return;out.innerHTML=`<div class="muted">«${esc(q)}» — جارٍ التحليل…</div>`;
+    fetch("/company/performance-prediction/ai-insights",{method:"POST",headers:H,body:JSON.stringify({question:q})}).then(async r=>{const j=await r.json().catch(()=>({}));
+      if(!r.ok){out.innerHTML=`<div class="neg">${esc(typeof j.detail==="string"?j.detail:"HTTP "+r.status)}</div>`;return;}
+      const a=j.ai||{},resp=a.response||{},L={FACTS:"من محرك التنبؤ",INTERPRETATION:"القراءة",HYPOTHESES:"عوامل مرجّحة",RECOMMENDATIONS:"الإجراءات",DATA_GAPS:"بيانات ناقصة"};
+      out.innerHTML=`<div class="muted" style="margin-bottom:6px">«${esc(j.question||q)}» · الأرقام من المحرك بثقتها ونطاقها — الذكاء الاصطناعي يشرح فقط</div>`+(a.message?`<div class="na">${esc(a.message)}</div>`:"")+Object.keys(L).map(k=>resp[k]&&resp[k].length?`<div class="ai-sec"><b>${L[k]}</b><ul style="margin:0;padding-inline-start:18px">${resp[k].map(x=>`<li>${esc(typeof x==="string"?x:JSON.stringify(x))}</li>`).join("")}</ul></div>`:"").join("");}).catch(e=>{out.innerHTML=`<div class="neg">${esc(e.message||e)}</div>`;});}
+  $("ov").onclick=e=>{if(e.target===$("ov"))$("ov").classList.remove("on");};
+  $("btnSet").onclick=settings;
+  load();
+})();
+</script>
+<script src="nabbah-sidebar.js"></script>
+</body></html>
