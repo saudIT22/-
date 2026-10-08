@@ -1039,6 +1039,65 @@ class CompanyDecisionHistory(SQLModel, table=True):
     note: str = ""
 
 
+# ═══ Phase 3.10 — Board Presentation: طبقة التقرير فقط (الأرقام تُقرأ من المحركات — النسخة المحفوظة لا تُعدّل) ═══
+class CompanyBoardReport(SQLModel, table=True):
+    """حزمة مجلس محفوظة: نسخة مرقّمة لكل فترة + لقطة كاملة وقت الإنشاء (Board Snapshot). تغيّر البيانات = نسخة جديدة."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    period: str = Field(default="", index=True)
+    version: int = 1
+    title: str = ""
+    status: str = "final"             # final | presented
+    meeting_date: str = ""
+    generated_by: str = ""
+    generated_by_id: Optional[int] = None
+    generated_at: _DTCOL = Field(default_factory=_now_naive)
+    presented_at: str = ""
+    snapshot_json: str = "{}"         # لقطة المقارنة بالاجتماع التالي
+    pack_json: str = "{}"             # الحزمة كاملة كما كانت وقت الإنشاء
+    checksum: str = ""
+    engine_version: str = ""
+    exports: int = 0
+
+
+class CompanyBoardReportSection(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    report_id: int = Field(index=True)
+    section: str = ""
+    sort_order: int = 0
+    content_json: str = "{}"
+    source: str = ""
+
+
+class CompanyBoardReportMetric(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    report_id: int = Field(index=True)
+    metric: str = ""
+    label: str = ""
+    value: Optional[float] = None
+    source_module: str = ""
+    confidence: str = ""
+    period: str = ""
+
+
+class CompanyBoardDecisionItem(SQLModel, table=True):
+    """قرار مطلوب من المجلس في حزمة معيّنة + قرار المجلس فيه (يُنفّذ عبر مسار 3.9)."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    report_id: int = Field(index=True)
+    decision_id: Optional[int] = None
+    goal_id: Optional[int] = None
+    title: str = ""
+    priority: str = ""
+    recommendation: str = ""
+    resolution: str = ""              # "" | approved | rejected | deferred
+    resolved_by: str = ""
+    resolved_at: str = ""
+    note: str = ""
+
+
 class BenchmarkDataset(SQLModel, table=True):
     """طبقة المعايير القطاعية (3.5): company_id فارغ = معيار المنصّة (من الإدارة)، وإلا معيار خاص بالشركة.
     كل معيار بمصدره ومنهجيته وفترته وعيّنته وثقته — لا معيار بلا مصدر."""
@@ -1756,6 +1815,11 @@ def page_goals_intelligence():
 @app.get("/company-decisions-intelligence.html")
 def page_decisions_intelligence():
     return FileResponse("company-decisions-intelligence.html")
+
+
+@app.get("/company-board-intelligence.html")
+def page_board_intelligence():
+    return FileResponse("company-board-intelligence.html")
 
 
 @app.get("/company-sector-benchmark.html")
@@ -4636,7 +4700,7 @@ def _load_p24(name):
     """يحمّل محركات 2.4 من المجلد أو من حزمة nabbah_engines."""
     try:
         import sys as _sys, os as _os, importlib
-        for _d in ("phase21", "phase22", "phase23", "phase24", "phase25", "phase26", "phase27", "phase28", "phase29", "phase210", "phase211", "phase30", "phase31", "phase32", "phase33", "phase34", "phase35", "phase37", "phase38", "phase39"):
+        for _d in ("phase21", "phase22", "phase23", "phase24", "phase25", "phase26", "phase27", "phase28", "phase29", "phase210", "phase211", "phase30", "phase31", "phase32", "phase33", "phase34", "phase35", "phase37", "phase38", "phase39", "phase310"):
             _p = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), _d)
             if _p not in _sys.path:
                 _sys.path.insert(0, _p)
@@ -7917,7 +7981,7 @@ def company_prediction_ai(data: dict, request: Request, user: User = Depends(get
 #  Phase 3.8 — Goals & Results Intelligence (هدف → فعلي → توقع → فجوة → إجراء → مسؤول → مرحلة → نتيجة → قبل/بعد)
 #  طبقة أهداف فقط: الفعلي والتوقع والمخاطر تُقرأ من محركات 3.3/3.4/3.5/3.7 — لا جداول بيانات مكررة
 # ═══════════════════════════════════════════════════════════
-_GOAL_TITLES = ("", "ceo", "dept_manager", "branch_manager", "employee")
+_GOAL_TITLES = ("", "ceo", "cfo", "board", "dept_manager", "branch_manager", "employee")
 _GOAL_COLLAB_KINDS = ("comment", "mention", "evidence", "request_update", "escalate", "assign_owner", "approve", "reject")
 
 
@@ -8029,12 +8093,12 @@ def _goal_decisions(s, cid, acts):
     return out
 
 
-def _goals_result(s, company, role, viewer, *, save=True):
+def _goals_result(s, company, role, viewer, *, save=True, cd=None):
     ge = _load_p24("goals_engine")
     if ge is None:
         raise HTTPException(503, "محرّك الأهداف غير متاح — " + _p23_diagnostic())
     R_ = _goals_rows(s, company.id)
-    ctx, d = _goals_ctx(s, company)
+    ctx, d = cd or _goals_ctx(s, company)
     st = R_["strat"]
     try:
         prev = json.loads(st.snapshot_json or "{}") if st else {}
@@ -8737,14 +8801,14 @@ def _dec_dict(dx, d, m, kpis, out, evs, hist, acts, gact, rk):
     return base
 
 
-def _dec_result(s, company, role, viewer):
+def _dec_result(s, company, role, viewer, *, cd=None):
     dx, ge = _load_p24("decisions_engine"), _load_p24("goals_engine")
     if dx is None or ge is None:
         raise HTTPException(503, "محرّك متابعة القرارات غير متاح — " + _p23_diagnostic())
     decs, metas, kpis, outs, evs, hist, acts, gacts, rbase = _dec_rows(s, company.id)
     items = [_dec_dict(dx, d, metas.get(d.id), kpis.get(d.id, []), outs.get(d.id), evs.get(d.id, []), hist.get(d.id, []), acts.get(d.id, []),
                        gacts.get(d.id), rbase.get(d.id)) for d in decs]
-    ctx, data = _goals_ctx(s, company)
+    ctx, data = cd or _goals_ctx(s, company)
     gids = {x["goal_id"] for x in items if x.get("goal_id")}
     gev = {}
     for g in s.exec(select(CompanyGoal).where(CompanyGoal.company_id == company.id)).all() if gids else []:
@@ -9261,6 +9325,241 @@ def company_decisions_ai(data: dict, request: Request, user: User = Depends(get_
     return {"question": q, "ai": out}
 
 
+# ═══════════════════════════════════════════════════════════
+#  Phase 3.10 — Board Presentation (حزمة قرار لمجلس الإدارة) — تقرأ من الطبقة الموحدة فقط
+#  النسخ المحفوظة لا تُعدّل: تغيّر البيانات = نسخة جديدة · كل عرض/إنشاء/تصدير يُسجَّل
+# ═══════════════════════════════════════════════════════════
+def _board_scope(s, user):
+    company, role, viewer = _goals_scope(s, user)
+    be = _load_p24("board_engine")
+    if be is None:
+        raise HTTPException(503, "محرّك عرض المجلس غير متاح — " + _p23_diagnostic())
+    sc = be.board_scope(viewer)
+    if sc["kind"] == "none":
+        raise HTTPException(403, "عرض مجلس الإدارة للمالك والرئيس التنفيذي والمدير المالي وأعضاء المجلس والمدراء")
+    return company, role, viewer, sc, be
+
+
+def _board_prev(s, company_id, before_id=None):
+    q = select(CompanyBoardReport).where(CompanyBoardReport.company_id == company_id).order_by(CompanyBoardReport.generated_at.desc())
+    for r in s.exec(q.limit(50)).all():
+        if before_id and r.id >= before_id:
+            continue
+        try:
+            return json.loads(r.snapshot_json or "{}") or None, r
+        except (TypeError, ValueError):
+            continue
+    return None, None
+
+
+def _board_live(s, company, role, viewer, sc, be, *, before_id=None):
+    """يبني الحزمة الحية: نفس سياق المحركات مرة واحدة → الأهداف (3.8) والقرارات (3.9) → المجلس. العرض للمجلس على مستوى الشركة."""
+    cd = _goals_ctx(s, company)
+    ctx, d = cd
+    data_viewer = {"role": "owner", "user_id": viewer.get("user_id")} if sc["kind"] in ("full", "cfo", "board") else viewer
+    gres = _goals_result(s, company, role, data_viewer, save=False, cd=cd)
+    dres, _ = _dec_result(s, company, role, data_viewer, cd=cd)
+    prev, prev_row = _board_prev(s, company.id, before_id)
+    gb = {}
+    for b in gres.get("branches") or []:
+        sts = [g["status"] for g in (b.get("goals") or []) + (b.get("implied") or [])]
+        if sts:
+            gb[b["branch"]] = {"behind": sts.count("behind"), "at_risk": sts.count("at_risk"), "on_track": sts.count("on_track")}
+    pack = be.analyze_board(ctx=ctx, risk=d["risk"], drivers=d["drivers"], pred=d["pred"], goals_res=gres, dec_res=dres,
+                            budget=(_fin_settings(s, company.id).get("budget") or {}), previous=prev, sector=_risk_sector(company), today=d["today"],
+                            viewer=viewer, currency=getattr(company, "currency", None) or "SAR", fy_start=d["fy_start"], company_name=company.name, goal_branches=gb)
+    pack["previous_report"] = {"id": prev_row.id, "version": prev_row.version, "period": prev_row.period,
+                               "at": prev_row.generated_at.strftime("%Y-%m-%d") if prev_row.generated_at else ""} if prev_row else None
+    pack["module_errors"] = d["errors"]
+    return pack
+
+
+def _board_reports(s, company_id):
+    rows = s.exec(select(CompanyBoardReport).where(CompanyBoardReport.company_id == company_id).order_by(CompanyBoardReport.generated_at.desc()).limit(100)).all()
+    views = {}
+    for a in s.exec(select(AuditLog).where(AuditLog.company_id == company_id, AuditLog.action == "board_report_view")).all():
+        views[a.target] = views.get(a.target, 0) + 1
+    return [{"id": r.id, "period": r.period, "version": r.version, "title": r.title, "status": r.status, "generated_by": r.generated_by,
+             "generated_at": r.generated_at.strftime("%Y-%m-%d %H:%M") if r.generated_at else "", "meeting_date": r.meeting_date, "presented_at": r.presented_at,
+             "exports": r.exports or 0, "views": views.get(f"board:{r.id}", 0), "engine": r.engine_version} for r in rows]
+
+
+@app.get("/company/board-intelligence")
+def company_board_intelligence(user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role, viewer, sc, be = _board_scope(s, user)
+        try:
+            pack = _board_live(s, company, role, viewer, sc, be)
+        except HTTPException:
+            raise
+        except Exception as e:
+            import traceback as _tb
+            _logger.error("board-intelligence failed:\n" + _tb.format_exc()[-3000:])
+            raise HTTPException(500, f"خطأ في عرض مجلس الإدارة — {type(e).__name__}: {str(e)[:200]} (التفاصيل في سجل الخادم)")
+        pack["reports"] = _board_reports(s, company.id)
+        pack["live"] = True
+        log_audit(company.id, user.id, user.name, "board_view", "board:live", f"scope={sc['kind']}")
+        return pack
+
+
+@app.post("/company/board/generate")
+def company_board_generate(data: dict, user: User = Depends(get_current_user)):
+    """3.10.17/3.10.19 — ينشئ حزمة مجلس كنسخة جديدة مجمّدة (لا يُعدّل أي نسخة سابقة)."""
+    with Session(engine) as s:
+        company, role, viewer, sc, be = _board_scope(s, user)
+        if not sc["can_generate"]:
+            raise HTTPException(403, "إنشاء حزمة المجلس للمالك والرئيس التنفيذي والمدير المالي")
+        md = str(data.get("meeting_date") or "")[:10]
+        if md and not _valid_date(md):
+            raise HTTPException(422, "تاريخ الاجتماع غير صالح")
+        full = {"role": "owner", "user_id": user.id}
+        pack = _board_live(s, company, role, full, be.board_scope(full), be)
+        same = s.exec(select(CompanyBoardReport).where(CompanyBoardReport.company_id == company.id, CompanyBoardReport.period == pack["period"])).all()
+        ver = max([r.version for r in same] or [0]) + 1
+        import hashlib as _h
+        body = json.dumps(pack, ensure_ascii=False, default=str)
+        r = CompanyBoardReport(company_id=company.id, period=pack["period"], version=ver, title=str(data.get("title") or f"حزمة مجلس الإدارة — {pack['period']} — النسخة {ver}")[:200],
+                               status="final", meeting_date=md, generated_by=(user.name or user.email)[:100], generated_by_id=user.id, generated_at=datetime.now(),
+                               snapshot_json=json.dumps(pack["snapshot"], ensure_ascii=False, default=str), pack_json=body,
+                               checksum=_h.sha256(body.encode()).hexdigest()[:32], engine_version=pack["version"])
+        s.add(r); s.commit(); s.refresh(r)
+        for i, (k, _a) in enumerate(be.SECTIONS):
+            v = pack.get(k)
+            s.add(CompanyBoardReportSection(company_id=company.id, report_id=r.id, section=k, sort_order=i,
+                                            content_json=json.dumps(v, ensure_ascii=False, default=str)[:200000], source=",".join(sorted({m["source_module"] for m in pack["metrics"]}))[:200] if k == "financial" else ""))
+        for m in pack["metrics"]:
+            s.add(CompanyBoardReportMetric(company_id=company.id, report_id=r.id, metric=str(m["metric"])[:80], label=str(m.get("label") or "")[:120],
+                                           value=m.get("value"), source_module=str(m.get("source_module") or "")[:40], confidence=str(m.get("confidence") if m.get("confidence") is not None else "")[:20],
+                                           period=str(m.get("period") or "")[:40]))
+        for it in pack["decisions_required"]:
+            s.add(CompanyBoardDecisionItem(company_id=company.id, report_id=r.id, decision_id=it.get("decision_id"), goal_id=it.get("goal_id"), title=it["title"][:200],
+                                           priority=it.get("risk_if_delayed") or "", recommendation=it.get("recommendation") or ""))
+        s.commit()
+        log_audit(company.id, user.id, user.name, "board_generate", f"board:{r.id}", f"period={r.period} version={ver} checksum={r.checksum}")
+        return {"ok": True, "id": r.id, "version": ver, "period": r.period}
+
+
+@app.get("/company/board/report/{rid}")
+def company_board_report(rid: int, user: User = Depends(get_current_user)):
+    """النسخة المحفوظة كما كانت وقت إنشائها (مقيّدة بصلاحية القارئ) + من شاهدها ومن صدّرها."""
+    with Session(engine) as s:
+        company, role, viewer, sc, be = _board_scope(s, user)
+        r = s.get(CompanyBoardReport, rid)
+        if not r or r.company_id != company.id:
+            raise HTTPException(404, "الحزمة غير موجودة")
+        try:
+            pack = json.loads(r.pack_json or "{}")
+        except (TypeError, ValueError):
+            raise HTTPException(500, "تعذّرت قراءة الحزمة المحفوظة")
+        pack = be.restrict(pack, viewer)
+        items = s.exec(select(CompanyBoardDecisionItem).where(CompanyBoardDecisionItem.company_id == company.id, CompanyBoardDecisionItem.report_id == r.id)).all()
+        trail = s.exec(select(AuditLog).where(AuditLog.company_id == company.id, AuditLog.target == f"board:{r.id}").order_by(AuditLog.created_at.desc()).limit(200)).all()
+        log_audit(company.id, user.id, user.name, "board_report_view", f"board:{r.id}", f"version={r.version}")
+        pack.update({"live": False, "report": {"id": r.id, "period": r.period, "version": r.version, "title": r.title, "status": r.status, "generated_by": r.generated_by,
+                                               "generated_at": r.generated_at.strftime("%Y-%m-%d %H:%M") if r.generated_at else "", "checksum": r.checksum,
+                                               "meeting_date": r.meeting_date, "presented_at": r.presented_at, "exports": r.exports or 0},
+                     "resolutions": [{"id": i.id, "decision_id": i.decision_id, "goal_id": i.goal_id, "title": i.title, "recommendation": i.recommendation,
+                                      "resolution": i.resolution, "resolved_by": i.resolved_by, "resolved_at": i.resolved_at, "note": i.note} for i in items],
+                     "access_log": [{"action": a.action, "user": a.user_name, "at": a.created_at.strftime("%Y-%m-%d %H:%M") if a.created_at else "", "details": a.details} for a in trail],
+                     "reports": _board_reports(s, company.id),
+                     "frozen_note_ar": "نسخة مجمّدة كما كانت وقت إنشائها — لا تتغير مع البيانات. لإظهار الأرقام الحالية أنشئ نسخة جديدة."})
+        return pack
+
+
+@app.post("/company/board/export")
+def company_board_export(data: dict, user: User = Depends(get_current_user)):
+    """3.10.18 — تسجيل تصدير PDF (الطباعة من المتصفح بتنسيق الحزمة) — من صدّر، أي نسخة، متى."""
+    with Session(engine) as s:
+        company, role, viewer, sc, be = _board_scope(s, user)
+        if sc["kind"] not in ("full", "cfo", "board"):
+            raise HTTPException(403, "تصدير حزمة المجلس للإدارة العليا وأعضاء المجلس فقط")
+        rid = data.get("id")
+        if rid:
+            r = s.get(CompanyBoardReport, int(rid))
+            if not r or r.company_id != company.id:
+                raise HTTPException(404, "الحزمة غير موجودة")
+            r.exports = (r.exports or 0) + 1
+            s.add(r); s.commit()
+            log_audit(company.id, user.id, user.name, "board_export", f"board:{r.id}", f"format=pdf version={r.version}")
+        else:
+            log_audit(company.id, user.id, user.name, "board_export", "board:live", "format=pdf live (غير محفوظ)")
+        return {"ok": True}
+
+
+@app.post("/company/board/present")
+def company_board_present(data: dict, user: User = Depends(get_current_user)):
+    """يوسم الحزمة «عُرضت في اجتماع» — تصبح أساس مقارنة الاجتماع القادم."""
+    with Session(engine) as s:
+        company, role, viewer, sc, be = _board_scope(s, user)
+        if not sc["can_resolve"]:
+            raise HTTPException(403, "للمالك أو الرئيس التنفيذي")
+        r = s.get(CompanyBoardReport, int(data.get("id") or 0))
+        if not r or r.company_id != company.id:
+            raise HTTPException(404, "الحزمة غير موجودة")
+        r.status, r.presented_at = "presented", datetime.now().strftime("%Y-%m-%d")
+        s.add(r); s.commit()
+        log_audit(company.id, user.id, user.name, "board_present", f"board:{r.id}", f"version={r.version}")
+        return {"ok": True}
+
+
+@app.post("/company/board/resolve")
+def company_board_resolve(data: dict, user: User = Depends(get_current_user)):
+    """قرار المجلس في بند مطلوب: اعتماد/رفض/تأجيل — الاعتماد والرفض يُنفّذان عبر مسار الاعتماد في 3.9 (لا مسار موازٍ)."""
+    with Session(engine) as s:
+        company, role, viewer, sc, be = _board_scope(s, user)
+        if not sc["can_resolve"]:
+            raise HTTPException(403, "قرار المجلس يسجله المالك أو الرئيس التنفيذي")
+        it = s.get(CompanyBoardDecisionItem, int(data.get("item_id") or 0))
+        if not it or it.company_id != company.id:
+            raise HTTPException(404, "البند غير موجود")
+        res = str(data.get("resolution") or "")
+        if res not in ("approved", "rejected", "deferred"):
+            raise HTTPException(422, "القرار: اعتماد أو رفض أو تأجيل")
+        note = str(data.get("note") or "").strip()[:500]
+        if res in ("rejected", "deferred") and not note:
+            raise HTTPException(422, "السبب مطلوب للرفض أو التأجيل")
+        if it.resolution:
+            raise HTTPException(409, "سُجّل قرار المجلس لهذا البند — أنشئ حزمة جديدة لإعادة الطرح")
+        rep = s.get(CompanyBoardReport, it.report_id)
+        out = None
+        if it.decision_id and res in ("approved", "rejected"):
+            d = s.get(CompanyDecision, it.decision_id)
+            if d and d.company_id == company.id:
+                m = s.exec(select(CompanyDecisionMeta).where(CompanyDecisionMeta.company_id == company.id, CompanyDecisionMeta.decision_id == d.id)).first()
+                if m and m.workflow in ("pending_approval", "under_review"):
+                    out = company_decision_center_transition({"id": d.id, "to": res, "note": f"قرار مجلس الإدارة — حزمة {rep.period if rep else ''} ن{rep.version if rep else ''}" + (f": {note}" if note else "")}, user=user)
+        it.resolution, it.resolved_by, it.resolved_at, it.note = res, (user.name or user.email)[:100], datetime.now().strftime("%Y-%m-%d"), note
+        s.add(it); s.commit()
+        log_audit(company.id, user.id, user.name, "board_resolution", f"board:{it.report_id}", f"item={it.id} decision={it.decision_id} {res}")
+        return {"ok": True, "resolution": res, "decision_transition": out}
+
+
+@app.post("/company/board/ai-insights")
+def company_board_ai(data: dict, request: Request, user: User = Depends(get_current_user)):
+    """Board Intelligence — يجيب من حزمة المجلس فقط (مقيّدة بصلاحية السائل) ولا يُصدر قراراً بدل المجلس."""
+    with Session(engine) as s:
+        company, role, viewer, sc, be = _board_scope(s, user)
+        if data.get("report_id"):
+            r = s.get(CompanyBoardReport, int(data["report_id"]))
+            if not r or r.company_id != company.id:
+                raise HTTPException(404, "الحزمة غير موجودة")
+            pack = be.restrict(json.loads(r.pack_json or "{}"), viewer)
+        else:
+            pack = _board_live(s, company, role, viewer, sc, be)
+    gw = _load_p24("ai_gateway")
+    if gw is None:
+        raise HTTPException(503, "بوابة الذكاء الاصطناعي غير متاحة — " + _p23_diagnostic())
+    q = str(data.get("question") or pack["ai_questions"][0])[:300]
+    if data.get("narrative"):
+        q = "اكتب سرداً تنفيذياً قصيراً للمجلس: ماذا حدث، لماذا، الأثر المالي، ماذا سيحدث، القرار المطلوب"
+    out = gw.request_ai_analysis(gw.GeminiProvider(company_gemini), be.ai_context(pack),
+                                 q + " — من أرقام حزمة المجلس فقط بثقتها. صياغة تنفيذية قصيرة. لا تخترع أرقاماً ولا تقرر بدل المجلس، والعلاقات ليست سببية مثبتة.",
+                                 trust_report={"overall_score": 75, "status": "pass", "has_critical_fail": False, "main_causes": []},
+                                 lang=get_lang(request), company=company)
+    log_audit(company.id, user.id, user.name, "board_ai", f"board:{data.get('report_id') or 'live'}", f"q={q[:80]}")
+    return {"question": q, "ai": out}
+
+
 @app.get("/company/executive-intelligence")
 def company_executive_intelligence(request: Request, user: User = Depends(get_current_user),
                                    period: Optional[str] = None, ai: int = 0):
@@ -9388,6 +9687,16 @@ def company_executive_intelligence(request: Request, user: User = Depends(get_cu
                                         result.setdefault("module_signals", {})["decisions"] = _dz.get("signals", [])[:6]
                             except Exception as _e:      # فشل المتابعة لا يُسقط مركز القيادة
                                 _logger.error(f"executive decisions block: {type(_e).__name__}: {str(_e)[:200]}")
+                            try:      # 3.10: آخر حزمة مجلس (بلا إعادة حساب — قراءة السجل فقط)
+                                _br = s.exec(select(CompanyBoardReport).where(CompanyBoardReport.company_id == company.id)
+                                             .order_by(CompanyBoardReport.generated_at.desc())).first()
+                                if _br:
+                                    _bs = json.loads(_br.snapshot_json or "{}")
+                                    result["board"] = {"last_pack": {"id": _br.id, "period": _br.period, "version": _br.version, "status": _br.status,
+                                                                     "generated_at": _br.generated_at.strftime("%Y-%m-%d") if _br.generated_at else ""},
+                                                       "lenses": _bs.get("lenses"), "link": "company-board-intelligence.html"}
+                            except Exception as _e:
+                                _logger.error(f"executive board block: {type(_e).__name__}: {str(_e)[:200]}")
             except HTTPException:
                 pass
             try:   # إشارات المشتريات 2.7
@@ -14715,7 +15024,7 @@ ENGINE_MODULES = ("nabbah_finance", "nabbah_trust", "semantic_layer", "kpi_engin
                   "ai_gateway", "period_aggregation", "legacy_adapters", "platform_bridge",
                   "intelligence_engine", "forecast_engine", "scenario_engine", "decision_memory",
                   "rule_catalog", "canonical_model", "period_model", "metric_registry", "ingestion",
-                  "sales_engine", "inventory_engine", "purchases_engine", "cashflow_engine", "hr_engine", "ops_engine", "finance_engine", "sector_intelligence", "leakage_engine", "tax_engine", "risk_engine", "drivers_engine", "benchmark_engine", "prediction_engine", "goals_engine", "decisions_engine")
+                  "sales_engine", "inventory_engine", "purchases_engine", "cashflow_engine", "hr_engine", "ops_engine", "finance_engine", "sector_intelligence", "leakage_engine", "tax_engine", "risk_engine", "drivers_engine", "benchmark_engine", "prediction_engine", "goals_engine", "decisions_engine", "board_engine")
 
 
 def _runtime_health():
