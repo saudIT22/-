@@ -162,9 +162,9 @@
     <div id="m-email" style="color:#475a52;font-size:14px;margin-bottom:8px"></div>
     <label>الباقة</label>
     <select id="m-plan">
-      <option value="basic">الأساسية (269 ريال)</option>
-      <option value="pro">الاحترافية (699 ريال)</option>
-      <option value="executive" selected>التنفيذية (1299 ريال)</option>
+      <option value="basic">Core — الأساسية (699 ريال)</option>
+      <option value="pro" selected>Intelligence ⭐ (1,499 ريال)</option>
+      <option value="executive">Enterprise — المؤسسية (2,999 ريال)</option>
     </select>
     <label>المدة (بالأيام)</label>
     <select id="m-days">
@@ -412,7 +412,7 @@
       const res = await fetch("/admin/user/" + userId, { headers: { "X-Admin-Key": adminKey } });
       if (!res.ok) { toast("تعذّر جلب التفاصيل", true); return; }
       const u = await res.json();
-      const planNames = {"":"بدون","basic":"الأساسية","pro":"الاحترافية","executive":"التنفيذية","trial":"تجربة","trial_used":"تجربة منتهية"};
+      const planNames = {"":"بدون","basic":"Core","pro":"Intelligence","executive":"Enterprise","trial":"تجربة","trial_used":"تجربة منتهية"};
       const fmt = d => d ? new Date(d).toLocaleDateString("ar-SA") : "—";
       const statusTxt = u.is_active === 1 ? (u.plan === "trial" ? "تجريبي نشط" : "نشط") : (u.plan === "trial_used" ? "تجربة منتهية" : "موقوف");
       let entriesHtml = "";
