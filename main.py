@@ -303,7 +303,14 @@ db_url = os.getenv("DATABASE_URL", "sqlite:///nabbah.db")
 # Railway يعطي postgres:// لكن SQLAlchemy يحتاج postgresql://
 if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
-engine = create_engine(db_url)
+# SQLAlchemy 2.1+ صار يستخدم psycopg (v3) افتراضياً لـ postgresql:// — نحدّد المشغّل المثبّت فعلاً
+if db_url.startswith("postgresql://"):
+    import importlib.util as _ilu
+    if _ilu.find_spec("psycopg2") is not None:
+        db_url = db_url.replace("postgresql://", "postgresql+psycopg2://", 1)
+    elif _ilu.find_spec("psycopg") is not None:
+        db_url = db_url.replace("postgresql://", "postgresql+psycopg://", 1)
+engine = create_engine(db_url, pool_pre_ping=True)
 class CompanyMember(SQLModel, table=True):
     """أعضاء فريق الشركة وصلاحياتهم."""
     id: Optional[int] = Field(default=None, primary_key=True)
