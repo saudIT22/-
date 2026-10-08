@@ -65,7 +65,7 @@
 
     <div class="msg" id="msg"></div>
 
-    <div class="switch">ما عندك حساب؟ <a href="register.html">أنشئ حساب جديد</a></div>
+    <div class="switch">ما عندك حساب؟ <a href="company-start.html">أنشئ حساب جديد</a></div>
     <div class="back"><a href="index.html">← رجوع للرئيسية</a></div>
   </div>
 
@@ -107,6 +107,11 @@
             if (info.has_company) { window.location.href = "company-dashboard.html"; return; }
           }
         } catch (e) {}
+        // جاي من مسار الشركات (زر "ابدأ تحليل منشأتك") → تسجيل الشركة بدل التحليل القديم
+        var intent = null; try { intent = localStorage.getItem("nabbah_intent"); } catch (e) {}
+        if (intent === "company" || new URLSearchParams(location.search).get("next") === "company") {
+          window.location.href = "company-register.html"; return;
+        }
         window.location.href = out.is_active == 1 ? "dashboard.html" : "trial.html";
       }
     } catch (e) {
@@ -118,5 +123,6 @@
 
   document.getElementById("password").addEventListener("keydown", e => { if (e.key === "Enter") login(); });
 </script>
+  <script src="i18n.js"></script>
 </body>
 </html>
