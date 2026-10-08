@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>نبّاه · عرض مجلس الإدارة</title>
+<link href="nabbah-design.css" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{background:var(--bg,#070b09);color:var(--txt,#e8f1ec);font-family:Tajawal,Tahoma,Arial,sans-serif;margin:0}
+  .wrap{max-width:1180px;margin:0 auto;padding:70px 16px 60px}
+  h1{margin:0 0 4px;font-size:24px}.sub{color:var(--txt-soft,#8ba396);margin:0 0 16px;font-size:14px}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+  select{background:var(--panel,#101a15);color:var(--txt,#e8f1ec);border:1px solid var(--line,#1d2c24);border-radius:10px;padding:8px 10px;font:inherit;font-size:13px;max-width:190px}
+  .crumbs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;min-height:4px}
+  .chip{background:rgba(16,185,129,.12);color:var(--mint,#10b981);border:1px solid rgba(16,185,129,.35);border-radius:20px;padding:3px 10px;font-size:12px;cursor:pointer}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+  .tile,.panel{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:14px;padding:14px}
+  .tile .l{font-size:12px;color:var(--txt-soft,#8ba396)}.tile .v{font-size:21px;font-weight:800;margin-top:4px}
+  .tile .c{font-size:12px;margin-top:4px}
+  .panel{margin-bottom:14px;min-width:0}.panel h2{margin:0 0 10px;font-size:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .panel h3{margin:12px 0 6px;font-size:13px;color:var(--txt-soft,#8ba396)}
+  .num{font-size:11px;color:var(--txt-soft,#8ba396);font-weight:600;border:1px solid var(--line,#1d2c24);border-radius:8px;padding:1px 6px}
+  .grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+  table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px;border-bottom:1px solid var(--line,#1d2c24);text-align:start;white-space:nowrap}
+  th{color:var(--txt-soft,#8ba396);font-weight:600}.tbl{overflow-x:auto}
+  tr.drill{cursor:pointer}tr.drill:hover td{background:rgba(16,185,129,.06)}
+  .barrow{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:13px}
+  .barrow.drill{cursor:pointer}.barrow.drill:hover{background:rgba(16,185,129,.06);border-radius:6px}
+  .barrow .t{flex:0 0 120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .barrow .g{flex:1;height:10px;background:var(--line,#1d2c24);border-radius:6px;overflow:hidden}
+  .barrow .g i{display:block;height:100%;background:var(--mint,#10b981)}
+  .pos{color:#10b981}.neg{color:#ef4444}.muted{color:var(--txt-soft,#8ba396);font-size:12px}
+  .b{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700;display:inline-block}
+  .high{background:rgba(234,88,12,.16);color:#ea580c}.medium{background:rgba(245,179,1,.15);color:#f5b301}
+  .low{background:rgba(16,185,129,.15);color:#10b981}.critical{background:rgba(239,68,68,.16);color:#ef4444}
+  .est{background:rgba(168,85,247,.15);color:#a855f7}
+  .sig{border-inline-start:4px solid var(--line,#1d2c24);padding:10px 12px;margin:8px 0;background:rgba(255,255,255,.02);border-radius:8px}
+  .sig.risk{border-color:#ef4444}.sig.opportunity{border-color:#10b981}.sig.data_quality{border-color:#f5b301}
+  .btn{background:var(--mint,#10b981);color:#062b1c;border:0;border-radius:10px;padding:7px 13px;font-weight:800;cursor:pointer;font:inherit;font-size:12px;text-decoration:none;display:inline-block}
+  .btn.ghost{background:transparent;color:var(--txt-soft,#8ba396);border:1px solid var(--line,#1d2c24);font-weight:600}
+  .btn:disabled{opacity:.5;cursor:default}
+  .state{padding:36px 16px;text-align:center;color:var(--txt-soft,#8ba396);border:1px dashed var(--line,#1d2c24);border-radius:14px}
+  .na{color:var(--txt-soft,#8ba396);font-size:13px;padding:10px;border:1px dashed var(--line,#1d2c24);border-radius:10px}
+  svg.ch{width:100%;height:170px;display:block}
+  .legend{display:flex;gap:14px;font-size:12px;color:var(--txt-soft,#8ba396);margin-top:6px;flex-wrap:wrap}
+  .legend i{display:inline-block;width:14px;height:3px;vertical-align:middle;margin-inline-end:4px}
+  .ai-sec{margin:8px 0}.ai-sec b{display:block;font-size:13px;margin-bottom:4px}.ai-sec li{font-size:13px;margin:3px 0}
+  input.f{flex:1;min-width:120px;background:var(--panel,#101a15);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:8px;padding:6px}
+  .st{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700;display:inline-block;white-space:nowrap}
+  .st.healthy{background:rgba(16,185,129,.15);color:#10b981}.st.watch{background:rgba(245,179,1,.15);color:#f5b301}
+  .st.low{background:rgba(234,88,12,.16);color:#ea580c}.st.stockout{background:rgba(239,68,68,.16);color:#ef4444}
+  .st.slow{background:rgba(59,130,246,.15);color:#60a5fa}.st.obsolete{background:rgba(148,163,184,.18);color:#cbd5e1}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}.schip{cursor:pointer;border:1px solid var(--line,#1d2c24);border-radius:12px;padding:8px 12px;min-width:120px}
+  .schip b{display:block;font-size:18px}.schip:hover{border-color:var(--mint,#10b981)}
+  .eq{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:13px}.eq .box{border:1px solid var(--line,#1d2c24);border-radius:10px;padding:8px 10px;text-align:center;min-width:90px}
+  .eq .box b{display:block;font-size:16px}
+  .ov{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:50;padding:14px}
+  .ov.on{display:flex}.modal{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:16px;padding:18px;width:min(560px,100%);max-height:90vh;overflow:auto}
+  .fg{display:grid;grid-template-columns:1fr 1fr;gap:10px}.fg label{font-size:12px;color:var(--txt-soft,#8ba396);display:flex;flex-direction:column;gap:4px}
+  .fg input,.fg select{background:var(--bg,#070b09);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:9px;padding:8px;font:inherit;max-width:none}
+  .cta{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  @media(max-width:760px){.fg{grid-template-columns:1fr}.tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.tile{padding:10px}.tile .v{font-size:17px}.grid2,.grid3{grid-template-columns:minmax(0,1fr)}h1{font-size:20px}select{max-width:47%}}
+  @media(max-width:700px){.tiles[style]{grid-template-columns:1fr 1fr!important}}
+</style>
+<style>
+  .tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--line,#1d2c24);margin:6px 0 16px}
+  .tab{background:none;border:0;color:var(--txt-soft,#8ba396);padding:10px 14px;font:inherit;font-size:14px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+  .tab.on{color:var(--txt,#e8f1ec);border-color:#14b8a6;font-weight:800}
+  .hero{display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr;gap:12px;margin-bottom:14px}
+  .hcard{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:16px;padding:16px;cursor:default}
+  .hcard.click{cursor:pointer}.hcard.click:hover{border-color:var(--mint,#10b981)}
+  .hcard .big{font-size:30px;font-weight:900;margin:6px 0}.hstat{font-size:22px;font-weight:900}
+  .hs-stable{color:#10b981}.hs-attention{color:#f5b301}.hs-critical{color:#ef4444}
+  .event{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-inline-start:4px solid #ef4444;border-radius:12px;padding:14px;margin-bottom:10px}
+  .event.opportunity{border-inline-start-color:#10b981}.event.data_quality{border-inline-start-color:#f5b301}
+  .event h4{margin:0 0 6px;font-size:15px}.acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .rec{display:grid;grid-template-columns:110px 1fr;gap:6px 12px;font-size:13px;margin-top:8px}.rec b{color:var(--txt-soft,#8ba396);font-weight:600}
+  .flow{display:flex;align-items:stretch;gap:8px;flex-wrap:wrap;justify-content:center}
+  .fnode{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:14px;padding:14px 18px;text-align:center;min-width:140px}
+  .fnode .big{font-size:22px;font-weight:900}.farrow{align-self:center;font-size:22px;color:var(--txt-soft,#8ba396)}
+  .ptip{background:var(--bg,#070b09);border:1px solid var(--mint,#10b981);border-radius:12px;padding:12px;margin-top:8px;font-size:13px}
+  .search{flex:1;min-width:180px;background:var(--panel,#101a15);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:10px;padding:9px 12px;font:inherit}
+  .perf{display:grid;grid-template-columns:70px 1fr 50px;gap:8px;align-items:center;font-size:13px;margin:8px 0}
+  .perf .g{height:10px;background:var(--line,#1d2c24);border-radius:6px;overflow:hidden}.perf .g i{display:block;height:100%}
+  .life{display:flex;gap:0;align-items:center;flex-wrap:wrap;margin:10px 0}.lstep{text-align:center;min-width:110px}
+  .ldot{width:16px;height:16px;border-radius:50%;margin:0 auto 6px;background:var(--line,#1d2c24)}.ldot.on{background:var(--mint,#10b981)}
+  .lline{flex:1;min-width:30px;height:2px;background:var(--line,#1d2c24);margin-bottom:22px}
+  .back{background:none;border:0;color:var(--mint,#10b981);cursor:pointer;font:inherit;padding:0;margin-bottom:10px}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-inline-end:6px}
+  @media(max-width:900px){.hero{grid-template-columns:1fr 1fr}}
+  @media(max-width:560px){.hero{grid-template-columns:1fr}.tab{padding:8px 10px;font-size:13px}.rec{grid-template-columns:1fr}}
+</style>
+
+<style>
+  .lv-critical{background:rgba(239,68,68,.18);color:#ef4444}.lv-high{background:rgba(234,88,12,.18);color:#f97316}
+  .lv-medium{background:rgba(245,179,1,.16);color:#f5b301}.lv-low{background:rgba(16,185,129,.15);color:#10b981}.lv-none{background:rgba(148,163,184,.15);color:#94a3b8}
+  .gauge{position:relative;height:12px;border-radius:8px;background:linear-gradient(270deg,#10b981 0 40%,#f5b301 40% 65%,#f97316 65% 85%,#ef4444 85% 100%);margin:8px 0 4px}
+  .gauge i{position:absolute;top:-5px;width:4px;height:22px;background:#fff;border-radius:3px;transform:translateX(50%)}
+  .heat td.c{text-align:center;font-weight:800;border-radius:6px}
+  .catgrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:14px}
+  .cat{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:14px;padding:12px;cursor:pointer}
+  .cat:hover{border-color:var(--mint,#10b981)}.cat .s{font-size:26px;font-weight:900;margin:4px 0}
+  .chain{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:8px 0}
+  .cnode{border:1px solid var(--line,#1d2c24);border-radius:10px;padding:6px 10px;font-size:12px;cursor:pointer}
+  .cnode.on{border-color:#ef4444}.carrow{color:var(--txt-soft,#8ba396)}
+  .kan{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.kcol{background:rgba(255,255,255,.02);border:1px solid var(--line,#1d2c24);border-radius:12px;padding:8px;min-height:80px}
+  .kcard{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:10px;padding:8px;margin:6px 0;font-size:12px;cursor:pointer}
+  .imp4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+  .brief li{margin:6px 0;font-size:14px}
+  @media(max-width:900px){.catgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.kan,.imp4{grid-template-columns:1fr 1fr}}
+  @media(max-width:560px){.catgrid,.kan,.imp4{grid-template-columns:1fr}}
+</style>
+<style>
+  .contrib{display:flex;height:22px;border-radius:8px;overflow:hidden;margin:8px 0;background:var(--line,#1d2c24)}
+  .contrib i{display:block;height:100%;border-inline-end:1px solid rgba(0,0,0,.35)}
+  .pr-immediate{background:rgba(239,68,68,.18);color:#ef4444}.pr-high{background:rgba(249,115,22,.18);color:#f97316}
+  .pr-medium{background:rgba(245,179,1,.16);color:#f5b301}.pr-monitor{background:rgba(148,163,184,.15);color:#94a3b8}
+  .tl{border-inline-start:2px solid var(--line,#1d2c24);margin:6px 8px;padding-inline-start:14px}.tl div{position:relative;margin:8px 0;font-size:13px}
+  .tl div::before{content:"";position:absolute;inset-inline-start:-21px;top:5px;width:10px;height:10px;border-radius:50%;background:var(--mint,#10b981)}
+  .step{display:flex;gap:10px;align-items:flex-start;margin:8px 0;flex-wrap:wrap}.step .m{min-width:120px;font-weight:800;color:var(--mint,#10b981)}
+  .ent{display:flex;gap:6px;flex-wrap:wrap}.ent span{border:1px solid var(--line,#1d2c24);border-radius:8px;padding:2px 8px;font-size:12px}
+  .exec4{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:14px}
+  @media(max-width:900px){.exec4{grid-template-columns:1fr}}
+</style>
+<style>
+  .pos-above{background:rgba(16,185,129,.15);color:#10b981}.pos-near{background:rgba(96,165,250,.15);color:#60a5fa}
+  .pos-below{background:rgba(249,115,22,.18);color:#f97316}.pos-critical{background:rgba(239,68,68,.18);color:#ef4444}.pos-na{background:rgba(148,163,184,.15);color:#94a3b8}
+  .pbar{position:relative;height:14px;border-radius:8px;background:linear-gradient(270deg,#ef4444,#f5b301 40%,#10b981);margin:10px 0 4px}
+  .pbar i{position:absolute;top:-5px;width:4px;height:24px;background:#fff;border-radius:3px;transform:translateX(50%)}
+  .src{font-size:12px;color:var(--txt-soft,#8ba396);line-height:1.7}
+  .vs{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}.vs b{font-size:22px}
+</style>
+<style>
+  .fc svg{width:100%;height:auto;display:block}
+  .fc .tip{position:fixed;pointer-events:none;background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:8px;padding:6px 9px;font-size:12px;display:none;z-index:60}
+  .conf-h{color:#10b981}.conf-m{color:#f5b301}.conf-l{color:#ef4444}
+  .wf{display:flex;align-items:flex-end;gap:10px;height:150px;margin:10px 0}
+  .wf div{flex:1;text-align:center;font-size:11px}.wf i{display:block;border-radius:4px 4px 0 0;margin:0 auto 4px;width:70%}
+  .sc{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+  @media(max-width:760px){.sc{grid-template-columns:1fr 1fr}}
+</style>
+<style>
+  .gbar{position:relative;height:10px;border-radius:6px;background:var(--line,#1d2c24);margin:6px 0 2px;overflow:visible}
+  .gbar>b{display:block;height:100%;border-radius:6px;max-width:100%}
+  .gbar>i{position:absolute;top:-4px;width:3px;height:18px;background:#e2e8f0;border-radius:2px;transform:translateX(50%)}
+  .st-on_track{background:rgba(16,185,129,.15);color:#10b981}.st-at_risk{background:rgba(249,115,22,.18);color:#f97316}
+  .st-behind,.st-missed{background:rgba(239,68,68,.18);color:#ef4444}.st-completed{background:rgba(96,165,250,.15);color:#60a5fa}
+  .st-not_started,.st-unavailable,.st-cancelled,.st-paused{background:rgba(148,163,184,.15);color:#94a3b8}
+  .gcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
+  .gcard{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:14px;padding:12px;cursor:pointer;min-width:0}
+  .gcard:hover{border-color:var(--mint,#10b981)}.gcard h4{margin:0 0 6px;font-size:14px;display:flex;justify-content:space-between;gap:6px}
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:12px}.kv b{color:var(--txt-soft,#8ba396);font-weight:600}
+  .quad{display:grid;grid-template-columns:1fr 1fr;gap:10px}.quad>div{border:1px solid var(--line,#1d2c24);border-radius:12px;padding:10px;min-height:90px}
+  .quad h5{margin:0 0 6px;font-size:13px}.q-intervene{border-color:#ef4444!important}.q-watch{border-color:#f5b301!important}
+  .tree{margin:0;padding-inline-start:16px;list-style:none}.tree li{margin:6px 0;border-inline-start:2px solid var(--line,#1d2c24);padding-inline-start:10px}
+  .ov4{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:12px}
+  .frmrow{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.frmrow input,.frmrow select{min-width:0;flex:1 1 140px}
+  .modal .fg{display:grid;grid-template-columns:1fr 1fr;gap:8px}.modal .fg label{display:flex;flex-direction:column;font-size:12px;gap:3px}
+  .modal .fg input,.modal .fg select,.modal .fg textarea{width:100%;box-sizing:border-box}
+  @media(max-width:900px){.ov4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  @media(max-width:560px){.quad,.modal .fg{grid-template-columns:1fr}.ov4{grid-template-columns:1fr 1fr}}
+</style>
+<style>
+  .wf{display:flex;gap:4px;flex-wrap:wrap;margin:8px 0}.wf span{font-size:11px;border:1px solid var(--line,#1d2c24);border-radius:8px;padding:3px 8px;color:var(--txt-soft,#8ba396)}
+  .wf span.done{border-color:#10b981;color:#10b981}.wf span.cur{background:rgba(16,185,129,.15);color:#10b981;font-weight:800}
+  .r-excellent,.r-strong,.r-positive{background:rgba(16,185,129,.15);color:#10b981}.r-partial,.r-mixed{background:rgba(245,179,1,.16);color:#f5b301}
+  .r-weak,.r-negative{background:rgba(239,68,68,.18);color:#ef4444}.r-no_change,.r-not_measurable,.r-pending{background:rgba(148,163,184,.15);color:#94a3b8}
+  .s-late,.s-rejected{background:rgba(239,68,68,.18);color:#ef4444}.s-pending_approval,.s-under_review,.s-evaluating{background:rgba(245,179,1,.16);color:#f5b301}
+  .s-approved,.s-in_progress{background:rgba(96,165,250,.15);color:#60a5fa}.s-completed,.s-measured{background:rgba(16,185,129,.15);color:#10b981}
+  .s-draft,.s-cancelled{background:rgba(148,163,184,.15);color:#94a3b8}
+  .eff{display:grid;grid-template-columns:150px 1fr 50px;gap:6px;align-items:center;font-size:12px;margin:3px 0}.eff i{display:block;height:8px;border-radius:5px;background:var(--mint,#10b981)}
+  .heat4{display:grid;grid-template-columns:1fr 1fr;gap:10px}.heat4>div{border:1px solid var(--line,#1d2c24);border-radius:12px;padding:10px;min-height:80px}
+  @media(max-width:560px){.heat4{grid-template-columns:1fr}.eff{grid-template-columns:110px 1fr 40px}}
+</style>
+<style>
+  .lens5{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:12px}
+  .lens{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:14px;padding:12px;cursor:pointer}.lens .s{font-size:28px;font-weight:900;margin:4px 0}
+  .lens.red{border-color:#ef4444}.lens.orange{border-color:#f97316}.lens.green{border-color:#10b981}
+  .ev{cursor:help;border-bottom:1px dotted var(--txt-soft,#8ba396)}
+  .pop{position:fixed;z-index:70;max-width:340px;background:var(--panel,#101a15);border:1px solid var(--mint,#10b981);border-radius:10px;padding:10px;font-size:12px;display:none;line-height:1.7}
+  .three{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.three>div{border:1px solid var(--line,#1d2c24);border-radius:12px;padding:12px}
+  .bw{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .sev-red{border-inline-start-color:#ef4444!important}.sev-orange{border-inline-start-color:#f97316!important}.sev-yellow{border-inline-start-color:#f5b301!important}
+  #pres{position:fixed;inset:0;background:var(--bg,#070b09);z-index:80;display:none;flex-direction:column;padding:28px}
+  #pres.on{display:flex}#pres .slide{flex:1;display:flex;flex-direction:column;justify-content:center;max-width:1000px;margin:0 auto;width:100%}
+  #pres h2{font-size:18px;color:var(--mint,#10b981);margin:0 0 8px}#pres .msg{font-size:30px;font-weight:900;line-height:1.4;margin-bottom:22px}
+  #pres .nums{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:18px}#pres .nums div{border:1px solid var(--line,#1d2c24);border-radius:14px;padding:14px}
+  #pres .nums b{display:block;font-size:26px}#pres .dec{margin-top:14px;padding:12px;border:1px solid #f5b301;border-radius:12px}
+  #pres .nav{display:flex;justify-content:space-between;align-items:center}
+  #printv{display:none}
+  @media print{body>*:not(#printv){display:none!important}#printv{display:block!important;color:#000;background:#fff}
+    #printv .pg{page-break-after:always;padding:24px}#printv table{width:100%;border-collapse:collapse}#printv td,#printv th{border:1px solid #ccc;padding:4px;font-size:11px}
+    #printv .cover{display:flex;flex-direction:column;justify-content:center;min-height:90vh;text-align:center}}
+  @media(max-width:900px){.lens5{grid-template-columns:repeat(2,minmax(0,1fr))}.three,.bw{grid-template-columns:1fr}#pres .nums{grid-template-columns:1fr}#pres .msg{font-size:22px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🏛️ عرض مجلس الإدارة</h1>
+  <p class="sub">أين الشركة؟ ماذا تغيّر؟ ما الخطر؟ أين الفرصة؟ ماذا نتوقع؟ وما القرارات المطلوبة من المجلس؟ — كل رقم بمصدره وثقته.</p>
+  <div class="bar"><select class="f" id="ver" style="max-width:280px"></select><button class="btn ghost" id="btnPres">🎞 وضع العرض</button><button class="btn ghost" id="btnPdf">🖨 تصدير PDF</button><button class="btn" id="btnGen" style="display:none">📦 إنشاء حزمة المجلس</button><button class="btn ghost" id="btnPresented" style="display:none">✔ عُرضت في الاجتماع</button><span class="muted" id="asof"></span></div>
+  <div class="na" id="disc" style="margin:6px 0 10px"></div>
+  <nav class="tabs" id="tabs"></nav>
+  <div id="content"><div class="state">…</div></div>
+</div>
+<div class="pop" id="pop"></div>
+<div id="pres"><div class="nav"><span class="muted" id="pN"></span><span><button class="btn ghost" id="pPrev">→ السابق</button> <button class="btn ghost" id="pNext">التالي ←</button> <button class="btn ghost" id="pX">✕ خروج</button></span></div><div class="slide" id="pS"></div></div>
+<div id="printv"></div>
+<div class="ov" id="ov"><div class="modal" id="modal"></div></div>
+<script src="i18n.js"></script>
+<script>
+(function(){
+  const TOKEN=localStorage.getItem("nabbah_token")||"";if(!TOKEN){location.href="login.html";return;}
+  const TABS=[["overview","نظرة المجلس"],["summary","الملخص التنفيذي"],["lenses","المحاور الخمسة"],["financial","الأداء المالي"],["branches","أفضل / أسوأ فرع"],["exceptions","الاستثناءات"],
+    ["risk","تقرير المخاطر"],["forecast","التوقعات"],["goals","الأهداف وOKR"],["initiatives","المبادرات الاستراتيجية"],["decisions_required","القرارات المطلوبة"],["decision_status","حالة القرارات"],
+    ["recommendations","توصيات المجلس"],["appendix","الملحق المالي"],["preread","القراءة المسبقة"],["comparison","مقارنة بالاجتماع السابق"],["sector","مؤشرات القطاع"],["data_quality","جودة البيانات"],
+    ["packs","حزم المجلس"],["ai","Board Intelligence"]];
+  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const n=(v,d=0)=>v==null?"—":Number(v).toLocaleString("ar-SA",{maximumFractionDigits:d});
+  const H={Authorization:"Bearer "+TOKEN,"Content-Type":"application/json"},$=id=>document.getElementById(id);
+  let D=null,EV={},evI=0,SL=0;
+  const route=()=>{const h=decodeURIComponent(location.hash.slice(1)||"overview");const i=h.indexOf("/");return i<0?[h,""]:[h.slice(0,i),h.slice(i+1)];};
+  const go=(v,arg)=>{location.hash=arg?`${v}/${encodeURIComponent(arg)}`:v;};
+  window.addEventListener("hashchange",()=>{if(D){render();window.scrollTo(0,0);}});
+  const api=(path,body)=>fetch(path,{method:"POST",headers:H,body:JSON.stringify(body)}).then(async r=>{const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(typeof j.detail==="string"?j.detail:"HTTP "+r.status);return j;});
+  function load(rid){$("content").innerHTML=`<div class="state">…</div>`;
+    fetch(rid?`/company/board/report/${rid}`:"/company/board-intelligence",{headers:H}).then(async r=>{
+      if(r.status===401){location.href="login.html";return null;}
+      if(r.status===403||r.status===402){let d="";try{d=(await r.json()).detail;}catch(_){}$("content").innerHTML=`<div class="state">🔒 ${esc(d||"ليست لديك صلاحية.")}</div>`;return null;}
+      if(!r.ok){let d="";try{const j=await r.json();d=typeof j.detail==="string"?j.detail:JSON.stringify(j.detail||j);}catch(_){}err(`HTTP ${r.status}${d?" — "+d:""}`);return null;}
+      return r.json();}).then(d=>{if(!d)return;D=d;const sc=d.scope||{};
+        $("btnGen").style.display=sc.can_generate?"":"none";$("btnPresented").style.display=(!d.live&&sc.can_resolve&&d.report&&d.report.status!=="presented")?"":"none";
+        $("btnPdf").style.display=["full","cfo","board"].includes(sc.kind)?"":"none";
+        $("ver").innerHTML=`<option value="">● الحزمة الحية (البيانات الحالية)</option>`+(d.reports||[]).map(r=>`<option value="${r.id}" ${d.report&&d.report.id===r.id?"selected":""}>${esc(r.period)} · النسخة ${r.version}${r.status==="presented"?" · عُرضت":""} · ${esc(r.generated_at)}</option>`).join("");
+        $("disc").textContent="🔒 سري · "+(d.disclaimer_ar||"")+" · صلاحيتك: "+(sc.ar||"")+(d.live?"":" · "+(d.frozen_note_ar||""));
+        $("asof").textContent=d.live?`حي · ${d.as_of} · الفترة ${d.period}`:`نسخة ${d.report.version} · ${d.report.generated_at} · ${d.report.generated_by} · ${d.report.checksum}`;
+        try{render();}catch(e){console.error(e);err("render: "+(e&&e.message||e));}}).catch(e=>err("network: "+(e&&e.message||e)));}
+  function err(m){$("content").innerHTML=`<div class="state neg">تعذّر تحميل عرض المجلس.<div class="muted" style="margin-top:8px">${esc(m)}</div></div>`;}
+  const panel=(title,body,extra="")=>`<div class="panel"><h2>${title}${extra}</h2>${body}</div>`;
+  const na=m=>`<div class="na">${esc(m)}</div>`;
+  const tile=(l,v,c)=>`<div class="tile"><div class="l">${l}</div><div class="v">${v}</div><div class="c">${c||""}</div></div>`;
+  const cur=()=>esc(D.currency||"SAR");
+  const money=v=>v==null?`<span class="muted">غير متاح</span>`:n(v,0)+" "+cur();
+  const fv=(v,u)=>v==null?`<span class="muted">غير متاح</span>`:(u==="SAR"||!u?n(v,0)+(u==="SAR"?" "+cur():""):u==="%"?n(v,1)+"%":n(v,1)+" "+esc(u));
+  const sgn=v=>v==null?`<span class="muted">—</span>`:`<span class="${v>0?"pos":v<0?"neg":""}">${v>0?"+":""}${n(v,0)}</span>`;
+  // 3.10.20 — كل رقم قابل للتتبع: انقر لترى المصدر والفترة والحساب والثقة
+  const ev=m=>{if(!m)return "—";const k="e"+(evI++);EV[k]=m;return `<span class="ev" data-ev="${k}">${m.available===false?`<span class="muted">غير متاح</span>`:fv(m.value,m.unit)}</span>`;};
+  const R=k=>{const v=D[k];return v&&v.restricted?null:v;};
+  const restricted=()=>na("🔒 خارج صلاحيتك");
+  // ── 01 نظرة المجلس
+  function lensCards(){return `<div class="lens5">${D.lenses.map(l=>`<div class="lens ${esc(l.status)}" data-go="lenses"><div>${esc(l.icon)} <b>${esc(l.ar)}</b></div><div class="s">${l.score==null?'<span class="muted" style="font-size:16px">غير متاح</span>':n(l.score,0)} <span style="font-size:18px">${esc(l.arrow)}</span></div><div>${esc(l.light)} ${esc(l.status_ar)}</div><div class="muted" style="font-size:11px">${esc((l.evidence||[])[0]||l.reason_ar||"")}</div></div>`).join("")}</div>`;}
+  function threeHtml(t){if(!t)return "";const c=(lbl,x)=>`<div><div class="muted">${lbl}</div>${x?`<div style="font-size:15px;font-weight:800;margin:4px 0"><a href="${esc(x.link||"#")}" style="color:inherit">${esc(x.ar)}</a></div><div class="muted">${esc(x.detail_ar||"")}</div>${x.amount!=null?`<div>${money(x.amount)}</div>`:""}`:'<div class="muted">—</div>'}</div>`;
+    return `<div class="three">${c("1 · أكبر خطر",t.risk)}${c("2 · أكبر فرصة",t.opportunity)}${c("3 · أهم قرار",t.decision)}</div>`;}
+  function overview(){const o=R("overview");if(!o)return restricted();
+    return panel(`${esc(o.status.light)} ${esc(o.status.ar)} — ${esc(D.period)}`,`<div class="muted" style="margin-bottom:8px">${esc(D.company||"")} · ${esc(o.headline_ar)}</div>${lensCards()}<div class="muted">${esc(D.lens_rule_ar)}</div>`)
+      +panel("3 أشياء يجب أن يعرفها المجلس",threeHtml(o.three))
+      +(R("summary")?panel("الملخص التنفيذي",`<p style="font-size:15px;line-height:1.9">${esc(D.summary.paragraph_ar)}</p>`):"")
+      +(Array.isArray(D.exceptions)?panel("أهم الاستثناءات",D.exceptions.slice(0,5).map(exItem).join("")||na("لا استثناءات"),` <button class="btn ghost" data-go="exceptions">الكل</button>`):"")
+      +(Array.isArray(D.decisions_required)&&D.decisions_required.length?panel("القرارات المطلوبة",D.decisions_required.slice(0,3).map(dItem).join(""),` <button class="btn ghost" data-go="decisions_required">الكل</button>`):"");}
+  function summary(){const s=R("summary");if(!s)return restricted();return panel("الملخص التنفيذي",`<p style="font-size:16px;line-height:2">${esc(s.paragraph_ar)}</p><div class="muted">${esc(s.note_ar)}</div>`)+panel("3 أشياء يجب أن يعرفها المجلس",threeHtml(s.three))
+      +panel("السرد التنفيذي (Board Summary)",`<div class="muted">ماذا حدث · لماذا · الأثر المالي · ماذا سيحدث · القرار المطلوب — من أرقام الحزمة فقط</div><div class="cta"><button class="btn ghost" id="narr">🤖 اكتب السرد التنفيذي</button></div><div id="narrOut"></div>`);}
+  function lenses(){return panel("المحاور الاستراتيجية الخمسة — كل محور من مصدره",lensCards()+`<div class="tbl"><table><thead><tr><th>المحور</th><th>الدرجة</th><th>الاتجاه</th><th>الحالة</th><th>الدليل</th><th>المصدر</th></tr></thead><tbody>${D.lenses.map(l=>`<tr><td><b>${esc(l.icon)} ${esc(l.ar)}</b></td><td>${l.score==null?"—":n(l.score,1)}</td><td>${esc(l.arrow)}${l.previous!=null?` <span class="muted">(كان ${n(l.previous,0)})</span>`:""}</td><td>${esc(l.light)} ${esc(l.status_ar)}</td><td style="white-space:normal">${(l.evidence||[]).map(esc).join("<br>")||esc(l.reason_ar||"")}</td><td><a href="${esc(l.link)}" style="color:var(--mint,#10b981)">${esc(l.source_ar)} ↗</a></td></tr>`).join("")}</tbody></table></div><div class="muted">${esc(D.lens_rule_ar)}</div>`);}
+  function financial(){const f=R("financial");if(!f)return restricted();
+    const mo=f.money;
+    return panel(`الأداء المالي مقابل الموازنة <span class="muted">(${esc(f.period_ytd||"")})</span>`,`<div class="tbl"><table><thead><tr><th>البند</th><th>الموازنة</th><th>الفعلي</th><th>الفرق</th><th>%</th></tr></thead><tbody>${f.rows.map(r=>`<tr><td><b>${esc(r.ar)}</b></td><td>${r.budget==null?`<span class="muted">${esc(r.budget_reason_ar||"—")}</span>`:money(r.budget)}</td><td>${ev(r.evidence)}</td><td class="${r.bad?"neg":r.bad===false?"pos":""}">${r.variance==null?"—":(r.variance>0?"+":"")+n(r.variance,0)}</td><td class="${r.bad?"neg":r.bad===false?"pos":""}">${r.variance_pct==null?"—":(r.variance_pct>0?"+":"")+n(r.variance_pct,1)+"%"}</td></tr>`).join("")}</tbody></table></div>${f.budget_available?"":na("لا توجد موازنة في الوحدة المالية — عمود الموازنة غير متاح (لا يُعرض صفراً)")}`)
+      +panel(`لماذا؟ <span class="muted">(${esc(f.variance_period||"")} مقابل الشهر السابق)</span>`,`<div>${esc(f.variance_main_ar||"")}</div><div class="tbl"><table><tbody>${f.variance_why.map(w=>`<tr><td>${esc(w.ar)}</td><td>${sgn(w.effect)}</td></tr>`).join("")}</tbody></table></div><div class="muted">من جسر الربح في الوحدة المالية — الأسباب المرشحة في <a href="company-risk-drivers.html" style="color:var(--mint,#10b981)">المسببات ↗</a></div>`)
+      +panel(`أين ذهب المال؟ <span class="muted">(${esc(mo.period||"")})</span>`,`<div class="tbl"><table><thead><tr><th>البند</th><th>المبلغ</th><th>الحصة</th><th>التغيّر</th></tr></thead><tbody>${mo.lines.map(l=>`<tr><td><a href="${esc(l.link)}" style="color:inherit"><b>${esc(l.ar)}</b> ↗</a></td><td>${money(l.amount)}</td><td>${l.share_pct==null?"—":n(l.share_pct,1)+"%"}</td><td class="${(l.change_pct||0)>0?"neg":""}">${l.change_pct==null?"—":(l.change_pct>0?"+":"")+n(l.change_pct,1)+"%"}</td></tr>`).join("")}</tbody></table></div>${mo.largest_increase?`<div class="event sev-orange"><h4>أكبر زيادة غير متوقعة: <a href="${esc(mo.largest_increase.link)}" style="color:inherit">${esc(mo.largest_increase.ar)} ↗</a> ${n(mo.largest_increase.change_pct,1)}% (+${n(mo.largest_increase.delta,0)})</h4></div>`:""}<div class="muted">${esc(mo.basis_ar)}</div>`);}
+  function mlist(ms){return `<div class="kv">${ms.map(m=>`<b>${esc(m.label)}</b><span>${ev(m)} <span class="muted">${esc(m.source_ar)}</span></span>`).join("")}</div>`;}
+  function branches(){const b=R("branches");if(!b)return restricted();if(b.status!=="ok")return na(b.reason_ar);
+    const card=(c,t,cls)=>`<div class="panel" style="border-color:${cls}"><h2>${t}: ${esc(c.branch)}</h2>${mlist(c.metrics)}<h3 style="font-size:14px;margin:10px 0 4px">${t.startsWith("أفضل")?"لماذا يؤدي جيداً؟":"لماذا؟"}</h3><ul style="margin:0;padding-inline-start:18px">${c.why.map(w=>`<li>${esc(w)}</li>`).join("")||"<li class='muted'>لا أدلة كافية</li>"}</ul>${c.goals?`<div class="muted">أهداف الفرع: 🔴${c.goals.behind} 🟠${c.goals.at_risk} 🟢${c.goals.on_track}</div>`:""}<div class="muted">${esc(c.note_ar)}</div></div>`;
+    return `<div class="bw">${card(b.best,"أفضل فرع","#10b981")}${card(b.worst,"أضعف فرع","#ef4444")}</div><div class="muted">${esc(b.rule_ar)}</div>`;}
+  const exItem=x=>`<div class="event sev-${esc(x.severity)}"><h4>${esc(x.icon)} ${x.link?`<a href="${esc(x.link)}" style="color:inherit">${esc(x.title_ar)}</a>`:esc(x.title_ar)}${x.amount!=null?` <span class="muted">${money(x.amount)}</span>`:""}</h4><div class="muted">${esc(x.detail_ar)} · ${esc(x.source_ar)}</div></div>`;
+  const exceptions=()=>Array.isArray(D.exceptions)?panel("الاستثناءات فقط — ما يحتاج انتباه المجلس",D.exceptions.map(exItem).join("")||na("لا استثناءات")):restricted();
+  function risk(){const r=R("risk");if(!r)return restricted();return panel(`تقرير المخاطر — المؤشر ${n(r.index,1)}/100 (${esc(r.level_ar||"")})`,r.top.map((t,i)=>`<div class="event ${t.level==="critical"?"sev-red":t.level==="high"?"sev-orange":"sev-yellow"}"><h4>${i+1}. ${esc(t.icon||"")} ${esc(t.ar)} — ${n(t.score,0)}</h4><div class="rec"><b>الأثر</b><span>${t.impact_range?money(t.impact_range[0])+" – "+money(t.impact_range[1]):"—"} <span class="muted">${esc(t.impact_note_ar)}</span></span><b>المسبب</b><span>${esc(t.driver.name_ar||"—")} <span class="muted">${(t.driver.evidence||[]).map(esc).join(" · ")}</span></span><b>السبب المرشح</b><span>${t.root_cause?esc(t.root_cause.name_ar)+` <span class="muted">${esc(t.root_cause.confidence_ar||"")} · ${esc(t.root_cause.note_ar)}</span>`:"—"}</span><b>المعالجة</b><span>${esc(t.mitigation.title||"—")}${t.mitigation.decision_id?` <a href="company-decisions-intelligence.html#dec/${t.mitigation.decision_id}" style="color:var(--mint,#10b981)">↗</a>`:""}</span><b>الحالة</b><span>${esc(t.mitigation.status_ar)}</span></div></div>`).join("")+`<div class="muted">${esc(r.headline_ar||"")} · <a href="${esc((r.top[0]||{}).link||"company-risk-intelligence.html")}" style="color:var(--mint,#10b981)">مركز المخاطر ↗</a></div>`);}
+  function forecast(){const f=R("forecast");if(!f)return restricted();if(f.status!=="ok")return na(f.reason_ar);
+    return panel("نظرة 6 أشهر — مع درجة الثقة",`<div class="tiles">${f.rows.map(m=>tile(esc(m.label),ev(m),m.confidence!=null?"الثقة "+n(m.confidence,0)+"%":esc(m.reason_ar||""))).join("")}</div>${f.target_gap?`<div class="event sev-orange"><h4>${esc(f.target_gap.sentence_ar||"")}</h4><div class="muted">الهدف ${money(f.target_gap.target)} · الإسقاط ${money(f.target_gap.projection)} · ${esc(f.target_gap.fiscal_year||"")} · مصدر الهدف: ${esc(f.target_gap.target_source_ar||"—")}</div></div>`:""}${f.risks.length?`<div class="muted">مخاطر مستقبلية: ${f.risks.map(r=>esc(r.ar)).join(" · ")}</div>`:""}<div class="muted">${esc(f.basis_ar)} · ${esc(f.disclaimer_ar)}</div>`);}
+  function goals(){const g=R("goals");if(!g)return restricted();if(!g.available)return na(g.reason_ar);
+    return panel(`الأهداف الاستراتيجية — ${esc(g.headline_ar||"")}`,`<div class="tbl"><table><thead><tr><th>الهدف</th><th>المستهدف</th><th>الفعلي</th><th>التقدم</th><th>الإسقاط</th><th>الحالة</th><th>احتمال التحقيق</th></tr></thead><tbody>${g.company_goals.map(x=>`<tr><td><a href="${esc(x.link)}" style="color:inherit"><b>${esc(x.name)}</b> ↗</a><div class="muted">${esc(x.metric_ar||"")}${x.owner?" · "+esc(x.owner):""}</div></td><td>${fv(x.target,x.unit)}</td><td>${fv(x.actual,x.unit)}</td><td>${x.progress_pct==null?"—":n(x.progress_pct,1)+"%"}</td><td>${fv(x.forecast,x.unit)}</td><td>${esc(x.icon||"")} ${esc(x.status_ar)}</td><td>${esc(x.probability_ar||"—")}</td></tr>`).join("")}</tbody></table></div>`)
+      +(g.okrs.length?panel("تقدم OKR",g.okrs.map(o=>`<div class="event"><h4>${esc(o.icon||"")} ${esc(o.objective)} — ${o.progress_pct==null?"—":n(o.progress_pct,1)+"%"} · ${esc(o.status_ar)}</h4><div class="muted">${o.krs.map(k=>esc(k.name)+" "+(k.progress_pct==null?"—":n(k.progress_pct,0)+"%")).join(" · ")}</div></div>`).join("")):"");}
+  function initiatives(){const xs=D.initiatives;if(!Array.isArray(xs))return restricted();return panel("المبادرات الاستراتيجية (الركائز وأهدافها الفعلية)",xs.length?`<div class="tbl"><table><thead><tr><th>المبادرة</th><th>الأهداف</th><th>التقدم</th><th>المسؤول</th><th>الحالة</th></tr></thead><tbody>${xs.map(i=>`<tr><td><a href="${esc(i.link)}" style="color:inherit"><b>${esc(i.icon||"")} ${esc(i.ar)}</b> ↗</a>${i.warning_ar?`<div class="muted">${esc(i.warning_ar)}</div>`:""}</td><td>${n(i.goals)}</td><td>${i.progress_pct==null?"—":n(i.progress_pct,0)+"%"}</td><td>${esc(i.owner||"—")}</td><td>${esc(i.light)}</td></tr>`).join("")}</tbody></table></div>`:na("لا ركائز استراتيجية — عرّفها في مركز الأهداف"));}
+  const dItem=(r,i)=>`<div class="event ${r.risk_if_delayed==="high"?"sev-red":"sev-orange"}"><h4>قرار ${String((i||0)+1).padStart(2,"0")}: <a href="${esc(r.link)}" style="color:inherit">${esc(r.title)}</a> ${r.kind==="proposed"?'<span class="b s-draft">مقترح — لم يُنشأ بعد</span>':'<span class="b s-pending_approval">بانتظار الاعتماد</span>'}</h4><div class="rec"><b>الأثر المتوقع</b><span>${money(r.expected_impact)}</span><b>خطر التأجيل</b><span>${esc(r.risk_if_delayed_ar)}</span><b>المسؤول</b><span>${esc(r.owner||"—")}</span><b>المهلة</b><span>${r.deadline_days==null?"—":r.deadline_days+" يوماً"}${r.due?" ("+esc(r.due)+")":""}</span><b>التوصية</b><span><b>${esc(r.recommendation_ar)}</b></span><b>الدليل</b><span>${(r.evidence||[]).map(esc).join(" · ")}</span></div>${resBox(r)}</div>`;
+  function resBox(r){if(D.live||!(D.scope||{}).can_resolve)return "";const it=(D.resolutions||[]).find(x=>(r.decision_id&&x.decision_id===r.decision_id)||(!r.decision_id&&x.title===r.title));if(!it)return "";
+    if(it.resolution)return `<div class="pos">قرار المجلس: ${esc({approved:"اعتماد",rejected:"رفض",deferred:"تأجيل"}[it.resolution])} — ${esc(it.resolved_by)} ${esc(it.resolved_at)}${it.note?" · "+esc(it.note):""}</div>`;
+    return `<div class="frmrow"><input class="f" data-rn="${it.id}" placeholder="ملاحظة / سبب"><button class="btn" data-res="${it.id}|approved">✅ اعتماد المجلس</button><button class="btn ghost" data-res="${it.id}|deferred">⏸ تأجيل</button><button class="btn ghost" data-res="${it.id}|rejected">⛔ رفض</button><span class="muted" data-rm="${it.id}"></span></div>`;}
+  const decisions_required=()=>Array.isArray(D.decisions_required)?panel("القرارات المطلوبة من المجلس",(D.decisions_required.map(dItem).join("")||na("لا قرارات تحتاج المجلس الآن"))+(D.live&&(D.scope||{}).can_resolve?`<div class="muted">لتسجيل قرار المجلس: أنشئ حزمة المجلس ثم افتح النسخة — الاعتماد يمر عبر مسار الاعتماد في متابعة القرارات (3.9).</div>`:"")):restricted();
+  function decision_status(){const d=R("decision_status");if(!d)return restricted();if(!d.available)return na(d.reason_ar);
+    return panel("حالة القرارات (3.9)",`<div class="ov4">${tile("معتمدة",n(d.approved))}${tile("بانتظار الاعتماد",n(d.pending))}${tile("🔴 متأخرة",n(d.late))}${tile("قيد التنفيذ",n(d.in_progress))}${tile("مكتملة",n(d.completed),"مُقاسة "+n(d.measured))}</div><div class="tiles">${tile("الأثر المتوقع",money(d.expected_total))}${tile("الفعلي المقاس",money(d.actual_total),d.achievement_pct!=null?"تحقق "+n(d.achievement_pct,1)+"%":"")}</div><div class="${d.late_high_impact?"neg":"pos"}" style="margin-top:8px;font-weight:800">${esc(d.sentence_ar)}</div>${d.late_items.map(x=>`<div class="muted"><a href="company-decisions-intelligence.html#dec/${x.id}" style="color:inherit">${esc(x.title)}</a> · متأخر ${n(x.days)} يوماً · ${money(x.impact)}</div>`).join("")}`);}
+  function recommendations(){const r=R("recommendations");if(!r)return restricted();const L_=(xs)=>xs.map((o,i)=>`<div class="event ${o.priority==="high"?"sev-red":"sev-orange"}"><h4>${i+1}. <a href="${esc(o.link||"#")}" style="color:inherit">${esc(o.title)}</a></h4><div class="rec"><b>الدليل</b><span>${(o.evidence||[]).map(esc).join(" · ")}</span><b>الأثر</b><span>${money(o.impact)}</span><b>المسؤول</b><span>${esc(o.owner||"—")}</span><b>حالة القرار</b><span>${esc(o.decision_status_ar)}</span></div></div>`).join("")||na("—");
+    return panel("أولوية عالية",L_(r.high))+panel("أولوية متوسطة",L_(r.medium))+`<div class="muted">${esc(r.note_ar)}</div>`;}
+  function appendix(){const a=R("appendix");if(!a)return restricted();const bs=a.balance_sheet;
+    const bl=(t,xs,tot)=>`<h3 style="font-size:14px;margin:10px 0 4px">${t}</h3><div class="tbl"><table><tbody>${xs.map(i=>`<tr><td>${esc(i.ar)}</td><td>${i.value==null?`<span class="muted">${esc(i.reason_ar)}</span>`:money(i.value)}</td><td class="muted">${esc(i.source||"")}</td></tr>`).join("")}<tr><td><b>الإجمالي</b></td><td><b>${tot==null?'<span class="muted">غير مكتمل</span>':money(tot)}</b></td><td></td></tr></tbody></table></div>`;
+    return panel(`قائمة الدخل <span class="muted">(الشهر ${esc(a.period||"")} · منذ بداية السنة ${esc(a.ytd||"")})</span>`,`<div class="tbl"><table><thead><tr><th>البند</th><th>الشهر</th><th>منذ بداية السنة</th></tr></thead><tbody>${a.pl.map(r=>`<tr><td><b>${esc(r.ar)}</b></td><td>${money(r.month)}</td><td>${money(r.ytd)}</td></tr>`).join("")}</tbody></table></div><div class="muted">من <a href="company-financial-intelligence.html" style="color:var(--mint,#10b981)">الوحدة المالية ↗</a> — لا نسخة جديدة من القوائم</div>`)
+      +panel("الميزانية العمومية",bl("الأصول",bs.assets,bs.total_assets)+bl("الالتزامات",bs.liabilities,bs.total_liabilities)+bl("حقوق الملكية",bs.equity,bs.total_equity)+`<div class="muted">${esc(bs.note_ar)}</div>`)
+      +panel(`التدفقات النقدية <span class="muted">(${esc(a.cash_flow.period||"")})</span>`,`<div class="tbl"><table><tbody>${a.cash_flow.rows.map(r=>`<tr><td><b>${esc(r.ar)}</b></td><td>${r.value==null?`<span class="muted">${esc(r.reason_ar||"غير متاح")}</span>`:sgn(r.value)}</td><td class="muted">${esc(r.basis_ar||"")}</td></tr>`).join("")}</tbody></table></div><div class="muted">${esc(a.cash_flow.classified_from_ar)}</div>`);}
+  function preread(){const p=R("preread");if(!p)return restricted();const Q=[["what_changed","ماذا تغيّر منذ الاجتماع السابق؟"],["attention","ما الذي يحتاج انتباه المجلس؟"],["decisions_required","ما القرارات المطلوبة؟"],["risks_increased","ما المخاطر التي ارتفعت؟"],["goals_changed","ما الأهداف التي تغيّرت حالتها؟"],["decisions_completed","ما القرارات التي اكتملت؟"],["results_achieved","ما النتائج التي تحققت؟"]];
+    return panel("القراءة المسبقة (Board Pre-read)",Q.map(([k,t])=>`<div class="event"><h4>${t}</h4>${(p[k]||[]).length?`<ul style="margin:0;padding-inline-start:18px">${p[k].map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`:'<div class="muted">لا شيء</div>'}</div>`).join(""));}
+  function comparison(){const c=R("comparison");if(!c)return restricted();if(!c.available)return na(c.reason_ar);
+    return panel(`منذ آخر اجتماع (${esc(c.since||"")})`,`<div class="tiles">${c.rows.map(r=>tile(esc(r.ar),r.change_pct!=null?`<span class="${(r.key==="risk"?-1:1)*r.change_pct>0?"pos":"neg"}">${r.change_pct>0?"+":""}${n(r.change_pct,1)}%</span>`:r.change_points!=null?`<span class="${(r.key==="risk"?-1:1)*r.change_points>0?"pos":"neg"}">${r.change_points>0?"+":""}${n(r.change_points,1)} نقطة</span>`:'<span class="muted">—</span>',`الآن ${n(r.now,0)} · قبل ${n(r.before,0)}`)).join("")}${tile("قرارات اكتملت",n(c.decisions_completed))}</div>
+      ${c.risks_increased.length?`<div class="event sev-red"><h4>مخاطر ارتفعت</h4>${c.risks_increased.map(r=>`<div>${esc(r.key)}: ${n(r.before,0)} → ${n(r.now,0)}</div>`).join("")}</div>`:""}${c.goals_changed.length?`<div class="event"><h4>أهداف تغيّرت حالتها</h4>${c.goals_changed.map(g=>`<div>${esc(g.name)}: ${esc(g.before)} → ${esc(g.now)}</div>`).join("")}</div>`:""}`);}
+  const sector=()=>R("sector")?panel("مؤشرات القطاع على مستوى المجلس",mlist(D.sector.rows)+`<div class="muted">${esc(D.sector.note_ar)}</div>`):restricted();
+  function data_quality(){const q=R("data_quality");if(!q)return restricted();return panel("إفصاح جودة البيانات (Data Confidence)",`<div class="tbl"><table><thead><tr><th>الجزء</th><th>الثقة</th><th>الأساس</th></tr></thead><tbody>${q.rows.map(r=>`<tr><td><b>${esc(r.ar)}</b></td><td class="${r.level==="high"?"pos":r.level==="low"?"neg":""}">${esc(r.level_ar)}</td><td class="muted">${esc(r.basis_ar)}</td></tr>`).join("")}</tbody></table></div><div class="muted">${esc(q.note_ar)}</div>`);}
+  function packs(){const rs=D.reports||[];return panel("حزم المجلس (نسخ مجمّدة)",(rs.length?`<div class="tbl"><table><thead><tr><th>الفترة</th><th>النسخة</th><th>أنشأها</th><th>متى</th><th>الحالة</th><th>المشاهدات</th><th>التصدير</th><th></th></tr></thead><tbody>${rs.map(r=>`<tr><td>${esc(r.period)}</td><td>${r.version}</td><td>${esc(r.generated_by)}</td><td>${esc(r.generated_at)}</td><td>${r.status==="presented"?"عُرضت "+esc(r.presented_at):"نهائية"}</td><td>${n(r.views)}</td><td>${n(r.exports)}</td><td><button class="btn ghost" data-open="${r.id}">فتح</button></td></tr>`).join("")}</tbody></table></div>`:na("لم تُنشأ أي حزمة بعد"))
+      +`<div class="muted">لا يتغير التقرير القديم بصمت: كل إنشاء = نسخة جديدة بلقطة كاملة ورمز تحقق. كل عرض وتصدير يُسجَّل.</div>`)
+      +(!D.live&&D.access_log?panel("سجل الوصول لهذه النسخة",`<div class="tl">${D.access_log.map(a=>`<div><b>${esc(a.at)}</b> — ${esc(a.user)} · ${esc({board_generate:"أنشأ",board_report_view:"شاهد",board_export:"صدّر PDF",board_resolution:"سجّل قرار المجلس",board_present:"وسمها معروضة",board_ai:"سأل Board Intelligence"}[a.action]||a.action)} <span class="muted">${esc(a.details||"")}</span></div>`).join("")}</div>`):"");}
+  const aiView=()=>panel("Board Intelligence — يجيب من حزمة المجلس فقط",`<div class="chips">${D.ai_questions.map(q=>`<span class="chip" data-q="${esc(q)}">${esc(q)}</span>`).join("")}</div><div style="display:flex;gap:6px;margin-top:10px"><input class="search" id="aiQ" placeholder="سؤال المجلس…"><button class="btn" id="aiGo">اسأل</button></div><div id="aiOut" style="margin-top:12px"></div>`)
+      +panel("أسئلة المجلس — سلسلة الأدلة",D.board_questions.map(b=>`<div class="event"><h4>${esc(b.q)}</h4><div class="chain">${b.chain.map(([k,l],i)=>`${i?'<span class="carrow">←</span>':""}<a class="cnode" href="${esc(LINKS[k]||"#")}" style="color:inherit">${esc(l)}</a>`).join("")}</div></div>`).join(""));
+  const LINKS={financial:"company-financial-intelligence.html",sales:"company-sales-intelligence.html",cashflow:"company-cashflow-intelligence.html",risk:"company-risk-intelligence.html",drivers:"company-risk-drivers.html",prediction:"company-performance-prediction.html",goals:"company-goals-intelligence.html",decisions:"company-decisions-intelligence.html",leakage:"company-leakage-intelligence.html",purchases:"company-purchases-intelligence.html",operations:"company-ops-intelligence.html",inventory:"company-inventory-intelligence.html"};
+  function render(){EV={};evI=0;const [v]=route();const allowed=new Set((D.sections_index||[]).filter(s=>s.allowed).map(s=>s.key).concat(["packs","ai","overview"]));
+    $("tabs").innerHTML=TABS.filter(([k])=>allowed.has(k)).map(([k,l],i)=>`<button class="tab ${k===v?"on":""}" data-go="${k}"><span class="muted" style="font-size:10px">${String(i+1).padStart(2,"0")}</span> ${l}${k==="exceptions"&&Array.isArray(D.exceptions)&&D.exceptions.length?` <span class="b high">${D.exceptions.length}</span>`:""}${k==="decisions_required"&&Array.isArray(D.decisions_required)&&D.decisions_required.length?` <span class="b high">${D.decisions_required.length}</span>`:""}</button>`).join("");
+    const views={overview,summary,lenses,financial,branches,exceptions,risk,forecast,goals,initiatives,decisions_required,decision_status,recommendations,appendix,preread,comparison,sector,data_quality,packs,ai:aiView};
+    $("content").innerHTML=(views[v]||overview)();bind();}
+  function bind(){document.querySelectorAll("[data-go]").forEach(el=>el.onclick=e=>{e.stopPropagation();go(el.dataset.go);});
+    document.querySelectorAll("#content [data-ev]").forEach(el=>el.onclick=e=>{e.stopPropagation();const m=EV[el.dataset.ev],p=$("pop");
+      p.innerHTML=`<b>${esc(m.label)}</b><div>${m.available===false?esc(m.reason_ar):fv(m.value,m.unit)}</div><div class="muted">المصدر: ${esc(m.source_ar)}</div>${m.period?`<div class="muted">الفترة: ${esc(m.period)}</div>`:""}${m.calculation_ar?`<div class="muted">الحساب: ${esc(m.calculation_ar)}</div>`:""}${m.confidence!=null?`<div class="muted">الثقة: ${esc(m.confidence)}</div>`:""}${m.last_update?`<div class="muted">آخر تحديث: ${esc(m.last_update)}</div>`:""}${m.link?`<a href="${esc(m.link)}" style="color:var(--mint,#10b981)">افتح المصدر ↗</a>`:""}`;
+      p.style.display="block";p.style.top=Math.min(window.innerHeight-200,e.clientY+10)+"px";p.style.left=Math.max(8,Math.min(window.innerWidth-350,e.clientX-170))+"px";});
+    document.querySelectorAll("#content [data-q]").forEach(c=>c.onclick=()=>runAI(c.dataset.q));
+    const ag=$("aiGo");if(ag)ag.onclick=()=>{const q=$("aiQ").value.trim();if(q)runAI(q);};
+    const nb=$("narr");if(nb)nb.onclick=()=>{$("narrOut").innerHTML=`<div class="muted">…</div>`;api("/company/board/ai-insights",{narrative:true,report_id:D.live?undefined:D.report.id}).then(j=>{$("narrOut").innerHTML=aiHtml(j);}).catch(er=>{$("narrOut").innerHTML=`<div class="neg">${esc(er.message)}</div>`;});};
+    document.querySelectorAll("#content [data-open]").forEach(b=>b.onclick=()=>{$("ver").value=b.dataset.open;load(b.dataset.open);});
+    document.querySelectorAll("#content [data-res]").forEach(b=>b.onclick=()=>{const [id,res]=b.dataset.res.split("|");const note=document.querySelector(`[data-rn="${id}"]`).value;
+      api("/company/board/resolve",{item_id:Number(id),resolution:res,note}).then(()=>load(D.report.id)).catch(er=>{document.querySelector(`[data-rm="${id}"]`).className="neg";document.querySelector(`[data-rm="${id}"]`).textContent=er.message;});});}
+  document.addEventListener("click",()=>{$("pop").style.display="none";});
+  function aiHtml(j){const a=j.ai||{},resp=a.response||{},L={FACTS:"من حزمة المجلس",INTERPRETATION:"القراءة",HYPOTHESES:"عوامل مرتبطة",RECOMMENDATIONS:"ما يحتاج قرار المجلس",DATA_GAPS:"بيانات ناقصة"};
+    return `<div class="muted" style="margin:6px 0">«${esc(j.question)}» · الأرقام من الحزمة — الذكاء الاصطناعي يشرح ولا يقرر بدل المجلس</div>`+(a.message?`<div class="na">${esc(a.message)}</div>`:"")+Object.keys(L).map(k=>resp[k]&&resp[k].length?`<div class="ai-sec"><b>${L[k]}</b><ul style="margin:0;padding-inline-start:18px">${resp[k].map(x=>`<li>${esc(typeof x==="string"?x:JSON.stringify(x))}</li>`).join("")}</ul></div>`:"").join("");}
+  function runAI(q){if(route()[0]!=="ai"){go("ai");setTimeout(()=>runAI(q),60);return;}const out=$("aiOut");out.innerHTML=`<div class="muted">«${esc(q)}» — جارٍ التحليل…</div>`;
+    api("/company/board/ai-insights",{question:q,report_id:D.live?undefined:D.report.id}).then(j=>{out.innerHTML=aiHtml(j);}).catch(er=>{out.innerHTML=`<div class="neg">${esc(er.message)}</div>`;});}
+  // ── 3.10.16 وضع العرض: رسالة واحدة · 3 أرقام · دليل · قرار
+  function slideHtml(s){return `<h2>${esc(s.title)}</h2><div class="msg">${esc(s.message||"")}</div>${s.numbers.length?`<div class="nums">${s.numbers.map(x=>`<div><div class="muted">${esc(x.label)}</div><b>${fv(x.value,x.unit)}</b></div>`).join("")}</div>`:""}${(s.evidence||[]).filter(Boolean).length?`<ul>${s.evidence.filter(Boolean).map(e=>`<li>${esc(e)}</li>`).join("")}</ul>`:""}${s.decision?`<div class="dec"><b>القرار:</b> ${esc(s.decision)}</div>`:""}`;}
+  function pres(i){const S=D.slides||[];if(!S.length)return;SL=Math.max(0,Math.min(S.length-1,i));$("pS").innerHTML=slideHtml(S[SL]);$("pN").textContent=`${SL+1} / ${S.length} · ${D.company||""} · ${D.period} · سري`;$("pres").classList.add("on");}
+  $("btnPres").onclick=()=>pres(0);$("pNext").onclick=()=>pres(SL+1);$("pPrev").onclick=()=>pres(SL-1);$("pX").onclick=()=>$("pres").classList.remove("on");
+  document.addEventListener("keydown",e=>{if(!$("pres").classList.contains("on"))return;if(e.key==="ArrowLeft")pres(SL+1);else if(e.key==="ArrowRight")pres(SL-1);else if(e.key==="Escape")$("pres").classList.remove("on");});
+  // ── 3.10.17/3.10.18 الحزمة القابلة للطباعة → PDF (يُسجَّل التصدير)
+  function printPack(){const keep=$("content").innerHTML;const pages=(D.pack_pages||[]).filter(p=>p.key!=="cover"),views={summary,lenses,financial,growth:()=>lenses(),risk,branches,forecast,goals,initiatives,decisions_required,appendix,data_quality};
+    let html=`<div class="pg cover"><h1>Nabbah Board Report — تقرير مجلس الإدارة</h1><h2>${esc(D.company||"")}</h2><div>الفترة: ${esc(D.period)}</div><div>${D.live?"حزمة حية (غير محفوظة)":"النسخة "+D.report.version+" · "+esc(D.report.generated_at)+" · "+esc(D.report.generated_by)+" · "+esc(D.report.checksum)}</div><div style="margin-top:24px;font-weight:900">سري — Confidential</div></div>`;
+    pages.forEach((p,i)=>{if(p.key!=="growth"&&!(p.key in views))return;let body="";try{body=p.key==="growth"?panel("النمو",(D.lenses.filter(l=>l.key==="growth").map(l=>`<div>${esc(l.ar)}: ${l.score==null?"—":n(l.score,0)} ${esc(l.light)}</div><ul>${(l.evidence||[]).map(e=>`<li>${esc(e)}</li>`).join("")}</ul>`).join(""))):views[p.key]();}catch(_){body=na("—");}
+      html+=`<div class="pg"><div style="font-size:11px;color:#666">صفحة ${i+1} · ${esc(p.ar)} · سري</div>${body}</div>`;});
+    $("printv").innerHTML=html;$("content").innerHTML=keep;
+    api("/company/board/export",{id:D.live?undefined:D.report.id}).catch(()=>{});setTimeout(()=>window.print(),100);}
+  $("btnPdf").onclick=printPack;
+  $("ver").onchange=()=>load($("ver").value||null);
+  $("btnGen").onclick=()=>{$("modal").innerHTML=`<h3 style="margin-top:0">إنشاء حزمة مجلس الإدارة</h3><div class="fg"><label>عنوان الحزمة<input id="gT" placeholder="اختياري"></label><label>تاريخ الاجتماع<input id="gD" type="date"></label></div><div class="muted">تُنشأ نسخة جديدة مجمّدة من البيانات الحالية — النسخ السابقة لا تتغير.</div><div class="cta"><button class="btn" id="gGo">إنشاء</button><button class="btn ghost" id="gC">إلغاء</button><span id="gM" class="muted"></span></div>`;$("ov").classList.add("on");
+    $("gC").onclick=()=>$("ov").classList.remove("on");$("gGo").onclick=()=>api("/company/board/generate",{title:$("gT").value,meeting_date:$("gD").value}).then(j=>{$("ov").classList.remove("on");load(j.id);}).catch(er=>{$("gM").className="neg";$("gM").textContent=er.message;});};
+  $("btnPresented").onclick=()=>api("/company/board/present",{id:D.report.id}).then(()=>load(D.report.id)).catch(er=>alert(er.message));
+  $("ov").onclick=e=>{if(e.target===$("ov"))$("ov").classList.remove("on");};
+  load();
+})();
+</script>
+<script src="nabbah-sidebar.js"></script>
+</body>
+</html>
