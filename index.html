@@ -153,6 +153,35 @@
   .price li::before{content:"✓";color:var(--mint);font-weight:900;flex-shrink:0}
   .price .btn{width:100%;padding:13px}
   @media(max-width:820px){.price-grid{grid-template-columns:1fr}}
+  .tiers-path{display:flex;justify-content:center;align-items:center;gap:8px;flex-wrap:wrap;margin:-6px 0 30px;font-weight:800;font-size:14px}
+  .tiers-path i{font-style:normal;color:var(--ink-muted,#8ba89f)}
+  .tiers-path .tp{padding:5px 13px;border-radius:100px;border:1px solid var(--line)}
+  .tiers-path .c1{background:#fff;color:var(--ink-soft)}
+  .tiers-path .c2{background:#ecfdf5;color:#065f46;border-color:#a7f3d0}
+  .tiers-path .c3{background:#0f1d18;color:#d1fae5;border-color:#0f1d18}
+  .price .tier-en{font-size:12.5px;font-weight:800;letter-spacing:.3px;color:var(--ink-soft);margin-bottom:4px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .price .tier-en .star{background:#fef3c7;color:#92400e;border-radius:100px;padding:2px 9px;font-size:11.5px}
+  .price .tier-pos{font-weight:800;color:var(--mint);font-size:14.5px;margin-bottom:8px}
+  .price .vat{font-size:12.5px;color:var(--ink-soft);margin-top:6px}
+  .price ul li b{color:var(--ink)}
+  .price-note{text-align:center;color:var(--ink-soft);font-size:14.5px;margin-top:26px;line-height:1.8}
+  .price-note a{color:#065f46;font-weight:800;text-decoration:underline}
+  .cmp{max-width:940px;margin:22px auto 0;background:#fff;border:1.5px solid var(--line);border-radius:18px;overflow:hidden}
+  .cmp summary{cursor:pointer;padding:16px 20px;font-weight:800;color:#065f46;text-align:center;list-style:none}
+  .cmp summary::-webkit-details-marker{display:none}
+  .cmp summary::after{content:" ▾"}
+  .cmp[open] summary::after{content:" ▴"}
+  .cmp-scroll{overflow-x:auto;border-top:1px solid var(--line)}
+  .cmp table{width:100%;border-collapse:collapse;min-width:560px;font-size:14px}
+  .cmp th,.cmp td{padding:11px 12px;text-align:center;border-bottom:1px solid var(--line);color:var(--ink-soft)}
+  .cmp th{background:#f4f9f7;color:var(--ink);font-weight:800}
+  .cmp td:first-child,.cmp th:first-child{text-align:right;color:var(--ink);font-weight:700}
+  .cmp td small{display:block;color:var(--ink-muted,#8ba89f);font-weight:500;font-size:11.5px}
+  .cmp .y{color:var(--mint);font-weight:900}
+  .cmp .n{color:#c3d1cc}
+  .cmp .hl{background:#f0fdf8}
+  .cmp th.hl{background:#d1fae5;color:#065f46}
+  .tax-note{text-align:center;color:var(--ink-muted,#8ba89f);font-size:12.5px;margin-top:12px}
 
   /* cta band */
   .band{text-align:center;padding:64px 0}
@@ -180,10 +209,10 @@
     <a href="#features" data-i18n="landing.features">المميزات</a>
     <a href="#pricing" data-i18n="landing.pricing">الباقات</a>
     <a href="trial.html" style="color:#10b981;font-weight:700">🎁 <span data-i18n="landing.trial">كود التجربة</span></a>
-    <a href="company-dashboard.html" id="nav-company" style="color:#065f46;font-weight:700">🏢 <span data-i18n="landing.companies">الشركات</span></a>
+    <a href="company-start.html" id="nav-company" style="color:#065f46;font-weight:700">🏢 <span data-i18n="landing.companies">الشركات</span></a>
     <a href="login.html" id="nav-login" data-i18n="landing.login">تسجيل الدخول</a>
     <button id="navLangToggle" type="button" style="background:transparent;border:1.5px solid #10b981;color:#0b8457;font-weight:800;font-size:14px;padding:7px 14px;border-radius:9px;cursor:pointer;font-family:inherit;transition:.2s" onmouseover="this.style.background='#10b981';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='#0b8457'">EN</button>
-    <a href="input.html" class="btn btn-primary" data-i18n="landing.cta">ابدأ تحليل منشأتك</a>
+    <a href="company-start.html" class="btn btn-primary" data-i18n="landing.cta">ابدأ تحليل منشأتك</a>
   </div>
 </div></nav>
 
@@ -194,7 +223,7 @@
     <h1 class="reveal d2"><span data-i18n="home.hero.1">أرقام منشأتك تستحق</span> <span class="hl" data-i18n="home.hero.2">قراراً أوضح</span></h1>
     <p data-i18n="home.lead" class="lead reveal d3">نبّاه يحوّل مبيعاتك وإيراداتك ومصروفاتك إلى تقرير تنفيذي عربي: مشاكل واضحة، حلول عملية، فرص للنمو، وقرارات مرتّبة — مع درجات ذكية تقرأ صحة منشأتك من نظرة.</p>
     <div class="hero-cta reveal d4">
-      <a data-i18n="home.cta.start" href="input.html" class="btn btn-primary">ابدأ الآن</a>
+      <a data-i18n="home.cta.start" href="company-start.html" class="btn btn-primary">ابدأ الآن</a>
       <a data-i18n="home.cta.plans" href="#pricing" class="btn btn-ghost">شاهد الباقات</a>
     </div>
     <div class="trust reveal d4">
@@ -259,7 +288,7 @@
     #enterprise .wrap{padding-block:52px!important}
   }
   @media(max-width:520px){
-    #enterprise a[href="company-dashboard.html"]{width:100%}
+    #enterprise a[href="company-start.html"]{width:100%}
   }
 </style>
 <section id="enterprise" style="background:#0a0f0c;color:#e8f1ec;position:relative;overflow:hidden;border-block:1px solid #0a0f0c">
@@ -276,7 +305,7 @@
           ارفع ملفاً واحداً من نظامك، ويتولّى نبّاه الباقي: كشف هدر الإيرادات، مراقبة السيولة، مقارنة الفروع، وقرارات بأثرها المالي.
         </p>
         <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px">
-          <a href="company-register.html" style="display:inline-flex;align-items:center;gap:9px;background:#10b981;color:#04130d;font-weight:800;font-size:15.5px;padding:14px 28px;border-radius:13px;box-shadow:0 8px 26px rgba(16,185,129,.3);transition:.2s">ابدأ التحليل الآن ←</a>
+          <a href="company-start.html" style="display:inline-flex;align-items:center;gap:9px;background:#10b981;color:#04130d;font-weight:800;font-size:15.5px;padding:14px 28px;border-radius:13px;box-shadow:0 8px 26px rgba(16,185,129,.3);transition:.2s">ابدأ التحليل الآن ←</a>
           <a href="#enterprise-feats" style="display:inline-flex;align-items:center;gap:8px;background:transparent;color:#9fb4aa;font-weight:700;font-size:15px;padding:14px 22px;border-radius:13px;border:1px solid #1d2c24">شوف الإمكانات</a>
         </div>
         <p data-i18n="home.trust.line" style="font-size:13px;color:#678075">منصة سعودية موثوقة · بالعربية · تسجيل فوري · للشركات والسلاسل متعددة الفروع</p>
@@ -310,46 +339,9 @@
       <div style="background:#101a15;border:1px solid #1d2c24;border-radius:14px;padding:18px"><div style="font-size:22px;margin-bottom:9px">👥</div><h3 data-i18n="home.e6.t" style="font-size:15.5px;font-weight:800;color:#fff;margin-bottom:5px">صلاحيات الفريق</h3><p data-i18n="home.e6.p" style="font-size:13.5px;color:#9fb4aa;line-height:1.7">مالك، مدير فرع، محاسب، موظف — كل واحد يشوف ما يخصّه.</p></div>
     </div>
 
-    <!-- باقات الشركات -->
-    <div id="enterprise-pricing" style="margin-top:54px">
-      <div style="text-align:center;margin-bottom:28px">
-        <h3 data-i18n="home.pricing.title" style="font-size:clamp(22px,3.5vw,30px);font-weight:900;color:#fff;margin-bottom:8px">باقات نبّاه للشركات</h3>
-        <p data-i18n="home.pricing.sub" style="color:#9fb4aa;font-size:15px">استثمار يحمي قراراتك ويكشف الهدر قبل ما يكلّفك أضعافه.</p>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:760px;margin:0 auto">
-        <!-- باقة الشركات -->
-        <div style="background:#101a15;border:1.5px solid #10b981;border-radius:18px;padding:26px;position:relative;box-shadow:0 20px 50px rgba(16,185,129,.12)">
-          <span style="position:absolute;top:16px;left:16px;background:#10b981;color:#04130d;font-size:11.5px;font-weight:800;padding:4px 12px;border-radius:100px">الأكثر طلباً</span>
-          <div style="font-size:16px;font-weight:800;color:#fff;margin-bottom:4px">نبّاه للشركات</div>
-          <div style="font-size:13px;color:#9fb4aa;margin-bottom:14px">للشركات والسلاسل حتى 5 فروع</div>
-          <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:4px"><span style="font-size:40px;font-weight:900;color:#fff">2,499</span><span style="color:#9fb4aa;font-weight:700">ريال / شهرياً</span></div>
-          <div style="font-size:13px;color:#678075;margin-bottom:18px">+ 399 ريال لكل فرع إضافي</div>
-          <div style="display:flex;flex-direction:column;gap:9px;margin-bottom:22px">
-            <div style="font-size:13.5px;color:#cfe0d8">✓ لوحة المدير التنفيذي لكل الفروع</div>
-            <div style="font-size:13.5px;color:#cfe0d8">✓ مقارنة الفروع والأسباب الجذرية</div>
-            <div style="font-size:13.5px;color:#cfe0d8">✓ التدفق النقدي التنبؤي</div>
-            <div style="font-size:13.5px;color:#cfe0d8">✓ تحليل هدر الإيرادات والاحتيال</div>
-            <div style="font-size:13.5px;color:#cfe0d8">✓ محاكي القرارات + صلاحيات الفريق</div>
-            <div style="font-size:13.5px;color:#cfe0d8">✓ تحليلات ذكية غير محدودة</div>
-          </div>
-          <a href="company-dashboard.html" style="display:block;text-align:center;background:#10b981;color:#04130d;font-weight:800;font-size:15px;padding:13px;border-radius:12px">ابدأ الآن</a>
-        </div>
-        <!-- باقة مؤسسية -->
-        <div style="background:#0e1712;border:1px solid #1d2c24;border-radius:18px;padding:26px">
-          <div style="font-size:16px;font-weight:800;color:#fff;margin-bottom:4px">مؤسسي · Enterprise</div>
-          <div style="font-size:13px;color:#9fb4aa;margin-bottom:14px">للسلاسل الكبيرة (10+ فروع)</div>
-          <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:22px"><span style="font-size:32px;font-weight:900;color:#fff">تسعير مخصّص</span></div>
-          <div style="display:flex;flex-direction:column;gap:9px;margin-bottom:22px">
-            <div style="font-size:13.5px;color:#cfe0d8">✓ كل مزايا باقة الشركات</div>
-            <div style="font-size:13.5px;color:#cfe0d8">✓ فروع غير محدودة</div>
-            <div style="font-size:13.5px;color:#cfe0d8">✓ مدير حساب مخصّص</div>
-            <div style="font-size:13.5px;color:#cfe0d8">✓ تكامل مع أنظمتك + أولوية دعم</div>
-            <div style="font-size:13.5px;color:#cfe0d8">✓ Benchmark السوق (عند توفّره)</div>
-          </div>
-          <a href="contact.html" style="display:block;text-align:center;background:transparent;color:#e8f1ec;font-weight:800;font-size:15px;padding:13px;border-radius:12px;border:1px solid #1d2c24">تواصل معنا</a>
-        </div>
-      </div>
-      <p data-i18n="home.pricing.note" style="text-align:center;color:#678075;font-size:13px;margin-top:18px">الاشتراك يُفعّل بعد التأكيد · بدون رسوم إعداد · إلغاء في أي وقت</p>
+    <div style="text-align:center;margin-top:44px">
+      <a href="#pricing" style="display:inline-flex;align-items:center;gap:8px;color:#34d399;font-weight:800;font-size:15px;padding:12px 22px;border-radius:12px;border:1px solid rgba(16,185,129,.35)">شاهد باقات نبّاه ↓</a>
+    </div>
     </div>
   </div>
 </section>
@@ -439,59 +431,126 @@
 
 <section id="pricing"><div class="wrap">
   <div class="sec-head">
-    <h2>باقة تناسب حجم منشأتك</h2>
-    <p>اختر باقتك وابدأ التحليل اليوم.</p>
+    <h2>باقات نبّاه</h2>
+    <p>الفرق بين الباقات ليس عدد الشاشات… بل عمق الذكاء الذي تحتاجه منشأتك.</p>
   </div>
+
+  <div class="tiers-path" aria-hidden="true">
+    <span class="tp c1">افهم</span><i>←</i><span class="tp c2">شخّص</span><i>←</i><span class="tp c2">توقّع</span><i>←</i><span class="tp c3">نفّذ</span><i>←</i><span class="tp c3">احكم</span>
+  </div>
+
   <div class="price-grid">
 
     <div class="price">
+      <div class="tier-en">Nabbah Core</div>
       <h3>الأساسية</h3>
-      <div class="pdesc">للمنشآت الصغيرة التي تبدأ بقراءة أرقامها.</div>
-      <div class="amt">269 <small>ريال / شهرياً</small></div>
+      <div class="tier-pos">افهم منشأتك</div>
+      <div class="pdesc">للشركات الصغيرة التي تريد معرفة أدائها بوضوح.</div>
+      <div class="amt">699 <small>ريال / شهرياً</small></div>
+      <div class="vat">قبل ضريبة القيمة المضافة</div>
       <ul>
-        <li>درجة صحة منشأتك</li>
-        <li>تغطية المصروفات بمعادلة مشروحة</li>
-        <li>ملخّص سريع في 30 ثانية</li>
-        <li>تقرير تنفيذي مبسّط</li>
+        <li>ذكاء الشركة: الإيرادات، الربح، الهامش، النمو، الفروع</li>
+        <li>مركز البيانات: رفع Excel / CSV وفحص جودة البيانات</li>
+        <li>ذكاء المبيعات: الاتجاه، الفروع، الأصناف، الخصومات والمرتجعات</li>
+        <li>الذكاء المالي وملخص الأرباح والخسائر</li>
+        <li>المخزون (أساسي)</li>
+        <li>تقارير تنفيذية (أساسية)</li>
+        <li>ذكاء اصطناعي محدود</li>
+        <li>دعم قياسي</li>
       </ul>
-      <a href="https://wa.me/966559986553?text=السلام%20عليكم،%20أرغب%20بالاشتراك%20في%20الباقة%20الأساسية%20(269%20ريال/شهر)%20من%20نبّاه" target="_blank" class="btn btn-ghost">اشترك عبر واتساب</a>
+      <a href="https://wa.me/966559986553?text=السلام%20عليكم،%20أرغب%20بالاشتراك%20في%20باقة%20Nabbah%20Core%20(699%20ريال/شهر)" target="_blank" rel="noopener" class="btn btn-ghost">اشترك عبر واتساب</a>
     </div>
 
     <div class="price feature">
-      <h3>الاحترافية</h3>
-      <div class="pdesc">للمنشآت المتوسطة التي تريد قرارات أعمق.</div>
-      <div class="amt">699 <small>ريال / شهرياً</small></div>
+      <div class="tier-en">Nabbah Intelligence <span class="star">⭐ الموصى بها</span></div>
+      <h3>الذكية</h3>
+      <div class="tier-pos">افهم السبب · توقّع القادم · قرّر</div>
+      <div class="pdesc">التحليل + المخاطر + الفرص + القرارات — من لوحة أرقام إلى ذكاء قرار.</div>
+      <div class="amt">1,499 <small>ريال / شهرياً</small></div>
+      <div class="vat">قبل ضريبة القيمة المضافة</div>
       <ul>
-        <li>كل ما في الأساسية</li>
-        <li>التوقعات الرقمية (متحفظ ومتفائل)</li>
-        <li>كشف التناقضات المالية</li>
-        <li>أهم 3 قرارات بأولوياتها</li>
-        <li>رسوم بيانية تفاعلية</li>
+        <li><b>كل ما في Core، إضافةً إلى:</b></li>
+        <li>تسرب الإيرادات وفرص الاسترداد</li>
+        <li>محرك المخاطر ومحركاتها والتنبيهات</li>
+        <li>الأسباب الجذرية بالأدلة والأثر المالي</li>
+        <li>التنبؤ بالأداء لـ 6 أشهر وسيناريوهات What-if</li>
+        <li>التدفق النقدي والسيولة</li>
+        <li>المشتريات وأداء الموردين</li>
+        <li>المخزون (متقدم)</li>
+        <li>الأهداف والنتائج OKR ومتابعة القرارات</li>
+        <li>ذكاء اصطناعي متقدم · تكاملات أساسية · دعم بأولوية</li>
       </ul>
-      <a href="https://wa.me/966559986553?text=السلام%20عليكم،%20أرغب%20بالاشتراك%20في%20الباقة%20الاحترافية%20(699%20ريال/شهر)%20من%20نبّاه" target="_blank" class="btn btn-primary">اشترك عبر واتساب</a>
+      <a href="https://wa.me/966559986553?text=السلام%20عليكم،%20أرغب%20بالاشتراك%20في%20باقة%20Nabbah%20Intelligence%20(1,499%20ريال/شهر)" target="_blank" rel="noopener" class="btn btn-primary">اشترك عبر واتساب</a>
     </div>
 
     <div class="price">
-      <h3>التنفيذية</h3>
-      <div class="pdesc">للشركات وأصحاب الفروع المتعددة.</div>
-      <div class="amt">1299 <small>ريال / شهرياً</small></div>
+      <div class="tier-en">Nabbah Enterprise</div>
+      <h3>المؤسسية</h3>
+      <div class="tier-pos">أدِر منشأتك بالذكاء</div>
+      <div class="pdesc">للشركات متعددة الفروع والإدارة التنفيذية ومجالس الإدارة.</div>
+      <div class="amt">2,999 <small>ريال / شهرياً</small></div>
+      <div class="vat">قبل ضريبة القيمة المضافة</div>
       <ul>
-        <li>كل ما في الاحترافية</li>
-        <li>تحليل متعدد الفروع</li>
-        <li>مراجعة خبراء للتقرير</li>
-        <li>دعم بأولوية</li>
+        <li><b>كل ما في Intelligence، إضافةً إلى:</b></li>
+        <li>عرض مجلس الإدارة والعدسات الاستراتيجية</li>
+        <li>المقارنة القطاعية والفجوات</li>
+        <li>ذكاء الضريبة والزكاة*</li>
+        <li>ذكاء الموارد البشرية</li>
+        <li>ذكاء العمليات</li>
+        <li>تقارير تنفيذية متقدمة</li>
+        <li>ذكاء اصطناعي متقدم — ضمن الاستخدام العادل</li>
+        <li>تكاملات متقدمة · دعم مخصّص</li>
       </ul>
-      <a href="https://wa.me/966559986553?text=السلام%20عليكم،%20أرغب%20بالاشتراك%20في%20الباقة%20التنفيذية%20(1299%20ريال/شهر)%20من%20نبّاه" target="_blank" class="btn btn-ghost">اشترك عبر واتساب</a>
+      <a href="https://wa.me/966559986553?text=السلام%20عليكم،%20أرغب%20بالاشتراك%20في%20باقة%20Nabbah%20Enterprise%20(2,999%20ريال/شهر)" target="_blank" rel="noopener" class="btn btn-ghost">اشترك عبر واتساب</a>
     </div>
 
   </div>
+
+  <div class="price-note">
+    الأسعار شهرية وقبل ضريبة القيمة المضافة. تحتاج اشتراكاً سنوياً أو احتياجاً خاصاً لمجموعة شركات؟
+    <a href="https://wa.me/966559986553?text=السلام%20عليكم،%20أرغب%20بالاستفسار%20عن%20الاشتراك%20السنوي%20في%20نبّاه" target="_blank" rel="noopener">تواصل مع فريقنا</a>
+  </div>
+
+  <details class="cmp">
+    <summary>قارن الباقات بالتفصيل</summary>
+    <div class="cmp-scroll">
+      <table>
+        <thead><tr><th>الميزة</th><th>Core</th><th class="hl">Intelligence ⭐</th><th>Enterprise</th></tr></thead>
+        <tbody>
+          <tr><td>ذكاء الشركة <small>Company Intelligence</small></td><td class="y">✓</td><td class="y hl">✓</td><td class="y">✓</td></tr>
+          <tr><td>مركز البيانات <small>Data Center</small></td><td class="y">✓</td><td class="y hl">✓</td><td class="y">✓</td></tr>
+          <tr><td>ذكاء المبيعات <small>Sales Intelligence</small></td><td class="y">✓</td><td class="y hl">✓</td><td class="y">✓</td></tr>
+          <tr><td>الذكاء المالي <small>Financial Intelligence</small></td><td class="y">✓</td><td class="y hl">✓</td><td class="y">✓</td></tr>
+          <tr><td>المخزون <small>Inventory</small></td><td>أساسي</td><td class="hl">متقدم</td><td>متقدم</td></tr>
+          <tr><td>المشتريات <small>Purchases</small></td><td class="n">—</td><td class="y hl">✓</td><td class="y">✓</td></tr>
+          <tr><td>التدفق النقدي <small>Cash Flow</small></td><td class="n">—</td><td class="y hl">✓</td><td class="y">✓</td></tr>
+          <tr><td>تسرب الإيرادات <small>Revenue Leakage</small></td><td class="n">—</td><td class="y hl">✓</td><td class="y">✓</td></tr>
+          <tr><td>محرك المخاطر <small>Risk Engine</small></td><td class="n">—</td><td class="y hl">✓</td><td class="y">✓</td></tr>
+          <tr><td>الأسباب الجذرية <small>Root Causes</small></td><td class="n">—</td><td class="y hl">✓</td><td class="y">✓</td></tr>
+          <tr><td>التنبؤ بالأداء <small>Performance Prediction</small></td><td class="n">—</td><td class="y hl">✓</td><td class="y">✓</td></tr>
+          <tr><td>الأهداف والنتائج <small>Goals &amp; OKR</small></td><td class="n">—</td><td class="y hl">✓</td><td class="y">✓</td></tr>
+          <tr><td>متابعة القرارات <small>Decision Tracking</small></td><td class="n">—</td><td class="y hl">✓</td><td class="y">✓</td></tr>
+          <tr><td>الضريبة والزكاة* <small>Tax &amp; Zakat</small></td><td class="n">—</td><td class="n hl">—</td><td class="y">✓</td></tr>
+          <tr><td>الموارد البشرية <small>HR Intelligence</small></td><td class="n">—</td><td class="n hl">—</td><td class="y">✓</td></tr>
+          <tr><td>ذكاء العمليات <small>Operations Intelligence</small></td><td class="n">—</td><td class="n hl">—</td><td class="y">✓</td></tr>
+          <tr><td>المقارنة القطاعية <small>Sector Benchmarking</small></td><td class="n">—</td><td class="n hl">—</td><td class="y">✓</td></tr>
+          <tr><td>عرض مجلس الإدارة <small>Board Intelligence</small></td><td class="n">—</td><td class="n hl">—</td><td class="y">✓</td></tr>
+          <tr><td>التقارير التنفيذية <small>Executive Reports</small></td><td>أساسية</td><td class="hl">متقدمة</td><td>متقدمة</td></tr>
+          <tr><td>الذكاء الاصطناعي <small>AI</small></td><td>محدود</td><td class="hl">متقدم</td><td>متقدم · استخدام عادل</td></tr>
+          <tr><td>التكاملات <small>Integrations</small></td><td class="n">—</td><td class="hl">أساسية</td><td>متقدمة</td></tr>
+          <tr><td>الدعم <small>Support</small></td><td>قياسي</td><td class="hl">بأولوية</td><td>مخصّص</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </details>
+  <p class="tax-note">* ذكاء الضريبة والزكاة أداة تحليل ومتابعة لبياناتك، وليس استشارة ضريبية أو شهادة امتثال.</p>
 </div></section>
 
 <!-- ===== CTA BAND ===== -->
 <div class="band"><div class="wrap">
   <h2>جاهز تقرأ منشأتك بوضوح؟</h2>
-  <p>أدخل أرقامك الآن، واحصل على تقريرك التنفيذي في دقائق.</p>
-  <a href="input.html" class="btn btn-primary" style="padding:15px 38px;font-size:17px">ابدأ تحليل منشأتك</a>
+  <p>سجّل شركتك وارفع ملف بياناتك، واحصل على مركز ذكاء تنفيذي متكامل.</p>
+  <a href="company-start.html" class="btn btn-primary" style="padding:15px 38px;font-size:17px">ابدأ تحليل منشأتك</a>
 </div></div>
 
 <!-- ===== FOOTER ===== -->
