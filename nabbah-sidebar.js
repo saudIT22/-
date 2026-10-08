@@ -17,7 +17,8 @@
       { label: "مركز القيادة التنفيذي", href: "company-command-center.html" },
       { label: "صحة الشركة", href: "company-health.html" },
       { label: "الأهداف والنتائج", href: "company-goals-intelligence.html" },
-      { label: "عرض مجلس الإدارة", href: "company-board.html" },
+      { label: "عرض مجلس الإدارة", href: "company-board-intelligence.html" },
+      { label: "عرض المجلس (السابق)", href: "company-board.html" },
     ]},
     { icon: "💰", label: "المالية", items: [
       { label: "الوحدة المالية", href: "company-financial-intelligence.html" },
