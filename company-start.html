@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نبّاه للشركات — ابدأ تحليل منشأتك</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{--mint:#10b981;--mint-deep:#047857;--mint-darker:#065f46;--mint-soft:#ecfdf5;
+    --ink:#0f1d18;--ink-soft:#475a52;--ink-muted:#8ba89f;--bg:#f4f9f7;--line:#e0ece8;--red:#ef4444;}
+  *{margin:0;padding:0;box-sizing:border-box;font-family:'Tajawal',sans-serif}
+  body{background:var(--bg);color:var(--ink);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px 16px}
+  body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+    background:radial-gradient(circle at 1px 1px,rgba(16,185,129,.055) 1px,transparent 0);background-size:24px 24px;opacity:.6}
+  .box{position:relative;z-index:1;background:#fff;border:1px solid var(--line);border-radius:22px;
+    padding:34px 30px;width:100%;max-width:460px;box-shadow:0 16px 50px rgba(6,95,70,.1)}
+  .logo{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:6px;text-decoration:none}
+  .logo .bell{width:46px;height:46px;border-radius:14px;background:var(--mint);display:grid;place-items:center;
+    font-size:24px;transform:rotate(-5deg);box-shadow:0 3px 12px rgba(16,185,129,.35)}
+  .logo .name{font-weight:900;font-size:26px;color:var(--mint-darker)}
+  .tag{display:block;width:max-content;margin:4px auto 0;background:var(--mint-soft);color:var(--mint-darker);
+    font-size:12.5px;font-weight:800;padding:4px 12px;border-radius:100px}
+  h1{text-align:center;font-size:20px;font-weight:800;margin:16px 0 4px}
+  .sub{text-align:center;color:var(--ink-muted);font-size:14px;margin-bottom:20px;line-height:1.7}
+  .tabs{display:grid;grid-template-columns:1fr 1fr;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:4px;margin-bottom:20px}
+  .tabs button{border:none;background:transparent;padding:10px;border-radius:9px;font-size:14.5px;font-weight:800;color:var(--ink-soft);cursor:pointer}
+  .tabs button.on{background:#fff;color:var(--mint-darker);box-shadow:0 2px 8px rgba(6,95,70,.08)}
+  .field{margin-bottom:14px}
+  .field label{display:block;font-weight:600;font-size:14px;margin-bottom:6px}
+  .field label small{color:var(--ink-muted);font-weight:500}
+  .field input{width:100%;background:#fff;border:1.5px solid var(--line);border-radius:12px;
+    padding:12px 14px;font-size:15px;color:var(--ink);transition:border-color .2s,box-shadow .2s}
+  .field input:focus{outline:none;border-color:var(--mint);box-shadow:0 0 0 4px var(--mint-soft)}
+  .btn{width:100%;padding:14px;background:var(--mint);color:#fff;border:none;border-radius:13px;
+    font-size:16px;font-weight:800;cursor:pointer;margin-top:6px;
+    transition:background .2s;display:flex;align-items:center;justify-content:center;gap:10px}
+  .btn:hover{background:var(--mint-deep)}
+  .btn:disabled{opacity:.6;cursor:not-allowed}
+  .spin{width:18px;height:18px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;
+    border-radius:50%;animation:spin .8s linear infinite;display:none}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .msg{margin-top:14px;padding:12px 15px;border-radius:11px;font-size:14px;font-weight:600;text-align:center;display:none}
+  .msg.error{background:#fef2f2;color:var(--red);display:block}
+  .msg.ok{background:var(--mint-soft);color:var(--mint-darker);display:block}
+  .steps{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin:18px 0 0;font-size:12.5px;color:var(--ink-soft)}
+  .steps span{background:var(--bg);border:1px solid var(--line);border-radius:100px;padding:4px 10px}
+  .back{text-align:center;margin-top:16px}
+  .back a{color:var(--ink-muted);font-size:13px;text-decoration:none}
+  .checking{text-align:center;color:var(--ink-soft);padding:24px 0;font-weight:700}
+  .hide{display:none}
+</style>
+</head>
+<body>
+  <div class="box">
+    <a class="logo" href="index.html"><span class="bell">🔔</span><span class="name">نبّاه</span></a>
+    <span class="tag">🏢 نبّاه للشركات</span>
+
+    <div id="checking" class="checking hide">جارٍ تجهيز حسابك…</div>
+
+    <div id="forms">
+      <h1 id="title">ابدأ تحليل منشأتك</h1>
+      <p class="sub" id="subtitle">أنشئ حسابك، ثم سجّل شركتك وارفع ملف بياناتك — ونبّاه يتولّى الباقي.</p>
+
+      <div class="tabs" role="tablist">
+        <button type="button" id="tab-signup" class="on" onclick="setMode('signup')">حساب جديد</button>
+        <button type="button" id="tab-login" onclick="setMode('login')">لدي حساب</button>
+      </div>
+
+      <div id="signup-fields">
+        <div class="field"><label>الاسم</label><input id="name" autocomplete="name" placeholder="اسمك الكامل"></div>
+        <div class="field"><label>اسم المنشأة <small>(اختياري)</small></label><input id="business" autocomplete="organization" placeholder="مثال: شركة نبّاه للتجارة"></div>
+        <div class="field"><label>الجوال <small>(اختياري)</small></label><input id="phone" type="tel" autocomplete="tel" placeholder="05xxxxxxxx" dir="ltr" style="text-align:right"></div>
+      </div>
+      <div class="field"><label>البريد الإلكتروني</label><input id="email" type="email" autocomplete="email" placeholder="example@company.com" dir="ltr" style="text-align:right"></div>
+      <div class="field"><label>كلمة المرور</label><input id="password" type="password" autocomplete="new-password" placeholder="6 أحرف على الأقل"></div>
+
+      <button class="btn" id="btn" onclick="submitForm()"><span class="spin" id="spin"></span><span id="btn-txt">أنشئ الحساب وابدأ</span></button>
+      <div class="msg" id="msg"></div>
+
+      <div class="steps"><span>١ · الحساب</span><span>٢ · تسجيل الشركة</span><span>٣ · رفع البيانات</span><span>٤ · مركز الذكاء</span></div>
+    </div>
+
+    <div class="back"><a href="index.html">← رجوع للرئيسية</a></div>
+  </div>
+
+<script>
+  // نية المستخدم: مسار الشركات (تقرأها صفحة الدخول أيضاً)
+  try { localStorage.setItem("nabbah_intent", "company"); } catch (e) {}
+
+  var mode = "signup";
+  function $(id) { return document.getElementById(id); }
+
+  function setMode(m) {
+    mode = m;
+    $("tab-signup").classList.toggle("on", m === "signup");
+    $("tab-login").classList.toggle("on", m === "login");
+    $("signup-fields").classList.toggle("hide", m !== "signup");
+    $("btn-txt").innerText = m === "signup" ? "أنشئ الحساب وابدأ" : "دخول";
+    $("password").setAttribute("autocomplete", m === "signup" ? "new-password" : "current-password");
+    $("title").innerText = m === "signup" ? "ابدأ تحليل منشأتك" : "دخول نبّاه للشركات";
+    $("msg").className = "msg";
+  }
+
+  // التوجيه: عنده شركة → لوحة الشركة، ما عنده → تسجيل الشركة
+  async function routeCompany(token) {
+    try {
+      var r = await fetch("/company/info", { headers: { "Authorization": "Bearer " + token } });
+      if (r.status === 401) return false;
+      if (r.ok) {
+        var info = await r.json();
+        window.location.href = info.has_company ? "company-dashboard.html" : "company-register.html";
+        return true;
+      }
+    } catch (e) {}
+    window.location.href = "company-register.html";
+    return true;
+  }
+
+  async function submitForm() {
+    var email = $("email").value.trim(), password = $("password").value, msg = $("msg");
+    msg.className = "msg";
+    var body;
+    if (mode === "signup") {
+      var name = $("name").value.trim();
+      if (!name || !email || !password) { msg.className = "msg error"; msg.innerText = "املأ الاسم والبريد وكلمة المرور"; return; }
+      if (password.length < 6) { msg.className = "msg error"; msg.innerText = "كلمة المرور يجب أن تكون 6 أحرف على الأقل"; return; }
+      body = { name: name, email: email, password: password, business_name: $("business").value.trim(), phone: $("phone").value.trim() };
+    } else {
+      if (!email || !password) { msg.className = "msg error"; msg.innerText = "املأ البريد وكلمة المرور"; return; }
+      body = { email: email, password: password };
+    }
+    $("btn").disabled = true; $("spin").style.display = "block";
+    try {
+      var res = await fetch(mode === "signup" ? "/register" : "/login", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body)
+      });
+      var out = {};
+      try { out = await res.json(); } catch (e) {}
+      if (!res.ok) {
+        msg.className = "msg error";
+        msg.innerText = (typeof out.detail === "string" && out.detail) || (mode === "signup" ? "تعذّر إنشاء الحساب" : "فشل الدخول");
+        return;
+      }
+      localStorage.setItem("nabbah_token", out.token);
+      localStorage.setItem("nabbah_name", out.name || "");
+      localStorage.setItem("nabbah_active", out.is_active);
+      msg.className = "msg ok"; msg.innerText = "تم، جارٍ التحويل…";
+      await routeCompany(out.token);
+    } catch (e) {
+      msg.className = "msg error"; msg.innerText = "تعذّر الاتصال بالخادم";
+    } finally {
+      $("btn").disabled = false; $("spin").style.display = "none";
+    }
+  }
+
+  document.addEventListener("keydown", function (e) { if (e.key === "Enter") submitForm(); });
+
+  // مسجّل دخول مسبقاً؟ وجّهه مباشرة
+  (async function () {
+    var q = new URLSearchParams(location.search);
+    if (q.get("mode") === "login") setMode("login");
+    var token = null;
+    try { token = localStorage.getItem("nabbah_token"); } catch (e) {}
+    if (!token) return;
+    $("forms").classList.add("hide"); $("checking").classList.remove("hide");
+    var ok = await routeCompany(token);
+    if (!ok) {
+      localStorage.removeItem("nabbah_token");
+      $("checking").classList.add("hide"); $("forms").classList.remove("hide");
+      setMode("login");
+    }
+  })();
+</script>
+</body>
+</html>
