@@ -2195,8 +2195,10 @@ def admin_list_users(_: bool = Depends(verify_admin)):
         return result
 
 
-# أسعار الباقات (ريال/شهر)
-PLAN_PRICES = {"basic": 269, "pro": 699, "executive": 1299}
+# أسعار الباقات (ريال/شهر، قبل ضريبة القيمة المضافة) — المفاتيح القديمة محفوظة لعدم كسر الاشتراكات
+# basic = Nabbah Core · pro = Nabbah Intelligence ⭐ · executive = Nabbah Enterprise
+PLAN_PRICES = {"basic": 699, "pro": 1499, "executive": 2999}
+PLAN_LABELS = {"basic": "Core", "pro": "Intelligence", "executive": "Enterprise"}
 
 @app.get("/admin/stats")
 def admin_stats(_: bool = Depends(verify_admin)):
@@ -2293,7 +2295,7 @@ def admin_activate_user(data: AdminActionData, _: bool = Depends(verify_admin)):
         user.subscription_end = now + timedelta(days=data.days)
         s.add(user)
         s.commit()
-        plan_ar = {"basic": "الأساسية", "pro": "الاحترافية", "executive": "التنفيذية"}.get(data.plan, data.plan)
+        plan_ar = PLAN_LABELS.get(data.plan, data.plan)
         if old_plan and old_plan != data.plan:
             log_activity("المسؤول", f"غيّر الاشتراك إلى {plan_ar} ({data.days} يوم)", user.email)
         else:
@@ -2586,7 +2588,7 @@ def analyze(data: SalesData, user: User = Depends(get_current_user)):
         level=level, health_score=health_score, risk_score=risk_score,
         opportunity_score=opportunity_score, data_quality=data_quality, quality_note=quality_note
     )
-    plan_names = {"basic": "الأساسية", "pro": "الاحترافية", "executive": "التنفيذية"}
+    plan_names = {"basic": "Core (الأساسية)", "pro": "Intelligence (الاحترافية)", "executive": "Enterprise (التنفيذية)"}
 
     prompt = f"""أنت "نبّاه"، مستشار أعمال تنفيذي بخبرة تتجاوز ١٥ عاماً في تحليل المنشآت. مهمتك ليست وصف الأرقام، بل اكتشاف المشكلات الحقيقية والفرص الخفية كمستشار تنفيذي يكتب لمالك المنشأة.
 
@@ -3363,6 +3365,10 @@ OPPORTUNITY: (أهم فرصة)
 
 
 # ===== صفحات قسم الشركات =====
+@app.get("/company-start.html")
+def page_company_start():
+    return FileResponse("company-start.html")
+
 @app.get("/company-register.html")
 def page_company_register():
     return FileResponse("company-register.html")
@@ -15363,7 +15369,7 @@ def files_check(_: bool = Depends(verify_admin)):
     """افتح nabbah.com/files-check — يبيّن أي صفحة ناقصة على السيرفر فوراً."""
     import os
     REQUIRED_PAGES = [
-        "index.html", "login.html", "admin.html",
+        "index.html", "login.html", "admin.html", "company-start.html",
         "company-register.html", "company-dashboard.html", "company-input.html",
         "company-branches.html", "company-report.html", "company-team.html",
         "company-cashflow.html", "company-leakage.html", "company-tax.html",
