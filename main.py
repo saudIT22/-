@@ -943,6 +943,102 @@ class CompanyUserScope(SQLModel, table=True):
     updated_at: _DTCOL = Field(default_factory=_now_naive)
 
 
+# ═══ Phase 3.9 — Follow-up on Decisions: طبقة متابعة فوق CompanyDecision/CompanyAction الموجودين (لا جداول أرقام مكررة) ═══
+class CompanyDecisionMeta(SQLModel, table=True):
+    """مسار الاعتماد والربط لقرار موجود (1:1 مع CompanyDecision). القرار القديم بلا هذا السجل يُقرأ كما هو."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    decision_id: int = Field(index=True)
+    workflow: str = "draft"           # draft | pending_approval | under_review | approved | rejected | in_progress | completed | measured | cancelled
+    priority: str = "medium"
+    category: str = ""
+    source: str = "manual"            # risk | risk_driver | sector_benchmark | prediction | goal | leakage | tax | purchases | recommendation | manual
+    source_ref: str = ""
+    department: str = ""
+    branch: str = ""
+    owner_user_id: Optional[int] = None
+    created_by_id: Optional[int] = None
+    submitted_at: str = ""
+    approved_by: str = ""
+    approved_at: str = ""
+    started_at: str = ""
+    completed_at: str = ""
+    cancelled_at: str = ""
+    rejection_reason: str = ""
+    cost: Optional[float] = None
+    delay_reason: str = ""
+    delay_note: str = ""
+    depends_on: str = ""
+    goal_id: Optional[int] = None
+    risk_key: str = ""
+    risk_baseline: Optional[float] = None
+    root_cause: str = ""
+    root_cause_baseline: Optional[float] = None
+    leakage_key: str = ""
+    leakage_baseline: Optional[float] = None
+    expected_type: str = "potential"
+    sensitive: int = 0
+    updated_at: Optional[_DTCOL] = None
+
+
+class CompanyDecisionKPI(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    decision_id: int = Field(index=True)
+    metric: str = ""
+    branch: str = ""
+    baseline: Optional[float] = None   # لقطة وقت القرار (للمؤشرات بلا تاريخ شهري)
+    baseline_at: str = ""
+    period: str = ""
+    target: Optional[float] = None
+    actual: Optional[float] = None     # يدوي فقط لمؤشر لا تملك نبّاه مصدره
+    actual_at: str = ""
+    side_effect: int = 0
+
+
+class CompanyDecisionOutcome(SQLModel, table=True):
+    """قياس معتمد للقرار: متوقع/فعلي/فرق/نتيجة — لقطة لا تتغير بعد الاعتماد."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    decision_id: int = Field(index=True)
+    expected_impact: Optional[float] = None
+    actual_impact: Optional[float] = None
+    variance: Optional[float] = None
+    result: str = ""
+    method: str = ""
+    actual_manual: Optional[float] = None
+    notes: str = ""
+    snapshot_json: str = "{}"
+    measured_by: str = ""
+    measured_at: str = ""
+
+
+class CompanyDecisionEvidence(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    decision_id: int = Field(index=True)
+    source: str = ""
+    reference: str = ""
+    period: str = ""
+    note: str = ""
+    url: str = ""
+    added_by: str = ""
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+class CompanyDecisionHistory(SQLModel, table=True):
+    """سجل تدقيق القرار: الحدث، الفاعل، الوقت، القيمة القديمة والجديدة."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    decision_id: int = Field(index=True)
+    event: str = ""
+    actor: str = ""
+    timestamp: _DTCOL = Field(default_factory=_now_naive)
+    old_value: str = ""
+    new_value: str = ""
+    note: str = ""
+
+
 class BenchmarkDataset(SQLModel, table=True):
     """طبقة المعايير القطاعية (3.5): company_id فارغ = معيار المنصّة (من الإدارة)، وإلا معيار خاص بالشركة.
     كل معيار بمصدره ومنهجيته وفترته وعيّنته وثقته — لا معيار بلا مصدر."""
@@ -1655,6 +1751,11 @@ def page_performance_prediction():
 @app.get("/company-goals-intelligence.html")
 def page_goals_intelligence():
     return FileResponse("company-goals-intelligence.html")
+
+
+@app.get("/company-decisions-intelligence.html")
+def page_decisions_intelligence():
+    return FileResponse("company-decisions-intelligence.html")
 
 
 @app.get("/company-sector-benchmark.html")
@@ -4535,7 +4636,7 @@ def _load_p24(name):
     """يحمّل محركات 2.4 من المجلد أو من حزمة nabbah_engines."""
     try:
         import sys as _sys, os as _os, importlib
-        for _d in ("phase21", "phase22", "phase23", "phase24", "phase25", "phase26", "phase27", "phase28", "phase29", "phase210", "phase211", "phase30", "phase31", "phase32", "phase33", "phase34", "phase35", "phase37", "phase38"):
+        for _d in ("phase21", "phase22", "phase23", "phase24", "phase25", "phase26", "phase27", "phase28", "phase29", "phase210", "phase211", "phase30", "phase31", "phase32", "phase33", "phase34", "phase35", "phase37", "phase38", "phase39"):
             _p = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), _d)
             if _p not in _sys.path:
                 _sys.path.insert(0, _p)
@@ -7875,17 +7976,31 @@ def _goals_data(s, company):
     mods, cust, errors = _risk_modules(s, company, "owner")
     today_ = datetime.now().date()
     dv, bz, pz = {}, None, None
+    errors = dict(errors or {})
+    # كل محرك سابق اختياري للأهداف: إن فشل يُسجَّل ويُكمل المركز بدونه (لا يسقط الصفحة)
     if risk.get("has_data") and de is not None:
-        dv = de.analyze_drivers(risk, mods, customer_rows=cust, settings=_risk_settings(s, company.id), history=_risk_history(s, company.id),
-                                today=today_, sector=_risk_sector(company))
+        try:
+            dv = de.analyze_drivers(risk, mods, customer_rows=cust, settings=_risk_settings(s, company.id), history=_risk_history(s, company.id),
+                                    today=today_, sector=_risk_sector(company))
+        except Exception as e:
+            _logger.error(f"goals: drivers failed: {type(e).__name__}: {str(e)[:200]}")
+            errors["drivers"], dv = f"مسببات المخاطر غير متاحة: {type(e).__name__}", {}
         if be is not None:
-            prof = _bench_profile(s, company)
-            bz = be.analyze_benchmark(mods, sales_rows=cust, risk=risk, drivers=dv, datasets=_bench_datasets(s, company), peers=_bench_peers(s, company, prof),
-                                      profile=prof, history=_bench_history(s, company.id), today=today_)
+            try:
+                prof = _bench_profile(s, company)
+                bz = be.analyze_benchmark(mods, sales_rows=cust, risk=risk, drivers=dv, datasets=_bench_datasets(s, company), peers=_bench_peers(s, company, prof),
+                                          profile=prof, history=_bench_history(s, company.id), today=today_)
+            except Exception as e:
+                _logger.error(f"goals: benchmark failed: {type(e).__name__}: {str(e)[:200]}")
+                errors["benchmark"], bz = f"المقارنة بالقطاع غير متاحة: {type(e).__name__}", None
     st = _pred_settings(s, company)
     if pe is not None and cust:
-        pz = pe.analyze_prediction(mods, sales_rows=cust, risk=risk, drivers=dv, bench=bz, settings={"targets": st["targets"], "fy_start": st["fy_start"]},
-                                   sector=_risk_sector(company), today=today_, currency=getattr(company, "currency", None) or "SAR")
+        try:
+            pz = pe.analyze_prediction(mods, sales_rows=cust, risk=risk, drivers=dv, bench=bz, settings={"targets": st["targets"], "fy_start": st["fy_start"]},
+                                       sector=_risk_sector(company), today=today_, currency=getattr(company, "currency", None) or "SAR")
+        except Exception as e:
+            _logger.error(f"goals: prediction failed: {type(e).__name__}: {str(e)[:200]}")
+            errors["prediction"], pz = f"التنبؤ غير متاح: {type(e).__name__}", None
     brs = s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company.id)).all()
     existing = {"annual_revenue": st["targets"].get("annual_revenue"), "revenue_source_ar": st["targets"].get("source_ar"),
                 "annual_profit": st["targets"].get("annual_profit"), "target_margin": getattr(company, "target_margin", None) or None,
@@ -7995,7 +8110,18 @@ def _goals_result(s, company, role, viewer, *, save=True):
 def company_goals_intelligence(user: User = Depends(get_current_user)):
     with Session(engine) as s:
         company, role, viewer = _goals_scope(s, user)
-        res = _goals_result(s, company, role, viewer)
+        try:
+            res = _goals_result(s, company, role, viewer)
+        except HTTPException:
+            raise
+        except Exception as e:
+            import traceback as _tb
+            _logger.error("goals-intelligence failed:\n" + _tb.format_exc()[-3000:])
+            try:
+                s.rollback()
+            except Exception:
+                pass
+            raise HTTPException(500, f"خطأ في مركز الأهداف — {type(e).__name__}: {str(e)[:200]} (التفاصيل في سجل الخادم)")
         log_audit(company.id, user.id, user.name, "goals_view", "goals", f"scope={res['scope']['kind']} goals={len(res['goals'])}")
         return res
 
@@ -8528,6 +8654,613 @@ def company_goals_ai(data: dict, request: Request, user: User = Depends(get_curr
     return {"question": q, "ai": out}
 
 
+# ═══════════════════════════════════════════════════════════
+#  Phase 3.9 — Follow-up on Decisions (قرار → اعتماد → تنفيذ → نتيجة → قياس → تعلّم)
+#  طبقة متابعة فوق CompanyDecision/CompanyAction — الفعلي من المصدر الموحد (كتالوج 3.8)، والقرارات القديمة تُقرأ دون تعديل
+# ═══════════════════════════════════════════════════════════
+def _dec_now():
+    return datetime.now().strftime("%Y-%m-%d %H:%M")
+
+
+def _dec_hist(s, company_id, did, event, actor, old="", new="", note=""):
+    s.add(CompanyDecisionHistory(company_id=company_id, decision_id=did, event=event, actor=(actor or "")[:100],
+                                 old_value=str(old if old is not None else "")[:300], new_value=str(new if new is not None else "")[:300], note=(note or "")[:500]))
+
+
+def _dec_sync_legacy(d, wf):
+    """يبقي صفحة القرارات السابقة متسقة: ملغى/مرفوض → cancelled · مكتمل/مُقاس → done · غير ذلك → open."""
+    d.status = "cancelled" if wf in ("cancelled", "rejected") else "done" if wf in ("completed", "measured") else "open"
+    if d.status != "open" and not d.closed_at:
+        d.closed_at = datetime.now()
+    d.updated_at = datetime.now()
+
+
+def _dec_rows(s, cid):
+    decs = s.exec(select(CompanyDecision).where(CompanyDecision.company_id == cid).order_by(CompanyDecision.created_at.desc()).limit(1000)).all()
+    metas = {m.decision_id: m for m in s.exec(select(CompanyDecisionMeta).where(CompanyDecisionMeta.company_id == cid)).all()}
+    kpis, outs, evs, hist, acts = {}, {}, {}, {}, {}
+    for k in s.exec(select(CompanyDecisionKPI).where(CompanyDecisionKPI.company_id == cid)).all():
+        kpis.setdefault(k.decision_id, []).append(k)
+    for o in s.exec(select(CompanyDecisionOutcome).where(CompanyDecisionOutcome.company_id == cid)).all():
+        if o.decision_id not in outs or (o.measured_at or "") >= (outs[o.decision_id].measured_at or ""):
+            outs[o.decision_id] = o
+    for e in s.exec(select(CompanyDecisionEvidence).where(CompanyDecisionEvidence.company_id == cid)).all():
+        evs.setdefault(e.decision_id, []).append(e)
+    for h in s.exec(select(CompanyDecisionHistory).where(CompanyDecisionHistory.company_id == cid)).all():
+        hist.setdefault(h.decision_id, []).append(h)
+    for a in s.exec(select(CompanyAction).where(CompanyAction.company_id == cid)).all():
+        acts.setdefault(a.decision_id, []).append(a)
+    gacts = {a.decision_id: a for a in s.exec(select(CompanyGoalAction).where(CompanyGoalAction.company_id == cid)).all() if a.decision_id}
+    rbase = {r.decision_id: r for r in s.exec(select(CompanyRisk).where(CompanyRisk.company_id == cid)).all() if getattr(r, "decision_id", None)}
+    return decs, metas, kpis, outs, evs, hist, acts, gacts, rbase
+
+
+def _dec_dict(dx, d, m, kpis, out, evs, hist, acts, gact, rk):
+    act = [{"id": a.id, "title": a.title, "owner": a.owner, "due": a.due_date, "status": a.status, "progress": a.progress or 0} for a in acts]
+    base = {"id": d.id, "title": d.title, "description": d.detail, "rationale": d.rationale, "owner": d.owner, "due": d.due_date or None,
+            "created_at": d.created_at.strftime("%Y-%m-%d") if d.created_at else None, "created_by": d.created_by or None, "actions": act}
+    if m:
+        base.update({"workflow": m.workflow, "priority": m.priority or "medium", "category": m.category or None, "source": m.source or "manual", "source_ref": m.source_ref,
+                     "department": m.department or None, "branch": m.branch or None, "owner_user_id": m.owner_user_id, "created_by_id": m.created_by_id,
+                     "approved_by": m.approved_by or None, "approved_at": m.approved_at or None, "completed_at": m.completed_at or None, "cost": m.cost,
+                     "delay_reason": m.delay_reason or None, "delay_note": m.delay_note, "depends_on": [int(x) for x in (m.depends_on or "").split(",") if x.strip().isdigit()],
+                     "goal_id": m.goal_id, "risk_key": m.risk_key or None, "risk_baseline": m.risk_baseline, "root_cause": m.root_cause or None,
+                     "root_cause_baseline": m.root_cause_baseline, "leakage_key": m.leakage_key or None, "leakage_baseline": m.leakage_baseline,
+                     "expected_type": m.expected_type or "potential", "sensitive": bool(m.sensitive), "expected_impact": d.expected_impact_value,
+                     "kpis": [{"id": k.id, "metric": k.metric, "branch": k.branch or None, "baseline": k.baseline, "baseline_at": k.baseline_at, "target": k.target,
+                               "actual_manual": k.actual, "actual_at": k.actual_at, "side_effect": bool(k.side_effect)} for k in kpis]})
+    else:
+        lg = dx.from_legacy({"status": d.status, "linked_to": d.linked_to, "decision_type": d.decision_type, "kpi": d.kpi, "metric_id": d.metric_id,
+                             "baseline_value": d.baseline_value, "expected_impact_value": d.expected_impact_value, "source_signal": d.source_signal,
+                             "created_at": base["created_at"]}, act)
+        base.update({**lg, "priority": "medium", "completed_at": d.closed_at.strftime("%Y-%m-%d") if (d.closed_at and d.status == "done") else None,
+                     "approved_at": base["created_at"], "approved_by": d.approver or None})
+    if rk is not None and base.get("risk_baseline") is None:
+        base["risk_baseline"] = getattr(rk, "baseline_score", None)
+        base["risk_key"] = base.get("risk_key") or getattr(rk, "risk_key", None)
+    if gact is not None:
+        base["goal_id"] = base.get("goal_id") or gact.goal_id
+        try:
+            base["goal_baseline"] = json.loads(gact.baseline_json or "{}")
+        except (TypeError, ValueError):
+            base["goal_baseline"] = {}
+    if out:
+        base["outcome"] = {"actual_manual": out.actual_manual, "notes": out.notes, "measured_at": out.measured_at, "measured_by": out.measured_by}
+    base["evidence"] = [{"id": e.id, "source": e.source, "reference": e.reference, "period": e.period, "note": e.note, "url": e.url, "by": e.added_by,
+                         "at": e.created_at.strftime("%Y-%m-%d %H:%M") if e.created_at else ""} for e in evs]
+    hs = [{"event": h.event, "actor": h.actor, "at": h.timestamp.strftime("%Y-%m-%d %H:%M") if h.timestamp else "", "old": h.old_value, "new": h.new_value, "note": h.note} for h in hist]
+    if not any(h["event"] == "created" for h in hs):
+        hs.append({"event": "created", "actor": d.created_by or "—", "at": d.created_at.strftime("%Y-%m-%d %H:%M") if d.created_at else "", "old": "", "new": d.title, "note": "من سجل القرارات"})
+    if not m and d.closed_at:
+        hs.append({"event": "completed" if d.status == "done" else "cancelled", "actor": "—", "at": d.closed_at.strftime("%Y-%m-%d %H:%M"), "old": "", "new": d.status, "note": d.result_note or ""})
+    base["history"] = hs
+    return base
+
+
+def _dec_result(s, company, role, viewer):
+    dx, ge = _load_p24("decisions_engine"), _load_p24("goals_engine")
+    if dx is None or ge is None:
+        raise HTTPException(503, "محرّك متابعة القرارات غير متاح — " + _p23_diagnostic())
+    decs, metas, kpis, outs, evs, hist, acts, gacts, rbase = _dec_rows(s, company.id)
+    items = [_dec_dict(dx, d, metas.get(d.id), kpis.get(d.id, []), outs.get(d.id), evs.get(d.id, []), hist.get(d.id, []), acts.get(d.id, []),
+                       gacts.get(d.id), rbase.get(d.id)) for d in decs]
+    ctx, data = _goals_ctx(s, company)
+    gids = {x["goal_id"] for x in items if x.get("goal_id")}
+    gev = {}
+    for g in s.exec(select(CompanyGoal).where(CompanyGoal.company_id == company.id)).all() if gids else []:
+        if g.id in gids and ge.visible(_goal_dict(g), viewer):
+            try:
+                gev[g.id] = ge.evaluate_goal(_goal_dict(g), ctx)
+            except Exception as e:
+                _logger.error(f"decision goal link {g.id}: {type(e).__name__}: {str(e)[:150]}")
+    res = dx.analyze_decisions(items, goal_evals=gev, sector=_risk_sector(company), today=data["today"], viewer=viewer,
+                               currency=getattr(company, "currency", None) or "SAR", ctx=ctx)
+    res["role"] = role
+    res["module_errors"] = data["errors"]
+    res["can_create"] = dx.can("create", {}, viewer)
+    res["users"] = [{"id": u.id, "name": u.name} for u in s.exec(select(User).where(User.company_id == company.id)).all()] if res["can_create"] else []
+    res["branches_list"] = sorted({b.name for b in s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company.id)).all()} | set(ctx["branches"]))
+    res["goals_list"] = [{"id": g.id, "name": g.name} for g in s.exec(select(CompanyGoal).where(CompanyGoal.company_id == company.id, CompanyGoal.archived == 0)).all()
+                         if ge.visible(_goal_dict(g), viewer)] if res["can_create"] else []
+    return res, items
+
+
+@app.get("/company/decisions-intelligence")
+def company_decisions_intelligence(user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role, viewer = _goals_scope(s, user)
+        try:
+            res, _ = _dec_result(s, company, role, viewer)
+        except HTTPException:
+            raise
+        except Exception as e:
+            import traceback as _tb
+            _logger.error("decisions-intelligence failed:\n" + _tb.format_exc()[-3000:])
+            raise HTTPException(500, f"خطأ في مركز متابعة القرارات — {type(e).__name__}: {str(e)[:200]} (التفاصيل في سجل الخادم)")
+        log_audit(company.id, user.id, user.name, "decisions_view", "decisions", f"scope={res['scope']['kind']} n={len(res['decisions'])}")
+        return res
+
+
+def _dec_load(s, company, did):
+    try:
+        did = int(did)
+    except (TypeError, ValueError):
+        raise HTTPException(422, "معرّف القرار غير صالح")
+    d = s.get(CompanyDecision, did)
+    if not d or d.company_id != company.id:
+        raise HTTPException(404, "القرار غير موجود")
+    return d
+
+
+def _dec_meta(s, company, d, dx, create=True):
+    """يعيد طبقة المتابعة؛ القرار القديم يُتبنّى عند أول إجراء (مع حفظ حالته المستنتجة) دون تعديل بياناته."""
+    m = s.exec(select(CompanyDecisionMeta).where(CompanyDecisionMeta.company_id == company.id, CompanyDecisionMeta.decision_id == d.id)).first()
+    if m or not create:
+        return m
+    acts = [{"status": a.status, "progress": a.progress} for a in s.exec(select(CompanyAction).where(CompanyAction.company_id == company.id, CompanyAction.decision_id == d.id)).all()]
+    lg = dx.from_legacy({"status": d.status, "linked_to": d.linked_to, "decision_type": d.decision_type, "kpi": d.kpi, "metric_id": d.metric_id,
+                         "expected_impact_value": d.expected_impact_value, "source_signal": d.source_signal}, acts)
+    m = CompanyDecisionMeta(company_id=company.id, decision_id=d.id, workflow=lg["workflow"], source=lg["source"], goal_id=lg["goal_id"], risk_key=lg["risk_key"] or "",
+                            depends_on=",".join(str(x) for x in lg["depends_on"]), approved_at=d.created_at.strftime("%Y-%m-%d") if d.created_at else "",
+                            approved_by=d.approver or "", completed_at=d.closed_at.strftime("%Y-%m-%d") if (d.closed_at and d.status == "done") else "")
+    s.add(m)
+    for k in lg["kpis"]:
+        s.add(CompanyDecisionKPI(company_id=company.id, decision_id=d.id, metric=k["metric"], baseline=k.get("baseline"),
+                                 baseline_at=d.created_at.strftime("%Y-%m-%d") if d.created_at else ""))
+    _dec_hist(s, company.id, d.id, "edited", "system", "", lg["workflow"], "تبنّي قرار من السجل السابق في مركز المتابعة (بدون تعديل بياناته)")
+    s.commit(); s.refresh(m)
+    return m
+
+
+def _dec_engine_dict(s, company, d, dx):
+    decs, metas, kpis, outs, evs, hist, acts, gacts, rbase = _dec_rows(s, company.id)
+    return _dec_dict(dx, d, metas.get(d.id), kpis.get(d.id, []), outs.get(d.id), evs.get(d.id, []), hist.get(d.id, []), acts.get(d.id, []), gacts.get(d.id), rbase.get(d.id))
+
+
+def _dec_baselines(s, company, dx, metrics, branch, m):
+    """لقطات خط الأساس وقت القرار من المصدر الموحد (للمؤشرات بلا تاريخ شهري) + المخاطر/السبب/التسرب."""
+    ctx, data = _goals_ctx(s, company)
+    out = {}
+    for met in metrics:
+        meta = _load_p24("goals_engine").metric_meta(met)
+        if not meta:
+            continue
+        months = dx.complete_months(ctx, meta)[-dx.BEFORE_MONTHS:] if meta["src"] in ("sales", "fin", "ratio") else None
+        snap = dx.kpi_snapshot(met, ctx, branch if meta["branch"] else None, months)
+        out[met] = (snap.get("value"), snap.get("basis_ar") or "")
+    for key, attr in ((m.risk_key, "risk_baseline"), (m.root_cause, "root_cause_baseline")):
+        if key and getattr(m, attr) is None:
+            dr = dx._driver(ctx, key)
+            setattr(m, attr, dr.get("score") if dr else None)
+    if m.leakage_key and m.leakage_baseline is None:
+        t = next((x for x in (((ctx["mods"].get("leakage") or {}).get("overview") or {}).get("types") or []) if x.get("key") == m.leakage_key), None)
+        m.leakage_baseline = (t or {}).get("amount")
+    return out
+
+
+@app.post("/company/decisions-center/save")
+def company_decision_center_save(data: dict, user: User = Depends(get_current_user)):
+    """إنشاء/تعديل قرار مع مؤشره وخط أساسه وأثره المتوقع ومصدره. الأرقام المرجعية تُلتقط من المصدر الموحد في الخادم."""
+    with Session(engine) as s:
+        company, role, viewer = _goals_scope(s, user)
+        dx = _load_p24("decisions_engine")
+        if dx is None:
+            raise HTTPException(503, "محرّك متابعة القرارات غير متاح — " + _p23_diagnostic())
+        by = (user.name or user.email)[:100]
+        kp = [{"metric": k.get("metric"), "target": k.get("target"), "side_effect": bool(k.get("side_effect")), "branch": k.get("branch")}
+              for k in (data.get("kpis") or []) if isinstance(k, dict) and k.get("metric")]
+        new = {"title": str(data.get("title") or "").strip()[:200], "priority": data.get("priority") or "medium", "category": data.get("category") or None,
+               "due": str(data.get("due") or "")[:10] or None, "expected_impact": data.get("expected_impact"), "cost": data.get("cost"), "kpis": kp,
+               "delay_reason": data.get("delay_reason") or None}
+        errs = dx.validate_decision(new)
+        if errs:
+            raise HTTPException(422, " · ".join(errs))
+        exp, cost = _fnum(data.get("expected_impact"), "الأثر المتوقع"), _fnum(data.get("cost"), "التكلفة")
+        deps = [int(x) for x in (data.get("depends_on") or []) if str(x).isdigit()]
+        own_ids = {x.id for x in s.exec(select(CompanyDecision).where(CompanyDecision.company_id == company.id)).all()}
+        if any(x not in own_ids for x in deps):
+            raise HTTPException(422, "قرار معتمد عليه غير موجود في شركتك")
+        gid = int(data["goal_id"]) if str(data.get("goal_id") or "").isdigit() else None
+        if gid:
+            gg = s.get(CompanyGoal, gid)
+            if not gg or gg.company_id != company.id:
+                raise HTTPException(422, "الهدف ليس من شركتك")
+        ou = None
+        if str(data.get("owner_user_id") or "").isdigit():
+            ou = s.get(User, int(data["owner_user_id"]))
+            if not ou or ou.company_id != company.id:
+                raise HTTPException(422, "المسؤول ليس من فريق شركتك")
+        owner = str(data.get("owner") or (ou.name if ou else "") or "").strip()[:100]
+        if data.get("id"):
+            d = _dec_load(s, company, data["id"])
+            m = _dec_meta(s, company, d, dx)
+            cur = _dec_engine_dict(s, company, d, dx)
+            if not dx.can("edit", cur, viewer):
+                raise HTTPException(403, "غير مصرّح بتعديل هذا القرار")
+            if m.workflow in ("measured", "cancelled"):
+                raise HTTPException(409, "القرار مغلق — لا يُعدّل")
+            changes = [(f, a, b) for f, a, b in (("title", d.title, new["title"]), ("owner", d.owner, owner), ("due", d.due_date, new["due"] or ""),
+                                                  ("expected_impact", d.expected_impact_value, exp), ("priority", m.priority, new["priority"]), ("cost", m.cost, cost))
+                       if (a or None) != (b or None)]
+            if changes and m.workflow not in ("draft", "rejected") and not str(data.get("reason") or "").strip():
+                raise HTTPException(422, "سبب التعديل مطلوب بعد إرسال القرار للاعتماد (حوكمة)")
+        else:
+            if not dx.can("create", {}, viewer):
+                raise HTTPException(403, "غير مصرّح بإنشاء قرار — المالك والرئيس التنفيذي والمدراء")
+            d = CompanyDecision(company_id=company.id, status="open", created_by=by, baseline_sales=_company_total_sales(s, company.id), decision_type="")
+            m = None
+            changes = []
+        cat = new["category"] or ""
+        src = data.get("source") if data.get("source") in dx.SOURCES else "manual"
+        d.title, d.detail, d.rationale = new["title"], str(data.get("description") or "")[:1000], str(data.get("rationale") or "")[:500]
+        d.owner, d.due_date, d.expected_impact_value = owner, new["due"] or "", exp
+        d.expected_impact = (f"{exp:,.0f} {getattr(company, 'currency', None) or 'SAR'} (متوقع)" if exp is not None else "")[:200]
+        prim = next((k for k in kp if not k["side_effect"]), None)
+        d.kpi = d.metric_id = (prim or {}).get("metric") or ""
+        d.decision_type = d.decision_type or src
+        d.linked_to = (f"goal:{gid}" if gid else (f"risk:{data.get('risk_key')}" if data.get("risk_key") else ",".join(str(x) for x in deps)))[:200]
+        d.updated_at = datetime.now()
+        s.add(d); s.commit(); s.refresh(d)
+        if m is None:
+            m = CompanyDecisionMeta(company_id=company.id, decision_id=d.id, workflow="draft", created_by_id=user.id)
+            _dec_hist(s, company.id, d.id, "created", by, "", d.title, str(data.get("rationale") or "")[:300])
+        m.priority, m.category, m.source, m.source_ref = new["priority"], cat, src, str(data.get("source_ref") or "")[:200]
+        m.department = str(data.get("department") or "")[:40] if data.get("department") in _load_p24("goals_engine").DEPARTMENTS else ""
+        m.branch, m.owner_user_id, m.cost = str(data.get("branch") or "")[:100], ou.id if ou else m.owner_user_id, cost
+        m.depends_on, m.goal_id = ",".join(str(x) for x in deps if x != d.id), gid
+        for f in ("risk_key", "root_cause", "leakage_key"):
+            v = str(data.get(f) or "")[:60]
+            if v != (getattr(m, f) or ""):
+                setattr(m, f, v)
+                setattr(m, {"risk_key": "risk_baseline", "root_cause": "root_cause_baseline", "leakage_key": "leakage_baseline"}[f], None)
+        m.expected_type = data.get("expected_type") if data.get("expected_type") in ("potential", "recovery", "actual") else "potential"
+        m.sensitive = 1 if data.get("sensitive") else 0
+        m.updated_at = datetime.now()
+        # KPIs: تُستبدل قبل الاعتماد فقط (بعده تُعدّل من نقطة المؤشرات بسجل)
+        if m.workflow in ("draft", "rejected", "pending_approval", "under_review") or not m.id:
+            old = s.exec(select(CompanyDecisionKPI).where(CompanyDecisionKPI.company_id == company.id, CompanyDecisionKPI.decision_id == d.id)).all()
+            for k in old:
+                s.delete(k)
+            snaps = _dec_baselines(s, company, dx, [k["metric"] for k in kp], m.branch or None, m)
+            for k in kp:
+                b = snaps.get(k["metric"], (None, ""))
+                s.add(CompanyDecisionKPI(company_id=company.id, decision_id=d.id, metric=k["metric"], branch=str(k.get("branch") or "")[:100],
+                                         target=_fnum(k.get("target"), "مستهدف المؤشر"), side_effect=1 if k["side_effect"] else 0,
+                                         baseline=b[0], baseline_at=datetime.now().strftime("%Y-%m-%d"), period=b[1][:120]))
+        else:
+            _dec_baselines(s, company, dx, [], m.branch or None, m)
+        s.add(m)
+        for f, a, b in changes:
+            _dec_hist(s, company.id, d.id, "owner_changed" if f == "owner" else "edited", by, a, b, str(data.get("reason") or f))
+        s.commit()
+        log_audit(company.id, user.id, user.name, "decision_save", f"decision:{d.id}", json.dumps([c[0] for c in changes], ensure_ascii=False)[:200])
+        if data.get("submit"):
+            return company_decision_center_transition({"id": d.id, "to": "pending_approval"}, user=user)
+        return {"ok": True, "id": d.id}
+
+
+@app.post("/company/decisions-center/transition")
+def company_decision_center_transition(data: dict, user: User = Depends(get_current_user)):
+    """مسار الاعتماد: مسودة → بانتظار الاعتماد → مراجعة → معتمد/مرفوض → قيد التنفيذ → مكتمل → مُقاس. كل انتقال بصلاحيته ويُسجّل."""
+    with Session(engine) as s:
+        company, role, viewer = _goals_scope(s, user)
+        dx = _load_p24("decisions_engine")
+        d = _dec_load(s, company, data.get("id"))
+        m = _dec_meta(s, company, d, dx)
+        to = str(data.get("to") or "")
+        cur = _dec_engine_dict(s, company, d, dx)
+        errs = dx.transition_check(cur, to, viewer)
+        if errs:
+            raise HTTPException(403 if any("صلاحيت" in e or "المنشئ" in e for e in errs) else 422, " · ".join(errs))
+        note = str(data.get("note") or data.get("reason") or "").strip()[:500]
+        if to in ("rejected", "cancelled") and not note:
+            raise HTTPException(422, "السبب مطلوب للرفض أو الإلغاء")
+        if to == "measured":
+            return company_decision_center_measure({"id": d.id, "notes": note}, user=user)
+        by = (user.name or user.email)[:100]
+        today_ = datetime.now().strftime("%Y-%m-%d")
+        old = m.workflow
+        m.workflow = to
+        if to == "pending_approval":
+            m.submitted_at = today_
+        elif to == "approved":
+            m.approved_by, m.approved_at = by, today_
+            d.approver = by
+        elif to == "rejected":
+            m.rejection_reason = note
+        elif to == "in_progress":
+            m.started_at = m.started_at or today_
+        elif to == "completed":
+            m.completed_at = today_
+        elif to == "cancelled":
+            m.cancelled_at = today_
+        m.updated_at = datetime.now()
+        _dec_sync_legacy(d, to)
+        if to == "completed":
+            d.outcome_status = "pending_measurement"
+        s.add(m); s.add(d)
+        ev = {"pending_approval": "submitted", "under_review": "under_review", "draft": "draft"}.get(to, to)
+        _dec_hist(s, company.id, d.id, ev, by, old, to, note)
+        if data.get("recommend") and to == "under_review":
+            _dec_hist(s, company.id, d.id, "recommended", by, "", "", note)
+        s.commit()
+        log_audit(company.id, user.id, user.name, f"decision_{to}", f"decision:{d.id}", f"{old}->{to} {note[:120]}")
+        return {"ok": True, "id": d.id, "workflow": to}
+
+
+@app.post("/company/decisions-center/measure")
+def company_decision_center_measure(data: dict, user: User = Depends(get_current_user)):
+    """اعتماد القياس: لقطة متوقع/فعلي/فرق/نتيجة من المحرك. القيمة اليدوية تُقبل فقط مع دليل وتُوسم يدوية. بلا بيانات → لا حكم."""
+    with Session(engine) as s:
+        company, role, viewer = _goals_scope(s, user)
+        dx = _load_p24("decisions_engine")
+        d = _dec_load(s, company, data.get("id"))
+        m = _dec_meta(s, company, d, dx)
+        cur = _dec_engine_dict(s, company, d, dx)
+        if not dx.can("measure", cur, viewer):
+            raise HTTPException(403, "اعتماد القياس للمالك أو الرئيس التنفيذي")
+        if m.workflow != "completed":
+            raise HTTPException(422, "يُقاس القرار بعد إكماله فقط (المكتمل ≠ الناجح)")
+        manual = _fnum(data.get("actual_manual"), "الأثر الفعلي")
+        notes = str(data.get("notes") or "").strip()[:1000]
+        if manual is not None and not notes:
+            raise HTTPException(422, "القيمة اليدوية تحتاج دليلاً/مصدراً مكتوباً")
+        if manual is not None:
+            cur["outcome"] = {"actual_manual": manual, "notes": notes}
+        res, items = _dec_result(s, company, role, viewer)
+        cur["workflow"] = "completed"
+        ctx, _d = _goals_ctx(s, company)
+        e = dx.evaluate_decision({**cur, "outcome": cur.get("outcome") or {}}, ctx, datetime.now().date(), res["overview"]["high_impact_threshold"])
+        o = e["outcome"]
+        if o["state"] not in ("measurable", "measured"):
+            raise HTTPException(422, (o.get("state_ar") or dx.CANNOT_MEASURE_AR) + (" — " + o["reason_ar"] if o.get("reason_ar") else ""))
+        by = (user.name or user.email)[:100]
+        today_ = datetime.now().strftime("%Y-%m-%d")
+        s.add(CompanyDecisionOutcome(company_id=company.id, decision_id=d.id, expected_impact=o.get("expected"), actual_impact=o.get("actual"), variance=o.get("variance"),
+                                     result=o.get("result") or "", method=(o.get("method_ar") or "")[:300], actual_manual=manual, notes=notes,
+                                     snapshot_json=json.dumps({"kpis": e["kpis"], "outcome": o, "effectiveness": e["effectiveness"]}, ensure_ascii=False, default=str)[:20000],
+                                     measured_by=by, measured_at=today_))
+        m.workflow, m.updated_at = "measured", datetime.now()
+        _dec_sync_legacy(d, "measured")
+        d.outcome_status, d.impact_status = "measured", "measured"
+        d.actual_impact_value = o.get("actual")
+        d.measurement_period = ",".join((e.get("primary") or {}).get("after_months") or [])[:50]
+        d.outcome_notes = (notes or o.get("result_ar") or "")[:1000]
+        s.add(m); s.add(d)
+        _dec_hist(s, company.id, d.id, "measured", by, "completed", f"{o.get('result_ar')} · فعلي {o.get('actual')}", notes or (o.get("method_ar") or ""))
+        s.commit()
+        log_audit(company.id, user.id, user.name, "decision_measured", f"decision:{d.id}", f"result={o.get('result')} actual={o.get('actual')} manual={manual is not None}")
+        return {"ok": True, "id": d.id, "outcome": o, "effectiveness": e["effectiveness"]}
+
+
+@app.post("/company/decisions-center/kpi")
+def company_decision_center_kpi(data: dict, user: User = Depends(get_current_user)):
+    """إضافة/تعديل مؤشر قرار (مستهدف، أثر جانبي، قيمة يدوية لمؤشر بلا مصدر) — بسجل."""
+    with Session(engine) as s:
+        company, role, viewer = _goals_scope(s, user)
+        dx, ge = _load_p24("decisions_engine"), _load_p24("goals_engine")
+        d = _dec_load(s, company, data.get("id"))
+        m = _dec_meta(s, company, d, dx)
+        cur = _dec_engine_dict(s, company, d, dx)
+        by = (user.name or user.email)[:100]
+        if data.get("kpi_id"):
+            k = s.get(CompanyDecisionKPI, int(data["kpi_id"]))
+            if not k or k.company_id != company.id or k.decision_id != d.id:
+                raise HTTPException(404, "المؤشر غير موجود")
+        else:
+            k = None
+        if "actual" in data and k is not None and set(data) <= {"id", "kpi_id", "actual", "note"}:
+            if not dx.can("progress", cur, viewer):
+                raise HTTPException(403, "غير مصرّح")
+            if (ge.metric_meta(k.metric) or {}).get("src") != "manual":
+                raise HTTPException(422, "قيمة هذا المؤشر تُقرأ من بيانات نبّاه تلقائياً — لا تُدخل يدوياً")
+            old = k.actual
+            k.actual, k.actual_at = _fnum(data.get("actual"), "القيمة"), datetime.now().strftime("%Y-%m-%d")
+            s.add(k)
+            _dec_hist(s, company.id, d.id, "kpi_updated", by, old, k.actual, str(data.get("note") or k.metric))
+            s.commit()
+            return {"ok": True}
+        if not dx.can("kpi", cur, viewer):
+            raise HTTPException(403, "غير مصرّح بتعديل مؤشرات القرار")
+        if data.get("delete") and k:
+            _dec_hist(s, company.id, d.id, "kpi_updated", by, k.metric, "حذف", str(data.get("note") or ""))
+            s.delete(k); s.commit()
+            return {"ok": True}
+        met = data.get("metric") or (k.metric if k else None)
+        if not ge.metric_meta(met):
+            raise HTTPException(422, "المؤشر غير موجود في الكتالوج")
+        if k is None:
+            snaps = _dec_baselines(s, company, dx, [met], m.branch or None, m)
+            b = snaps.get(met, (None, ""))
+            k = CompanyDecisionKPI(company_id=company.id, decision_id=d.id, metric=met, baseline=b[0], baseline_at=datetime.now().strftime("%Y-%m-%d"), period=b[1][:120])
+        old = {"target": k.target, "side_effect": k.side_effect}
+        if "target" in data:
+            k.target = _fnum(data.get("target"), "المستهدف")
+        if "side_effect" in data:
+            k.side_effect = 1 if data.get("side_effect") else 0
+        s.add(k)
+        if not d.kpi and not k.side_effect:
+            d.kpi = d.metric_id = met
+            s.add(d)
+        _dec_hist(s, company.id, d.id, "kpi_updated", by, old, {"metric": met, "target": k.target, "side_effect": k.side_effect}, str(data.get("note") or ""))
+        s.commit()
+        log_audit(company.id, user.id, user.name, "decision_kpi", f"decision:{d.id}", met)
+        return {"ok": True}
+
+
+@app.post("/company/decisions-center/action")
+def company_decision_center_action(data: dict, user: User = Depends(get_current_user)):
+    """إجراءات القرار (CompanyAction نفسه): المدير ينشئ ويسند، والمسند إليه يحدّث التقدم."""
+    with Session(engine) as s:
+        company, role, viewer = _goals_scope(s, user)
+        dx = _load_p24("decisions_engine")
+        d = _dec_load(s, company, data.get("id"))
+        _dec_meta(s, company, d, dx)
+        cur = _dec_engine_dict(s, company, d, dx)
+        by = (user.name or user.email)[:100]
+        if data.get("action_id"):
+            a = s.get(CompanyAction, int(data["action_id"]))
+            if not a or a.company_id != company.id or a.decision_id != d.id:
+                raise HTTPException(404, "الإجراء غير موجود")
+            mine = _load_p24("goals_engine")._is_mine({"owner": a.owner}, viewer)
+            if not (dx.can("assign", cur, viewer) or (mine and dx.can("progress", cur, viewer))):
+                raise HTTPException(403, "غير مصرّح")
+            before = f"{a.status}/{a.progress}"
+            if data.get("status"):
+                if data["status"] not in ACTION_STATUSES:
+                    raise HTTPException(422, "حالة غير صالحة")
+                a.status = data["status"]
+            if "progress" in data:
+                try:
+                    p_ = int(data["progress"])
+                except (TypeError, ValueError):
+                    raise HTTPException(422, "نسبة الإنجاز غير صالحة")
+                if not 0 <= p_ <= 100:
+                    raise HTTPException(422, "نسبة الإنجاز بين 0 و100")
+                a.progress = p_
+            if a.status == "completed":
+                a.progress = 100
+            note = str(data.get("note") or "").strip()
+            if note:
+                a.notes = ((a.notes + "\n") if a.notes else "") + f"[{_dec_now()} · {by}] {note[:500]}"
+            a.updated_at = datetime.now()
+            s.add(a)
+            _dec_hist(s, company.id, d.id, "progress", by, before, f"{a.status}/{a.progress}", note or a.title)
+            s.commit()
+            return {"ok": True, "action_id": a.id}
+        if not dx.can("assign", cur, viewer):
+            raise HTTPException(403, "إضافة الإجراءات للمدراء والإدارة")
+        title = str(data.get("title") or "").strip()[:200]
+        if not title:
+            raise HTTPException(422, "عنوان الإجراء مطلوب")
+        due = str(data.get("due") or "")[:10]
+        if due and not _valid_date(due):
+            raise HTTPException(422, "تاريخ غير صالح")
+        a = CompanyAction(company_id=company.id, decision_id=d.id, title=title, owner=str(data.get("owner") or d.owner or "")[:100], due_date=due,
+                          start_date=datetime.now().strftime("%Y-%m-%d"), priority="P2", updated_at=datetime.now())
+        s.add(a)
+        _dec_hist(s, company.id, d.id, "assigned", by, "", f"{title} → {a.owner or '—'}", "")
+        s.commit(); s.refresh(a)
+        return {"ok": True, "action_id": a.id}
+
+
+@app.post("/company/decisions-center/evidence")
+def company_decision_center_evidence(data: dict, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role, viewer = _goals_scope(s, user)
+        dx = _load_p24("decisions_engine")
+        d = _dec_load(s, company, data.get("id"))
+        _dec_meta(s, company, d, dx)
+        if not dx.can("evidence", _dec_engine_dict(s, company, d, dx), viewer):
+            raise HTTPException(403, "غير مصرّح")
+        url = str(data.get("url") or "").strip()[:500]
+        if url and not url.lower().startswith(("https://", "http://")):
+            raise HTTPException(422, "رابط الدليل يجب أن يبدأ بـ https://")
+        src, ref, note = str(data.get("source") or "")[:120], str(data.get("reference") or "")[:200], str(data.get("note") or "")[:1000]
+        if not (src or ref or note or url):
+            raise HTTPException(422, "اكتب مصدر الدليل أو مرجعه")
+        by = (user.name or user.email)[:100]
+        s.add(CompanyDecisionEvidence(company_id=company.id, decision_id=d.id, source=src, reference=ref, period=str(data.get("period") or "")[:40], note=note, url=url, added_by=by))
+        _dec_hist(s, company.id, d.id, "evidence", by, "", src or ref or url, note[:200])
+        s.commit()
+        log_audit(company.id, user.id, user.name, "decision_evidence", f"decision:{d.id}", (src or ref)[:100])
+        return {"ok": True}
+
+
+@app.post("/company/decisions-center/delay")
+def company_decision_center_delay(data: dict, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role, viewer = _goals_scope(s, user)
+        dx = _load_p24("decisions_engine")
+        d = _dec_load(s, company, data.get("id"))
+        m = _dec_meta(s, company, d, dx)
+        if not dx.can("delay_reason", _dec_engine_dict(s, company, d, dx), viewer):
+            raise HTTPException(403, "غير مصرّح")
+        r = str(data.get("reason") or "")
+        if r not in dx.DELAY_REASONS:
+            raise HTTPException(422, "سبب التأخير غير معروف")
+        by = (user.name or user.email)[:100]
+        old = m.delay_reason
+        m.delay_reason, m.delay_note, m.updated_at = r, str(data.get("note") or "")[:300], datetime.now()
+        new_due = str(data.get("new_due") or "")[:10]
+        if new_due:
+            if not _valid_date(new_due):
+                raise HTTPException(422, "تاريخ غير صالح")
+            if not dx.can("edit", _dec_engine_dict(s, company, d, dx), viewer):
+                raise HTTPException(403, "تغيير الموعد للمدير أو الإدارة")
+            _dec_hist(s, company.id, d.id, "edited", by, d.due_date, new_due, "تمديد الموعد: " + dx.DELAY_REASONS[r])
+            d.due_date = new_due
+            s.add(d)
+        s.add(m)
+        _dec_hist(s, company.id, d.id, "delay_reason", by, old, r, m.delay_note)
+        s.commit()
+        return {"ok": True}
+
+
+@app.post("/company/decisions-center/escalate")
+def company_decision_center_escalate(data: dict, user: User = Depends(get_current_user)):
+    """تصعيد للرئيس التنفيذي/المالك أو تعيين مسؤول جديد (حسب الصلاحية)."""
+    with Session(engine) as s:
+        company, role, viewer = _goals_scope(s, user)
+        dx = _load_p24("decisions_engine")
+        d = _dec_load(s, company, data.get("id"))
+        m = _dec_meta(s, company, d, dx)
+        cur = _dec_engine_dict(s, company, d, dx)
+        if not dx.can("escalate", cur, viewer):
+            raise HTTPException(403, "التصعيد للمدير أو الإدارة")
+        by = (user.name or user.email)[:100]
+        note = str(data.get("note") or "").strip()[:500]
+        if not note:
+            raise HTTPException(422, "اكتب سبب التصعيد")
+        new_owner = str(data.get("new_owner") or "").strip()[:100]
+        if new_owner:
+            if not dx.can("assign", cur, viewer):
+                raise HTTPException(403, "غير مصرّح بتغيير المسؤول")
+            _dec_hist(s, company.id, d.id, "owner_changed", by, d.owner, new_owner, note)
+            d.owner = new_owner
+            m.owner_user_id = None
+            s.add(d)
+        if m.priority not in ("critical",):
+            _dec_hist(s, company.id, d.id, "edited", by, m.priority, "critical", "رفع الأولوية بالتصعيد")
+            m.priority = "critical"
+        m.updated_at = datetime.now()
+        s.add(m)
+        _dec_hist(s, company.id, d.id, "escalated", by, "", "الرئيس التنفيذي / المالك", note)
+        s.commit()
+        log_audit(company.id, user.id, user.name, "decision_escalated", f"decision:{d.id}", note[:200])
+        return {"ok": True}
+
+
+@app.post("/company/decisions-center/ai-insights")
+def company_decisions_ai(data: dict, request: Request, user: User = Depends(get_current_user)):
+    """AI يحلل نتائج القرارات ويكتب المراجعة من أرقام المحرك فقط — لا يصدر قراراً."""
+    with Session(engine) as s:
+        company, role, viewer = _goals_scope(s, user)
+        res, _ = _dec_result(s, company, role, viewer)
+    dx, gw = _load_p24("decisions_engine"), _load_p24("ai_gateway")
+    if gw is None:
+        raise HTTPException(503, "بوابة الذكاء الاصطناعي غير متاحة — " + _p23_diagnostic())
+    if not res["decisions"]:
+        raise HTTPException(422, "لا توجد قرارات ضمن نطاقك")
+    q = str(data.get("question") or res["ai_questions"][0])[:300]
+    ctx = dx.ai_context(res)
+    did = data.get("decision_id")
+    if did is not None:
+        one = next((e for e in res["decisions"] if str(e["id"]) == str(did)), None)
+        if not one:
+            raise HTTPException(404, "القرار خارج نطاقك")
+        ctx = {"decision": next(x for x in ctx["decisions"] if x["title"] == one["title"]) if any(x["title"] == one["title"] for x in ctx["decisions"]) else {"title": one["title"], "review": one["review"]},
+               "rule": ctx["rule"]}
+        q = q or "اكتب مراجعة هذا القرار"
+    out = gw.request_ai_analysis(gw.GeminiProvider(company_gemini), ctx,
+                                 q + " — اعتمد أرقام محرك القرارات كما هي (متوقع/فعلي/فرق/نتيجة/فعالية). لا تُصدر قراراً، ولا تقل إن القرار «سبّب» التغيّر — "
+                                     "قبل/بعد مقارنة زمنية. إن كان القياس غير ممكن فقل ذلك صراحة.",
+                                 trust_report={"overall_score": 75, "status": "pass", "has_critical_fail": False, "main_causes": []},
+                                 lang=get_lang(request), company=company)
+    log_audit(company.id, user.id, user.name, "decisions_ai", "decisions", f"q={q[:80]}")
+    return {"question": q, "ai": out}
+
+
 @app.get("/company/executive-intelligence")
 def company_executive_intelligence(request: Request, user: User = Depends(get_current_user),
                                    period: Optional[str] = None, ai: int = 0):
@@ -8627,7 +9360,8 @@ def company_executive_intelligence(request: Request, user: User = Depends(get_cu
                                                             "link": "company-performance-prediction.html"}
                                     result.setdefault("module_signals", {})["prediction"] = _pz.get("signals", [])[:6]
                             _ge = _load_p24("goals_engine")
-                            if _ge is not None:      # 3.8: الأهداف والنتائج (نطاق المستخدم نفسه — نفس البيانات)
+                            try:
+                              if _ge is not None:      # 3.8: الأهداف والنتائج (نطاق المستخدم نفسه — نفس البيانات)
                                 _gr = _goals_rows(s, company.id)
                                 if _gr["goals"]:
                                     _gc, _gco, _gv = _goals_scope(s, user)
@@ -8640,6 +9374,20 @@ def company_executive_intelligence(request: Request, user: User = Depends(get_cu
                                     result["goals"] = {"counts": _gz["overview"]["counts"], "headline": _gz["overview"]["headline_ar"], "top_risk": _gz["overview"]["top_risk"][:3],
                                                        "link": "company-goals-intelligence.html"}
                                     result.setdefault("module_signals", {})["goals"] = _gz.get("signals", [])[:6]
+                            except Exception as _e:      # الأهداف إضافة — فشلها لا يُسقط مركز القيادة
+                                _logger.error(f"executive goals block: {type(_e).__name__}: {str(_e)[:200]}")
+                            try:      # 3.9: متابعة القرارات — متأخر/بانتظار الاعتماد/المتوقع مقابل الفعلي (نطاق المستخدم)
+                                if _load_p24("decisions_engine") is not None:
+                                    _dc, _dco, _dv9 = _goals_scope(s, user)
+                                    _dz, _ = _dec_result(s, company, _dco, _dv9)
+                                    if _dz["decisions"]:
+                                        _ov = _dz["overview"]
+                                        result["decisions_followup"] = {**{k: _ov[k] for k in ("open", "pending_approval", "overdue", "completed", "measured", "high_impact",
+                                                                                            "expected_total", "actual_total", "achievement_pct", "headline_ar")},
+                                                                        "escalations": _dz["escalations"][:3], "link": "company-decisions-intelligence.html"}
+                                        result.setdefault("module_signals", {})["decisions"] = _dz.get("signals", [])[:6]
+                            except Exception as _e:      # فشل المتابعة لا يُسقط مركز القيادة
+                                _logger.error(f"executive decisions block: {type(_e).__name__}: {str(_e)[:200]}")
             except HTTPException:
                 pass
             try:   # إشارات المشتريات 2.7
@@ -13967,7 +14715,7 @@ ENGINE_MODULES = ("nabbah_finance", "nabbah_trust", "semantic_layer", "kpi_engin
                   "ai_gateway", "period_aggregation", "legacy_adapters", "platform_bridge",
                   "intelligence_engine", "forecast_engine", "scenario_engine", "decision_memory",
                   "rule_catalog", "canonical_model", "period_model", "metric_registry", "ingestion",
-                  "sales_engine", "inventory_engine", "purchases_engine", "cashflow_engine", "hr_engine", "ops_engine", "finance_engine", "sector_intelligence", "leakage_engine", "tax_engine", "risk_engine", "drivers_engine", "benchmark_engine", "prediction_engine", "goals_engine")
+                  "sales_engine", "inventory_engine", "purchases_engine", "cashflow_engine", "hr_engine", "ops_engine", "finance_engine", "sector_intelligence", "leakage_engine", "tax_engine", "risk_engine", "drivers_engine", "benchmark_engine", "prediction_engine", "goals_engine", "decisions_engine")
 
 
 def _runtime_health():
