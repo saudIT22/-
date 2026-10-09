@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>نبّاه · التقرير الشهري</title>
+<link href="nabbah-design.css" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{background:var(--bg,#070b09);color:var(--txt,#e8f1ec);font-family:Tajawal,Tahoma,Arial,sans-serif;margin:0}
+  .wrap{max-width:1180px;margin:0 auto;padding:70px 16px 60px}
+  h1{margin:0 0 4px;font-size:24px}.sub{color:var(--txt-soft,#8ba396);margin:0 0 14px;font-size:14px}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+  select,.f{background:var(--panel,#101a15);color:var(--txt,#e8f1ec);border:1px solid var(--line,#1d2c24);border-radius:10px;padding:8px 10px;font:inherit;font-size:13px}
+  .tabs{display:flex;gap:2px;flex-wrap:wrap;border-bottom:1px solid var(--line,#1d2c24);margin:6px 0 16px}
+  .tab{background:none;border:0;color:var(--txt-soft,#8ba396);padding:9px 11px;font:inherit;font-size:13px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+  .tab.on{color:var(--txt,#e8f1ec);border-color:#14b8a6;font-weight:800}
+  .tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:14px}
+  .tile,.panel{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:14px;padding:14px;min-width:0}
+  .tile{cursor:pointer}.tile:hover{border-color:var(--mint,#10b981)}
+  .tile .l{font-size:12px;color:var(--txt-soft,#8ba396)}.tile .v{font-size:21px;font-weight:800;margin-top:4px;overflow-wrap:anywhere}
+  .tile .c{font-size:12px;margin-top:4px;line-height:1.7}
+  .panel{margin-bottom:14px}.panel h2{margin:0 0 10px;font-size:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .panel h3{margin:12px 0 6px;font-size:13px;color:var(--txt-soft,#8ba396)}
+  .grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+  table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px;border-bottom:1px solid var(--line,#1d2c24);text-align:start;white-space:nowrap}
+  th{color:var(--txt-soft,#8ba396);font-weight:600}.tbl{overflow-x:auto}
+  tr.drill{cursor:pointer}tr.drill:hover td{background:rgba(16,185,129,.06)}
+  .pos{color:#10b981}.neg{color:#ef4444}.warn{color:#f5b301}.muted{color:var(--txt-soft,#8ba396);font-size:12px}
+  .b{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700;display:inline-block;white-space:nowrap}
+  .critical{background:rgba(239,68,68,.16);color:#ef4444}.high{background:rgba(234,88,12,.16);color:#f97316}
+  .medium{background:rgba(245,179,1,.15);color:#f5b301}.low,.positive{background:rgba(16,185,129,.15);color:#10b981}.grey{background:rgba(148,163,184,.15);color:#94a3b8}
+  .btn{background:var(--mint,#10b981);color:#062b1c;border:0;border-radius:10px;padding:7px 13px;font-weight:800;cursor:pointer;font:inherit;font-size:12px;text-decoration:none;display:inline-block}
+  .btn.ghost{background:transparent;color:var(--txt-soft,#8ba396);border:1px solid var(--line,#1d2c24);font-weight:600}
+  .btn:disabled{opacity:.5;cursor:default}
+  .state{padding:36px 16px;text-align:center;color:var(--txt-soft,#8ba396);border:1px dashed var(--line,#1d2c24);border-radius:14px}
+  .na{color:var(--txt-soft,#8ba396);font-size:13px;padding:10px;border:1px dashed var(--line,#1d2c24);border-radius:10px;margin:6px 0}
+  .obs{border:1px solid var(--line,#1d2c24);border-inline-start:4px solid #f5b301;border-radius:12px;padding:12px;margin-bottom:10px;background:rgba(255,255,255,.015)}
+  .obs.critical{border-inline-start-color:#ef4444;background:none;color:inherit}.obs.high{border-inline-start-color:#f97316;background:none;color:inherit}
+  .obs.positive{border-inline-start-color:#10b981;background:none;color:inherit}.obs.medium{background:none;color:inherit}
+  .obs h4{margin:0 0 6px;font-size:15px}.kv{display:grid;grid-template-columns:110px 1fr;gap:4px 10px;font-size:13px;margin-top:6px}.kv b{color:var(--txt-soft,#8ba396);font-weight:600}
+  .barrow{display:flex;align-items:center;gap:8px;margin:7px 0;font-size:13px}
+  .barrow .t{flex:0 0 150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .barrow .g{flex:1;height:12px;background:var(--line,#1d2c24);border-radius:6px;overflow:hidden;min-width:40px}.barrow .g i{display:block;height:100%;background:var(--mint,#10b981)}
+  .barrow .x{flex:0 0 150px;text-align:end}
+  .sum p{font-size:15px;line-height:2;margin:6px 0}.sum a{color:var(--mint,#10b981);font-size:11px;text-decoration:none}
+  .pri{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+  .step{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--line,#1d2c24);font-size:13px}.step .i{font-size:16px;width:24px;text-align:center}
+  .pop{position:fixed;display:none;z-index:70;background:var(--panel,#101a15);border:1px solid var(--mint,#10b981);border-radius:12px;padding:12px;font-size:12px;max-width:340px;line-height:1.8}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}.chip{background:rgba(16,185,129,.12);color:var(--mint,#10b981);border:1px solid rgba(16,185,129,.35);border-radius:20px;padding:4px 11px;font-size:12px;cursor:pointer}
+  input.search{flex:1;min-width:160px;background:var(--panel,#101a15);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:10px;padding:9px 12px;font:inherit}
+  .ai-sec{margin:8px 0}.ai-sec b{display:block;font-size:13px;margin-bottom:4px}.ai-sec li{font-size:13px;margin:3px 0}
+  svg.ch{width:100%;height:180px;display:block}.legend{display:flex;gap:14px;font-size:12px;color:var(--txt-soft,#8ba396);margin-top:6px;flex-wrap:wrap}
+  .legend i{display:inline-block;width:14px;height:3px;vertical-align:middle;margin-inline-end:4px}
+  .ov{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:50;padding:14px}
+  .ov.on{display:flex}.modal{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:16px;padding:18px;width:min(560px,100%);max-height:90vh;overflow:auto}
+  .fg{display:grid;grid-template-columns:1fr 1fr;gap:10px}.fg label{font-size:12px;color:var(--txt-soft,#8ba396);display:flex;flex-direction:column;gap:4px}
+  .fg input{background:var(--bg,#070b09);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:9px;padding:8px;font:inherit}
+  .cta{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .back{background:none;border:0;color:var(--mint,#10b981);cursor:pointer;font:inherit;padding:0;margin-bottom:10px}
+  .flow{font-size:12px;color:var(--txt-soft,#8ba396);margin:0 0 12px;line-height:1.9}
+  .stbadge{font-size:12px;font-weight:800;padding:4px 10px;border-radius:10px;border:1px solid var(--line,#1d2c24)}
+  #printv{display:none}
+  @media print{body>*:not(#printv){display:none!important}#printv{display:block!important;color:#000;background:#fff}
+    #printv .pg{page-break-after:always;padding:22px}#printv .panel,#printv .tile,#printv .obs{background:#fff;border:1px solid #ccc;color:#000;break-inside:avoid}
+    #printv table{width:100%;border-collapse:collapse}#printv td,#printv th{border:1px solid #ccc;padding:4px;font-size:10.5px;white-space:normal;color:#000}
+    #printv .muted{color:#555}#printv .cover{display:flex;flex-direction:column;justify-content:center;min-height:90vh;text-align:center}}
+  @media(max-width:900px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.pri{grid-template-columns:1fr}}
+  @media(max-width:760px){.grid2{grid-template-columns:minmax(0,1fr)}.fg{grid-template-columns:1fr}h1{font-size:20px}.tile{padding:10px}.tile .v{font-size:17px}
+    .barrow .t{flex-basis:96px}.barrow .x{flex-basis:96px;font-size:12px}.kv{grid-template-columns:1fr}.tab{padding:7px 8px;font-size:12px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>📅 التقرير الشهري الذكي</h1>
+  <p class="sub">ماذا حدث لشركتي هذا الشهر؟ ولماذا؟ وكم أثر ذلك مالياً؟ وما الذي يجب أن أفعله الشهر القادم؟</p>
+  <div class="bar">
+    <select id="ver" style="max-width:300px"></select>
+    <span class="stbadge" id="stb"></span>
+    <button class="btn" id="btnGen" style="display:none">📄 توليد التقرير الشهري</button>
+    <span id="stBtns"></span>
+    <button class="btn ghost" id="btnPdf">🖨 تصدير PDF</button>
+    <span class="muted" id="asof"></span>
+  </div>
+  <div class="na" id="disc" style="margin:6px 0 10px"></div>
+  <nav class="tabs" id="tabs"></nav>
+  <div id="content"><div class="state">…</div></div>
+</div>
+<div class="pop" id="pop"></div>
+<div id="printv"></div>
+<div class="ov" id="ov"><div class="modal" id="modal"></div></div>
+<script src="i18n.js"></script>
+<script>
+(function(){
+  const TOKEN=localStorage.getItem("nabbah_token")||"";if(!TOKEN){location.href="login.html";return;}
+  const TABS=[["overview","التقرير الشهري"],["summary","الملخص التنفيذي"],["financial","الأداء المالي"],["money","أين ذهبت الأموال؟"],["sales","المبيعات"],["expenses","المصروفات"],
+    ["profit","الأرباح"],["cashflow","التدفق النقدي"],["branches","الفروع"],["inventory_purchases","المخزون والمشتريات"],["operations_hr","التشغيل والموظفين"],["risk_leakage","المخاطر والتسرب"],
+    ["tax","الضريبة والزكاة"],["observations","أهم الملاحظات"],["root_causes","الأسباب الجذرية"],["gap","فجوة الأداء"],["opportunities","الفرص"],["decisions","القرارات المطلوبة"],
+    ["followup","متابعة القرارات"],["priorities","أولويات الشهر القادم"],["comparison","مقارنة شهرية وسنوية"],["trend","اتجاه 12 شهراً"],["confidence","الثقة وجودة البيانات"],
+    ["sector","مؤشرات القطاع"],["closing","إقفال الشهر"],["history","سجل التقارير"],["ai","AI Monthly Intelligence"]];
+  const STAT={draft:"مسودة",data_review:"مراجعة البيانات",ready:"جاهز للمراجعة",approved:"معتمد",published:"منشور",superseded:"مُستبدل"};
+  const STCLS={draft:"grey",data_review:"medium",ready:"medium",approved:"low",published:"low",superseded:"grey"};
+  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const n=(v,d=0)=>{if(v==null||isNaN(Number(v)))return"—";const x=Number(v),t=Math.abs(x).toLocaleString("ar-SA",{maximumFractionDigits:d});return x<0?"\u2066−"+t+"\u2069":t;};
+  const CONF={high:"مرتفعة",medium:"متوسطة",low:"منخفضة",possible:"محتمل"};
+  const fv=(v,u)=>v==null?"غير متاح":(u==="%"?n(v,1)+"%":u==="SAR"||u==="money"?n(v,0)+" ر.س":u==="count"?n(v,0):n(v,2)+(u?" "+u:""));
+  const pc=(v,inv)=>v==null?"":`<span class="${(inv?v<0:v>0)?"pos":v===0?"muted":"neg"}">${v>0?"+":""}${n(v,1)}%</span>`;
+  const pp=(v,inv)=>v==null?"":`<span class="${(inv?v<0:v>0)?"pos":v===0?"muted":"neg"}">${v>0?"+":""}${n(v,1)} نقطة</span>`;
+  const H={Authorization:"Bearer "+TOKEN,"Content-Type":"application/json"},$=id=>document.getElementById(id);
+  let D=null,EV={},evI=0;
+  const route=()=>{const h=decodeURIComponent(location.hash.slice(1)||"overview");const i=h.indexOf("/");return i<0?[h,""]:[h.slice(0,i),h.slice(i+1)];};
+  const go=(v,arg)=>{location.hash=arg?`${v}/${encodeURIComponent(arg)}`:v;};
+  window.addEventListener("hashchange",()=>{if(!D)return;const [v,a]=route();if(v==="report"&&a){$("ver").value=a;load(a);go("overview");return;}render();window.scrollTo(0,0);});
+  const api=(path,body)=>fetch(path,{method:"POST",headers:H,body:JSON.stringify(body)}).then(async r=>{const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(typeof j.detail==="string"?j.detail:"HTTP "+r.status);return j;});
+  function load(rid){$("content").innerHTML=`<div class="state">جارٍ تجميع التقرير من المحركات…</div>`;
+    fetch(rid?`/company/monthly/report/${rid}`:"/company/monthly-intelligence",{headers:H}).then(async r=>{
+      if(r.status===401){location.href="login.html";return null;}
+      if(r.status===403||r.status===402){let d="";try{d=(await r.json()).detail;}catch(_){}$("content").innerHTML=`<div class="state">🔒 ${esc(d||"ليست لديك صلاحية.")}</div>`;$("tabs").innerHTML="";return null;}
+      if(!r.ok){let d="";try{const j=await r.json();d=typeof j.detail==="string"?j.detail:JSON.stringify(j.detail||j);}catch(_){}err(`HTTP ${r.status}${d?" — "+d:""}`);return null;}
+      return r.json();}).then(d=>{if(!d)return;D=d;
+        if(d.empty){$("tabs").innerHTML="";$("content").innerHTML=`<div class="state">📭 ${esc(d.message_ar)}</div>`;$("btnPdf").style.display="none";$("disc").textContent="صلاحيتك: "+((d.scope||{}).ar||"");return;}
+        const sc=d.scope||{};
+        $("btnGen").style.display=sc.can_generate?"":"none";
+        $("ver").innerHTML=(sc.published_only?"":`<option value="">● التقرير الحي (البيانات الحالية)</option>`)+(d.reports||[]).map(r=>`<option value="${r.id}" ${d.report&&d.report.id===r.id?"selected":""}>${esc(r.period)} · النسخة ${r.version} · ${esc(STAT[r.status]||r.status)}</option>`).join("");
+        const st=d.live?null:d.report.status;
+        $("stb").className="stbadge "+(st?STCLS[st]:"grey");$("stb").textContent=d.live?"حي — غير محفوظ":(STAT[st]||st);
+        const nx=(!d.live&&sc.can_generate&&d.report.next)?d.report.next:[];
+        $("stBtns").innerHTML=nx.filter(t=>sc.can_approve||!["approved","published"].includes(t)).map(t=>`<button class="btn ${t==="draft"||t==="data_review"&&st==="ready"?"ghost":""}" data-to="${t}">${t==="draft"?"↩ إرجاع للمسودة":"← "+esc(STAT[t])}</button>`).join(" ");
+        $("disc").textContent=(d.disclaimer_ar||"")+" · صلاحيتك: "+(sc.ar||"")+(d.live?"":" · "+(d.frozen_note_ar||""));
+        $("asof").textContent=d.live?`حي · ${d.as_of} · الشهر ${d.period}`:`${d.report.period} · النسخة ${d.report.version} · ${d.report.generated_at} · ${d.report.generated_by}${d.report.approved_by?" · اعتمده "+d.report.approved_by:""}`;
+        document.querySelectorAll("[data-to]").forEach(b=>b.onclick=()=>setStatus(b.dataset.to));
+        try{render();}catch(e){console.error(e);err("render: "+(e&&e.message||e));}}).catch(e=>err("network: "+(e&&e.message||e)));}
+  function err(m){$("content").innerHTML=`<div class="state neg">تعذّر تحميل التقرير الشهري.<div class="muted" style="margin-top:8px">${esc(m)}</div></div>`;}
+  function setStatus(to){let note="";if(to==="draft"){note=prompt("سبب الإرجاع للمسودة؟")||"";if(!note)return;}
+    api("/company/monthly/status",{id:D.report.id,to,note}).then(()=>load(D.report.id)).catch(er=>alert(er.message));}
+  const panel=(t,b,x="")=>`<div class="panel"><h2>${t}${x}</h2>${b}</div>`;
+  const na=m=>`<div class="na">${esc(m)}</div>`;
+  const R=k=>{const x=D[k];return x&&!(x.restricted)?x:null;};
+  const restricted=()=>`<div class="state">🔒 خارج صلاحيتك</div>`;
+  const ev=m=>{const k="e"+(evI++);EV[k]=m;return k;};
+  const src=m=>m&&m.source_ar?`<span class="muted"> · ${esc(m.source_ar)}</span>`:"";
+  function tile(m){if(!m)return"";const k=ev(m);const ch=m.change_pct!=null?pc(m.change_pct,m.inverse):m.change_pp!=null?pp(m.change_pp,m.inverse):"";
+    return `<div class="tile" data-ev="${k}"><div class="l">${esc(m.label)}</div><div class="v">${m.available===false?'<span class="muted" style="font-size:14px">غير متاح</span>':fv(m.value,m.unit)}</div>
+      <div class="c">${m.available===false?`<span class="muted">${esc(m.reason_ar||"")}</span>`:`${m.previous!=null?`<span class="muted">السابق ${fv(m.previous,m.unit)}</span> `:""}${ch}${m.yoy_change_pct!=null?` · <span class="muted">سنوي</span> ${pc(m.yoy_change_pct,m.inverse)}`:(m.yoy_reason_ar&&m.unit!=="%"?` · <span class="muted">سنوي: غير متاح</span>`:"")}${m.range?`<div class="muted">نطاق: ${n(m.range[0])} – ${n(m.range[1])}</div>`:""}<div class="muted">الثقة: ${esc(CONF[m.confidence]||m.confidence||"—")}${src(m)}</div>`}</div></div>`;}
+  const mtable=(rows,cols=true)=>`<div class="tbl"><table><thead><tr><th>المؤشر</th><th>القيمة</th><th>السابق</th><th>التغير</th>${cols?"<th>سنوي</th>":""}<th>المصدر</th></tr></thead><tbody>${(rows||[]).map(m=>{const k=ev(m);return `<tr class="drill" data-ev="${k}"><td><b>${esc(m.label)}</b></td><td>${m.available===false?`<span class="muted">${esc(m.reason_ar||"غير متاح")}</span>`:fv(m.value,m.unit)}</td><td>${m.previous!=null?fv(m.previous,m.unit):"—"}</td><td>${m.change_pct!=null?pc(m.change_pct,m.inverse):m.change_pp!=null?pp(m.change_pp,m.inverse):"—"}</td>${cols?`<td>${m.yoy_change_pct!=null?pc(m.yoy_change_pct,m.inverse):'<span class="muted">—</span>'}</td>`:""}<td class="muted">${esc(m.source_ar||"")}</td></tr>`;}).join("")}</tbody></table></div>`;
+  const lvl=l=>({critical:"حرج",high:"مرتفع",medium:"متوسط",low:"منخفض",positive:"إيجابي",possible:"محتمل"}[l]||l||"—");
+  const conf=c=>c?`<span class="b ${c==="high"?"low":c==="low"?"critical":"medium"}">ثقة ${esc({high:"مرتفعة",medium:"متوسطة",low:"منخفضة",possible:"محتمل"}[c]||c)}</span>`:"";
+  const imp=i=>i&&i.amount!=null?`<b>${n(i.amount)}</b> ر.س <span class="b grey">${esc(i.type_ar||i.type||"")}</span>`:'<span class="muted">غير مقاس</span>';
+
+  // ── 01 نظرة الشهر
+  function overview(){const o=R("overview");if(!o)return restricted();
+    return `<div class="flow">${esc(D.flow_ar||"")}</div><div class="tiles">${(D.cards||[]).map(tile).join("")||na("لا توجد مؤشرات ضمن صلاحيتك")}</div>`
+      +panel(`🗓 ${esc(o.headline_ar||"")}`,`${o.summary?`<p style="line-height:2;margin:0">${esc(o.summary)}</p>`:""}${(o.top3||[]).length?`<h3>أهم ما حدث</h3><ul>${o.top3.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`:""}<div class="muted">ثقة التقرير: ${esc(o.confidence_ar||"—")}${o.stale?" · ⚠️ البيانات قديمة":""}${o.trend_verdict_ar?" · الاتجاه: "+esc(o.trend_verdict_ar):""}</div><div class="cta"><button class="btn ghost" data-go="summary">الملخص التنفيذي</button><button class="btn ghost" data-go="observations">الملاحظات</button><button class="btn ghost" data-go="priorities">الأولويات</button></div>`);}
+  // ── 02 الملخص التنفيذي
+  function summary(){const s=R("summary");if(!s)return restricted();
+    return panel("ملخص الشهر",`<div class="sum">${s.sentences.map(x=>`<p>${esc(x.ar)} ${x.link?`<a href="${esc(x.link)}">المصدر ↗</a>`:""}</p>`).join("")||na(s.paragraph_ar)}</div>`)
+      +(s.priorities.length?panel("الأولويات",`<div class="sum">${s.priorities.map(p=>`<p><span class="b ${p.level}">${esc({critical:"حرجة",high:"مرتفعة",medium:"متوسطة"}[p.level])}</span> ${esc(p.ar)}</p>`).join("")}</div>`):"")
+      +`<div class="muted">${esc(s.note_ar)}</div>`;}
+  // ── 03 الأداء المالي
+  function financial(){const f=R("financial");if(!f)return restricted();if(f.available===false)return na(f.reason_ar);
+    const vr=f.variance.map(v=>`<tr><td><b>${esc(v.ar)}</b></td><td>${fv(v.actual,"SAR")}</td><td>${v.vs_previous.value!=null?fv(v.vs_previous.value,"SAR")+" "+pc(v.vs_previous.pct,v.inverse):"—"}</td><td>${v.vs_target.value!=null?fv(v.vs_target.value,"SAR")+" "+pc(v.vs_target.pct,v.inverse):`<span class="muted">${esc(v.vs_target.reason_ar)}</span>`}</td><td>${v.vs_last_year.value!=null?fv(v.vs_last_year.value,"SAR")+" "+pc(v.vs_last_year.pct,v.inverse):`<span class="muted">${esc(v.vs_last_year.reason_ar)}</span>`}</td></tr>`).join("");
+    return panel("الإيراد (Revenue)",mtable(f.revenue))+panel("الربح (Profit)",mtable(f.profit)+(f.quality_note_ar?`<div class="muted">${esc(f.quality_note_ar)}</div>`:""))
+      +panel("الانحرافات (Variance)",`<div class="tbl"><table><thead><tr><th>البند</th><th>الفعلي</th><th>مقابل الشهر السابق</th><th>مقابل المستهدف</th><th>مقابل نفس الشهر العام الماضي</th></tr></thead><tbody>${vr}</tbody></table></div><div class="muted">${esc(f.note_ar)}</div>`);}
+  // ── 04 أين ذهبت الأموال؟
+  function money(){const m=R("money");if(!m)return restricted();if(!m.available)return na(m.reason_ar);const mx=Math.max(...m.lines.map(l=>l.amount||0),1);
+    return panel(`أين ذهبت الأموال؟ <span class="muted">${esc(m.period||"")} · الإجمالي ${n(m.total)} ر.س</span>`,`<div class="tbl"><table><thead><tr><th>الفئة</th><th>المبلغ</th><th>الحصة</th><th>التغير</th><th>من الإيراد</th></tr></thead><tbody>${m.lines.map(l=>`<tr><td><a href="${esc(l.link)}" style="color:inherit">${esc(l.ar)}</a></td><td>${n(l.amount)}</td><td>${n(l.share_pct,1)}%</td><td>${pc(l.change_pct,true)||"—"}</td><td>${l.pct_of_revenue!=null?n(l.pct_of_revenue,1)+"%":"—"}</td></tr>`).join("")}</tbody></table></div>`
+      +m.lines.map(l=>`<div class="barrow"><span class="t">${esc(l.ar)}</span><span class="g"><i style="width:${(l.amount||0)/mx*100}%"></i></span><span class="x">${n(l.amount)} · ${n(l.share_pct,1)}%</span></div>`).join("")+`<div class="muted">${esc(m.basis_ar)}</div>`)
+      +(m.largest_increase?panel("أهم سبب للزيادة",`<div class="kv"><b>البند</b><span>${esc(m.largest_increase.ar)} ${pc(m.largest_increase.change_pct,true)} (${n(m.largest_increase.delta)} ر.س)</span>
+        <b>السبب المرتبط</b><span>${esc((m.reason||{}).ar||"—")} ${conf((m.reason||{}).confidence)}<div class="muted">${esc((m.reason||{}).note_ar||"")}</div></span>
+        <b>الأثر</b><span>${esc((m.impact||{}).ar||"—")}<div class="muted">${esc((m.impact||{}).basis_ar||"")}</div></span>
+        <b>الإجراء</b><span>${esc((m.action||{}).ar||"—")} <span class="muted">· المسؤول: ${esc((m.action||{}).owner||"—")}</span></span></div>${m.leakage_note?`<div class="muted" style="margin-top:8px">💧 ${esc(m.leakage_note.ar)} — <a href="${esc(m.leakage_note.link)}" style="color:var(--mint,#10b981)">مركز الاسترداد</a></div>`:""}`):na("لا توجد زيادة في أي بند عن الشهر السابق"));}
+  // ── 05 المبيعات
+  function sales(){const s=R("sales");if(!s)return restricted();if(s.available===false)return na(s.reason_ar);
+    const brs=s.branches.length?`<div class="tbl"><table><thead><tr><th>الفرع</th><th>صافي المبيعات</th><th>النمو</th><th>الحصة</th><th>المعاملات</th><th>متوسط الطلب</th></tr></thead><tbody>${s.branches.map(b=>`<tr><td><b>${esc(b.key)}</b>${s.best&&b.key===s.best.key?' <span class="b low">الأفضل</span>':""}${s.worst&&b.key===s.worst.key?' <span class="b critical">الأضعف</span>':""}</td><td>${n(b.net_sales)}</td><td>${pc(b.growth_pct)||"—"}</td><td>${n(b.share_pct,1)}%</td><td>${n(b.transactions)}</td><td>${n(b.aov,2)}</td></tr>`).join("")}</tbody></table></div>`:"";
+    const lst=(t,a)=>a.length?`<h3>${t}</h3>`+a.map(x=>`<div class="barrow"><span class="t">${esc(x.key)}</span><span class="g"><i style="width:${Math.min(100,x.share_pct||0)}%"></i></span><span class="x">${n(x.net_sales)} ${pc(x.growth_pct)}</span></div>`).join(""):"";
+    return panel(`المبيعات <span class="muted">${esc(s.period)} · ${s.reconciled?"✅ مطابقة للوحدة المالية":s.reconciled===false?"⚠️ لا تطابق الوحدة المالية":""}</span>`,mtable(s.rows)+(s.rows_note_ar?`<div class="muted">${esc(s.rows_note_ar)}</div>`:""))
+      +(s.observation_ar||s.recommendation_ar?panel("قراءة المبيعات",`<div class="kv"><b>الملاحظة</b><span>${esc(s.observation_ar||"—")}</span><b>الأثر المالي</b><span>${esc((s.impact||{}).ar||"—")}</span><b>التوصية</b><span>${esc(s.recommendation_ar||"—")}</span></div>`):"")
+      +panel("الفروع والأصناف",brs+`<div class="grid2"><div>${lst("أعلى الفئات",s.top_categories)}</div><div>${lst("أعلى المنتجات",s.top_products)}</div></div><div class="muted">${esc(s.note_ar||"")}</div>`);}
+  // ── 06 المصروفات
+  function expenses(){const e=R("expenses");if(!e)return restricted();if(!e.available)return na(e.reason_ar);
+    return panel(`المصروفات التشغيلية <span class="muted">الإجمالي ${n(e.total)} ر.س ${e.change_pct!=null?"· "+(e.change_pct>0?"+":"")+n(e.change_pct,1)+"%":""} · ${n(e.pct_of_revenue,1)}% من الإيراد</span>`,
+      `<div class="tbl"><table><thead><tr><th>البند</th><th>الحالي</th><th>السابق</th><th>التغير</th><th>الموازنة</th><th>ما يكتشفه النظام</th></tr></thead><tbody>${e.rows.map(r=>`<tr><td><b>${esc(r.ar)}</b>${e.highest&&r.key===e.highest.key?' <span class="b grey">الأعلى</span>':""}${e.fastest&&r.key===e.fastest.key?' <span class="b high">الأسرع نمواً</span>':""}</td><td>${n(r.current)}</td><td>${n(r.previous)}</td><td>${pc(r.change_pct,true)||"—"}</td><td>${r.budget!=null?n(r.budget):'<span class="muted">—</span>'}</td><td style="white-space:normal;min-width:220px">${r.flags.map(f=>`<div class="${f.key==="over_budget"||f.key==="unusual"?"neg":"warn"}">• ${esc(f.ar)}</div>`).join("")||'<span class="muted">لا ملاحظات</span>'}${r.roi?`<div class="muted">العائد: ${esc(r.roi.ar)}</div>`:""}</td></tr>`).join("")}</tbody></table></div>`)
+      +(e.sentences.length?panel("قراءة المصروفات",`<ul>${e.sentences.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`):"")
+      +(e.risk_link?`<div class="muted">🛡 ${esc(e.risk_link.ar)} — <a href="${esc(e.risk_link.link)}" style="color:var(--mint,#10b981)">مركز المخاطر</a></div>`:"")
+      +(e.payroll_reconciliation?`<div class="muted">الرواتب: ${esc(e.payroll_reconciliation.note_ar||"")}</div>`:"");}
+  // ── 07 الأرباح
+  function profit(){const p=R("profit");if(!p)return restricted();if(!p.available)return na("لا توجد قائمة دخل لهذا الشهر");
+    const mx=Math.max(...p.bridge.map(b=>Math.abs(b.effect||0)),1);
+    return panel("قصة الربح (Profit Story)",`<div class="tbl"><table><thead><tr><th>البند</th><th>الحالي</th><th>السابق</th><th>التغير</th></tr></thead><tbody>${p.rows.map(r=>`<tr><td><b>${esc(r.ar)}</b></td><td>${n(r.current)}</td><td>${n(r.previous)}</td><td>${pc(r.change_pct,r.inverse)||"—"}</td></tr>`).join("")}</tbody></table></div>`
+      +(p.why_ar?`<h3>لماذا؟</h3><p style="font-size:15px;line-height:1.9">${esc(p.why_ar)}</p>`:""))
+      +panel(`جسر صافي الربح <span class="muted">التغير ${n(p.net_profit_change)} ر.س${p.margin_change_pp!=null?" · الهامش "+(p.margin_change_pp>0?"+":"")+n(p.margin_change_pp,1)+" نقطة":""}</span>`,p.bridge.map(b=>`<div class="barrow"><span class="t">${esc(b.ar)}</span><span class="g"><i style="width:${Math.abs(b.effect)/mx*100}%;background:${b.effect<0?"#ef4444":"#10b981"}"></i></span><span class="x ${b.effect<0?"neg":"pos"}">${b.effect>0?"+":""}${n(b.effect)}</span></div>`).join("")+`<div class="muted">${esc(p.note_ar)}</div>`);}
+  // ── 08 التدفق النقدي
+  function cashflow(){const c=R("cashflow");if(!c)return restricted();if(c.available===false)return na(c.reason_ar);
+    return panel(`التدفق النقدي <span class="muted">${esc(c.period)}</span>${c.liquidity_risk?` <span class="b ${c.liquidity_risk.level}">مخاطر السيولة: ${esc(c.liquidity_risk.level_ar)}</span>`:""}`,mtable(c.rows,false))
+      +(c.explain_ar?panel("المبيعات ≠ النقد",`<p style="font-size:15px;line-height:1.9;margin:0">${esc(c.explain_ar)}</p>`):"")
+      +(c.overdue!=null?`<div class="muted">ذمم متأخرة ${n(c.overdue)} ر.س (${n(c.overdue_share_pct,1)}% من الذمم) · ${esc(c.note_ar)}</div>`:"");}
+  // ── 09 الفروع
+  function branches(){const b=R("branches");if(!b)return restricted();if(!b.available)return na(b.reason_ar);const [,a]=route();
+    if(a&&b.deep_dive[a])return deep(a,b.deep_dive[a]);
+    const bw=b.best_worst||{};
+    const card=(x,good)=>x?`<div class="panel"><h2>${good?"🏆 الأفضل":"⚠️ الأضعف"}: ${esc(x.branch)}</h2><ul>${(x.why||[]).map(w=>`<li>${esc(w)}</li>`).join("")}</ul></div>`:"";
+    return panel("ملخص أداء الفروع",`<div class="tbl"><table><thead><tr><th>الفرع</th><th>المبيعات</th><th>النمو</th><th>الهامش</th><th>المساهمة</th><th>المخاطر</th><th>الحالة</th></tr></thead><tbody>${b.rows.map(r=>`<tr class="drill" data-br="${esc(r.branch)}"><td><b>${esc(r.branch)}</b></td><td>${n(r.sales)}</td><td>${pc(r.growth_pct)||"—"}</td><td>${r.margin!=null?n(r.margin,1)+"%":"—"}</td><td>${r.profit!=null?n(r.profit):"—"}</td><td>${r.risk_score!=null?n(r.risk_score,0)+" "+`<span class="b ${r.risk_level}">${esc(lvl(r.risk_level))}</span>`:"—"}</td><td>${esc(r.light)} ${esc(r.status_ar)}<div class="muted" style="white-space:normal">${esc(r.reasons.join("، "))}</div></td></tr>`).join("")}</tbody></table></div><div class="muted">${esc(b.status_rule_ar)} · اضغط الفرع للتفاصيل · ${esc(b.note_ar)}</div>`)
+      +(bw.status==="ok"?`<div class="grid2">${card(bw.best,true)}${card(bw.worst,false)}</div>`:bw.reason_ar?na(bw.reason_ar):"");}
+  function deep(k,d){const kv=(o,lab)=>Object.entries(o||{}).filter(([x])=>lab[x]).map(([x,v])=>`<b>${lab[x]}</b><span>${Array.isArray(v)?(v.length?esc(v.join("، ")):"—"):v==null?"غير متاح":typeof v==="number"?n(v,2):esc(v)}</span>`).join("");
+    const box=(t,o,lab)=>o&&o.restricted?panel(t,restricted()):panel(t,`<div class="kv">${kv(o,lab)}</div>`);
+    return `<button class="back" data-go="branches">→ كل الفروع</button>`+panel(`🏬 ${esc(k)}`,`<p style="font-size:15px;margin:0">${esc(d.verdict_ar)}</p>`)
+      +`<div class="grid2">${box("المالية",d.financial,{sales:"المبيعات",gross_profit:"مجمل الربح",contribution:"المساهمة",margin:"الهامش %",net_profit_reason_ar:"صافي الربح"})}${box("المبيعات",d.sales,{transactions:"المعاملات",aov:"متوسط الطلب",growth_pct:"النمو %"})}
+      ${box("المخزون",d.inventory,{stock:"قيمة المخزون",turnover:"الدوران",stockout_rate:"النفاد %",slow_moving:"بطيء الحركة",out_now:"نافد الآن"})}${box("التشغيل",d.operations,{efficiency:"الكفاءة",on_time:"في الموعد %",fulfillment:"زمن التنفيذ",issues:"مشكلات مفتوحة"})}
+      ${box("الموظفون",d.hr,{employees:"العدد",revenue_per_employee:"الإيراد/موظف",payroll_estimate:"تقدير الرواتب"})}${box("المخاطر والتسرب",Object.assign({},d.risk,{leak:d.leakage&&d.leakage.amount,lsrc:d.leakage&&d.leakage.top_source}),{score:"درجة المخاطر",level:"المستوى",top:"أعلى المسببات",leak:"التسرب",lsrc:"أكبر مصدر تسرب"})}</div>`;}
+  // ── 10 المخزون والمشتريات
+  function inventory_purchases(){const x=R("inventory_purchases");if(!x)return restricted();
+    return `<div class="grid2">${panel("المخزون (2.6)",x.inventory?mtable(x.inventory,false):na(x.inventory_reason_ar))}${panel("المشتريات (2.7)",x.purchases?mtable(x.purchases,false):na(x.purchases_reason_ar))}</div>`
+      +(x.links.length?panel("الروابط",`<ul>${x.links.map(l=>`<li>${esc(l.ar)} <span class="b grey">${l.kind==="chain"?"سلسلة":"علاقة"}</span></li>`).join("")}</ul><div class="muted">${esc(x.note_ar)}</div>`):"");}
+  // ── 11 التشغيل والموظفين
+  function operations_hr(){const x=R("operations_hr");if(!x)return restricted();
+    return `<div class="grid2">${x.operations?panel("التشغيل (2.9)",mtable(x.operations.rows,false)+(x.operations.bottlenecks.length?`<h3>الاختناقات</h3><ul>${x.operations.bottlenecks.map(b=>`<li>${esc(b.ar)}</li>`).join("")}</ul>`:"")):panel("التشغيل",na(x.operations_reason_ar))}
+      ${x.hr?panel("الموارد البشرية",mtable(x.hr.rows,false)):panel("الموارد البشرية",na(x.hr_reason_ar))}</div>`
+      +(x.chain?panel("هل المشكلة المالية تشغيلية؟",`<p>${esc(x.chain.ar)}</p><div class="muted">${esc(x.chain.note_ar)}</div>`):"")
+      +(x.links.length?panel("قراءة إدارية",`<ul>${x.links.map(l=>`<li>${esc(l.ar)}</li>`).join("")}</ul>`):"");}
+  // ── 12 المخاطر والتسرب
+  function risk_leakage(){const x=R("risk_leakage");if(!x)return restricted();const l=x.leakage;
+    return panel(`أهم المخاطر <span class="muted">مؤشر المخاطر ${n(x.index,1)}/100 ${esc(x.level_ar||"")}</span>`,x.top.length?x.top.map(t=>`<div class="obs ${t.level}"><h4>${esc(t.ar)} <span class="b ${t.level}">${esc(t.level_ar)}</span> <span class="muted">${esc(t.category_ar||"")}</span></h4>
+        <div class="kv"><b>الدليل</b><span>${esc((t.evidence||[]).join(" · "))}</span><b>الأثر</b><span>${imp(t.impact)} <span class="muted">${esc(t.impact.basis_ar||"")}</span></span><b>المرتبط به</b><span>${esc(t.root_cause_ar||"—")}</span><b>التوصية</b><span>${esc(t.recommendation_ar||"—")}</span></div>${t.link?`<a href="${esc(t.link)}" class="muted">المصدر ↗</a>`:""}</div>`).join(""):na("لا مخاطر ضمن صلاحيتك"))
+      +(l?panel("تسرب الإيرادات (3.1)",`<div class="tiles">${[["المكتشف",l.detected],["فرصة الاسترداد",l.opportunity],["المسترد فعلياً",l.recovered],["متكرر",l.recurring]].map(([a,v])=>`<div class="tile"><div class="l">${a}</div><div class="v">${n(v)}</div></div>`).join("")}</div>
+        <div class="tbl"><table><thead><tr><th>المصدر</th><th>المبلغ</th><th>ضمن الإجمالي</th></tr></thead><tbody>${l.sources.map(s=>`<tr><td>${esc(s.ar)}</td><td>${s.available?n(s.amount):`<span class="muted">${esc(s.reason_ar||"غير متاح")}</span>`}</td><td>${s.in_total?"✓":"منفصل"}</td></tr>`).join("")}</tbody></table></div>
+        <div class="muted">${esc(l.attribution_ar||"")} · ذمم معرّضة للخطر ${n(l.ar_at_risk)} (منفصلة)</div>`):na(x.leakage_reason_ar))+`<div class="muted">${esc(x.note_ar)}</div>`;}
+  function tax(){const t=R("tax");if(!t)return restricted();if(t.available===false)return na(t.reason_ar);
+    return panel("ملاحظات الضريبة والزكاة للشهر",`${t.observations.map(o=>`<div class="obs ${o.severity==="red"?"critical":o.severity==="orange"?"high":"medium"}">${esc(o.ar)}</div>`).join("")||na("لا ملاحظات")}
+      <div class="kv"><b>ضريبة المخرجات</b><span>${n(t.vat.output)}</span><b>ضريبة المدخلات</b><span>${t.vat.input!=null?n(t.vat.input):"غير متاحة"}</span><b>صافي المركز</b><span>${t.vat.net!=null?n(t.vat.net):esc(t.vat.net_reason_ar||"غير متاح")}</span><b>تعرّض محتمل</b><span>${n(t.exposure)} <span class="muted">${esc(t.exposure_note_ar||"")}</span></span><b>جاهزية الزكاة</b><span>${n(t.zakat_readiness,0)}%</span></div><div class="muted">${esc(t.disclaimer_ar)} — <a href="${esc(t.link)}" style="color:var(--mint,#10b981)">مركز الضريبة</a></div>`);}
+  // ── 14 أهم الملاحظات
+  function observations(){const o=D.observations;if(!Array.isArray(o))return restricted();
+    return panel(`أهم ${o.length} ملاحظات`,o.map(x=>`<div class="obs ${x.severity}"><h4>${esc(x.icon)} ${x.rank}. ${esc(x.signal_ar)} ${conf(x.confidence)}</h4><div class="kv"><b>الدليل</b><span>${esc((x.evidence||[]).join(" · ")||"—")}</span><b>الأثر</b><span>${imp(x.impact)}</span><b>المطلوب</b><span>${esc(x.recommendation_ar||"—")}${x.owner?` <span class="muted">· ${esc(x.owner)}</span>`:""}</span><b>المصدر</b><span><a href="${esc(x.link||"#")}" style="color:var(--mint,#10b981)">${esc(x.source_ar)}</a></span></div></div>`).join("")||na("لا ملاحظات ضمن صلاحيتك"));}
+  function root_causes(){const r=R("root_causes");if(!r)return restricted();const p=r.profit;
+    return panel("الأسباب الجذرية",(p?`<h3>${esc(p.ar)} (${n(p.change)} ر.س) ${conf(p.confidence)}</h3>${p.items.map(i=>`<div class="barrow"><span class="t">${esc(i.ar)}</span><span class="g"><i style="width:${i.share_pct}%;background:#ef4444"></i></span><span class="x">${i.share_pct}% · ${n(i.amount)}</span></div>`).join("")}<div class="muted">${esc(p.method_ar)}</div>`:na(r.profit_reason_ar))
+      +(r.candidates.length?`<h3>أسباب محتملة مرتبطة (سلاسل المسببات)</h3>${r.candidates.map(c=>`<div class="obs medium"><b>${esc(c.ar)}</b> <span class="b grey">${esc(c.confidence_ar)}</span><div class="muted">${esc(c.summary_ar||"")}</div></div>`).join("")}`:"")+`<div class="muted">${esc(r.note_ar)}</div>`);}
+  function gap(){const g=R("gap");if(!g)return restricted();if(!g.available)return na(g.reason_ar);
+    return panel("فجوة الأداء: الفعلي · المستهدف · التوقع",`<div class="tbl"><table><thead><tr><th>البند</th><th>الفعلي</th><th>المستهدف</th><th>التوقع</th><th>الفجوة</th><th>المصدر</th></tr></thead><tbody>${g.rows.map(r=>`<tr><td><b>${esc(r.ar)}</b>${r.status_ar?` <span class="b high">${esc(r.status_ar)}</span>`:""}</td><td>${n(r.actual)}</td><td>${n(r.target)}</td><td>${n(r.forecast??r.forecast_next)}</td><td class="${(r.gap||0)>0?"neg":"pos"}">${n(r.gap)}${r.gap_pct!=null?` (${n(r.gap_pct,1)}%)`:""}</td><td class="muted">${esc(r.source_ar)}</td></tr>`).join("")}</tbody></table></div>`
+      +(g.causes.length?`<h3>ما المرتبط بالفجوة؟</h3><ul>${g.causes.map(c=>`<li>${esc(c.ar)} <span class="b ${c.level}">${esc(lvl(c.level))}</span> <span class="muted">${esc(c.category_ar||"")}</span></li>`).join("")}</ul><div class="muted">${esc(g.causes_note_ar)}</div>`:""));}
+  function opportunities(){const o=R("opportunities");if(!o)return restricted();if(!o.available)return na(o.reason_ar);
+    return panel(`أهم الفرص <span class="muted">إجمالي شهري بلا تكرار: ${n(o.total_monthly)} ر.س${o.year_end?" · حتى نهاية السنة: "+n(o.year_end):""}${o.cash?" · نقد: "+n(o.cash):""}</span>`,`<div class="tbl"><table><thead><tr><th>#</th><th>الفرصة</th><th>المبلغ</th><th>الأفق</th><th>المصدر</th><th>في الإجمالي</th></tr></thead><tbody>${o.items.map((i,k)=>`<tr><td>${k+1}</td><td><b>${esc(i.ar)}</b><div class="muted" style="white-space:normal">${esc(i.basis_ar||"")}</div></td><td>${n(i.amount)}</td><td>${esc(i.horizon_ar)}</td><td class="muted">${esc({leakage:"استرداد الأموال 3.1",prediction:"التنبؤ 3.7",purchases:"المشتريات 2.7"}[i.source]||i.source)}</td><td>${i.counted?"✓":'<span class="muted">متداخلة</span>'}</td></tr>`).join("")}</tbody></table></div><div class="muted">${esc(o.attribution_ar)}</div>`);}
+  function decisions(){const d=R("decisions");if(!d)return restricted();
+    const canMake=!D.live&&D.report&&D.report.status!=="superseded";
+    return panel("قرارات موصى بها من التقرير",d.recommended.length?d.recommended.map(x=>`<div class="obs ${x.priority==="high"?"high":"medium"}"><h4>Decision ${esc(x.no)} — ${esc(x.title)}</h4><div class="kv"><b>السبب</b><span>${esc(x.reason_ar)}</span><b>الأثر المتوقع</b><span>${x.expected_impact!=null?n(x.expected_impact)+" ر.س":`<span class="muted">${esc(x.expected_note_ar||"يحدده المسؤول")}</span>`}</span><b>المسؤول</b><span>${esc(x.owner||"—")}</span><b>الموعد</b><span>${esc(x.due||"")} (${x.due_days} يوماً)</span><b>المؤشر</b><span>${esc(x.kpi_ar||x.kpi||"—")}</span><b>خط الأساس</b><span>${x.baseline!=null?n(x.baseline,2):"—"} <span class="muted">${esc(x.baseline_basis_ar||"")}</span></span><b>المستهدف</b><span class="muted">${esc(x.target_note_ar)}</span></div>
+      <div class="cta">${x.decision_id?`<a class="btn ghost" href="company-decisions-intelligence.html#dec/${x.decision_id}">✔ القرار #${x.decision_id} في مركز القرارات ↗</a>`:canMake&&x.rec_id?`<button class="btn" data-mkdec="${x.rec_id}" data-due="${esc(x.due||"")}">➕ إنشاء قرار</button>`:x.exists?'<span class="muted">قرار بنفس العنوان موجود في 3.9</span>':'<span class="muted">ولّد نسخة محفوظة من التقرير لتحويل التوصيات إلى قرارات</span>'}</div></div>`).join(""):na("لا توجد توصيات قابلة للتحويل"))
+      +(d.pending.length?panel("قرارات قائمة تحتاج إجراء (3.9)",`<ul>${d.pending.map(p=>`<li><a href="${esc(p.link)}" style="color:inherit">${esc(p.title)}</a> <span class="b medium">${esc(p.status_ar)}</span> <span class="muted">${esc(p.owner||"")}</span></li>`).join("")}</ul>`):"")+`<div class="muted">${esc(d.note_ar)}</div>`;}
+  function followup(){const f=R("followup");if(!f)return restricted();
+    return panel(`متابعة قرارات الأشهر السابقة <span class="muted">${esc(f.loop_ar)}</span>`,(f.available?`<div class="tbl"><table><thead><tr><th>القرار</th><th>المؤشر</th><th>قبل</th><th>بعد</th><th>المتوقع</th><th>الفعلي</th><th>النتيجة</th></tr></thead><tbody>${f.rows.map(r=>`<tr class="drill" onclick="location.href='${esc(r.link)}'"><td><b>${esc(r.title)}</b></td><td>${esc(r.kpi_ar||"—")}</td><td>${n(r.before,2)}</td><td>${n(r.after,2)}</td><td>${n(r.expected)}</td><td>${n(r.actual)}</td><td><span class="b ${r.result==="excellent"||r.result==="strong"?"low":r.result==="negative"?"critical":"medium"}">${esc(r.result_ar||"—")}</span></td></tr>`).join("")}</tbody></table></div><div class="muted">قبل/بعد مقارنة زمنية — لا تثبت أن القرار هو السبب.</div>`:na(f.reason_ar))+(f.headline_ar?`<div class="muted">${esc(f.headline_ar)}</div>`:""));}
+  function priorities(){const p=R("priorities");if(!p)return restricted();
+    const col=(lv,t)=>`<div><h3>${t}</h3>${p.items.filter(x=>x.level===lv).map(x=>`<div class="obs ${lv}"><b>${esc(x.title)}</b><div class="kv"><b>لماذا</b><span>${esc(x.why_ar)}</span><b>الأثر</b><span>${imp(x.impact)}</span><b>الإلحاح</b><span>${esc(x.urgency_ar)}</span><b>الثقة</b><span>${esc(CONF[x.confidence]||x.confidence||"—")}</span><b>المسؤول</b><span>${esc(x.owner)}</span><b>الموعد</b><span>${esc(x.deadline||"—")}</span><b>المؤشر</b><span>${esc(x.kpi_ar||x.kpi||"—")}</span></div></div>`).join("")||'<div class="muted">لا يوجد</div>'}</div>`;
+    return panel("أولويات الشهر القادم",`<div class="pri">${col("critical","🔴 الأولوية 1 — حرجة")}${col("high","🟠 الأولوية 2 — مرتفعة")}${col("medium","🟡 الأولوية 3 — متوسطة")}</div><div class="muted">${esc(p.rule_ar)}</div>`);}
+  function comparison(){const c=R("comparison");if(!c)return restricted();
+    return panel(`المقارنة: ${esc(c.period)} مقابل ${esc(c.previous_period||"—")} (شهري) و${esc(c.last_year_period||"—")} (سنوي)`,`<div class="tbl"><table><thead><tr><th>المؤشر</th><th>الحالي</th><th>عن الشهر السابق</th><th>عن نفس الشهر العام الماضي</th></tr></thead><tbody>${c.rows.map(r=>`<tr><td><b>${esc(r.ar)}</b></td><td>${r.unit==="%"?n(r.current,1)+"%":n(r.current)}</td><td>${r.unit==="%"?pp(r.mom_pp):pc(r.mom_pct,r.inverse)||"—"}</td><td>${r.unit==="%"?(r.yoy_pp!=null?pp(r.yoy_pp):'<span class="muted">غير متاح</span>'):(r.yoy_pct!=null?pc(r.yoy_pct,r.inverse):'<span class="muted">غير متاح</span>')}</td></tr>`).join("")}</tbody></table></div>${c.yoy_reason_ar?`<div class="muted">${esc(c.yoy_reason_ar)}</div>`:""}<ul>${c.lines_ar.map(l=>`<li>${esc(l)}</li>`).join("")}</ul>`);}
+  function chart(series,keys){const pts=series.filter(s=>keys.some(([k])=>s[k]!=null));if(pts.length<2)return na("بيانات غير كافية للرسم");
+    const W=640,Hh=180,P=34;const vals=pts.flatMap(s=>keys.map(([k])=>s[k]).filter(v=>v!=null));let lo=Math.min(0,...vals),hi=Math.max(...vals);if(hi===lo)hi=lo+1;
+    const x=i=>P+i*(W-2*P)/(pts.length-1),y=v=>Hh-20-(v-lo)/(hi-lo)*(Hh-40);
+    const lines=keys.map(([k,,c])=>{const d=pts.map((s,i)=>s[k]==null?null:`${x(i)},${y(s[k])}`).filter(Boolean).join(" ");return `<polyline points="${d}" fill="none" stroke="${c}" stroke-width="2.5"/>`+pts.map((s,i)=>s[k]==null?"":`<circle cx="${x(i)}" cy="${y(s[k])}" r="3" fill="${c}"><title>${esc(s.period)} · ${n(s[k])}</title></circle>`).join("");}).join("");
+    return `<svg class="ch" viewBox="0 0 ${W} ${Hh}" preserveAspectRatio="none"><line x1="${P}" x2="${W-P}" y1="${y(0)}" y2="${y(0)}" stroke="#334" stroke-dasharray="3 3"/>${lines}${pts.map((s,i)=>i%2?"":`<text x="${x(i)}" y="${Hh-4}" font-size="10" fill="#8ba396" text-anchor="middle">${esc(s.period.slice(2))}</text>`).join("")}</svg><div class="legend">${keys.map(([,l,c])=>`<span><i style="background:${c}"></i>${l}</span>`).join("")}</div>`;}
+  function trend(){const t=R("trend");if(!t)return restricted();const dd=t.directions||{};const DL={revenue:"الإيراد",net_profit:"صافي الربح",margin:"الهامش",cash:"النقد",leakage:"التسرب",risk:"المخاطر"};
+    return panel(`اتجاه آخر ${t.series.length} شهراً ${t.verdict_ar?`<span class="b ${t.verdict_ar.includes("يسوء")?"critical":t.verdict_ar.includes("يتحسن")?"low":"medium"}">${esc(t.verdict_ar)}</span>`:""}`,
+      `${chart(t.series,[["revenue","الإيراد","#10b981"],["net_profit","صافي الربح","#f97316"]])}<div class="grid2" style="margin-top:12px"><div>${chart(t.series,[["cash","رصيد النقد آخر الشهر","#60a5fa"]])}</div><div>${chart(t.series,[["leakage","التسرب المكتشف","#ef4444"]])}</div></div>
+      <div class="chips" style="margin-top:10px">${Object.entries(dd).filter(([,v])=>v).map(([k,v])=>`<span class="b ${v.dir==="improving"?"low":v.dir==="worsening"?"critical":"grey"}">${esc(DL[k]||k)}: ${esc(v.ar)}</span>`).join("")}</div><div class="muted">${esc(t.rule_ar)} · ${esc(t.customers_note_ar)} — الهدف: هل الأداء يتحسن أم يسوء؟ (ليس لوحة مؤشرات أخرى)</div>`);}
+  function confidence(){const c=R("confidence");if(!c)return restricted();
+    return panel(`ثقة البيانات <span class="b ${c.overall==="high"?"low":c.overall==="low"?"critical":"medium"}">الثقة العامة: ${esc(c.overall_ar)}</span>`,`<div class="tbl"><table><thead><tr><th>المجال</th><th>الثقة</th><th>الأساس</th></tr></thead><tbody>${c.rows.map(r=>`<tr><td><b>${esc(r.ar)}</b></td><td class="${r.level==="high"?"pos":r.level==="low"?"neg":r.level==="na"?"muted":"warn"}">${esc(r.level_ar)}</td><td class="muted" style="white-space:normal">${esc(r.basis_ar)}</td></tr>`).join("")}</tbody></table></div>
+      ${c.warning_ar?`<div class="na neg">⚠️ ${esc(c.warning_ar)}</div>`:""}${(c.errors||[]).length?`<h3>وحدات تعذّر تحميلها</h3><ul>${c.errors.map(e=>`<li>${esc(e.module)}: ${esc(e.ar)}</li>`).join("")}</ul>`:""}<div class="muted">آخر بيانات: ${esc(c.data_end||"—")} · ${esc(c.rule_ar)}</div>`);}
+  function sector(){const s=R("sector");if(!s)return restricted();return panel(`مؤشرات القطاع الشهرية <span class="muted">${esc(s.sector)}</span>`,`<div class="tiles">${s.rows.map(tile).join("")}</div><div class="muted">${esc(s.note_ar)}</div>`);}
+  function closing(){const c=R("closing");if(!c)return restricted();
+    return panel(`إقفال الشهر — ${c.ready_for_review?'<span class="b low">جاهز للمراجعة</span>':'<span class="b critical">يوجد ما يمنع التجهيز</span>'}`,c.steps.map(s=>`<div class="step"><span class="i">${s.icon}</span><div><b>${s.step}. ${esc(s.ar)}</b><div class="muted">${esc(s.detail_ar)}</div></div></div>`).join("")+(c.blockers.length?`<div class="na neg">${c.blockers.map(esc).join("<br>")}</div>`:""));}
+  function historyView(){const rs=D.reports||[];
+    return panel("سجل التقارير الشهرية (Report History)",(rs.length?`<div class="tbl"><table><thead><tr><th>الشهر</th><th>النسخة</th><th>وُلّد</th><th>بواسطة</th><th>الثقة</th><th>الحالة</th><th>قرارات</th><th>تصدير</th><th></th></tr></thead><tbody>${rs.map(r=>`<tr><td>${esc(r.period)}</td><td>V${r.version}</td><td>${esc(r.generated_at)}</td><td>${esc(r.generated_by)}</td><td>${esc({high:"مرتفعة",medium:"متوسطة",low:"منخفضة"}[r.confidence]||r.confidence||"—")}</td><td><span class="b ${STCLS[r.status]}">${esc(STAT[r.status]||r.status)}</span></td><td>${n(r.decisions_created)}</td><td>${n(r.exports)}</td><td><button class="btn ghost" data-open="${r.id}">فتح</button></td></tr>`).join("")}</tbody></table></div>`:na("لم يُولّد أي تقرير بعد"))
+      +`<div class="muted">كل توليد = نسخة جديدة؛ النسخ السابقة لنفس الشهر تصبح «مُستبدلة» ولا تُحذف.</div>`)
+      +(!D.live&&D.version_diff?panel(`لماذا تختلف هذه النسخة عن V${D.previous_version.version}؟`,`${D.version_diff.metrics.length?`<div class="tbl"><table><thead><tr><th>المؤشر</th><th>قبل</th><th>بعد</th></tr></thead><tbody>${D.version_diff.metrics.map(m=>`<tr><td>${esc(m.metric)}</td><td>${n(m.before,2)}</td><td>${n(m.after,2)}</td></tr>`).join("")}</tbody></table></div>`:na("لا تغير في المؤشرات الرئيسية")}${D.version_diff.new_observations.length?`<h3>ملاحظات جديدة</h3><ul>${D.version_diff.new_observations.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`:""}`):"")
+      +(!D.live&&(D.access_log||[]).length?panel("سجل التدقيق لهذه النسخة",`<ul>${D.access_log.map(a=>`<li><b>${esc(a.at)}</b> — ${esc(a.user)} · ${esc({monthly_generate:"ولّد",monthly_report_view:"شاهد",monthly_export:"صدّر PDF",monthly_status:"غيّر الحالة",monthly_to_decision:"أنشأ قراراً",monthly_ai:"سأل الذكاء الاصطناعي",monthly_superseded:"استُبدلت"}[a.action]||a.action)} <span class="muted">${esc(a.details||"")}</span></li>`).join("")}</ul>`):"");}
+  const aiView=()=>panel("AI Monthly Intelligence — المحرك يحسب، الذكاء الاصطناعي يشرح",`<div class="chips">${(D.ai_questions||[]).map(q=>`<span class="chip" data-q="${esc(q)}">${esc(q)}</span>`).join("")}</div><div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap"><input class="search" id="aiQ" placeholder="اسأل عن هذا الشهر…"><button class="btn" id="aiGo">اسأل</button><button class="btn ghost" id="narr">✍ سرد تنفيذي للشهر</button></div><div id="aiOut" style="margin-top:12px"></div>`)
+    +panel("أسئلة الرئيس التنفيذي — من أين تأتي الإجابة؟",(D.ceo_questions||[]).map(q=>`<div class="obs medium"><b>${esc(q.q)}</b><div class="chips" style="margin-top:6px">${q.sections.map(s=>`<span class="chip" data-go="${esc(s==="forecast"?"overview":s)}">${esc((TABS.find(t=>t[0]===s)||[s,s==="forecast"?"التوقعات":s])[1])}</span>`).join("")}</div></div>`).join(""));
+  function aiHtml(j){const a=j.ai||{},resp=a.response||{},L={FACTS:"من التقرير الموثق",INTERPRETATION:"القراءة",HYPOTHESES:"عوامل مرتبطة (ليست أسباباً مثبتة)",RECOMMENDATIONS:"المطلوب",DATA_GAPS:"بيانات ناقصة"};
+    return `<div class="muted" style="margin:6px 0">«${esc(j.question)}» · الأرقام من محركات نبّاه — الذكاء الاصطناعي يشرح فقط</div>`+(a.message?`<div class="na">${esc(a.message)}</div>`:"")+Object.keys(L).map(k=>resp[k]&&resp[k].length?`<div class="ai-sec"><b>${L[k]}</b><ul style="margin:0;padding-inline-start:18px">${resp[k].map(x=>`<li>${esc(typeof x==="string"?x:JSON.stringify(x))}</li>`).join("")}</ul></div>`:"").join("")+((j.sources||[]).length?`<div class="muted">المصادر: ${j.sources.map(esc).join(" · ")}</div>`:"");}
+  function runAI(q,narr){if(route()[0]!=="ai"){go("ai");setTimeout(()=>runAI(q,narr),60);return;}const out=$("aiOut");out.innerHTML=`<div class="muted">جارٍ التحليل…</div>`;
+    api("/company/monthly/ai-insights",{question:q,narrative:!!narr,report_id:D.live?undefined:D.report.id}).then(j=>{out.innerHTML=aiHtml(j);}).catch(er=>{out.innerHTML=`<div class="neg">${esc(er.message)}</div>`;});}
+  const VIEWS={overview,summary,financial,money,sales,expenses,profit,cashflow,branches,inventory_purchases,operations_hr,risk_leakage,tax,observations,root_causes,gap,opportunities,decisions,followup,priorities,comparison,trend,confidence,sector,closing,history:historyView,ai:aiView};
+  function render(){EV={};evI=0;const [v]=route();const allowed=new Set((D.sections_index||[]).filter(s=>s.allowed).map(s=>s.key).concat(["history","ai"]));
+    const tabs=TABS.filter(([k])=>allowed.has(k));const cur=tabs.some(([k])=>k===v)?v:"overview";
+    $("tabs").innerHTML=tabs.map(([k,l],i)=>`<button class="tab ${k===cur?"on":""}" data-go="${k}"><span class="muted" style="font-size:10px">${String(i+1).padStart(2,"0")}</span> ${l}${k==="observations"&&Array.isArray(D.observations)&&D.observations.length?` <span class="b high">${D.observations.length}</span>`:""}</button>`).join("");
+    $("content").innerHTML=(VIEWS[cur]||overview)();bind();}
+  function bind(){document.querySelectorAll("[data-go]").forEach(el=>el.onclick=e=>{e.stopPropagation();go(el.dataset.go);});
+    document.querySelectorAll("#content [data-br]").forEach(el=>el.onclick=()=>go("branches",el.dataset.br));
+    document.querySelectorAll("#content [data-ev]").forEach(el=>el.onclick=e=>{e.stopPropagation();const m=EV[el.dataset.ev],p=$("pop");
+      p.innerHTML=`<b>${esc(m.label)}</b><div>${m.available===false?esc(m.reason_ar):fv(m.value,m.unit)}</div><div class="muted">المصدر: ${esc(m.source_ar)}${m.source_entity?" · "+esc(m.source_entity):""}</div>${m.period?`<div class="muted">الفترة: ${esc(m.period)}${m.comparison_period?" مقابل "+esc(m.comparison_period):""}</div>`:""}${m.calculation_method?`<div class="muted">الحساب: ${esc(m.calculation_method)}</div>`:""}<div class="muted">الثقة: ${esc(CONF[m.confidence]||m.confidence||"—")} · الجودة: ${esc(m.data_quality_status||"—")}</div><div class="muted">${esc(m.calculation_version||"")} · ${esc(m.generated_at||"")}</div>${m.basis_ar?`<div class="muted">الأساس: ${esc(m.basis_ar)}</div>`:""}${m.link?`<a href="${esc(m.link)}" style="color:var(--mint,#10b981)">افتح المصدر ↗</a>`:""}`;
+      p.style.display="block";p.style.top=Math.min(window.innerHeight-230,e.clientY+10)+"px";p.style.left=Math.max(8,Math.min(window.innerWidth-350,e.clientX-170))+"px";});
+    document.querySelectorAll("#content [data-q]").forEach(c=>c.onclick=()=>runAI(c.dataset.q));
+    const ag=$("aiGo");if(ag)ag.onclick=()=>{const q=$("aiQ").value.trim();if(q)runAI(q);};
+    const nb=$("narr");if(nb)nb.onclick=()=>runAI("سرد تنفيذي",true);
+    document.querySelectorAll("#content [data-open]").forEach(b=>b.onclick=()=>{$("ver").value=b.dataset.open;load(b.dataset.open);});
+    document.querySelectorAll("#content [data-mkdec]").forEach(b=>b.onclick=()=>{$("modal").innerHTML=`<h3 style="margin-top:0">إنشاء قرار في مركز متابعة القرارات</h3><div class="fg"><label>المسؤول<input id="dO" placeholder="اسم المسؤول"></label><label>الموعد<input id="dD" type="date" value="${esc(b.dataset.due)}"></label><label>مستهدف المؤشر<input id="dT" type="number" step="any" placeholder="اختياري"></label><label>الأثر المتوقع (ر.س)<input id="dE" type="number" step="any" placeholder="اختياري"></label></div><div class="muted">يُنشأ كمسودة في 3.9 بخط أساس من المصدر الموحد — ويقيسه التقرير القادم.</div><div class="cta"><button class="btn" id="dGo">إنشاء</button><button class="btn ghost" id="dC">إلغاء</button><span id="dM" class="muted"></span></div>`;$("ov").classList.add("on");
+      $("dC").onclick=()=>$("ov").classList.remove("on");
+      $("dGo").onclick=()=>{const body={report_id:D.report.id,rec_id:Number(b.dataset.mkdec),due:$("dD").value};if($("dO").value.trim())body.owner=$("dO").value.trim();if($("dT").value!=="")body.target=Number($("dT").value);if($("dE").value!=="")body.expected_impact=Number($("dE").value);
+        api("/company/monthly/to-decision",body).then(j=>{$("ov").classList.remove("on");load(D.report.id);}).catch(er=>{$("dM").className="neg";$("dM").textContent=er.message;});};});}
+  document.addEventListener("click",()=>{$("pop").style.display="none";});
+  // ── 3.11.27 ملف PDF: الغلاف + 16 قسماً (طباعة المتصفح، والتصدير يُسجَّل)
+  function printReport(){const keep=$("content").innerHTML;const fc=()=>{const f=D.forecast||{};return panel("التوقعات",f.available?`<div class="tbl"><table><thead><tr><th>الشهر</th><th>الإيراد المتوقع</th><th>النطاق</th></tr></thead><tbody>${f.next.map(x=>`<tr><td>${esc(x.period)}</td><td>${n(x.revenue)}</td><td>${n(x.lower)} – ${n(x.upper)}</td></tr>`).join("")}</tbody></table></div>`:na(f.reason_ar));};
+    const pv=Object.assign({},VIEWS,{forecast:fc});
+    let html=`<div class="pg cover"><h1>NABBAH MONTHLY BUSINESS REPORT</h1><h2>تقرير الأعمال الشهري</h2><h2>${esc(D.company||"")}</h2><div>الفترة: ${esc(D.period)}</div><div>تاريخ التوليد: ${esc(D.live?D.generated_at:D.report.generated_at)}${D.live?" (تقرير حي غير محفوظ)":" · النسخة "+D.report.version+" · "+esc(STAT[D.report.status]||"")}</div><div style="margin-top:24px;font-weight:900">سري — Confidential</div></div>`;
+    (D.pdf_pages||[]).filter(p=>p.key!=="cover").forEach(p=>{let body="";try{EV={};body=(pv[p.key]||(()=>na("—")))();}catch(_){body=na("—");}html+=`<div class="pg"><div style="font-size:11px;color:#666">${esc(p.ar)} · ${esc(D.period)} · سري</div>${body}</div>`;});
+    $("printv").innerHTML=html;$("content").innerHTML=keep;bind();
+    api("/company/monthly/export",{id:D.live?undefined:D.report.id}).catch(()=>{});setTimeout(()=>window.print(),120);}
+  $("btnPdf").onclick=printReport;
+  $("ver").onchange=()=>load($("ver").value||null);
+  $("btnGen").onclick=()=>{$("modal").innerHTML=`<h3 style="margin-top:0">توليد التقرير الشهري</h3><div class="fg"><label style="grid-column:1/-1">عنوان التقرير<input id="gT" placeholder="اختياري"></label></div><div class="muted">تُنشأ نسخة جديدة محفوظة كمسودة من البيانات الحالية. أي نسخة سابقة لنفس الشهر تصبح «مُستبدلة» وتبقى في السجل.</div><div class="cta"><button class="btn" id="gGo">توليد</button><button class="btn ghost" id="gC">إلغاء</button><span id="gM" class="muted"></span></div>`;$("ov").classList.add("on");
+    $("gC").onclick=()=>$("ov").classList.remove("on");$("gGo").onclick=()=>{$("gGo").disabled=true;api("/company/monthly/generate",{title:$("gT").value}).then(j=>{$("ov").classList.remove("on");load(j.id);}).catch(er=>{$("gGo").disabled=false;$("gM").className="neg";$("gM").textContent=er.message;});};};
+  $("ov").onclick=e=>{if(e.target===$("ov"))$("ov").classList.remove("on");};
+  const [v0,a0]=route();if(v0==="report"&&a0){load(a0);history.replaceState(null,"","#overview");}else load();
+})();
+</script>
+<script src="nabbah-sidebar.js"></script>
+</body>
+</html>
