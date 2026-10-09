@@ -17,6 +17,7 @@
       { label: "مركز القيادة التنفيذي", href: "company-command-center.html" },
       { label: "صحة الشركة", href: "company-health.html" },
       { label: "الأهداف والنتائج", href: "company-goals-intelligence.html" },
+      { label: "التقرير التنفيذي", href: "company-executive-report-intelligence.html" },
       { label: "التقرير الشهري الذكي", href: "company-monthly-intelligence.html" },
       { label: "عرض مجلس الإدارة", href: "company-board-intelligence.html" },
       { label: "عرض المجلس (السابق)", href: "company-board.html" },
@@ -83,7 +84,8 @@
     ]},
     { icon: "📊", label: "التقارير", items: [
       { label: "مركز التقارير", href: "company-reports.html" },
-      { label: "التقرير التنفيذي الذكي", href: "company-executive-report.html" },
+      { label: "التقرير التنفيذي الذكي", href: "company-executive-report-intelligence.html" },
+      { label: "التقرير التنفيذي (السابق)", href: "company-executive-report.html" },
       { label: "التقرير التنفيذي", href: "company-report.html" },
       { label: "التقرير الشهري الذكي", href: "company-monthly-intelligence.html" },
       { label: "التقرير الشهري (السابق)", href: "company-monthly-report.html" },
