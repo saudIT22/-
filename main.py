@@ -1195,6 +1195,115 @@ class CompanyMonthlyReportRecommendation(SQLModel, table=True):
     created_at: str = ""
 
 
+# ═══ Phase 3.12 — Executive Report: كيانات التقرير فقط (النسخة = صف بالرقم، اللقطة داخلها، التدقيق في AuditLog الموحد) ═══
+class CompanyExecReport(SQLModel, table=True):
+    """ExecutiveReport + Version + Snapshot: تعريف التقرير والفترة والحالة ورقم النسخة وسببها ولقطة البيانات وقت الإنشاء."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    period: str = Field(default="", index=True)
+    version: int = 1
+    title: str = ""
+    status: str = "draft"             # draft | review | approved | published | superseded
+    version_reason: str = ""
+    confidence: str = ""
+    generated_by: str = ""
+    generated_by_id: Optional[int] = None
+    generated_at: _DTCOL = Field(default_factory=_now_naive)
+    approved_by: str = ""
+    approved_at: str = ""
+    published_at: str = ""
+    superseded_by: Optional[int] = None
+    report_json: str = "{}"
+    snapshot_json: str = "{}"
+    data_fingerprint: str = ""        # بصمة البيانات وقت الإنشاء — لإظهار «تغيّرت البيانات بعد الإنشاء»
+    checksum: str = ""
+    engine_version: str = ""
+    monthly_report_id: Optional[int] = None
+    exports: int = 0
+
+
+class CompanyExecReportSection(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    report_id: int = Field(index=True)
+    section: str = ""
+    sort_order: int = 0
+    content_json: str = "{}"
+
+
+class CompanyExecReportMetric(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    report_id: int = Field(index=True)
+    metric_name: str = ""
+    label: str = ""
+    value: Optional[float] = None
+    unit: str = ""
+    period: str = ""
+    source_module: str = ""
+    calculation_version: str = ""
+    confidence: str = ""
+
+
+class CompanyExecReportObservation(SQLModel, table=True):
+    """الملاحظات التنفيذية (الاستثناءات الحرجة) وقت الإنشاء."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    report_id: int = Field(index=True)
+    severity: str = ""
+    title: str = ""
+    detail: str = ""
+    source_module: str = ""
+    impact_amount: Optional[float] = None
+    owner: str = ""
+    action: str = ""
+
+
+class CompanyExecReportRecommendation(SQLModel, table=True):
+    """توصية تنفيذية (قرار مقترح أو أولوية 30 يوماً) — تتحول إلى قرار 3.9."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    report_id: int = Field(index=True)
+    kind: str = ""                    # proposed | next30
+    no: str = ""
+    title: str = ""
+    reason: str = ""
+    priority: str = ""
+    owner: str = ""
+    deadline: str = ""
+    kpi: str = ""
+    expected_impact: Optional[float] = None
+    category: str = ""
+    branch: str = ""
+    decision_id: Optional[int] = None
+    created_by: str = ""
+    created_at: str = ""
+
+
+class CompanyExecDecisionLink(SQLModel, table=True):
+    """ExecutiveReportDecisionLink: ربط التقرير بقرار قائم + الإجراء التنفيذي عليه (اعتماد/رفض/أدلة/إحالة/تأجيل)."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    report_id: Optional[int] = Field(default=None, index=True)
+    decision_id: int = Field(index=True)
+    action: str = ""
+    note: str = ""
+    target: str = ""
+    until: str = ""
+    by_name: str = ""
+    by_id: Optional[int] = None
+    at: str = ""
+
+
+class CompanyExecSetting(SQLModel, table=True):
+    """حدود الاعتماد وقواعد المراجعة الخاصة بالشركة — لا أرقام افتراضية في النظام."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    settings_json: str = "{}"
+    updated_by: str = ""
+    updated_at: str = ""
+
+
 class BenchmarkDataset(SQLModel, table=True):
     """طبقة المعايير القطاعية (3.5): company_id فارغ = معيار المنصّة (من الإدارة)، وإلا معيار خاص بالشركة.
     كل معيار بمصدره ومنهجيته وفترته وعيّنته وثقته — لا معيار بلا مصدر."""
@@ -1922,6 +2031,11 @@ def page_board_intelligence():
 @app.get("/company-monthly-intelligence.html")
 def page_monthly_intelligence():
     return FileResponse("company-monthly-intelligence.html")
+
+
+@app.get("/company-executive-report-intelligence.html")
+def page_exec_report_intelligence():
+    return FileResponse("company-executive-report-intelligence.html")
 
 
 @app.get("/company-sector-benchmark.html")
@@ -4808,7 +4922,7 @@ def _load_p24(name):
     """يحمّل محركات 2.4 من المجلد أو من حزمة nabbah_engines."""
     try:
         import sys as _sys, os as _os, importlib
-        for _d in ("phase21", "phase22", "phase23", "phase24", "phase25", "phase26", "phase27", "phase28", "phase29", "phase210", "phase211", "phase30", "phase31", "phase32", "phase33", "phase34", "phase35", "phase37", "phase38", "phase39", "phase310", "phase311"):
+        for _d in ("phase21", "phase22", "phase23", "phase24", "phase25", "phase26", "phase27", "phase28", "phase29", "phase210", "phase211", "phase30", "phase31", "phase32", "phase33", "phase34", "phase35", "phase37", "phase38", "phase39", "phase310", "phase311", "phase312"):
             _p = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), _d)
             if _p not in _sys.path:
                 _sys.path.insert(0, _p)
@@ -9102,6 +9216,14 @@ def company_decision_center_save(data: dict, user: User = Depends(get_current_us
         else:
             _dec_baselines(s, company, dx, [], m.branch or None, m)
         s.add(m)
+        if m.workflow in ("approved", "in_progress") and any(c[0] in ("title", "expected_impact", "cost") for c in changes):
+            # 3.12 — لا يُعدّل قرار معتمد بصمت: تعديل النطاق أو الميزانية أو الأثر يعيده للاعتماد
+            _old_wf = m.workflow
+            m.workflow, m.approved_by, m.approved_at = "pending_approval", "", ""
+            d.approver = ""
+            _dec_sync_legacy(d, "pending_approval")
+            s.add(d)
+            _dec_hist(s, company.id, d.id, "reapproval_required", by, _old_wf, "pending_approval", "تعديل يمس النطاق أو الميزانية أو الأثر — يعود للاعتماد")
         for f, a, b in changes:
             _dec_hist(s, company.id, d.id, "owner_changed" if f == "owner" else "edited", by, a, b, str(data.get("reason") or f))
         s.commit()
@@ -9480,6 +9602,9 @@ def _board_live(s, company, role, viewer, sc, be, *, before_id=None):
         _mr = _monthly_latest(s, company.id)
         pack["monthly_report"] = {"id": _mr.id, "period": _mr.period, "version": _mr.version, "status": _mr.status,
                                   "link": "company-monthly-intelligence.html#report/" + str(_mr.id)} if _mr else None
+        _xr = _exec_latest(s, company.id)
+        pack["executive_report"] = {"id": _xr.id, "period": _xr.period, "version": _xr.version, "status": _xr.status,
+                                    "link": "company-executive-report-intelligence.html#report/" + str(_xr.id)} if _xr else None
     except Exception as _e:
         _logger.error(f"board monthly ref: {type(_e).__name__}: {str(_e)[:200]}")
         pack["monthly_report"] = None
@@ -9690,7 +9815,7 @@ def _monthly_scope(s, user):
     return company, role, viewer, sc, me
 
 
-def _monthly_live(s, company, role, viewer, me, *, status=None, decisions_created=0):
+def _monthly_live(s, company, role, viewer, me, *, status=None, decisions_created=0, parts=False):
     """يبني التقرير الحي: نفس سياق المحركات مرة واحدة → المبيعات لشهر التقرير → الأهداف (3.8) والقرارات (3.9) → التقرير. يُبنى كاملاً ثم يُقيّد بالصلاحية."""
     cd = _goals_ctx(s, company)
     ctx, d = cd
@@ -9710,6 +9835,8 @@ def _monthly_live(s, company, role, viewer, me, *, status=None, decisions_create
                               budget=(_fin_settings(s, company.id).get("budget") or {}), sector=_risk_sector(company), today=d["today"], viewer=full,
                               currency=getattr(company, "currency", None) or "SAR", company_name=company.name, risk_history=_risk_history(s, company.id),
                               errors=errors, report_status=status, decisions_created=decisions_created)
+    if parts:   # 3.12 يستهلك نفس المدخلات والتقرير الشهري الكامل — لا إعادة حساب
+        return rep_, me.restrict(rep_, viewer), {"ctx": ctx, "d": d, "gres": gres, "dres": dres, "sales": sales, "errors": errors}
     return rep_, me.restrict(rep_, viewer)
 
 
@@ -9979,6 +10106,413 @@ def _monthly_latest(s, company_id, statuses=("published", "approved")):
                   .order_by(CompanyMonthlyReport.generated_at.desc())).first()
 
 
+# ═══════════════════════════════════════════════════════════
+#  Phase 3.12 — Executive Report Intelligence (التقرير التنفيذي) — ينتقي من التقرير الشهري والمحركات، والقرارات عبر مسار 3.9 فقط
+# ═══════════════════════════════════════════════════════════
+def _xr_scope(s, user):
+    company, role, viewer = _goals_scope(s, user)
+    xe = _load_p24("executive_engine")
+    me = _load_p24("monthly_engine")
+    if xe is None or me is None:
+        raise HTTPException(503, "محرّك التقرير التنفيذي غير متاح — " + _p23_diagnostic())
+    sc = xe.exec_scope(viewer)
+    if sc["kind"] == "none":
+        raise HTTPException(403, "التقرير التنفيذي حسب الصلاحية: الرئيس التنفيذي/المالك، المدير المالي، مدير العمليات، الموارد البشرية، مدير الفرع (فرعه)، ومجلس الإدارة (المنشور)")
+    return company, role, viewer, sc, xe, me
+
+
+def _exec_settings(s, company_id):
+    r = s.exec(select(CompanyExecSetting).where(CompanyExecSetting.company_id == company_id)).first()
+    try:
+        return json.loads(r.settings_json or "{}") if r else {}
+    except (TypeError, ValueError):
+        return {}
+
+
+def _exec_fingerprint(s, company):
+    """بصمة خفيفة للبيانات: عدد ونطاق المبيعات + القرارات + الأهداف — تكشف تغيّر البيانات بعد إنشاء نسخة."""
+    rows = _sales_rows(s, company.id)
+    dts = [str(r.get("date") or "")[:10] for r in rows if r.get("date")]
+    nd = len(s.exec(select(CompanyDecision).where(CompanyDecision.company_id == company.id)).all())
+    ng = len(s.exec(select(CompanyGoal).where(CompanyGoal.company_id == company.id)).all())
+    tot = round(sum(float(r.get("net_sales") or 0) for r in rows), 2)
+    return f"s{len(rows)}:{max(dts) if dts else '-'}:{tot}|d{nd}|g{ng}"
+
+
+def _exec_live(s, company, role, viewer, xe, me):
+    full_m, _r, P = _monthly_live(s, company, role, viewer, me, parts=True)
+    d = P["d"]
+    rep_ = xe.analyze_executive(monthly=full_m, ctx=P["ctx"], mods=d["mods"], sales=P["sales"], risk=d["risk"], drivers=d["drivers"], pred=d["pred"],
+                                goals_res=P["gres"], dec_res=P["dres"], sector=_risk_sector(company), today=d["today"], viewer={"role": "owner", "user_id": viewer.get("user_id")},
+                                settings=_exec_settings(s, company.id), company_name=company.name, register=(d["risk"] or {}).get("register"))
+    rep_["module_errors"] = P["errors"]
+    return rep_, xe.restrict(rep_, viewer)
+
+
+def _exec_reports(s, company_id, sc=None):
+    rows = s.exec(select(CompanyExecReport).where(CompanyExecReport.company_id == company_id).order_by(CompanyExecReport.generated_at.desc()).limit(120)).all()
+    if sc and sc.get("published_only"):
+        rows = [r for r in rows if r.status == "published"]
+    return [{"id": r.id, "period": r.period, "version": r.version, "title": r.title, "status": r.status, "reason": r.version_reason, "confidence": r.confidence,
+             "generated_by": r.generated_by, "generated_at": r.generated_at.strftime("%Y-%m-%d %H:%M") if r.generated_at else "", "approved_by": r.approved_by,
+             "approved_at": r.approved_at, "published_at": r.published_at, "superseded_by": r.superseded_by, "exports": r.exports or 0, "engine": r.engine_version} for r in rows]
+
+
+def _exec_load(s, company, rid):
+    r = s.get(CompanyExecReport, int(rid or 0))
+    if not r or r.company_id != company.id:
+        raise HTTPException(404, "التقرير غير موجود")
+    return r
+
+
+def _exec_links(s, company_id, report_id=None):
+    q = select(CompanyExecDecisionLink).where(CompanyExecDecisionLink.company_id == company_id)
+    rows = s.exec(q).all()
+    return [{"id": x.id, "report_id": x.report_id, "decision_id": x.decision_id, "action": x.action, "note": x.note, "target": x.target, "until": x.until,
+             "by": x.by_name, "at": x.at} for x in rows if report_id is None or x.report_id in (None, report_id)][-100:]
+
+
+@app.get("/company/executive-report-intelligence")
+def company_exec_report_intelligence(user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role, viewer, sc, xe, me = _xr_scope(s, user)
+        if sc.get("published_only"):
+            pub = s.exec(select(CompanyExecReport).where(CompanyExecReport.company_id == company.id, CompanyExecReport.status == "published")
+                         .order_by(CompanyExecReport.generated_at.desc())).first()
+            if not pub:
+                return {"live": False, "empty": True, "scope": {k: v for k, v in sc.items() if k != "sections"}, "reports": [],
+                        "message_ar": "لا يوجد تقرير تنفيذي منشور بعد — تظهر نسخة المجلس هنا بعد نشرها"}
+            return company_exec_report_get(pub.id, user=user)
+        try:
+            _full, rep_ = _exec_live(s, company, role, viewer, xe, me)
+        except HTTPException:
+            raise
+        except Exception as e:
+            import traceback as _tb
+            _logger.error("executive-report failed:\n" + _tb.format_exc()[-3000:])
+            raise HTTPException(500, f"خطأ في التقرير التنفيذي — {type(e).__name__}: {str(e)[:200]} (التفاصيل في سجل الخادم)")
+        rep_["reports"] = _exec_reports(s, company.id, sc)
+        rep_["decision_links"] = _exec_links(s, company.id)
+        rep_["settings"] = dict(xe.DEFAULT_SETTINGS, **_exec_settings(s, company.id)) if sc["kind"] in ("full", "cfo") else None
+        rep_["live"] = True
+        log_audit(company.id, user.id, user.name, "exec_view", "exec:live", f"scope={sc['kind']} period={rep_.get('period')}")
+        return rep_
+
+
+@app.post("/company/exec-report/generate")
+def company_exec_report_generate(data: dict, user: User = Depends(get_current_user)):
+    """3.12.9 — Generate Executive Report: نسخة جديدة محفوظة بلقطة وبصمة بيانات. نسخة ثانية لنفس الفترة تتطلب سبب الإصدار."""
+    with Session(engine) as s:
+        company, role, viewer, sc, xe, me = _xr_scope(s, user)
+        if not sc["can_generate"]:
+            raise HTTPException(403, "إنشاء التقرير التنفيذي للرئيس التنفيذي/المالك والمدير المالي")
+        full, _ = _exec_live(s, company, role, {"role": "owner", "user_id": user.id}, xe, me)
+        same = s.exec(select(CompanyExecReport).where(CompanyExecReport.company_id == company.id, CompanyExecReport.period == full["period"])).all()
+        reason = str(data.get("reason") or "").strip()[:300]
+        if same and not reason:
+            raise HTTPException(422, "سبب إصدار نسخة جديدة مطلوب (مثلاً: تحديث البيانات، تصحيح، طلب المجلس)")
+        ver = max([r.version for r in same] or [0]) + 1
+        mr = s.exec(select(CompanyMonthlyReport).where(CompanyMonthlyReport.company_id == company.id, CompanyMonthlyReport.period == full["period"],
+                                                       CompanyMonthlyReport.status != "superseded").order_by(CompanyMonthlyReport.generated_at.desc())).first()
+        import hashlib as _h
+        body = json.dumps(full, ensure_ascii=False, default=str)
+        r = CompanyExecReport(company_id=company.id, period=full["period"], version=ver, status="draft", version_reason=reason or "الإصدار الأول",
+                              title=str(data.get("title") or f"التقرير التنفيذي — {full['period']} — V{ver}")[:200],
+                              confidence=(full.get("confidence") or {}).get("overall") or "", generated_by=(user.name or user.email)[:100], generated_by_id=user.id,
+                              generated_at=datetime.now(), report_json=body, snapshot_json=json.dumps(full["snapshot"], ensure_ascii=False, default=str),
+                              data_fingerprint=_exec_fingerprint(s, company), checksum=_h.sha256(body.encode()).hexdigest()[:32], engine_version=full["version"],
+                              monthly_report_id=mr.id if mr else None)
+        s.add(r); s.commit(); s.refresh(r)
+        for o in same:
+            if o.status != "superseded":
+                was = o.status
+                o.status, o.superseded_by = "superseded", r.id
+                s.add(o)
+                log_audit(company.id, user.id, user.name, "exec_superseded", f"exec:{o.id}", f"by={r.id} was={was}")
+        for i, (k, _a) in enumerate(xe.SECTIONS):
+            s.add(CompanyExecReportSection(company_id=company.id, report_id=r.id, section=k, sort_order=i, content_json=json.dumps(full.get(k), ensure_ascii=False, default=str)[:300000]))
+        for m in full["metrics"]:
+            s.add(CompanyExecReportMetric(company_id=company.id, report_id=r.id, metric_name=str(m.get("metric_name") or "")[:80], label=str(m.get("label") or "")[:120],
+                                          value=m.get("value"), unit=str(m.get("unit") or "")[:20], period=str(m.get("period") or "")[:60],
+                                          source_module=str(m.get("source_module") or "")[:40], calculation_version=str(m.get("calculation_version") or "")[:30],
+                                          confidence=str(m.get("confidence") or "")[:20]))
+        for x in full["exceptions"]["items"]:
+            s.add(CompanyExecReportObservation(company_id=company.id, report_id=r.id, severity=x["severity"], title=x["title_ar"][:300], detail=str(x.get("detail_ar") or "")[:600],
+                                               source_module=x["source"][:40], impact_amount=(x.get("impact") or {}).get("amount"), owner=str(x.get("owner") or "")[:100],
+                                               action=str(x.get("action_ar") or "")[:400]))
+        for p in full["decisions_required"]["proposed"]:
+            s.add(CompanyExecReportRecommendation(company_id=company.id, report_id=r.id, kind="proposed", no=p["no"], title=p["title"][:200], reason=str(p.get("reason_ar") or "")[:400],
+                                                  priority=p.get("priority") or "", owner=str(p.get("owner") or "")[:100], deadline=p.get("due") or "", kpi=p.get("kpi") or "",
+                                                  expected_impact=p.get("expected_impact"), category=p.get("category") or "", branch=str(p.get("branch") or "")[:100]))
+        for i, n in enumerate(full["next30"]["items"], 1):
+            s.add(CompanyExecReportRecommendation(company_id=company.id, report_id=r.id, kind="next30", no=f"P{i}", title=n["goal_ar"][:200], reason=n["why_ar"][:400],
+                                                  priority=n["level"], owner=str(n.get("owner") or "")[:100], deadline=n.get("deadline") or "", kpi=n.get("kpi") or ""))
+        s.commit()
+        log_audit(company.id, user.id, user.name, "exec_generate", f"exec:{r.id}", f"period={r.period} version={ver} reason={r.version_reason[:80]} checksum={r.checksum}")
+        return {"ok": True, "id": r.id, "version": ver, "period": r.period, "superseded": [o.id for o in same]}
+
+
+@app.get("/company/exec-report/report/{rid}")
+def company_exec_report_get(rid: int, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role, viewer, sc, xe, me = _xr_scope(s, user)
+        r = _exec_load(s, company, rid)
+        if sc.get("published_only") and r.status != "published":
+            raise HTTPException(403, "أعضاء المجلس يطّلعون على التقارير المنشورة فقط")
+        try:
+            full = json.loads(r.report_json or "{}")
+        except (TypeError, ValueError):
+            raise HTTPException(500, "تعذّرت قراءة التقرير المحفوظ")
+        rep_ = xe.restrict(full, viewer)
+        prev = s.exec(select(CompanyExecReport).where(CompanyExecReport.company_id == company.id, CompanyExecReport.period == r.period,
+                                                      CompanyExecReport.version == r.version - 1)).first() if r.version > 1 else None
+        diff = None
+        if prev and sc["financial"]:
+            try:
+                diff = xe.compare_versions(json.loads(prev.snapshot_json or "{}"), json.loads(r.snapshot_json or "{}"))
+            except (TypeError, ValueError):
+                diff = None
+        try:
+            changed = bool(r.data_fingerprint) and r.data_fingerprint != _exec_fingerprint(s, company)
+        except Exception:
+            changed = None
+        recs = s.exec(select(CompanyExecReportRecommendation).where(CompanyExecReportRecommendation.company_id == company.id,
+                                                                    CompanyExecReportRecommendation.report_id == r.id)).all()
+        rd = {(x.kind, x.no): x for x in recs}
+        if isinstance(rep_.get("decisions_required"), dict) and not rep_["decisions_required"].get("restricted"):
+            for p in rep_["decisions_required"].get("proposed") or []:
+                x = rd.get(("proposed", p["no"]))
+                p["rec_id"], p["decision_id"] = (x.id, x.decision_id) if x else (None, None)
+        trail = s.exec(select(AuditLog).where(AuditLog.company_id == company.id, AuditLog.target == f"exec:{r.id}").order_by(AuditLog.created_at.desc()).limit(200)).all()
+        log_audit(company.id, user.id, user.name, "exec_report_view", f"exec:{r.id}", f"version={r.version}")
+        rep_.update({"live": False, "report": {"id": r.id, "period": r.period, "version": r.version, "title": r.title, "status": r.status, "status_ar": xe.STATUS_AR.get(r.status, r.status),
+                                               "next": xe.TRANSITIONS.get(r.status, []), "reason": r.version_reason, "generated_by": r.generated_by,
+                                               "generated_at": r.generated_at.strftime("%Y-%m-%d %H:%M") if r.generated_at else "", "approved_by": r.approved_by,
+                                               "approved_at": r.approved_at, "published_at": r.published_at, "checksum": r.checksum, "superseded_by": r.superseded_by,
+                                               "exports": r.exports or 0, "confidence": r.confidence, "monthly_report_id": r.monthly_report_id},
+                     "data_changed": changed, "data_changed_ar": ("تغيّرت البيانات بعد إنشاء هذه النسخة — الأرقام هنا كما كانت وقت الإنشاء؛ أنشئ نسخة جديدة لتعكس البيانات المحدثة"
+                                                                  if changed else ("البيانات لم تتغير منذ إنشاء هذه النسخة" if changed is False else None)),
+                     "version_diff": diff, "previous_version": {"id": prev.id, "version": prev.version} if prev else None,
+                     "access_log": [{"action": a.action, "user": a.user_name, "at": a.created_at.strftime("%Y-%m-%d %H:%M") if a.created_at else "", "details": a.details} for a in trail]
+                     if sc["kind"] in ("full", "cfo") else [],
+                     "decision_links": _exec_links(s, company.id, r.id), "reports": _exec_reports(s, company.id, sc),
+                     "settings": dict(xe.DEFAULT_SETTINGS, **_exec_settings(s, company.id)) if sc["kind"] in ("full", "cfo") else None,
+                     "frozen_note_ar": "نسخة محفوظة كما كانت وقت إنشائها — لا تتغير مع البيانات، والنسخ السابقة تبقى في السجل."})
+        return rep_
+
+
+@app.post("/company/exec-report/status")
+def company_exec_report_status(data: dict, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role, viewer, sc, xe, me = _xr_scope(s, user)
+        if not sc["can_generate"]:
+            raise HTTPException(403, "غير مصرّح بتغيير حالة التقرير")
+        r = _exec_load(s, company, data.get("id"))
+        to = str(data.get("to") or "")
+        if to not in xe.TRANSITIONS.get(r.status, []):
+            raise HTTPException(409, f"لا يمكن الانتقال من «{xe.STATUS_AR.get(r.status, r.status)}» إلى «{xe.STATUS_AR.get(to, to)}»")
+        if to in ("approved", "published") and not sc["can_approve"]:
+            raise HTTPException(403, "اعتماد التقرير التنفيذي ونشره للرئيس التنفيذي/المالك")
+        note = str(data.get("note") or "").strip()[:300]
+        if to == "draft" and not note:
+            raise HTTPException(422, "سبب الإرجاع للمسودة مطلوب")
+        old, now = r.status, datetime.now().strftime("%Y-%m-%d %H:%M")
+        r.status = to
+        if to == "approved":
+            r.approved_by, r.approved_at = (user.name or user.email)[:100], now
+        if to == "published":
+            r.published_at = now
+        s.add(r); s.commit()
+        log_audit(company.id, user.id, user.name, "exec_status", f"exec:{r.id}", f"{old}→{to}" + (f" note={note}" if note else ""))
+        return {"ok": True, "status": to, "status_ar": xe.STATUS_AR[to]}
+
+
+@app.post("/company/exec-report/decision-action")
+def company_exec_decision_action(data: dict, user: User = Depends(get_current_user)):
+    """خيارات الرئيس التنفيذي على قرار: اعتماد · رفض · طلب أدلة · إحالة · تأجيل — كلها عبر مسار 3.9 وحدود الاعتماد في إعدادات الشركة، وتُسجَّل."""
+    act = str(data.get("action") or "")
+    if act not in ("approve", "reject", "evidence", "delegate", "defer"):
+        raise HTTPException(422, "الإجراء: اعتماد أو رفض أو طلب أدلة أو إحالة أو تأجيل")
+    note = str(data.get("note") or "").strip()[:500]
+    with Session(engine) as s:
+        company, role, viewer, sc, xe, me = _xr_scope(s, user)
+        if act == "evidence" and not sc["can_review"]:
+            raise HTTPException(403, "طلب الأدلة للرئيس التنفيذي والمدير المالي")
+        if act != "evidence" and not sc["can_decide"]:
+            raise HTTPException(403, "قرارات الاعتماد والرفض والإحالة والتأجيل للرئيس التنفيذي/المالك")
+        dx = _load_p24("decisions_engine")
+        d = _dec_load(s, company, data.get("decision_id"))
+        m = _dec_meta(s, company, d, dx)
+        if act in ("reject", "evidence", "delegate", "defer") and not note:
+            raise HTTPException(422, "السبب/الملاحظة مطلوبة لهذا الإجراء")
+        until = str(data.get("until") or "")[:10]
+        if act == "defer" and not _valid_date(until):
+            raise HTTPException(422, "موعد التأجيل مطلوب (YYYY-MM-DD)")
+        target = str(data.get("target") or "").strip()[:100]
+        if act == "delegate" and not target:
+            raise HTTPException(422, "حدد صاحب الصلاحية المحال إليه")
+        rid = int(data["report_id"]) if str(data.get("report_id") or "").isdigit() else None
+        if rid:
+            _exec_load(s, company, rid)
+        route = xe.approval_route({"expected_impact": d.expected_impact_value, "cost": m.cost, "category": m.category, "created_by": d.created_by}, _exec_settings(s, company.id))
+        if act == "approve":
+            if route["over_ceo_limit"]:
+                raise HTTPException(409, "الأثر/التكلفة يتجاوز حد اعتماد الرئيس التنفيذي في إعدادات الشركة — يُحال لمجلس الإدارة (عرض المجلس 3.10)")
+            if route["needs_review"] and m.workflow == "pending_approval":
+                raise HTTPException(409, "سياسة الشركة تتطلب مراجعة قبل الاعتماد: " + "، ".join(x["who"] for x in route["steps"] if x["role"] in ("cfo", "ops", "legal", "tech"))
+                                    + " — انقله للمراجعة أولاً (طلب أدلة/مراجعة)")
+        by = (user.name or user.email)[:100]
+        did, wf = d.id, m.workflow
+    out = None
+    if act == "approve":
+        out = company_decision_center_transition({"id": did, "to": "approved", "note": note or "اعتماد من التقرير التنفيذي"}, user=user)
+    elif act == "reject":
+        out = company_decision_center_transition({"id": did, "to": "rejected", "note": note}, user=user)
+    elif act == "evidence" and wf == "pending_approval":
+        out = company_decision_center_transition({"id": did, "to": "under_review", "note": f"طلب أدلة إضافية: {note}"}, user=user)
+    with Session(engine) as s:
+        m = s.exec(select(CompanyDecisionMeta).where(CompanyDecisionMeta.company_id == company.id, CompanyDecisionMeta.decision_id == did)).first()
+        if act == "evidence":
+            _dec_hist(s, company.id, did, "evidence_requested", by, "", "", note)
+        elif act == "delegate":
+            _dec_hist(s, company.id, did, "delegated", by, "", target, note)
+        elif act == "defer":
+            _dec_hist(s, company.id, did, "deferred", by, "", until, note)
+            if m:
+                m.delay_note = f"مؤجل حتى {until}: {note}"[:300]
+                s.add(m)
+        s.add(CompanyExecDecisionLink(company_id=company.id, report_id=rid, decision_id=did, action=act, note=note, target=target, until=until,
+                                      by_name=by, by_id=user.id, at=datetime.now().strftime("%Y-%m-%d %H:%M")))
+        s.commit()
+        log_audit(company.id, user.id, user.name, f"exec_decision_{act}", f"exec:{rid}" if rid else f"decision:{did}", f"decision={did} {note[:100]}")
+        return {"ok": True, "action": act, "decision_id": did, "transition": out}
+
+
+@app.post("/company/exec-report/to-decision")
+def company_exec_to_decision(data: dict, user: User = Depends(get_current_user)):
+    """تحويل قرار مقترح من التقرير التنفيذي إلى مسودة في 3.9 (نفس مسار الحفظ والصلاحيات وخط الأساس)."""
+    with Session(engine) as s:
+        company, role, viewer, sc, xe, me = _xr_scope(s, user)
+        r = _exec_load(s, company, data.get("report_id"))
+        rec = s.get(CompanyExecReportRecommendation, int(data.get("rec_id") or 0))
+        if not rec or rec.company_id != company.id or rec.report_id != r.id:
+            raise HTTPException(404, "التوصية غير موجودة في هذا التقرير")
+        if rec.decision_id:
+            raise HTTPException(409, f"أُنشئ قرار لهذه التوصية مسبقاً (#{rec.decision_id})")
+        if r.status == "superseded":
+            raise HTTPException(409, "هذه النسخة مُستبدلة — أنشئ القرار من النسخة الحالية")
+        payload = {"title": str(data.get("title") or rec.title)[:200], "rationale": f"من التقرير التنفيذي {r.period} (V{r.version}): {rec.reason}"[:500],
+                   "owner": str(data.get("owner") or rec.owner or "")[:100], "due": str(data.get("due") or rec.deadline or "")[:10] or None,
+                   "category": rec.category if rec.category in _MONTHLY_CATS else "other", "priority": "high" if rec.priority in ("high", "critical") else "medium",
+                   "expected_impact": data.get("expected_impact", rec.expected_impact), "cost": data.get("cost"),
+                   "expected_type": "recovery" if rec.category == "leakage" else "potential", "source": "executive", "source_ref": f"exec:{r.id}:{rec.no}",
+                   "branch": rec.branch or None, "kpis": [{"metric": rec.kpi, "target": data.get("target")}] if rec.kpi else []}
+    out = company_decision_center_save(payload, user=user)
+    with Session(engine) as s:
+        rec = s.get(CompanyExecReportRecommendation, rec.id)
+        rec.decision_id, rec.created_by, rec.created_at = out.get("id"), (user.name or user.email)[:100], datetime.now().strftime("%Y-%m-%d")
+        s.add(rec)
+        s.add(CompanyExecDecisionLink(company_id=company.id, report_id=r.id, decision_id=out.get("id"), action="created", note=rec.title[:200],
+                                      by_name=(user.name or user.email)[:100], by_id=user.id, at=datetime.now().strftime("%Y-%m-%d %H:%M")))
+        s.commit()
+        log_audit(company.id, user.id, user.name, "exec_to_decision", f"exec:{r.id}", f"rec={rec.no} decision={out.get('id')}")
+        return {"ok": True, "decision_id": out.get("id"), "link": f"company-decisions-intelligence.html#dec/{out.get('id')}"}
+
+
+@app.get("/company/exec-report/settings")
+def company_exec_settings_get(user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role, viewer, sc, xe, me = _xr_scope(s, user)
+        if sc["kind"] not in ("full", "cfo"):
+            raise HTTPException(403, "إعدادات الاعتماد للرئيس التنفيذي والمدير المالي")
+        return {"settings": dict(xe.DEFAULT_SETTINGS, **_exec_settings(s, company.id)), "categories": {k: v[0] for k, v in _load_p24("decisions_engine").CATEGORIES.items()}}
+
+
+@app.post("/company/exec-report/settings")
+def company_exec_settings_save(data: dict, user: User = Depends(get_current_user)):
+    """حدود الاعتماد المالي وقواعد المراجعة — تُحدد من الشركة (لا أرقام افتراضية في النظام). المالك/الرئيس التنفيذي فقط."""
+    with Session(engine) as s:
+        company, role, viewer, sc, xe, me = _xr_scope(s, user)
+        if not sc["can_approve"]:
+            raise HTTPException(403, "حدود الاعتماد يحددها المالك أو الرئيس التنفيذي")
+        cats = set(_load_p24("decisions_engine").CATEGORIES)
+        out = {}
+        for k in ("ceo_approval_limit", "cfo_review_threshold"):
+            v = data.get(k)
+            if v in (None, ""):
+                out[k] = None
+                continue
+            fv = _fnum(v, k)
+            if fv is None or fv < 0:
+                raise HTTPException(422, "الحدود المالية أرقام موجبة")
+            out[k] = fv
+        n = data.get("next30_count", 5)
+        if not str(n).isdigit() or not 1 <= int(n) <= 10:
+            raise HTTPException(422, "عدد أولويات 30 يوماً بين 1 و10")
+        out["next30_count"] = int(n)
+        for k in ("ops_review_categories", "legal_review_categories", "tech_review_categories"):
+            v = [str(x) for x in (data.get(k) or [])]
+            if any(x not in cats for x in v):
+                raise HTTPException(422, "فئة قرار غير معروفة")
+            out[k] = v
+        out["confidentiality"] = str(data.get("confidentiality") or xe.DEFAULT_SETTINGS["confidentiality"])[:80]
+        r = s.exec(select(CompanyExecSetting).where(CompanyExecSetting.company_id == company.id)).first() or CompanyExecSetting(company_id=company.id)
+        old = r.settings_json
+        r.settings_json, r.updated_by, r.updated_at = json.dumps(out, ensure_ascii=False), (user.name or user.email)[:100], datetime.now().strftime("%Y-%m-%d %H:%M")
+        s.add(r); s.commit()
+        log_audit(company.id, user.id, user.name, "exec_settings", "exec:settings", f"old={old[:200]} new={r.settings_json[:200]}")
+        return {"ok": True, "settings": out}
+
+
+@app.post("/company/exec-report/export")
+def company_exec_export(data: dict, user: User = Depends(get_current_user)):
+    fmt_ = data.get("format") if data.get("format") in ("pdf", "excel") else "pdf"
+    with Session(engine) as s:
+        company, role, viewer, sc, xe, me = _xr_scope(s, user)
+        if data.get("id"):
+            r = _exec_load(s, company, data["id"])
+            if sc.get("published_only") and r.status != "published":
+                raise HTTPException(403, "أعضاء المجلس يصدّرون المنشور فقط")
+            r.exports = (r.exports or 0) + 1
+            s.add(r); s.commit()
+            log_audit(company.id, user.id, user.name, "exec_export", f"exec:{r.id}", f"format={fmt_} version={r.version} scope={sc['kind']}")
+        else:
+            log_audit(company.id, user.id, user.name, "exec_export", "exec:live", f"format={fmt_} live scope={sc['kind']}")
+        return {"ok": True}
+
+
+@app.post("/company/exec-report/ai-insights")
+def company_exec_ai(data: dict, request: Request, user: User = Depends(get_current_user)):
+    """3.12.8 — المساعد التنفيذي: يجيب من نتائج التقرير المعتمدة ضمن صلاحية السائل، يُظهر المصادر، ولا يعتمد قراراً."""
+    with Session(engine) as s:
+        company, role, viewer, sc, xe, me = _xr_scope(s, user)
+        if data.get("report_id"):
+            r = _exec_load(s, company, data["report_id"])
+            if sc.get("published_only") and r.status != "published":
+                raise HTTPException(403, "أعضاء المجلس يطّلعون على المنشور فقط")
+            rep_ = xe.restrict(json.loads(r.report_json or "{}"), viewer)
+        else:
+            if sc.get("published_only"):
+                raise HTTPException(403, "أعضاء المجلس يطّلعون على المنشور فقط")
+            _f, rep_ = _exec_live(s, company, role, viewer, xe, me)
+    gw = _load_p24("ai_gateway")
+    if gw is None:
+        raise HTTPException(503, "بوابة الذكاء الاصطناعي غير متاحة — " + _p23_diagnostic())
+    q = str(data.get("question") or xe.AI_QUESTIONS[0]["q"])[:300]
+    ctx = xe.ai_context(rep_, q)
+    out = gw.request_ai_analysis(gw.GeminiProvider(company_gemini), ctx,
+                                 q + " — أجب كمستشار للرئيس التنفيذي من نتائج التقرير الموثقة فقط: الجواب، الأدلة، المصادر، والخطوة التالية. لا تحسب ولا تخترع ولا ترفع مستوى خطر ولا تعتمد قراراً.",
+                                 trust_report={"overall_score": 75, "status": "pass", "has_critical_fail": False, "main_causes": []},
+                                 lang=get_lang(request), company=company)
+    log_audit(company.id, user.id, user.name, "exec_ai", f"exec:{data.get('report_id') or 'live'}", f"q={q[:80]}")
+    return {"question": q, "ai": out, "sources": ctx.get("sources"), "chain_ar": ctx.get("chain_ar")}
+
+
+def _exec_latest(s, company_id, statuses=("published", "approved")):
+    return s.exec(select(CompanyExecReport).where(CompanyExecReport.company_id == company_id, CompanyExecReport.status.in_(statuses))
+                  .order_by(CompanyExecReport.generated_at.desc())).first()
+
+
 @app.get("/company/executive-intelligence")
 def company_executive_intelligence(request: Request, user: User = Depends(get_current_user),
                                    period: Optional[str] = None, ai: int = 0):
@@ -10125,6 +10659,15 @@ def company_executive_intelligence(request: Request, user: User = Depends(get_cu
                                                          "link": "company-monthly-intelligence.html"}
                             except Exception as _e:
                                 _logger.error(f"executive monthly block: {type(_e).__name__}: {str(_e)[:200]}")
+                            try:      # 3.12: آخر تقرير تنفيذي معتمد/منشور (قراءة السجل فقط)
+                                _xr = _exec_latest(s, company.id)
+                                if _xr:
+                                    _xs = json.loads(_xr.snapshot_json or "{}")
+                                    result["executive_report"] = {"report": {"id": _xr.id, "period": _xr.period, "version": _xr.version, "status": _xr.status},
+                                                                  "exceptions": (_xs.get("exceptions") or [])[:3], "decisions_waiting": _xs.get("decisions_waiting") or [],
+                                                                  "health": _xs.get("health"), "link": "company-executive-report-intelligence.html"}
+                            except Exception as _e:
+                                _logger.error(f"executive report block: {type(_e).__name__}: {str(_e)[:200]}")
             except HTTPException:
                 pass
             try:   # إشارات المشتريات 2.7
@@ -15452,7 +15995,7 @@ ENGINE_MODULES = ("nabbah_finance", "nabbah_trust", "semantic_layer", "kpi_engin
                   "ai_gateway", "period_aggregation", "legacy_adapters", "platform_bridge",
                   "intelligence_engine", "forecast_engine", "scenario_engine", "decision_memory",
                   "rule_catalog", "canonical_model", "period_model", "metric_registry", "ingestion",
-                  "sales_engine", "inventory_engine", "purchases_engine", "cashflow_engine", "hr_engine", "ops_engine", "finance_engine", "sector_intelligence", "leakage_engine", "tax_engine", "risk_engine", "drivers_engine", "benchmark_engine", "prediction_engine", "goals_engine", "decisions_engine", "board_engine", "monthly_engine")
+                  "sales_engine", "inventory_engine", "purchases_engine", "cashflow_engine", "hr_engine", "ops_engine", "finance_engine", "sector_intelligence", "leakage_engine", "tax_engine", "risk_engine", "drivers_engine", "benchmark_engine", "prediction_engine", "goals_engine", "decisions_engine", "board_engine", "monthly_engine", "executive_engine")
 
 
 def _runtime_health():
@@ -15802,7 +16345,7 @@ def files_check(_: bool = Depends(verify_admin)):
         "company-data-quality.html", "company-predictions.html", "company-risks.html",
         "company-board.html", "company-root-cause.html", "company-benchmarks.html",
         "company-upload.html", "company-memory.html", "company-decisions.html",
-        "company-monthly-report.html", "company-monthly-intelligence.html", "company-board-intelligence.html",
+        "company-monthly-report.html", "company-monthly-intelligence.html", "company-board-intelligence.html", "company-executive-report-intelligence.html",
         "nabbah-data-template.xlsx",
     ]
     missing, present = [], []
