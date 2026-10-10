@@ -108,7 +108,7 @@
   const CONF={high:"مرتفعة",medium:"متوسطة",low:"منخفضة",possible:"محتمل"};
   const LV={critical:"حرج",high:"مرتفع",medium:"متوسط",low:"منخفض"};
   const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-  const n=(v,d=0)=>{if(v==null||v===""||isNaN(Number(v)))return"—";const x=Number(v),t=Math.abs(x).toLocaleString("ar-SA",{maximumFractionDigits:d});return x<0?"⁦−"+t+"⁩":t;};
+  const n=(v,d=0)=>{if(v==null||v===""||isNaN(Number(v)))return"—";const x=Number(v),t=Math.abs(x).toLocaleString("ar-SA",{maximumFractionDigits:d});return x<0?"\u2066−"+t+"\u2069":t;};
   const fv=(v,u)=>v==null?"غير متاح":(u==="%"?n(v,1)+"%":u==="SAR"?n(v)+" ر.س":u==="count"?n(v):n(v,2)+(u?" "+u:""));
   const pc=(v,inv)=>v==null?"":`<span class="${(inv?v<0:v>0)?"pos":v===0?"muted":"neg"}">${v>0?"+":""}${n(v,1)}%</span>`;
   const H={Authorization:"Bearer "+TOKEN,"Content-Type":"application/json"},$=id=>document.getElementById(id);
@@ -278,7 +278,7 @@
     (D.pdf_pages||[]).filter(p=>p.key!=="cover").forEach(p=>{let body="";try{EV={};body=(VIEWS[p.key]||(()=>na("—")))();}catch(_){body=na("—");}html+=`<div class="pg"><div style="font-size:11px;color:#666">${esc(p.ar)} · ${esc(D.period)} · ${esc(D.confidentiality||"سري")} · المصادر: محركات نبّاه</div>${body}</div>`;});
     $("printv").innerHTML=html;$("content").innerHTML=keep;bind();
     api("/company/exec-report/export",{id:D.live?undefined:D.report.id,format:"pdf"}).catch(()=>{});setTimeout(()=>window.print(),120);}
-  function exportExcel(){const box=document.createElement("div");let csv="﻿"+`التقرير التنفيذي,${D.period},${D.live?"حي":"V"+D.report.version}\n`;
+  function exportExcel(){const box=document.createElement("div");let csv="\uFEFF"+`التقرير التنفيذي,${D.period},${D.live?"حي":"V"+D.report.version}\n`;
     (D.pdf_pages||[]).filter(p=>p.key!=="cover").forEach(p=>{try{EV={};box.innerHTML=(VIEWS[p.key]||(()=>""))();}catch(_){return;}const ts=box.querySelectorAll("table");if(!ts.length)return;
       csv+=`\n${p.ar}\n`;ts.forEach(t=>{t.querySelectorAll("tr").forEach(tr=>{csv+=[...tr.children].map(c=>'"'+c.innerText.replace(/"/g,'""').replace(/\s+/g," ").trim()+'"').join(",")+"\n";});csv+="\n";});});
     const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));a.download=`executive-report-${D.period}${D.live?"":"-V"+D.report.version}.csv`;document.body.appendChild(a);a.click();a.remove();
