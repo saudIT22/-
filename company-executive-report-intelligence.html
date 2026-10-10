@@ -157,6 +157,8 @@
       +panel(`${esc(h.light||"")} وضع الشركة: ${esc(h.ar||"—")}${o.growth_ar?` <span class="muted">· النمو: ${esc(o.growth_ar)}</span>`:""}`,(o.summary?`<p style="line-height:2;margin:0">${esc(o.summary)}</p>`:"")
         +((o.top3||[]).length?`<h3>أهم ثلاثة أمور تحتاج تدخلك</h3><ol>${o.top3.map(x=>`<li>${esc(x)}</li>`).join("")}</ol>`:"")
         +`<div class="cta"><button class="btn" data-go="decisions_required">🗳 ${n(o.decisions_waiting)} قرارات تنتظرك</button><button class="btn ghost" data-go="exceptions">الاستثناءات</button><button class="btn ghost" data-go="next30">أولويات 30 يوماً</button></div>`)
+      +(o.customers&&o.customers.available?panel(`👥 العملاء <a class="btn ghost" href="${esc(o.customers.link)}">ذكاء العملاء ←</a>`,`<p style="margin:0;line-height:2">${esc(o.customers.text_ar)}</p><div class="muted">المصدر: ${esc(o.customers.source_ar)} · حتى ${esc(o.customers.as_of)}${o.customers.top_alert?" · أهم تنبيه: "+esc(o.customers.top_alert):""}</div>`)
+        :(o.customers&&o.customers.reason_ar?panel("👥 العملاء",na(o.customers.reason_ar)):""))
       +((o.sector_kpis||[]).length?panel(`مؤشرات القطاع الأهم <span class="muted">(الوحدة: ${esc(o.unit_ar)})</span>`,`<div class="tiles">${o.sector_kpis.map(m=>tile(Object.assign({},m,{key:m.metric_name}))).join("")}</div>`):"");}
   function summary(){const s=R("summary");if(!s)return restricted();
     return panel("الملخص التنفيذي",`<div class="sum">${s.items.map(i=>`<p><b>${esc(i.ar)}:</b> ${i.text?esc(i.text):`<span class="muted">${esc(i.text_na)}</span>`} ${i.text&&i.confidence?conf(i.confidence):""} ${i.link&&i.text?`<a href="${esc(i.link)}">${esc(i.source_ar)} ↗</a>`:""}</p>`).join("")}</div><div class="muted">${esc(s.note_ar)}</div>`);}
