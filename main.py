@@ -1304,6 +1304,63 @@ class CompanyExecSetting(SQLModel, table=True):
     updated_at: str = ""
 
 
+class CompanyCustomerFeedback(SQLModel, table=True):
+    """4.1 — نتائج الاستبيانات والملاحظات (NPS/CSAT/تعليق) كما رفعتها الشركة — لا درجات مخترعة. التعليق الأصلي محفوظ ويُعرض مع إخفاء البيانات الشخصية."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    date: str = ""
+    customer: str = ""
+    branch: str = ""
+    product: str = ""
+    channel: str = ""
+    kind: str = ""                   # nps | csat | comment
+    score: Optional[float] = None
+    comment: str = ""
+    method: str = ""
+    batch: str = ""
+    created_by: str = ""
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+class CompanyRetentionAction(SQLModel, table=True):
+    """4.1 — إجراء احتفاظ: المستهدف، السبب، الإجراء، المسؤول، الموعد، التكلفة، المؤشر، النتيجة الفعلية والأثر. العروض/الخصومات تحتاج اعتماداً."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    kind: str = "contact"
+    customer_id: str = ""
+    target: str = ""
+    reason: str = ""
+    action: str = ""
+    owner: str = ""
+    owner_user_id: Optional[int] = None
+    due: str = ""
+    cost: Optional[float] = None
+    kpi: str = ""
+    branch: str = ""
+    status: str = "open"             # open | pending_approval | approved | rejected | in_progress | done | cancelled
+    started_on: str = ""
+    approved_by: str = ""
+    approved_at: str = ""
+    rejection_reason: str = ""
+    actual_result: str = ""
+    actual_impact: Optional[float] = None
+    alert_kind: str = ""
+    decision_id: Optional[int] = None
+    created_by: str = ""
+    created_by_id: Optional[int] = None
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+    updated_at: str = ""
+
+
+class CompanyCustomerSetting(SQLModel, table=True):
+    """4.1 — تعريفات العملاء الخاصة بالشركة (نشط/مفقود/RFM) وبنود تكلفة الاكتساب. الافتراضي من ملف القطاع."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    settings_json: str = "{}"
+    updated_by: str = ""
+    updated_at: str = ""
+
+
 class BenchmarkDataset(SQLModel, table=True):
     """طبقة المعايير القطاعية (3.5): company_id فارغ = معيار المنصّة (من الإدارة)، وإلا معيار خاص بالشركة.
     كل معيار بمصدره ومنهجيته وفترته وعيّنته وثقته — لا معيار بلا مصدر."""
@@ -2031,6 +2088,11 @@ def page_board_intelligence():
 @app.get("/company-monthly-intelligence.html")
 def page_monthly_intelligence():
     return FileResponse("company-monthly-intelligence.html")
+
+
+@app.get("/company-customer-intelligence.html")
+def page_company_customer_intelligence():
+    return FileResponse("company-customer-intelligence.html")
 
 
 @app.get("/company-executive-report-intelligence.html")
@@ -4922,7 +4984,7 @@ def _load_p24(name):
     """يحمّل محركات 2.4 من المجلد أو من حزمة nabbah_engines."""
     try:
         import sys as _sys, os as _os, importlib
-        for _d in ("phase21", "phase22", "phase23", "phase24", "phase25", "phase26", "phase27", "phase28", "phase29", "phase210", "phase211", "phase30", "phase31", "phase32", "phase33", "phase34", "phase35", "phase37", "phase38", "phase39", "phase310", "phase311", "phase312"):
+        for _d in ("phase21", "phase22", "phase23", "phase24", "phase25", "phase26", "phase27", "phase28", "phase29", "phase210", "phase211", "phase30", "phase31", "phase32", "phase33", "phase34", "phase35", "phase37", "phase38", "phase39", "phase310", "phase311", "phase312", "phase41"):
             _p = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), _d)
             if _p not in _sys.path:
                 _sys.path.insert(0, _p)
@@ -10021,7 +10083,7 @@ def company_monthly_status(data: dict, user: User = Depends(get_current_user)):
         return {"ok": True, "status": to, "status_ar": me.STATUS_AR[to]}
 
 
-_MONTHLY_CATS = {"collections", "branch", "cost", "supplier", "leakage", "operations", "inventory", "pricing", "discount", "staffing", "marketing", "growth", "other", "compliance"}
+_MONTHLY_CATS = {"customers", "collections", "branch", "cost", "supplier", "leakage", "operations", "inventory", "pricing", "discount", "staffing", "marketing", "growth", "other", "compliance"}
 
 
 @app.post("/company/monthly/to-decision")
@@ -10142,9 +10204,17 @@ def _exec_fingerprint(s, company):
 def _exec_live(s, company, role, viewer, xe, me):
     full_m, _r, P = _monthly_live(s, company, role, viewer, me, parts=True)
     d = P["d"]
+    cust_brief = None
+    ce = _load_p24("customer_engine")
+    if ce is not None:   # 4.1 → 3.12: نفس أرقام وحدة العملاء (نطاق كامل ثم يُقيّد التقرير بصلاحية القارئ)
+        try:
+            cust_brief = _cust_live(s, company, {"role": "owner", "user_id": viewer.get("user_id")}, ce, mods=d["mods"], risk=d["risk"]).get("brief")
+        except Exception as e:
+            _logger.error(f"executive: customers failed: {type(e).__name__}: {str(e)[:200]}")
+            P["errors"]["customers"] = f"ذكاء العملاء غير متاح: {type(e).__name__}"
     rep_ = xe.analyze_executive(monthly=full_m, ctx=P["ctx"], mods=d["mods"], sales=P["sales"], risk=d["risk"], drivers=d["drivers"], pred=d["pred"],
                                 goals_res=P["gres"], dec_res=P["dres"], sector=_risk_sector(company), today=d["today"], viewer={"role": "owner", "user_id": viewer.get("user_id")},
-                                settings=_exec_settings(s, company.id), company_name=company.name, register=(d["risk"] or {}).get("register"))
+                                settings=_exec_settings(s, company.id), company_name=company.name, register=(d["risk"] or {}).get("register"), customers=cust_brief)
     rep_["module_errors"] = P["errors"]
     return rep_, xe.restrict(rep_, viewer)
 
@@ -10511,6 +10581,401 @@ def company_exec_ai(data: dict, request: Request, user: User = Depends(get_curre
 def _exec_latest(s, company_id, statuses=("published", "approved")):
     return s.exec(select(CompanyExecReport).where(CompanyExecReport.company_id == company_id, CompanyExecReport.status.in_(statuses))
                   .order_by(CompanyExecReport.generated_at.desc())).first()
+
+
+# ═══════════════════════════════════════════════════════════
+# Phase 4.1 — Customer Unit Intelligence — وحدة ذكاء العملاء
+# لا جدول عملاء جديد: فواتير المبيعات (2.5) + ملف العملاء (CompanyCustomer). الاستبيانات وإجراءات الاحتفاظ والإعدادات فقط جداول جديدة.
+# ═══════════════════════════════════════════════════════════
+_CUST_ACT_FLOW = {"open": {"in_progress", "done", "cancelled"}, "pending_approval": {"approved", "rejected", "cancelled"},
+                  "approved": {"in_progress", "cancelled"}, "in_progress": {"done", "cancelled"}, "rejected": set(), "done": set(), "cancelled": set()}
+_CUST_ACT_AR = {"open": "مفتوح", "pending_approval": "بانتظار الاعتماد", "approved": "معتمد", "rejected": "مرفوض", "in_progress": "قيد التنفيذ",
+                "done": "منجز", "cancelled": "ملغى"}
+
+
+def _cust_scope(s, user):
+    company, role, viewer = _goals_scope(s, user)
+    ce = _load_p24("customer_engine")
+    if ce is None:
+        raise HTTPException(503, "محرّك ذكاء العملاء غير متاح — " + _p23_diagnostic())
+    sc = ce.cust_scope(viewer)
+    if sc["kind"] == "none":
+        raise HTTPException(403, "ذكاء العملاء حسب الصلاحية: المالك/الرئيس التنفيذي، المدير المالي، المديرون، مدير الفرع (فرعه)، ومجلس الإدارة (مؤشرات مجمعة)")
+    return company, role, viewer, sc, ce
+
+
+def _cust_settings(s, company_id):
+    r = s.exec(select(CompanyCustomerSetting).where(CompanyCustomerSetting.company_id == company_id)).first()
+    try:
+        return json.loads(r.settings_json or "{}") if r else {}
+    except (TypeError, ValueError):
+        return {}
+
+
+def _cust_master(s, company_id):
+    out = []
+    for c in s.exec(select(CompanyCustomer).where(CompanyCustomer.company_id == company_id).limit(50000)).all():
+        try:
+            ex = json.loads(c.extra_json or "{}") if c.extra_json else {}
+        except (TypeError, ValueError):
+            ex = {}
+        out.append({"customer_code": c.customer_code or "", "name": c.name or "", "email": c.email or "", "phone": c.phone or "", "city": c.city or "",
+                    "segment": c.segment or "", "customer_type": c.customer_type or "", "extra": ex if isinstance(ex, dict) else {}})
+    return out
+
+
+def _cust_feedback(s, company_id):
+    return [{"id": f.id, "date": f.date, "customer": f.customer, "branch": f.branch, "product": f.product, "channel": f.channel, "kind": f.kind,
+             "score": f.score, "comment": f.comment, "method": f.method} for f in
+            s.exec(select(CompanyCustomerFeedback).where(CompanyCustomerFeedback.company_id == company_id).order_by(CompanyCustomerFeedback.date.desc()).limit(20000)).all()]
+
+
+def _cust_act_dict(a):
+    return {"id": a.id, "kind": a.kind, "customer_id": a.customer_id or None, "target": a.target, "reason": a.reason, "action": a.action, "owner": a.owner,
+            "due": a.due, "cost": a.cost, "kpi": a.kpi, "branch": a.branch, "status": a.status, "status_ar": _CUST_ACT_AR.get(a.status, a.status),
+            "started_on": a.started_on or None, "created_on": a.created_at.strftime("%Y-%m-%d") if a.created_at else None, "approved_by": a.approved_by,
+            "approved_at": a.approved_at, "rejection_reason": a.rejection_reason, "actual_result": a.actual_result, "actual_impact": a.actual_impact,
+            "alert_kind": a.alert_kind, "decision_id": a.decision_id, "created_by": a.created_by}
+
+
+def _cust_actions(s, company_id):
+    return [_cust_act_dict(a) for a in s.exec(select(CompanyRetentionAction).where(CompanyRetentionAction.company_id == company_id)
+                                              .order_by(CompanyRetentionAction.created_at.desc()).limit(2000)).all()]
+
+
+def _cust_decisions(s, company_id):
+    metas = {m.decision_id: m for m in s.exec(select(CompanyDecisionMeta).where(CompanyDecisionMeta.company_id == company_id)).all()}
+    out = []
+    for d in s.exec(select(CompanyDecision).where(CompanyDecision.company_id == company_id).order_by(CompanyDecision.created_at.desc()).limit(500)).all():
+        m = metas.get(d.id)
+        cat, src = (m.category if m else ""), (m.source if m else "")
+        if cat in ("customers", "marketing", "growth") or src == "customer":
+            out.append({"id": d.id, "title": d.title, "owner": d.owner, "due": d.due_date, "status": d.status, "workflow": m.workflow if m else None,
+                        "category": cat, "source": src, "expected_impact": d.expected_impact_value, "actual_impact": d.actual_impact_value,
+                        "link": f"company-decisions-intelligence.html#dec/{d.id}"})
+    return out
+
+
+def _cust_sku_cost(s, company_id):
+    return {p.sku: p.cost for p in s.exec(select(CompanyProduct).where(CompanyProduct.company_id == company_id)).all() if p.sku and p.cost is not None}
+
+
+def _cust_live(s, company, viewer, ce, *, mods=None, risk=None, sales_rows=None):
+    """نفس المدخلات الموحدة: فواتير المبيعات + ملف العملاء + المالية (بنود التسويق لـCAC) + مركز المخاطر (للمقارنة) + القرارات (3.9)."""
+    errors = {}
+    if mods is None or risk is None:
+        try:
+            risk = _risk_result(s, company, "owner", save_snapshot=False) if risk is None else risk
+        except Exception as e:
+            _logger.error(f"customers: risk failed: {type(e).__name__}: {str(e)[:200]}")
+            risk, errors["risk"] = None, f"مركز المخاطر غير متاح: {type(e).__name__}"
+        try:
+            mods, _c, _e = _risk_modules(s, company, "owner") if mods is None else (mods, None, None)
+        except Exception as e:
+            _logger.error(f"customers: modules failed: {type(e).__name__}: {str(e)[:200]}")
+            mods, errors["financial"] = {}, f"الوحدة المالية غير متاحة: {type(e).__name__}"
+    rows = sales_rows if sales_rows is not None else _sales_rows(s, company.id)
+    rep_ = ce.analyze_customers(sales_rows=rows, master=_cust_master(s, company.id), feedback=_cust_feedback(s, company.id), actions=_cust_actions(s, company.id),
+                                settings=_cust_settings(s, company.id), sector=_risk_sector(company), sku_cost=_cust_sku_cost(s, company.id),
+                                fin=(mods or {}).get("finance"), risk=risk, decisions=_cust_decisions(s, company.id), viewer=viewer, today=datetime.now().date())
+    rep_["module_errors"] = errors
+    return rep_
+
+
+@app.get("/company/customer-intelligence")
+def company_customer_intelligence(user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role, viewer, sc, ce = _cust_scope(s, user)
+        try:
+            rep_ = _cust_live(s, company, viewer, ce)
+        except HTTPException:
+            raise
+        except Exception as e:
+            import traceback as _tb
+            _logger.error("customer-intelligence failed:\n" + _tb.format_exc()[-3000:])
+            raise HTTPException(500, f"خطأ في ذكاء العملاء — {type(e).__name__}: {str(e)[:200]} (التفاصيل في سجل الخادم)")
+        rep_["settings"] = dict(ce.DEFAULTS, **_cust_settings(s, company.id)) if sc["kind"] in ("full", "cfo") else None
+        rep_["sector_profiles"] = {k: {"active_days": v["active_days"], "lost_days": v["lost_days"], "term": v["term"]} for k, v in ce.SECTOR_CUSTOMER.items()}
+        log_audit(company.id, user.id, user.name, "customer_view", "customers:live", f"scope={sc['kind']} as_of={rep_.get('as_of')}")
+        return rep_
+
+
+@app.post("/company/customers/feedback")
+def company_customer_feedback_upload(data: dict, user: User = Depends(get_current_user)):
+    """رفع نتائج الاستبيانات/الملاحظات: صفوف تُتحقق واحداً واحداً — NPS 0–10، CSAT 1–5، تاريخ صحيح. المرفوض يُعاد بسببه ولا يُحفظ."""
+    with Session(engine) as s:
+        company, role, viewer, sc, ce = _cust_scope(s, user)
+        if not sc["can_feedback"]:
+            raise HTTPException(403, "رفع الاستبيانات للمالك والمدير المالي والمديرين")
+        rows = data.get("rows") or []
+        if not isinstance(rows, list) or not rows:
+            raise HTTPException(422, "لا توجد صفوف")
+        if len(rows) > 5000:
+            raise HTTPException(422, "الحد الأقصى 5000 صف في الرفعة الواحدة")
+        ok, bad = [], []
+        for i, r in enumerate(rows, 1):
+            if not isinstance(r, dict):
+                bad.append({"row": i, "reason_ar": "صف غير صالح"}); continue
+            d = str(r.get("date") or "")[:10]
+            kind = str(r.get("kind") or ("comment" if r.get("score") in (None, "") else "")).strip().lower()
+            if not _valid_date(d):
+                bad.append({"row": i, "reason_ar": "التاريخ غير صالح (YYYY-MM-DD)"}); continue
+            if kind not in ("nps", "csat", "comment"):
+                bad.append({"row": i, "reason_ar": "النوع يجب أن يكون nps أو csat أو comment"}); continue
+            sv = None
+            if kind != "comment":
+                try:
+                    sv = float(r.get("score"))
+                except (TypeError, ValueError):
+                    bad.append({"row": i, "reason_ar": "الدرجة ليست رقماً"}); continue
+                lo, hi = (0, 10) if kind == "nps" else (1, 5)
+                if not lo <= sv <= hi or sv != sv:
+                    bad.append({"row": i, "reason_ar": f"درجة {kind.upper()} يجب أن تكون بين {lo} و{hi}"}); continue
+            cm = str(r.get("comment") or "").strip()[:2000]
+            if kind == "comment" and not cm:
+                bad.append({"row": i, "reason_ar": "ملاحظة بلا نص"}); continue
+            br = str(r.get("branch") or "").strip()[:100]
+            if sc.get("branch") and br and br != sc["branch"]:
+                bad.append({"row": i, "reason_ar": "خارج فرعك"}); continue
+            ok.append((d, kind, sv, cm, br, r))
+        if ok:
+            batch = datetime.now().strftime("%Y%m%d%H%M%S")
+            for d, kind, sv, cm, br, r in ok:
+                s.add(CompanyCustomerFeedback(company_id=company.id, date=d, customer=str(r.get("customer") or "")[:150], branch=br or (sc.get("branch") or ""),
+                                              product=str(r.get("product") or "")[:100], channel=str(r.get("channel") or "")[:60], kind=kind, score=sv, comment=cm,
+                                              method=str(r.get("method") or "استبيان")[:60], batch=batch, created_by=(user.name or user.email)[:100]))
+            s.commit()
+        log_audit(company.id, user.id, user.name, "customer_feedback_upload", "customers:feedback", f"ok={len(ok)} rejected={len(bad)}")
+        return {"ok": True, "saved": len(ok), "rejected": bad[:200], "rejected_count": len(bad)}
+
+
+@app.get("/company/customers/feedback")
+def company_customer_feedback_list(topic: str = "", sentiment: str = "", limit: int = 100, user: User = Depends(get_current_user)):
+    """الملاحظات الأصلية خلف ملخص المشاعر — البيانات الشخصية مخفية، والمجلس يرى النص بلا اسم العميل."""
+    with Session(engine) as s:
+        company, role, viewer, sc, ce = _cust_scope(s, user)
+        if "sentiment" not in sc["sections"]:
+            raise HTTPException(403, "خارج صلاحيتك")
+        fb = [f for f in _cust_feedback(s, company.id) if str(f.get("comment") or "").strip()]
+        if sc.get("branch"):
+            fb = [f for f in fb if f.get("branch") == sc["branch"]]
+        words = (ce.TOPICS.get(topic) or (None, None))[1]
+        out = []
+        for f in fb:
+            low = f["comment"].lower()
+            if words and not any(w in low for w in words):
+                continue
+            sv = ce.sentiment_of(f["comment"])
+            if sentiment and sv != sentiment:
+                continue
+            out.append({"id": f["id"], "date": f["date"], "branch": f["branch"], "product": f["product"], "kind": f["kind"], "score": f["score"], "sentiment": sv,
+                        "text": ce.mask(f["comment"]), "customer": (ce.mask(f["customer"]) if sc["names"] else "—")})
+            if len(out) >= max(1, min(int(limit or 100), 500)):
+                break
+        log_audit(company.id, user.id, user.name, "customer_feedback_view", "customers:feedback", f"topic={topic} n={len(out)}")
+        return {"items": out, "total": len(out), "masked": True, "note_ar": "البيانات الشخصية (الجوال/البريد/الأرقام الطويلة) مخفية تلقائياً"}
+
+
+def _cust_act_load(s, company, aid, sc):
+    a = s.get(CompanyRetentionAction, int(aid or 0))
+    if not a or a.company_id != company.id:
+        raise HTTPException(404, "الإجراء غير موجود")
+    if sc.get("branch") and a.branch not in ("", sc["branch"]):
+        raise HTTPException(403, "خارج فرعك")
+    return a
+
+
+@app.post("/company/customers/actions")
+def company_customer_action_create(data: dict, user: User = Depends(get_current_user)):
+    """إجراء احتفاظ جديد: المستهدف + السبب + الإجراء + المسؤول + الموعد. العروض والخصومات تبدأ «بانتظار الاعتماد» ولا تُنفذ تلقائياً."""
+    with Session(engine) as s:
+        company, role, viewer, sc, ce = _cust_scope(s, user)
+        if not sc["can_act"]:
+            raise HTTPException(403, "إنشاء إجراءات الاحتفاظ للمالك والمدير المالي والمديرين")
+        kind = str(data.get("kind") or "")
+        if kind not in ce.ACTION_KINDS:
+            raise HTTPException(422, "نوع الإجراء غير معروف")
+        target, cid = str(data.get("target") or "").strip()[:200], str(data.get("customer_id") or "").strip()[:150]
+        reason, owner, due = str(data.get("reason") or "").strip()[:400], str(data.get("owner") or "").strip()[:100], str(data.get("due") or "").strip()[:10]
+        if not (target or cid):
+            raise HTTPException(422, "حدد العميل أو الشريحة المستهدفة")
+        if not reason:
+            raise HTTPException(422, "سبب الإجراء مطلوب")
+        if not owner:
+            raise HTTPException(422, "المسؤول مطلوب")
+        if not _valid_date(due):
+            raise HTTPException(422, "الموعد مطلوب (YYYY-MM-DD)")
+        cost = _fnum(data.get("cost"), "التكلفة")
+        if cost is not None and cost < 0:
+            raise HTTPException(422, "التكلفة رقم موجب")
+        needs = ce.ACTION_KINDS[kind][1]
+        if needs and cost is None:
+            raise HTTPException(422, "العروض والخصومات تحتاج تكلفة تقديرية قبل طلب الاعتماد")
+        br = sc.get("branch") or str(data.get("branch") or "").strip()[:100]
+        a = CompanyRetentionAction(company_id=company.id, kind=kind, customer_id=cid, target=target or cid, reason=reason, action=str(data.get("action") or ce.ACTION_KINDS[kind][0])[:400],
+                                   owner=owner, due=due, cost=cost, kpi=str(data.get("kpi") or "")[:120], branch=br, status="pending_approval" if needs else "open",
+                                   alert_kind=str(data.get("alert_kind") or "")[:40], created_by=(user.name or user.email)[:100], created_by_id=user.id,
+                                   updated_at=datetime.now().strftime("%Y-%m-%d %H:%M"))
+        s.add(a); s.commit(); s.refresh(a)
+        log_audit(company.id, user.id, user.name, "customer_action_create", f"retention:{a.id}", f"kind={kind} status={a.status} cost={cost}")
+        return {"ok": True, "id": a.id, "status": a.status, "needs_approval": needs}
+
+
+@app.post("/company/customers/actions/status")
+def company_customer_action_status(data: dict, user: User = Depends(get_current_user)):
+    """انتقال حالة الإجراء: اعتماد/رفض العروض والخصومات للمالك/الرئيس التنفيذي فقط؛ لا بدء لعرض غير معتمد؛ الإنجاز يسجل النتيجة الفعلية."""
+    with Session(engine) as s:
+        company, role, viewer, sc, ce = _cust_scope(s, user)
+        a = _cust_act_load(s, company, data.get("id"), sc)
+        to = str(data.get("status") or "")
+        if to not in _CUST_ACT_FLOW.get(a.status, set()):
+            raise HTTPException(409, f"لا يمكن الانتقال من «{_CUST_ACT_AR.get(a.status, a.status)}» إلى «{_CUST_ACT_AR.get(to, to)}»")
+        if to in ("approved", "rejected"):
+            if not sc["can_approve"]:
+                raise HTTPException(403, "اعتماد العروض والخصومات للمالك أو الرئيس التنفيذي")
+            if a.created_by_id == user.id and role != "owner":
+                raise HTTPException(403, "لا يعتمد المنشئ إجراءه بنفسه")
+        elif not sc["can_act"]:
+            raise HTTPException(403, "خارج صلاحيتك")
+        today_ = datetime.now().strftime("%Y-%m-%d")
+        old = a.status
+        if to == "approved":
+            a.approved_by, a.approved_at = (user.name or user.email)[:100], today_
+        if to == "rejected":
+            a.rejection_reason = str(data.get("reason") or "").strip()[:300]
+            if not a.rejection_reason:
+                raise HTTPException(422, "سبب الرفض مطلوب")
+        if to == "in_progress" and not a.started_on:
+            a.started_on = today_
+        if to == "done":
+            res = str(data.get("actual_result") or "").strip()[:500]
+            if not res:
+                raise HTTPException(422, "النتيجة الفعلية مطلوبة عند الإنجاز")
+            a.actual_result = res
+            a.actual_impact = _fnum(data.get("actual_impact"), "الأثر الفعلي")
+            if not a.started_on:
+                a.started_on = today_
+        a.status, a.updated_at = to, datetime.now().strftime("%Y-%m-%d %H:%M")
+        s.add(a); s.commit()
+        log_audit(company.id, user.id, user.name, "customer_action_status", f"retention:{a.id}", f"{old}->{to}")
+        return {"ok": True, "id": a.id, "status": to, "status_ar": _CUST_ACT_AR[to]}
+
+
+@app.post("/company/customers/to-decision")
+def company_customer_to_decision(data: dict, user: User = Depends(get_current_user)):
+    """تحويل تنبيه/إجراء عملاء إلى قرار في متابعة القرارات (3.9) — نفس مسار الحفظ والاعتماد وخط الأساس."""
+    with Session(engine) as s:
+        company, role, viewer, sc, ce = _cust_scope(s, user)
+        if not sc["can_act"] or "decisions" not in sc["sections"]:
+            raise HTTPException(403, "إنشاء القرارات من ذكاء العملاء للمالك والمدير المالي والمديرين")
+        title = str(data.get("title") or "").strip()[:200]
+        if not title:
+            raise HTTPException(422, "عنوان القرار مطلوب")
+        aid = data.get("action_id")
+        a = _cust_act_load(s, company, aid, sc) if aid else None
+        if a and a.decision_id:
+            raise HTTPException(409, f"أُنشئ قرار لهذا الإجراء مسبقاً (#{a.decision_id})")
+        reason = str(data.get("reason") or (a.reason if a else "") or "").strip()[:400]
+        payload = {"title": title, "rationale": f"من ذكاء العملاء (4.1): {reason}"[:500], "owner": str(data.get("owner") or (a.owner if a else "") or "")[:100],
+                   "due": str(data.get("due") or (a.due if a else "") or "")[:10] or None, "category": "customers", "priority": data.get("priority") if data.get("priority") in ("high", "medium", "low") else "medium",
+                   "expected_impact": data.get("expected_impact"), "expected_type": "potential", "source": "customer",
+                   "source_ref": f"customer:{'action:' + str(a.id) if a else 'alert:' + str(data.get('alert_kind') or '')[:40]}", "branch": (a.branch if a else None) or sc.get("branch"),
+                   "cost": a.cost if a else data.get("cost"), "kpis": [{"metric": "revenue"}]}
+    out = company_decision_center_save(payload, user=user)
+    with Session(engine) as s:
+        if a:
+            a = s.get(CompanyRetentionAction, a.id)
+            a.decision_id = out.get("id")
+            s.add(a); s.commit()
+        log_audit(company.id, user.id, user.name, "customer_to_decision", f"customers:{'action:' + str(aid) if aid else 'alert'}", f"decision={out.get('id')}")
+        return {"ok": True, "decision_id": out.get("id"), "link": f"company-decisions-intelligence.html#dec/{out.get('id')}"}
+
+
+@app.get("/company/customers/settings")
+def company_customer_settings_get(user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role, viewer, sc, ce = _cust_scope(s, user)
+        if sc["kind"] not in ("full", "cfo"):
+            raise HTTPException(403, "إعدادات العملاء للمالك/الرئيس التنفيذي والمدير المالي")
+        st = _cust_settings(s, company.id)
+        return {"settings": dict(ce.DEFAULTS, **st), "definitions": ce.definitions(_risk_sector(company), st), "sector": _risk_sector(company),
+                "action_kinds": {k: v[0] for k, v in ce.ACTION_KINDS.items()}, "expense_lines": ce.CAC_LINE_AR}
+
+
+@app.post("/company/customers/settings")
+def company_customer_settings_save(data: dict, user: User = Depends(get_current_user)):
+    """تعريفات العملاء (نشط/مفقود)، حدود RFM، بنود تكلفة الاكتساب، وتكاليف الاكتساب اليدوية. كل تغيير يُسجَّل."""
+    with Session(engine) as s:
+        company, role, viewer, sc, ce = _cust_scope(s, user)
+        if sc["kind"] not in ("full", "cfo"):
+            raise HTTPException(403, "إعدادات العملاء للمالك/الرئيس التنفيذي والمدير المالي")
+        out = {}
+        for k, lo, hi in (("active_days", 7, 730), ("lost_days", 14, 1460)):
+            v = data.get(k)
+            if v in (None, ""):
+                out[k] = None; continue
+            if not str(v).isdigit() or not lo <= int(v) <= hi:
+                raise HTTPException(422, f"{k} بين {lo} و{hi} يوماً")
+            out[k] = int(v)
+        if out.get("active_days") and out.get("lost_days") and out["lost_days"] <= out["active_days"]:
+            raise HTTPException(422, "فترة الفقد يجب أن تكون أطول من فترة النشاط")
+        for k, lo, hi in (("decline_pct", 10, 90), ("vip_share_pct", 1, 50)):
+            v = data.get(k, ce.DEFAULTS[k])
+            fv = _fnum(v, k)
+            if fv is None or not lo <= fv <= hi:
+                raise HTTPException(422, f"{k} بين {lo} و{hi}")
+            out[k] = fv
+        lines = data.get("cac_expense_lines", ce.DEFAULTS["cac_expense_lines"])
+        if not isinstance(lines, list) or any(str(x) not in ce.CAC_LINE_AR for x in lines):
+            raise HTTPException(422, "بنود تكلفة الاكتساب غير معروفة")
+        out["cac_expense_lines"] = [str(x) for x in lines]
+        costs = []
+        for c in data.get("acquisition_costs") or []:
+            p = str((c or {}).get("period") or "")
+            if not re.match(r"^\d{4}-\d{2}$", p):
+                raise HTTPException(422, "فترة تكلفة الاكتساب بصيغة YYYY-MM")
+            amt = _fnum((c or {}).get("amount"), "مبلغ تكلفة الاكتساب")
+            if amt is None or amt < 0:
+                raise HTTPException(422, "مبلغ تكلفة الاكتساب رقم موجب")
+            costs.append({"period": p, "channel": str(c.get("channel") or "")[:60] or None, "amount": amt})
+        out["acquisition_costs"] = costs[:240]
+        rfm = data.get("rfm")
+        if rfm:
+            if not isinstance(rfm, dict) or any(not isinstance(rfm.get(d), list) or len(rfm[d]) != 4 for d in ("r", "f", "m")):
+                raise HTTPException(422, "حدود RFM: أربعة حدود لكل من R وF وM")
+            try:
+                out["rfm"] = {d: [float(x) for x in rfm[d]] for d in ("r", "f", "m")}
+            except (TypeError, ValueError):
+                raise HTTPException(422, "حدود RFM أرقام")
+            if any(out["rfm"][d] != sorted(out["rfm"][d]) for d in ("r", "f", "m")):
+                raise HTTPException(422, "حدود RFM تصاعدية")
+        else:
+            out["rfm"] = None
+        r = s.exec(select(CompanyCustomerSetting).where(CompanyCustomerSetting.company_id == company.id)).first() or CompanyCustomerSetting(company_id=company.id)
+        old = r.settings_json or "{}"
+        r.settings_json, r.updated_by, r.updated_at = json.dumps(out, ensure_ascii=False), (user.name or user.email)[:100], datetime.now().strftime("%Y-%m-%d %H:%M")
+        s.add(r); s.commit()
+        log_audit(company.id, user.id, user.name, "customer_settings", "customers:settings", f"old={old[:300]} new={r.settings_json[:300]}")
+        return {"ok": True, "settings": out, "definitions": ce.definitions(_risk_sector(company), out)}
+
+
+@app.post("/company/customers/ai-insights")
+def company_customer_ai(data: dict, request: Request, user: User = Depends(get_current_user)):
+    """المساعد: يجيب من نتائج ذكاء العملاء ضمن صلاحية السائل — بلا أسماء أو تعليقات خام، ولا أرقام مخترعة."""
+    with Session(engine) as s:
+        company, role, viewer, sc, ce = _cust_scope(s, user)
+        rep_ = _cust_live(s, company, viewer, ce)
+    gw = _load_p24("ai_gateway")
+    if gw is None:
+        raise HTTPException(503, "بوابة الذكاء الاصطناعي غير متاحة — " + _p23_diagnostic())
+    q = str(data.get("question") or ce.AI_QUESTIONS[0])[:300]
+    ctx = ce.ai_context(rep_, q)
+    out = gw.request_ai_analysis(gw.GeminiProvider(company_gemini), ctx,
+                                 q + " — أجب من نتائج ذكاء العملاء الموثقة فقط: الجواب، الأدلة مع الفترة والمصدر، ثم الخطوة التالية. لا تحسب ولا تخترع ولا تدّعِ سببية.",
+                                 trust_report={"overall_score": 75, "status": "pass", "has_critical_fail": False, "main_causes": []},
+                                 lang=get_lang(request), company=company)
+    log_audit(company.id, user.id, user.name, "customer_ai", "customers:ai", f"q={q[:80]}")
+    return {"question": q, "ai": out, "as_of": rep_.get("as_of")}
 
 
 @app.get("/company/executive-intelligence")
@@ -15995,7 +16460,7 @@ ENGINE_MODULES = ("nabbah_finance", "nabbah_trust", "semantic_layer", "kpi_engin
                   "ai_gateway", "period_aggregation", "legacy_adapters", "platform_bridge",
                   "intelligence_engine", "forecast_engine", "scenario_engine", "decision_memory",
                   "rule_catalog", "canonical_model", "period_model", "metric_registry", "ingestion",
-                  "sales_engine", "inventory_engine", "purchases_engine", "cashflow_engine", "hr_engine", "ops_engine", "finance_engine", "sector_intelligence", "leakage_engine", "tax_engine", "risk_engine", "drivers_engine", "benchmark_engine", "prediction_engine", "goals_engine", "decisions_engine", "board_engine", "monthly_engine", "executive_engine")
+                  "sales_engine", "inventory_engine", "purchases_engine", "cashflow_engine", "hr_engine", "ops_engine", "finance_engine", "sector_intelligence", "leakage_engine", "tax_engine", "risk_engine", "drivers_engine", "benchmark_engine", "prediction_engine", "goals_engine", "decisions_engine", "board_engine", "monthly_engine", "executive_engine", "customer_engine")
 
 
 def _runtime_health():
@@ -16345,7 +16810,7 @@ def files_check(_: bool = Depends(verify_admin)):
         "company-data-quality.html", "company-predictions.html", "company-risks.html",
         "company-board.html", "company-root-cause.html", "company-benchmarks.html",
         "company-upload.html", "company-memory.html", "company-decisions.html",
-        "company-monthly-report.html", "company-monthly-intelligence.html", "company-board-intelligence.html", "company-executive-report-intelligence.html",
+        "company-monthly-report.html", "company-monthly-intelligence.html", "company-board-intelligence.html", "company-executive-report-intelligence.html", "company-customer-intelligence.html",
         "nabbah-data-template.xlsx",
     ]
     missing, present = [], []
