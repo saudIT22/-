@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>نبّاه · ذكاء العملاء</title>
+<link href="nabbah-design.css" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{background:var(--bg,#070b09);color:var(--txt,#e8f1ec);font-family:Tajawal,Tahoma,Arial,sans-serif;margin:0}
+  .wrap{max-width:1180px;margin:0 auto;padding:70px 16px 60px}
+  h1{margin:0 0 4px;font-size:24px}.sub{color:var(--txt-soft,#8ba396);margin:0 0 14px;font-size:14px}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+  select{background:var(--panel,#101a15);color:var(--txt,#e8f1ec);border:1px solid var(--line,#1d2c24);border-radius:10px;padding:8px 10px;font:inherit;font-size:13px;max-width:100%}
+  .tabs{display:flex;gap:2px;flex-wrap:wrap;border-bottom:1px solid var(--line,#1d2c24);margin:6px 0 16px}
+  .tab{background:none;border:0;color:var(--txt-soft,#8ba396);padding:9px 11px;font:inherit;font-size:13px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+  .tab.on{color:var(--txt,#e8f1ec);border-color:#14b8a6;font-weight:800}
+  .tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:14px}
+  .tile,.panel{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:14px;padding:14px;min-width:0}
+  .tile{cursor:pointer}.tile:hover{border-color:var(--mint,#10b981)}
+  .tile .l{font-size:12px;color:var(--txt-soft,#8ba396)}.tile .v{font-size:22px;font-weight:800;margin-top:4px;overflow-wrap:anywhere}.tile .c{font-size:12px;margin-top:4px;line-height:1.7}
+  .panel{margin-bottom:14px}.panel h2{margin:0 0 10px;font-size:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .panel h3{margin:12px 0 6px;font-size:13px;color:var(--txt-soft,#8ba396)}
+  .grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+  table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px;border-bottom:1px solid var(--line,#1d2c24);text-align:start;white-space:nowrap}
+  th{color:var(--txt-soft,#8ba396);font-weight:600}.tbl{overflow-x:auto}td.w{white-space:normal;min-width:200px}
+  tr.drill{cursor:pointer}tr.drill:hover td{background:rgba(16,185,129,.06)}
+  .pos{color:#10b981}.neg{color:#ef4444}.warn{color:#f5b301}.muted{color:var(--txt-soft,#8ba396);font-size:12px}
+  .b{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700;display:inline-block;white-space:nowrap}
+  .critical,.intervene{background:rgba(239,68,68,.16);color:#ef4444}.high{background:rgba(234,88,12,.16);color:#f97316}
+  .medium,.watch{background:rgba(245,179,1,.15);color:#f5b301}.low,.good{background:rgba(16,185,129,.15);color:#10b981}.grey,.na,.monitor{background:rgba(148,163,184,.15);color:#94a3b8}
+  .btn{background:var(--mint,#10b981);color:#062b1c;border:0;border-radius:10px;padding:7px 13px;font-weight:800;cursor:pointer;font:inherit;font-size:12px;text-decoration:none;display:inline-block}
+  .btn.ghost{background:transparent;color:var(--txt-soft,#8ba396);border:1px solid var(--line,#1d2c24);font-weight:600}.btn.red{background:#ef4444;color:#fff}
+  .btn:disabled{opacity:.5;cursor:default}
+  .state{padding:36px 16px;text-align:center;color:var(--txt-soft,#8ba396);border:1px dashed var(--line,#1d2c24);border-radius:14px}
+  .na-box{color:var(--txt-soft,#8ba396);font-size:13px;padding:10px;border:1px dashed var(--line,#1d2c24);border-radius:10px;margin:6px 0}
+  .itm{border:1px solid var(--line,#1d2c24);border-inline-start:4px solid #f5b301;border-radius:12px;padding:12px;margin-bottom:10px}
+  .itm.critical,.itm.intervene{border-inline-start-color:#ef4444;background:none;color:inherit}.itm.high{border-inline-start-color:#f97316;background:none;color:inherit}
+  .itm.medium,.itm.watch{background:none;color:inherit}.itm.good,.itm.low{border-inline-start-color:#10b981;background:none;color:inherit}.itm.na,.itm.monitor{border-inline-start-color:#94a3b8;background:none;color:inherit}
+  .itm h4{margin:0 0 6px;font-size:15px}.kv{display:grid;grid-template-columns:120px 1fr;gap:4px 10px;font-size:13px;margin-top:6px}.kv b{color:var(--txt-soft,#8ba396);font-weight:600}
+  .sum p{font-size:15px;line-height:2;margin:4px 0}.sum b{color:var(--mint,#10b981)}.sum a{color:var(--mint,#10b981);font-size:11px;text-decoration:none}
+  .hgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+  .barrow{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:13px}.barrow .t{flex:0 0 140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .barrow .g{flex:1;height:10px;background:var(--line,#1d2c24);border-radius:6px;overflow:hidden;min-width:40px}.barrow .g i{display:block;height:100%;background:var(--mint,#10b981)}.barrow .x{flex:0 0 120px;text-align:end}
+  .pop{position:fixed;display:none;z-index:70;background:var(--panel,#101a15);border:1px solid var(--mint,#10b981);border-radius:12px;padding:12px;font-size:12px;max-width:340px;line-height:1.8}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}.chip{background:rgba(16,185,129,.12);color:var(--mint,#10b981);border:1px solid rgba(16,185,129,.35);border-radius:20px;padding:4px 11px;font-size:12px;cursor:pointer}
+  input.search,.fg input,.fg select,.fg textarea{background:var(--bg,#070b09);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:9px;padding:8px;font:inherit}
+  input.search{flex:1;min-width:160px;background:var(--panel,#101a15);border-radius:10px;padding:9px 12px}
+  .ai-sec{margin:8px 0}.ai-sec b{display:block;font-size:13px;margin-bottom:4px}.ai-sec li{font-size:13px;margin:3px 0}
+  .ov{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:50;padding:14px}
+  .ov.on{display:flex}.modal{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:16px;padding:18px;width:min(580px,100%);max-height:90vh;overflow:auto}
+  .fg{display:grid;grid-template-columns:1fr 1fr;gap:10px}.fg label{font-size:12px;color:var(--txt-soft,#8ba396);display:flex;flex-direction:column;gap:4px}.fg .full{grid-column:1/-1}
+  .cta{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .back{background:none;border:0;color:var(--mint,#10b981);cursor:pointer;font:inherit;padding:0;margin-bottom:10px}
+  .stbadge{font-size:12px;font-weight:800;padding:4px 10px;border-radius:10px;border:1px solid var(--line,#1d2c24)}
+  .flag{padding:10px 12px;border-radius:10px;margin:6px 0 10px;font-size:13px}
+  /* بطاقة القرار */
+  .dc-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;background:linear-gradient(90deg,#0f2a3d,#123047);border-radius:14px;padding:16px 18px;margin-bottom:12px}
+  .dc-head h2{margin:0;font-size:20px}.dc-no{border:1px solid rgba(255,255,255,.3);border-radius:10px;padding:6px 12px;font-weight:800;font-size:13px}
+  .dc-meta{display:grid;grid-template-columns:2fr repeat(4,minmax(0,1fr));gap:10px;align-items:center}.dc-meta>div{border-inline-start:1px solid var(--line,#1d2c24);padding:4px 10px}
+  .dc-meta .l{font-size:12px;color:var(--txt-soft,#8ba396)}.dc-meta .v{font-size:15px;font-weight:800;margin-top:4px}
+  .dc-box{background:rgba(255,255,255,.025);border-radius:10px;padding:12px;font-size:14px;line-height:1.9}
+  .fin3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.fin3 div{background:rgba(255,255,255,.025);border-radius:10px;padding:12px;text-align:center}
+  .fin3 b{display:block;font-size:20px;margin:6px 0}
+  .flow{display:flex;align-items:flex-start;justify-content:space-between;gap:4px;margin:10px 0}.flow .st{text-align:center;flex:1;font-size:12px;position:relative}
+  .flow .dot{width:28px;height:28px;border-radius:50%;margin:0 auto 6px;display:grid;place-items:center;font-weight:900;background:var(--line,#1d2c24);color:#94a3b8}
+  .flow .dot.on{background:#10b981;color:#062b1c}.flow .dot.cur{background:#f5b301;color:#2b1d00}
+  #printv{display:none}
+  @media print{body>*:not(#printv){display:none!important}#printv{display:block!important;color:#000;background:#fff}
+    #printv .pg{page-break-after:always;padding:22px}#printv .panel,#printv .tile,#printv .itm{background:#fff;border:1px solid #ccc;color:#000;break-inside:avoid}
+    #printv table{width:100%;border-collapse:collapse}#printv tr{break-inside:avoid}#printv td,#printv th{border:1px solid #ccc;padding:4px;font-size:10.5px;white-space:normal;color:#000}
+    #printv .muted{color:#555}#printv .cover{display:flex;flex-direction:column;justify-content:center;min-height:90vh;text-align:center}}
+  @media(max-width:900px){.hgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.dc-meta{grid-template-columns:1fr 1fr}.dc-meta>div:first-child{grid-column:1/-1}}
+  @media(max-width:760px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.grid2,.grid3,.fin3{grid-template-columns:minmax(0,1fr)}.fg{grid-template-columns:1fr}h1{font-size:20px}
+    .tile{padding:10px}.tile .v{font-size:17px}.kv{grid-template-columns:1fr}.tab{padding:7px 8px;font-size:12px}.barrow .t{flex-basis:90px}.barrow .x{flex-basis:90px}}
+  @media(max-width:1000px){.grid3{grid-template-columns:minmax(0,1fr)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>👥 ذكاء العملاء</h1>
+  <p class="sub">من عملاؤنا الأكثر قيمة؟ من المعرّض للتوقف؟ أي الشرائح والقنوات تجلب عملاء يستمرون؟ وما الإجراء الأفضل للاحتفاظ — ثم قياس أثره فعلياً.</p>
+  <div class="bar">
+    <span class="stbadge" id="stb">حي</span>
+    <button class="btn" id="btnAct" style="display:none">➕ إجراء احتفاظ</button>
+    <button class="btn ghost" id="btnFb" style="display:none">⬆ رفع استبيانات</button>
+    <button class="btn ghost" id="btnXls">📊 Excel</button>
+    <span class="muted" id="asof"></span>
+  </div>
+  <div class="na-box" id="disc" style="margin:6px 0 10px"></div>
+  <nav class="tabs" id="tabs"></nav>
+  <div id="content"><div class="state">…</div></div>
+</div>
+<div class="pop" id="pop"></div>
+<div class="ov" id="ov"><div class="modal" id="modal"></div></div>
+<script src="i18n.js"></script>
+<script>
+(function(){
+  const TOKEN=localStorage.getItem("nabbah_token")||"";if(!TOKEN){location.href="login.html";return;}
+  const TABS=[["overview","ملخص قاعدة العملاء"],["active","النشطون والنمو"],["segments","التقسيم وRFM"],["acquisition","الاكتساب"],["cac","تكلفة الاكتساب"],
+    ["retention","الاحتفاظ"],["repeat","تكرار الشراء"],["churn","الفقد والمعرّضون"],["clv","القيمة الدائمة"],["profitability","ربحية العملاء"],["journey","رحلة العميل"],
+    ["satisfaction","الرضا والولاء"],["sentiment","الملاحظات والمشاعر"],["cohorts","مجموعات العملاء"],["alerts","التنبيهات"],["actions","إجراءات الاحتفاظ"],
+    ["decisions","القرارات والنتائج"],["data_quality","جودة البيانات والتعريفات"],["ai","AI Customer Intelligence"],["settings","الإعدادات"]];
+  const CONF={high:"مرتفعة",medium:"متوسطة",low:"منخفضة"};
+  const SEV={critical:"حرج",high:"مرتفع",medium:"متوسط"};
+  const AST={open:"مفتوح",pending_approval:"بانتظار الاعتماد",approved:"معتمد",rejected:"مرفوض",in_progress:"قيد التنفيذ",done:"منجز",cancelled:"ملغى"};
+  const ACLS={open:"medium",pending_approval:"high",approved:"low",rejected:"grey",in_progress:"medium",done:"low",cancelled:"grey"};
+  const FLOW={open:["in_progress","done","cancelled"],pending_approval:["approved","rejected","cancelled"],approved:["in_progress","cancelled"],in_progress:["done","cancelled"]};
+  const SENT={positive:"إيجابي",negative:"سلبي",neutral:"محايد"};
+  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const n=(v,d=0)=>{if(v==null||v===""||isNaN(Number(v)))return"—";const x=Number(v),t=Math.abs(x).toLocaleString("ar-SA",{maximumFractionDigits:d});return x<0?"⁦−"+t+"⁩":t;};
+  const fv=(v,u)=>v==null?"غير متاح":(u==="%"?n(v,1)+"%":u==="SAR"?n(v)+" ر.س":n(v,1)+(u?" "+u:""));
+  const pp=v=>v==null?"—":n(v,1)+"%";
+  const H={Authorization:"Bearer "+TOKEN,"Content-Type":"application/json"},$=id=>document.getElementById(id);
+  let D=null,EV={},evI=0;
+  const route=()=>{const h=decodeURIComponent(location.hash.slice(1)||"overview");const i=h.indexOf("/");return i<0?[h,""]:[h.slice(0,i),h.slice(i+1)];};
+  const go=(v,a)=>{location.hash=a?`${v}/${encodeURIComponent(a)}`:v;};
+  window.addEventListener("hashchange",()=>{if(D){render();window.scrollTo(0,0);}});
+  const api=(path,body)=>fetch(path,{method:"POST",headers:H,body:JSON.stringify(body)}).then(async r=>{const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(typeof j.detail==="string"?j.detail:"HTTP "+r.status);return j;});
+  const getj=path=>fetch(path,{headers:H}).then(async r=>{const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(typeof j.detail==="string"?j.detail:"HTTP "+r.status);return j;});
+  function load(){$("content").innerHTML=`<div class="state">جارٍ قراءة فواتير المبيعات وملف العملاء…</div>`;
+    fetch("/company/customer-intelligence",{headers:H}).then(async r=>{
+      if(r.status===401){location.href="login.html";return null;}
+      if(r.status===403||r.status===402){let d="";try{d=(await r.json()).detail;}catch(_){}$("tabs").innerHTML="";$("content").innerHTML=`<div class="state">🔒 ${esc(d||"ليست لديك صلاحية.")}</div>`;return null;}
+      if(!r.ok){let d="";try{const j=await r.json();d=typeof j.detail==="string"?j.detail:JSON.stringify(j.detail||j);}catch(_){}err(`HTTP ${r.status}${d?" — "+d:""}`);return null;}
+      return r.json();}).then(d=>{if(!d)return;D=d;const sc=d.scope||{};
+        $("btnAct").style.display=sc.can_act?"":"none";$("btnFb").style.display=sc.can_feedback?"":"none";
+        const df=d.definitions||{};
+        $("asof").textContent=`حتى ${d.as_of||"—"} · البيانات من ${d.data_start||"—"} · القطاع: ${df.sector||"—"} · نشط ≤ ${df.active_days} يوماً · مفقود > ${df.lost_days} يوماً${df.custom?" (مخصص)":" (افتراضي القطاع)"}`;
+        $("disc").textContent=`${d.disclaimer_ar||""} · صلاحيتك: ${sc.ar||""}`;
+        const me=d.module_errors||{};if(Object.keys(me).length)$("disc").textContent+=" · غير متاح الآن: "+Object.values(me).join("، ");
+        try{render();}catch(e){console.error(e);err("render: "+(e&&e.message||e));}}).catch(e=>err("network: "+(e&&e.message||e)));}
+  function err(m){$("content").innerHTML=`<div class="state neg">تعذّر تحميل ذكاء العملاء.<div class="muted" style="margin-top:8px">${esc(m)}</div></div>`;}
+  const panel=(t,b,x="")=>`<div class="panel"><h2>${t}${x}</h2>${b}</div>`;
+  const na=m=>`<div class="na-box">${esc(m)}</div>`;
+  const R=k=>{const x=D[k];return x&&!x.restricted?x:null;};
+  const restricted=()=>`<div class="state">🔒 خارج صلاحيتك</div>`;
+  const ev=m=>{const k="e"+(evI++);EV[k]=m;return k;};
+  const conf=c=>c?`<span class="b ${c==="high"?"low":c==="low"?"critical":"medium"}">ثقة ${esc(CONF[c]||c)}</span>`:"";
+  const tbl=(head,rows)=>`<div class="tbl"><table><thead><tr>${head.map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>${rows.join("")}</tbody></table></div>`;
+  const bars=(items,lab,val,fmt)=>{const mx=Math.max(1,...items.map(i=>Number(val(i))||0));return items.map(i=>`<div class="barrow"><span class="t" title="${esc(lab(i))}">${esc(lab(i))}</span><span class="g"><i style="width:${Math.max(0,(Number(val(i))||0)/mx*100)}%"></i></span><span class="x">${fmt(i)}</span></div>`).join("");};
+  const dist=(xs,title)=>xs&&xs.length?`<h3>${title}</h3>`+bars(xs,i=>i.key,i=>i.count,i=>`${n(i.count)} · ${pp(i.share_pct)}`):"";
+  function tile(c){if(!c)return"";const k=ev(c);const d=c.change_pct!=null?c.change_pct:c.change_pp;const good=c.status==="improved",bad=c.status==="declined";
+    const ch=d==null?"":`<span class="${good?"pos":bad?"neg":"muted"}">${d>0?"+":""}${n(d,1)}${c.change_pct!=null?"%":" نقطة"}</span>`;
+    return `<div class="tile" data-ev="${k}"><div class="l">${esc(c.label)}</div><div class="v">${c.available===false?'<span class="muted" style="font-size:14px">غير متاح</span>':fv(c.value,c.unit)}</div><div class="c">${c.available===false?`<span class="muted">${esc(c.reason_ar||"")}</span>`:`${c.previous!=null?`<span class="muted">السابق ${fv(c.previous,c.unit)}</span> `:""}${ch} ${conf(c.confidence)}`}</div></div>`;}
+  const simple=(l,v,sub)=>`<div class="tile"><div class="l">${l}</div><div class="v">${v}</div>${sub?`<div class="c muted">${sub}</div>`:""}</div>`;
+  // ── 1 الملخص
+  function overview(){const o=R("overview");if(!o)return restricted();const al=(R("alerts")||{}).items||[];
+    return `<div class="tiles">${(o.cards||[]).map(tile).join("")}</div>`
+      +(al.length?panel("ما يحتاج انتباهك الآن",al.slice(0,3).map(a=>`<div class="itm ${a.severity}"><h4>${esc(a.icon)} ${esc(a.title_ar)}</h4><div class="muted">${(a.evidence||[]).map(esc).join(" · ")}</div></div>`).join("")+`<div class="cta"><button class="btn ghost" data-go="alerts">كل التنبيهات</button><button class="btn ghost" data-go="churn">المعرّضون للفقد</button></div>`):"")
+      +panel(`التعريفات المستخدمة <span class="muted">(${esc(o.term||"العميل")})</span>`,`<ul style="margin:0;line-height:2">${Object.values(o.definitions||{}).map(x=>`<li>${esc(x)}</li>`).join("")}</ul><div class="muted">قابلة للضبط من الإعدادات — غياب سجل عميل لا يعني صفر عملاء.</div>`);}
+  // ── 2 النشطون
+  function active(){const a=R("active");if(!a)return restricted();if(!a.available)return na(a.unidentified_note_ar||"لا يوجد معرّف عميل في فواتير المبيعات — أضف عمود العميل");const s=a.by_status||{};
+    return `<div class="tiles">${simple("العملاء المعروفون",n(a.known))}${simple("النشطون",n(a.active),`السابق ${n(a.active_prev)} · ${a.growth_pct==null?"—":(a.growth_pct>0?"+":"")+n(a.growth_pct,1)+"%"}`)}${simple("الجدد (30 يوماً)",n(a.new),`السابق ${n(a.new_prev)}`)}${simple("العائدون (نشط + أكثر من طلب)",n(a.returning))}${simple("غير النشطين",n(a.inactive),"معرّض + مفقود")}${simple("بيانات غير كافية",n(s.insufficient))}</div>`
+      +(a.unidentified_note_ar?`<div class="flag medium">⚠️ ${esc(a.unidentified_note_ar)}</div>`:"")
+      +`<div class="grid2">${panel("الحالة",bars(Object.entries(s).map(([k,v])=>({k,v})),i=>({new:"جديد",active:"نشط",at_risk:"معرّض للفقد",lost:"مفقود",insufficient:"بيانات غير كافية"}[i.k]),i=>i.v,i=>n(i.v)))}${panel("النشطون عبر الزمن",bars(a.series||[],i=>i.as_of,i=>i.active,i=>n(i.active)))}</div>`
+      +`<div class="grid2">${panel("حسب الفرع",dist(a.by_branch,"")||na("—"))}${panel("حسب القناة والمدينة",dist(a.by_channel,"القناة")+dist(a.by_city,"المدينة"))}</div>`
+      +`<div class="muted">${esc(a.definition_ar)}</div>`;}
+  // ── 3 التقسيم
+  function segments(){const s=R("segments");if(!s)return restricted();if(!s.available)return na(s.reason_ar);
+    return panel("شرائح RFM",tbl(["الشريحة","العملاء","الحصة","الإيراد","حصة الإيراد","متوسط القيمة","الهامش","نشط"],s.rfm.map(r=>`<tr><td><b>${esc(r.ar)}</b></td><td>${n(r.count)}</td><td>${pp(r.share_pct)}</td><td>${n(r.revenue)}</td><td>${pp(r.revenue_share_pct)}</td><td>${n(r.avg_value)}</td><td>${r.margin_pct==null?'<span class="muted">بلا تكلفة</span>':pp(r.margin_pct)}</td><td>${pp(r.active_pct)}</td></tr>`))+`<div class="muted">${esc(s.rfm_rule_ar)} · ${esc(s.margin_note_ar)}</div>`)
+      +`<div class="grid3">${panel("تكرار الشراء",bars(s.frequency_buckets,i=>i.key+" طلب",i=>i.count,i=>`${n(i.count)} · ${pp(i.share_pct)}`))}${panel("النوع",bars(s.types,i=>i.key,i=>i.count,i=>`${n(i.count)} · ${n(i.revenue)} ر.س`))}${panel("دورة الحياة",bars(Object.entries(s.lifecycle||{}).map(([k,v])=>({k,v})),i=>i.k,i=>i.v,i=>n(i.v)))}</div>`
+      +panel("التركّز",`<div class="kv"><b>أعلى 20% إنفاقاً</b><span>${pp(s.top20_revenue_share_pct)} من الإيراد</span><b>مرة واحدة</b><span>${n((s.new_vs_returning||{}).new)} عميل</span><b>أكثر من مرة</b><span>${n((s.new_vs_returning||{}).returning)} عميل</span></div>`);}
+  // ── 4 الاكتساب
+  function acquisition(){const a=R("acquisition");if(!a)return restricted();
+    const grp=(xs,t)=>xs&&xs.length?tbl([t,"جدد","إيراد أول 90 يوماً","عادوا خلال 90 يوماً"],xs.map(r=>`<tr><td>${esc(r.key)}</td><td>${n(r.new)}</td><td>${n(r.revenue_90d)}</td><td>${r.repeat_90d_pct==null?'<span class="muted">عينة غير كافية</span>':pp(r.repeat_90d_pct)}</td></tr>`)):na("—");
+    return panel("العملاء الجدد شهرياً",bars(a.monthly,i=>i.period,i=>i.new,i=>`${n(i.new)} · ${n(i.revenue_90d)} ر.س`))
+      +(a.source_note_ar?`<div class="flag medium">⚠️ ${esc(a.source_note_ar)}</div>`:"")
+      +`<div class="grid2">${panel("حسب المصدر",grp(a.by_source,"المصدر"))}${panel("حسب القناة",grp(a.by_channel,"القناة"))}</div>`+panel("حسب الفرع",grp(a.by_branch,"الفرع"))
+      +`<div class="muted">${esc(a.quality_rule_ar)} · ${esc(a.conversion_ar)}</div>`;}
+  // ── 5 CAC
+  function cac(){const c=R("cac");if(!c)return restricted();const S={complete:"low",partial:"medium",incomplete:"critical"};
+    return panel(`تكلفة اكتساب العميل <span class="b ${S[c.status]}">${esc({complete:"مكتملة",partial:"جزئية",incomplete:"غير مكتملة"}[c.status])}</span>`,
+      `<div class="tiles">${simple("CAC الحالي",c.current&&c.current.cac!=null?n(c.current.cac,2)+" ر.س":'<span class="muted" style="font-size:14px">غير متاح</span>',c.current?`${esc(c.current.period)} · ${n(c.current.cost)} ÷ ${n(c.current.new)}`:"")}${simple("الأساس",esc(c.basis_ar||"لا تكاليف"))}${simple("التكاليف المشمولة",esc((c.included_ar||[]).join("، ")||"—"))}</div>`
+      +`<div class="na-box">${esc(c.status_ar)}</div><div class="kv"><b>المعادلة</b><span>${esc(c.formula_ar)}</span><b>غير مشمول</b><span>${esc(c.excluded_ar)}</span></div>`
+      +((c.rows||[]).length?tbl(["الفترة","التكلفة","عملاء جدد","CAC"],c.rows.map(r=>`<tr><td>${esc(r.period)}</td><td>${n(r.cost)}</td><td>${n(r.new)}</td><td>${r.cac==null?`<span class="muted">${esc(r.reason_ar||"—")}</span>`:n(r.cac,2)}</td></tr>`)):"")
+      +(D.scope&&["full","cfo"].includes(D.scope.kind)?`<div class="cta"><button class="btn ghost" data-go="settings">تحديد بنود/تكاليف الاكتساب</button></div>`:""));}
+  // ── 6 الاحتفاظ
+  function retention(){const r=R("retention");if(!r)return restricted();if(!r.available)return na("لا عملاء نشطون في النافذة السابقة لقياس الاحتفاظ");
+    const by=(xs,t)=>tbl([t,"القاعدة","الاحتفاظ",""],xs.map(x=>`<tr><td>${esc(x.key)}</td><td>${n(x.base)}</td><td>${pp(x.rate)}</td><td>${x.small?'<span class="b grey">عينة صغيرة</span>':""}</td></tr>`));
+    return `<div class="tiles">${simple("معدل الاحتفاظ",pp(r.rate),`السابق ${pp(r.prev_rate)}`)}${simple("القاعدة / من عاد",`${n(r.base)} / ${n(r.kept)}`)}${simple("الاتجاه (6 نقاط)",r.trend_pp==null?"—":(r.trend_pp>0?"+":"")+n(r.trend_pp,1)+" نقطة")}</div>`
+      +panel("الاحتفاظ عبر الزمن",bars(r.series,i=>i.as_of,i=>i.rate,i=>`${pp(i.rate)} (${n(i.base)})`))
+      +(r.weak_segments&&r.weak_segments.length?`<div class="flag high">⚠️ شرائح أضعف احتفاظاً: ${r.weak_segments.map(w=>`${esc(w.key)} ${pp(w.rate)}`).join(" · ")}</div>`:"")
+      +`<div class="grid3">${panel("حسب الفرع",by(r.by_branch,"الفرع"))}${panel("حسب القناة",by(r.by_channel,"القناة"))}${panel("حسب الشريحة",by(r.by_segment,"الشريحة"))}</div>`
+      +`<div class="muted">${esc(r.rule_ar)}${r.model_note_ar?" · "+esc(r.model_note_ar):""}</div>`;}
+  // ── 7 التكرار
+  function repeat(){const r=R("repeat");if(!r)return restricted();if(!r.available)return na(r.reason_ar);
+    return `<div class="tiles">${simple("معدل تكرار الشراء",pp(r.repeat_rate),"عملاء بطلبين أو أكثر")}${simple("طلبات لكل عميل",n(r.orders_per_customer,2))}${simple("الوسيط بين طلبين",r.median_days_between==null?"—":n(r.median_days_between)+" يوم")}${simple("الشراء الثاني خلال 90 يوماً",r.second_purchase_90d==null?'<span class="muted" style="font-size:14px">عينة غير كافية</span>':pp(r.second_purchase_90d))}${simple("اشتروا مرة واحدة",n(r.one_time))}</div><div class="muted">${esc(r.second_rule_ar)}</div>`;}
+  // ── 8 الفقد
+  function clist(xs,title,cls){if(!xs||!xs.length)return"";return panel(`${title} (${xs.length})`,tbl(["العميل","الفرع","آخر شراء","الطلبات","الإيراد","القيمة الشهرية","الشريحة","الدليل",""],xs.map(c=>`<tr><td><b>${esc(c.name)}</b></td><td>${esc(c.branch)}</td><td>منذ ${n(c.recency)} يوم</td><td>${n(c.orders)}</td><td>${n(c.revenue)}</td><td>${n(c.monthly_value)}</td><td>${esc(c.segment_ar||"")}</td><td class="w muted">${(c.evidence||[]).map(esc).join(" · ")}</td><td>${D.scope.can_act?`<button class="btn ghost" data-newact="${esc(c.id)}" data-tname="${esc(c.name)}" data-reason="${esc((c.evidence||[]).slice(-1)[0]||"")}">إجراء</button>`:""}</td></tr>`)));}
+  function churn(){const c=R("churn");if(!c)return restricted();const k=c.counts||{};
+    return `<div class="tiles">${simple("معدل الفقد",pp(c.rate))}${simple("مفقودون",n(k.lost),`قيمة شهرية سابقة ${n(c.lost_monthly_value)} ر.س`)}${simple("معرّضون للفقد",n(k.at_risk),`قيمة شهرية سابقة ${n(c.at_risk_monthly_value)} ر.س`)}</div>`
+      +`<div class="na-box">${esc(c.value_type_ar)}</div>`
+      +(c.risk_engine?`<div class="flag medium">مركز المخاطر (3.3): ${n(c.risk_engine.lost_customers)} عميلاً متوقفاً بنافذة ${n(c.risk_engine.window_days)} يوماً — ${esc(c.risk_engine.note_ar)} <a class="btn ghost" href="company-risk-intelligence.html">↗</a></div>`:"")
+      +(c.names_hidden_ar?na(c.names_hidden_ar):"")
+      +clist(c.at_risk,"تجاوزوا فترة النشاط أو تأخروا عن نمطهم")+clist(c.declining,"نشطون لكن تراجع نشاطهم")+clist(c.lost,"مفقودون")+clist(c.insufficient,"بيانات غير كافية للحكم")
+      +panel("التعريفات",`<ul style="margin:0">${["at_risk","lost","insufficient"].map(x=>`<li>${esc((c.rules_ar||{})[x])}</li>`).join("")}</ul>`);}
+  // ── 9 CLV
+  function clv(){const c=R("clv");if(!c)return restricted();if(!c.available)return na("لا بيانات عملاء");const m=c.model;
+    return `<div class="tiles">${simple("متوسط القيمة التاريخية",n(c.avg_historical)+" ر.س",esc(c.labels_ar.historical))}${simple("القيمة المتوقعة (تقدير)",m&&m.value!=null?n(m.value)+" ر.س":'<span class="muted" style="font-size:14px">غير متاح</span>',m&&m.value!=null?"ثقة منخفضة — تقدير بنموذج":esc((m||{}).reason_ar||"تحتاج 10 عملاء بتاريخ ≥ 30 يوماً"))}${simple("متوسط مدة العلاقة",n(c.avg_tenure_days)+" يوم")}</div>`
+      +(m?panel(`نموذج التقدير ${conf(c.confidence)}`,`<div class="kv"><b>متوسط الطلب</b><span>${n(m.aov,2)} ر.س</span><b>طلبات شهرياً</b><span>${n(m.freq_month,2)}</span><b>الفقد الشهري</b><span>${pp(m.monthly_churn_pct)}</span><b>مدة العلاقة المتوقعة</b><span>${m.lifetime_months==null?"—":n(m.lifetime_months,1)+" شهر"}</span><b>الطريقة</b><span>${esc(m.method_ar||m.reason_ar||"")}</span></div>`):"")
+      +panel("أعلى العملاء قيمة",tbl(["العميل","الإيراد التاريخي","مجمل الربح التاريخي","الطلبات","المدة","الحالة","القيمة المتوقعة"],c.top.map(r=>`<tr><td><b>${esc(r.name)}</b></td><td>${n(r.historical_revenue)}</td><td>${r.historical_gp==null?'<span class="muted">بلا تكلفة</span>':n(r.historical_gp)}</td><td>${n(r.orders)}</td><td>${n(r.tenure_days)} يوم</td><td>${esc(r.status_ar)}</td><td>${r.predicted==null?'<span class="muted">—</span>':n(r.predicted)+' <span class="b grey">تقدير</span>'}</td></tr>`))
+        +`<div class="muted">${esc(c.labels_ar.historical)} · ${esc(c.labels_ar.predicted)}</div>`);}
+  // ── 10 الربحية
+  function profitability(){const p=R("profitability");if(!p)return restricted();if(!p.available)return na(p.reason_ar)+(p.revenue_ranking_note_ar?`<div class="muted">${esc(p.revenue_ranking_note_ar)}</div>`:"");
+    return `<div class="tiles">${simple("متوسط هامش مجمل الربح",pp(p.avg_margin_pct))}${simple("مرتفعو الإنفاق منخفضو الهامش",n((p.high_spend_low_margin||[]).length))}${simple("الأساس",esc(p.basis_ar))}</div>`
+      +`<div class="na-box">${esc(p.service_cost_ar)}</div>`
+      +panel("أعلى العملاء ربحية",tbl(["العميل","الإيراد","تكلفة الأصناف","مجمل الربح","الهامش","الخصم","المرتجعات","الشريحة"],p.rows.map(r=>`<tr><td><b>${esc(r.name)}</b></td><td>${n(r.revenue)}</td><td>${n(r.cogs)}</td><td>${n(r.gross_profit)}</td><td>${pp(r.margin_pct)}</td><td>${pp(r.discount_rate)}</td><td>${n(r.returns)}</td><td>${esc(r.segment_ar||"")}</td></tr>`)))
+      +((p.high_spend_low_margin||[]).length?panel("إنفاق مرتفع وهامش أقل من المتوسط بأكثر من 5 نقاط",tbl(["العميل","الإيراد","الهامش","الخصم"],p.high_spend_low_margin.map(r=>`<tr><td>${esc(r.name)}</td><td>${n(r.revenue)}</td><td class="neg">${pp(r.margin_pct)}</td><td>${pp(r.discount_rate)}</td></tr>`))):"")
+      +`<div class="grid2">${panel("حسب الشريحة",tbl(["الشريحة","الإيراد","مجمل الربح","الهامش"],p.by_segment.map(r=>`<tr><td>${esc(r.key)}</td><td>${n(r.revenue)}</td><td>${n(r.gross_profit)}</td><td>${pp(r.margin_pct)}</td></tr>`)))}${panel("حسب القناة",tbl(["القناة","الإيراد","مجمل الربح","الهامش"],p.by_channel.map(r=>`<tr><td>${esc(r.key)}</td><td>${n(r.revenue)}</td><td>${n(r.gross_profit)}</td><td>${pp(r.margin_pct)}</td></tr>`)))}</div>`;}
+  // ── 11 الرحلة
+  function journey(){const j=R("journey");if(!j)return restricted();if(!j.available)return na(j.reason_ar);
+    return panel("مراحل الرحلة من المعاملات",bars(j.stages,i=>i.ar,i=>i.count,i=>`${n(i.count)}${i.conversion_pct!=null?" · "+pp(i.conversion_pct):""}`)
+      +`<div class="kv"><b>الوسيط حتى الشراء الثاني</b><span>${j.days_to_second==null?"—":n(j.days_to_second)+" يوم"}</span><b>الوسيط حتى الانتظام (4 طلبات)</b><span>${j.days_to_regular==null?"—":n(j.days_to_regular)+" يوم"}</span><b>أكبر تسرب</b><span>${j.biggest_dropoff?`${esc(j.biggest_dropoff.ar)} — ${pp(j.biggest_dropoff.conversion_pct)} تحويل (${n(j.biggest_dropoff.dropoff)} عميل)`:"—"}</span></div>`)
+      +`<div class="na-box">${esc(j.pre_purchase_ar)}</div>`+panel("الشراء الثاني حسب القناة",tbl(["القناة","العملاء","اشتروا مرة ثانية"],j.by_channel.map(r=>`<tr><td>${esc(r.key)}</td><td>${n(r.customers)}</td><td>${pp(r.second_pct)}</td></tr>`)));}
+  // ── 12 الرضا
+  function satisfaction(){const s=R("satisfaction");if(!s)return restricted();
+    if(!s.available)return na(s.reason_ar)+(D.scope.can_feedback?`<div class="cta"><button class="btn" data-fb="1">⬆ رفع نتائج الاستبيانات</button></div>`:"");
+    const g=(xs,t)=>tbl([t,"n","CSAT","NPS",""],xs.map(x=>`<tr><td>${esc(x.key)}</td><td>${n(x.n)}</td><td>${pp(x.csat)}</td><td>${x.nps==null?"—":n(x.nps,1)}</td><td>${x.small?'<span class="b grey">عينة صغيرة</span>':""}</td></tr>`));
+    const rl=s.retention_link||{};
+    return `<div class="tiles">${simple("NPS",s.nps==null?"—":n(s.nps,1),`n=${n(s.n_nps)}`)}${simple("CSAT",pp(s.csat),`n=${n(s.n_csat)}`)}${simple("الإجابات",n(s.n),`${esc(s.from||"")} → ${esc(s.to||"")}`)}</div>`
+      +(s.small_sample_ar?`<div class="flag high">⚠️ ${esc(s.small_sample_ar)}</div>`:"")
+      +`<div class="kv"><b>الطريقة</b><span>${esc((s.methods||[]).join("، "))}</span><b>الثقة</b><span>${conf(s.confidence)}</span><b>NPS</b><span class="muted">${esc(s.nps_rule_ar)}</span><b>CSAT</b><span class="muted">${esc(s.csat_rule_ar)}</span></div>`
+      +`<div class="grid2">${panel("حسب الفرع",g(s.by_branch||[],"الفرع"))}${panel("الاتجاه الشهري",tbl(["الشهر","n","CSAT","NPS"],(s.trend||[]).map(t=>`<tr><td>${esc(t.period)}</td><td>${n(t.n)}</td><td>${pp(t.csat)}</td><td>${t.nps==null?"—":n(t.nps,1)}</td></tr>`)))}</div>`
+      +panel("الرضا والاحتفاظ",rl.available?`<div class="kv"><b>الراضون النشطون</b><span>${pp(rl.satisfied_active_pct)} (n=${n(rl.n_satisfied)})</span><b>غير الراضين النشطون</b><span>${pp(rl.dissatisfied_active_pct)} (n=${n(rl.n_dissatisfied)})</span></div><div class="muted">${esc(rl.note_ar)}</div>`:na(rl.reason_ar||"غير متاح"));}
+  // ── 13 المشاعر
+  function sentiment(){const s=R("sentiment");if(!s)return restricted();if(!s.available)return na(s.reason_ar)+(D.scope.can_feedback?`<div class="cta"><button class="btn" data-fb="1">⬆ رفع الملاحظات</button></div>`:"");const c=s.counts||{};
+    return `<div class="tiles">${simple("إيجابي",n(c.positive))}${simple("سلبي",n(c.negative))}${simple("محايد",n(c.neutral),`من ${n(s.n)} ملاحظة`)}</div>`
+      +panel("الموضوعات",s.topics.map(t=>`<div class="itm ${t.needs_action?"high":t.positive>t.negative?"low":"na"}"><h4>${esc(t.ar)} <span class="muted">${n(t.count)} ذكر · سلبي ${n(t.negative)} · إيجابي ${n(t.positive)}</span> ${t.needs_action?'<span class="b high">يحتاج إجراء</span>':""}</h4>${t.top_branch?`<div class="muted">أكثر فرع في الشكاوى: ${esc(t.top_branch)}${t.top_product&&t.top_product!=="—"?" · المنتج: "+esc(t.top_product):""}</div>`:""}<ul style="margin:6px 0;padding-inline-start:18px;font-size:13px">${t.examples.map(e=>`<li>«${esc(e.text)}» <span class="muted">${esc(SENT[e.sentiment]||"")} · ${esc(e.date||"")} · ${esc(e.branch||"")}</span></li>`).join("")}</ul><button class="btn ghost" data-raw="${esc(t.key)}">الملاحظات الأصلية</button></div>`).join(""))
+      +`<div class="muted">${esc(s.method_ar)}</div>`;}
+  // ── 14 المجموعات
+  function cohorts(){const c=R("cohorts");if(!c)return restricted();const mx=Math.max(1,...c.rows.map(r=>(r.retention||[]).length));
+    return panel("مجموعات العملاء حسب شهر أول شراء",tbl(["المجموعة","الحجم",...Array.from({length:mx},(_,i)=>"ش"+i),"متوسط القيمة"],c.rows.map(r=>`<tr><td>${esc(r.cohort)}</td><td>${n(r.size)}</td>${Array.from({length:mx},(_,i)=>{const v=(r.retention||[])[i];return `<td style="${v!=null?`background:rgba(16,185,129,${Math.min(.5,v/200)})`:""}">${v==null?"":pp(v)}</td>`;}).join("")}<td>${n(r.avg_value)}</td></tr>`))
+      +`<div class="muted">${esc(c.rule_ar)}${c.quality_ar?" · "+esc(c.quality_ar):""}</div>`);}
+  // ── 15 التنبيهات
+  function alerts(){const a=R("alerts");if(!a)return restricted();const sc=D.scope||{};
+    return panel(`تنبيهات العملاء (${a.items.length})`,a.items.length?a.items.map((x,i)=>`<div class="itm ${x.severity}"><h4>${esc(x.icon)} ${esc(x.title_ar)} <span class="b ${x.severity}">${esc(SEV[x.severity])}</span></h4><div class="kv"><b>الدليل</b><span>${(x.evidence||[]).map(esc).join(" · ")}</span><b>المصدر</b><span>${esc(x.source_ar)}</span>${x.amount!=null?`<b>القيمة</b><span>${n(x.amount)} ر.س شهرياً (محتملة)</span>`:""}<b>الإجراء المقترح</b><span>${esc(x.action_ar||"—")}</span><b>اكتُشف</b><span>${esc(x.detected||"")}</span></div>${sc.can_act?`<div class="cta"><button class="btn" data-alact="${i}">➕ إجراء احتفاظ</button>${(D.sections_index||[]).some(s=>s.key==="decisions"&&s.allowed)?`<button class="btn ghost" data-aldec="${i}">🗳 إنشاء قرار</button>`:""}</div>`:""}</div>`).join(""):na("لا تنبيهات حالياً"))+`<div class="muted">${esc(a.rule_ar)}</div>`;}
+  // ── 16 الإجراءات
+  function actions(){const a=R("actions");if(!a)return restricted();const sc=D.scope||{};
+    const btns=x=>(FLOW[x.status]||[]).filter(t=>!["approved","rejected"].includes(t)||sc.can_approve).filter(()=>sc.can_act||sc.can_approve).map(t=>`<button class="btn ${t==="approved"?"":t==="rejected"||t==="cancelled"?"ghost":"ghost"}" data-ast="${x.id}" data-to="${t}">${esc(AST[t])}</button>`).join(" ");
+    return `<div class="tiles">${simple("مفتوحة",n(a.open))}${simple("منجزة",n(a.done))}${simple("عاد العميل بعد الإجراء",a.returned_pct==null?"—":pp(a.returned_pct),"من الإجراءات المنجزة على عميل محدد")}</div>`
+      +`<div class="na-box">⚖️ ${esc(a.rule_ar)}</div>`
+      +panel("إجراءات الاحتفاظ",a.items.length?tbl(["المستهدف","السبب","الإجراء","المسؤول","الموعد","التكلفة","المؤشر","الحالة","النتيجة","قبل/بعد 60 يوماً",""],a.items.map(x=>{const m=x.measurement||{};return `<tr><td><b>${esc(x.target||x.customer_id)}</b>${x.branch?`<div class="muted">${esc(x.branch)}</div>`:""}</td><td class="w">${esc(x.reason)}</td><td class="w">${esc(x.kind_ar)}${x.needs_approval?' <span class="b high">يحتاج اعتماد</span>':""}<div class="muted">${esc(x.action||"")}</div></td><td>${esc(x.owner)}</td><td>${esc(x.due)}</td><td>${x.cost==null?"—":n(x.cost)}</td><td>${esc(x.kpi||"—")}</td><td><span class="b ${ACLS[x.status]||"grey"}">${esc(AST[x.status]||x.status)}</span>${x.approved_by?`<div class="muted">اعتمد: ${esc(x.approved_by)}</div>`:""}${x.rejection_reason?`<div class="muted">${esc(x.rejection_reason)}</div>`:""}</td><td class="w">${esc(x.actual_result||"")}${x.actual_impact!=null?`<div>${n(x.actual_impact)} ر.س</div>`:""}</td><td class="w">${m.available?`${n(m.before)} ← ${n(m.after)} <span class="muted">${esc(m.note_ar)}</span>`:`<span class="muted">${esc(m.reason_ar||"")}</span>`}</td><td>${btns(x)}${x.decision_id?` <a class="btn ghost" href="company-decisions-intelligence.html#dec/${x.decision_id}">قرار #${x.decision_id}</a>`:(sc.can_act&&x.status!=="cancelled"?` <button class="btn ghost" data-actdec="${x.id}">🗳 قرار</button>`:"")}</td></tr>`;})):na("لا إجراءات بعد"))
+      +((a.suggestions||[]).length&&sc.can_act?panel("مقترحات من التحليل (لا تُنفذ تلقائياً)",a.suggestions.map((s,i)=>`<div class="itm medium"><h4>${esc(s.target_ar)}</h4><div class="muted">${esc(s.reason_ar)} · ${esc(a.kinds[s.kind]||s.kind)}</div><div class="cta"><button class="btn ghost" data-sugg="${i}">➕ إنشاء إجراء</button></div></div>`).join("")):"");}
+  // ── 17 القرارات
+  function decisions(){const d=R("decisions");if(!d)return restricted();
+    return panel("قرارات العملاء في متابعة القرارات (3.9)",d.items.length?tbl(["#","القرار","المسؤول","الموعد","الحالة","الأثر المتوقع","الأثر الفعلي",""],d.items.map(x=>`<tr><td>${x.id}</td><td><b>${esc(x.title)}</b></td><td>${esc(x.owner||"")}</td><td>${esc(x.due||"")}</td><td>${esc(x.workflow||x.status||"")}</td><td>${x.expected_impact==null?"—":n(x.expected_impact)}</td><td>${x.actual_impact==null?"—":n(x.actual_impact)}</td><td>${x.link?`<a class="btn ghost" href="${esc(x.link)}">فتح</a>`:""}</td></tr>`)):na("لا قرارات مرتبطة بالعملاء بعد"))+`<div class="muted">${esc(d.note_ar)}</div>`
+      +panel("روابط",`<div class="chips">${[["company-sales-intelligence.html","ذكاء المبيعات 2.5"],["company-financial-intelligence.html","الوحدة المالية"],["company-leakage-intelligence.html","التسرب 3.1"],["company-risk-intelligence.html","المخاطر 3.3"],["company-performance-prediction.html","التنبؤ 3.7"],["company-goals-intelligence.html","الأهداف 3.8"],["company-executive-report-intelligence.html","التقرير التنفيذي 3.12"]].map(([h,l])=>`<a class="chip" href="${h}">${l}</a>`).join("")}</div>`);}
+  // ── 18 جودة البيانات
+  function data_quality(){const q=R("data_quality");if(!q)return restricted();const c=q.contract||{};const S={ok:"low",weak:"medium",missing:"critical"};
+    return panel("جودة بيانات العملاء",tbl(["العنصر","القيمة","الحالة","يؤثر على"],q.rows.map(r=>`<tr><td>${esc(r.ar)}</td><td>${r.key==="feedback"?n(r.value):pp(r.value)}</td><td><span class="b ${S[r.status]}">${esc({ok:"جيد",weak:"ضعيف",missing:"غير موجود"}[r.status])}</span></td><td class="w">${esc(r.effect_ar)}</td></tr>`)))
+      +`<div class="grid2">${panel("عقد البيانات",`<div class="kv"><b>فواتير</b><span>${n(c.rows)}</span><b>بمعرّف عميل</b><span>${n(c.identified_rows)} (${pp(c.identified_pct)})</span><b>بلا معرّف</b><span>${n(c.unidentified_rows)} · ${n(c.unidentified_value)} ر.س</span><b>عملاء</b><span>${n(c.customers)}</span><b>مرتبطون بالملف</b><span>${n(c.linked_to_master)} (${pp(c.linked_pct)})</span><b>سجلات الملف</b><span>${n(c.master_records)}</span><b>تغطية التكلفة</b><span>${pp(c.cost_coverage_pct)}</span></div>`)}${panel("التعريفات",`<ul style="margin:0;line-height:2">${Object.values(q.definitions||{}).map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`)}</div>`
+      +(q.missing_ar&&q.missing_ar.length?`<div class="flag medium">ينقص: ${q.missing_ar.map(esc).join("، ")}</div>`:"")+`<div class="muted">${esc(q.note_ar)}</div>`;}
+  // ── AI
+  function ai(){return panel("اسأل عن عملائك",`<div class="chips">${(D.ai_questions||[]).map(q=>`<span class="chip" data-q="${esc(q)}">${esc(q)}</span>`).join("")}</div><div class="bar" style="margin-top:10px"><input class="search" id="aiQ" placeholder="سؤالك…"><button class="btn" id="aiGo">اسأل</button></div><div id="aiOut"></div><div class="muted">يجيب من نتائج ذكاء العملاء ضمن صلاحيتك فقط — بلا أسماء أو تعليقات خام، ولا أرقام مخترعة، والعلاقات ليست سببية.</div>`);}
+  function aiHtml(j){const a=j.ai||{},resp=a.response||{},L={FACTS:"من النتائج الموثقة",INTERPRETATION:"القراءة",HYPOTHESES:"عوامل محتملة (غير مؤكدة)",RECOMMENDATIONS:"الخطوة التالية",DATA_GAPS:"بيانات ناقصة"};
+    return `<div class="muted" style="margin:6px 0">«${esc(j.question)}»</div>`+(a.message?`<div class="na-box">${esc(a.message)}</div>`:"")+Object.keys(L).map(k=>resp[k]&&resp[k].length?`<div class="ai-sec"><b>${L[k]}</b><ul style="margin:0;padding-inline-start:18px">${resp[k].map(x=>`<li>${esc(typeof x==="string"?x:JSON.stringify(x))}</li>`).join("")}</ul></div>`:"").join("");}
+  function runAI(q){if(route()[0]!=="ai"){go("ai");setTimeout(()=>runAI(q),60);return;}$("aiOut").innerHTML=`<div class="muted">جارٍ التحليل…</div>`;
+    api("/company/customers/ai-insights",{question:q}).then(j=>{$("aiOut").innerHTML=aiHtml(j);}).catch(er=>{$("aiOut").innerHTML=`<div class="neg">${esc(er.message)}</div>`;});}
+  // ── الإعدادات
+  function settings(){const s=D.settings;if(!s)return restricted();const df=D.definitions||{};const sp=(D.sector_profiles||{})[df.sector]||{};
+    const lines={marketing:"التسويق والإعلان",payroll:"الرواتب",commissions:"العمولات",other:"مصروفات أخرى"};
+    return panel("تعريفات العملاء",`<div class="fg"><label>نشط إذا اشترى خلال (يوم)<input id="sA" type="number" min="7" max="730" value="${s.active_days??""}" placeholder="افتراضي القطاع ${sp.active_days||""}"></label><label>مفقود بعد (يوم)<input id="sL" type="number" min="14" max="1460" value="${s.lost_days??""}" placeholder="افتراضي القطاع ${sp.lost_days||""}"></label><label>حد تراجع النشاط %<input id="sD" type="number" value="${s.decline_pct}"></label><label>الأعلى قيمة = أعلى % <input id="sV" type="number" value="${s.vip_share_pct}"></label></div>`)
+      +panel("تكلفة الاكتساب (CAC)",`<div class="muted">بنود المصروفات من الوحدة المالية التي تُحسب تكلفة اكتساب:</div><div class="chips" style="margin:8px 0">${Object.entries(lines).map(([k,l])=>`<label class="chip"><input type="checkbox" class="sLine" value="${k}" ${(s.cac_expense_lines||[]).includes(k)?"checked":""}> ${l}</label>`).join("")}</div><div class="fg"><label class="full">تكاليف اكتساب يدوية (سطر لكل فترة: YYYY-MM,القناة,المبلغ) — تتقدم على بنود المصروفات<textarea id="sC" rows="4">${(s.acquisition_costs||[]).map(c=>`${c.period},${c.channel||""},${c.amount}`).join("\n")}</textarea></label></div>`)
+      +panel("حدود RFM (اختياري)",`<div class="fg"><label class="full">R (أيام منذ آخر شراء، 4 حدود تصاعدية)<input id="sR" value="${s.rfm?s.rfm.r.join(","):""}" placeholder="7,14,30,60"></label><label class="full">F (عدد الطلبات)<input id="sF" value="${s.rfm?s.rfm.f.join(","):""}" placeholder="2,4,10,30"></label><label class="full">M (الإنفاق ر.س)<input id="sM" value="${s.rfm?s.rfm.m.join(","):""}" placeholder="500,2000,10000,30000"></label></div><div class="muted">فارغ = خُمسيات من بيانات الشركة نفسها.</div>`)
+      +`<div class="cta"><button class="btn" id="sGo">حفظ الإعدادات</button><span id="sMsg" class="muted"></span></div>`;}
+  function saveSettings(){const num=id=>{const v=$(id).value.trim();return v===""?null:v;};const arr=id=>$(id).value.trim()?$(id).value.split(",").map(x=>x.trim()):null;
+    const costs=$("sC").value.split("\n").map(l=>l.trim()).filter(Boolean).map(l=>{const p=l.split(",");return {period:(p[0]||"").trim(),channel:(p[1]||"").trim(),amount:(p[2]||"").trim()};});
+    const r=arr("sR"),f=arr("sF"),m=arr("sM");
+    api("/company/customers/settings",{active_days:num("sA"),lost_days:num("sL"),decline_pct:num("sD"),vip_share_pct:num("sV"),cac_expense_lines:[...document.querySelectorAll(".sLine:checked")].map(x=>x.value),acquisition_costs:costs,rfm:(r||f||m)?{r,f,m}:null})
+      .then(()=>{$("sMsg").className="pos";$("sMsg").textContent="✔ حُفظت — يُعاد الحساب";setTimeout(load,400);}).catch(er=>{$("sMsg").className="neg";$("sMsg").textContent=er.message;});}
+  // ── النوافذ
+  const close=()=>$("ov").classList.remove("on");
+  function actModal(pre){pre=pre||{};const kinds=(R("actions")||{}).kinds||{contact:"تواصل مع العميل"};const appr=(R("actions")||{}).approval_kinds||["offer","discount"];
+    $("modal").innerHTML=`<h3 style="margin-top:0">إجراء احتفاظ</h3><div class="fg"><label>النوع<select id="aK">${Object.entries(kinds).map(([k,l])=>`<option value="${k}" ${pre.kind===k?"selected":""}>${esc(l)}${appr.includes(k)?" (يحتاج اعتماد)":""}</option>`).join("")}</select></label><label>المستهدف (عميل أو شريحة)<input id="aT" value="${esc(pre.target||"")}"></label><label class="full">السبب<input id="aR" value="${esc(pre.reason||"")}"></label><label class="full">الإجراء<input id="aA" placeholder="مثلاً: اتصال من مدير الفرع"></label><label>المسؤول<input id="aO"></label><label>الموعد<input id="aD" type="date"></label><label>التكلفة التقديرية (ر.س)<input id="aCo" type="number" min="0"></label><label>مؤشر النجاح<input id="aKpi" placeholder="عودة الشراء خلال 30 يوماً"></label></div><div class="muted" id="aNote">العروض والخصومات تُرسل للاعتماد ولا تُنفذ تلقائياً.</div><div class="cta"><button class="btn" id="aGo">حفظ</button><button class="btn ghost" id="aC">إلغاء</button><span id="aM" class="muted"></span></div>`;$("ov").classList.add("on");
+    $("aC").onclick=close;$("aGo").onclick=()=>{$("aGo").disabled=true;api("/company/customers/actions",{kind:$("aK").value,target:$("aT").value,customer_id:pre.customer_id||"",reason:$("aR").value,action:$("aA").value,owner:$("aO").value,due:$("aD").value,cost:$("aCo").value,kpi:$("aKpi").value,alert_kind:pre.alert_kind||""})
+      .then(j=>{close();load();go("actions");}).catch(er=>{$("aGo").disabled=false;$("aM").className="neg";$("aM").textContent=er.message;});};}
+  function statusModal(id,to){if(!["done","rejected"].includes(to)){api("/company/customers/actions/status",{id:Number(id),status:to}).then(load).catch(er=>alert(er.message));return;}
+    $("modal").innerHTML=`<h3 style="margin-top:0">${to==="done"?"إنجاز الإجراء — النتيجة الفعلية":"رفض الإجراء"}</h3><div class="fg"><label class="full">${to==="done"?"النتيجة الفعلية":"سبب الرفض"}<input id="tN"></label>${to==="done"?`<label>الأثر الفعلي (ر.س، اختياري)<input id="tI" type="number"></label>`:""}</div><div class="cta"><button class="btn" id="tGo">تأكيد</button><button class="btn ghost" id="tC">إلغاء</button><span id="tM" class="muted"></span></div>`;$("ov").classList.add("on");
+    $("tC").onclick=close;$("tGo").onclick=()=>api("/company/customers/actions/status",to==="done"?{id:Number(id),status:to,actual_result:$("tN").value,actual_impact:$("tI").value}:{id:Number(id),status:to,reason:$("tN").value}).then(()=>{close();load();}).catch(er=>{$("tM").className="neg";$("tM").textContent=er.message;});}
+  function decModal(pre){$("modal").innerHTML=`<h3 style="margin-top:0">إنشاء قرار في متابعة القرارات (3.9)</h3><div class="fg"><label class="full">العنوان<input id="dT" value="${esc(pre.title||"")}"></label><label class="full">السبب<input id="dR" value="${esc(pre.reason||"")}"></label><label>المسؤول<input id="dO"></label><label>الموعد<input id="dD" type="date"></label><label>الأثر المتوقع (ر.س، اختياري)<input id="dE" type="number"></label></div><div class="muted">يمر بنفس مسار الاعتماد وخط الأساس في 3.9.</div><div class="cta"><button class="btn" id="dGo">إنشاء</button><button class="btn ghost" id="dC">إلغاء</button><span id="dM" class="muted"></span></div>`;$("ov").classList.add("on");
+    $("dC").onclick=close;$("dGo").onclick=()=>api("/company/customers/to-decision",{title:$("dT").value,reason:$("dR").value,owner:$("dO").value,due:$("dD").value,expected_impact:$("dE").value||null,action_id:pre.action_id,alert_kind:pre.alert_kind})
+      .then(j=>{$("dM").className="pos";$("dM").innerHTML=`✔ أُنشئ القرار <a href="${esc(j.link)}" style="color:var(--mint,#10b981)">#${j.decision_id}</a>`;setTimeout(()=>{close();load();},900);}).catch(er=>{$("dM").className="neg";$("dM").textContent=er.message;});}
+  function parseCSV(t){const rows=[];let row=[],f="",q=false;for(let i=0;i<t.length;i++){const ch=t[i];if(q){if(ch==='"'&&t[i+1]==='"'){f+='"';i++;}else if(ch==='"')q=false;else f+=ch;}else if(ch==='"')q=true;else if(ch===","){row.push(f);f="";}else if(ch==="\n"||ch==="\r"){if(ch==="\r"&&t[i+1]==="\n")i++;row.push(f);rows.push(row);row=[];f="";}else f+=ch;}
+    if(f||row.length){row.push(f);rows.push(row);}return rows.filter(r=>r.some(x=>x.trim()));}
+  function fbModal(){$("modal").innerHTML=`<h3 style="margin-top:0">رفع نتائج الاستبيانات والملاحظات</h3><div class="muted" style="line-height:1.9">ملف CSV بالأعمدة: <code>date,customer,branch,product,channel,kind,score,comment,method</code> — kind = nps (0–10) أو csat (1–5) أو comment. كل صف يُتحقق منه؛ المرفوض يظهر بسببه ولا يُحفظ.</div><div class="fg" style="margin-top:8px"><label class="full">الملف<input id="fF" type="file" accept=".csv,text/csv"></label><label class="full">أو الصق المحتوى<textarea id="fT" rows="5" placeholder="date,customer,branch,kind,score,comment"></textarea></label></div><div class="cta"><button class="btn" id="fGo">رفع</button><button class="btn ghost" id="fC">إغلاق</button></div><div id="fM" class="muted"></div>`;$("ov").classList.add("on");
+    $("fC").onclick=close;$("fGo").onclick=async()=>{let t=$("fT").value;const fl=$("fF").files[0];if(fl)t=await fl.text();const rs=parseCSV(t.replace(/^﻿/,""));if(rs.length<2){$("fM").className="neg";$("fM").textContent="لا صفوف";return;}
+      const hd=rs[0].map(h=>h.trim().toLowerCase());const rows=rs.slice(1).map(r=>Object.fromEntries(hd.map((h,i)=>[h,(r[i]||"").trim()])));
+      api("/company/customers/feedback",{rows}).then(j=>{$("fM").className="";$("fM").innerHTML=`<div class="pos">✔ حُفظ ${n(j.saved)} صف · رُفض ${n(j.rejected_count)}</div>${(j.rejected||[]).slice(0,20).map(x=>`<div class="neg">صف ${x.row}: ${esc(x.reason_ar)}</div>`).join("")}`;if(j.saved)setTimeout(load,600);}).catch(er=>{$("fM").className="neg";$("fM").textContent=er.message;});};}
+  function rawModal(topic){$("modal").innerHTML=`<h3 style="margin-top:0">الملاحظات الأصلية</h3><div id="rB" class="muted">…</div><div class="cta"><button class="btn ghost" id="rC">إغلاق</button></div>`;$("ov").classList.add("on");$("rC").onclick=close;
+    getj("/company/customers/feedback?topic="+encodeURIComponent(topic)).then(j=>{$("rB").className="";$("rB").innerHTML=(j.items.length?j.items.map(x=>`<div class="itm ${x.sentiment==="negative"?"high":x.sentiment==="positive"?"low":"na"}"><div>«${esc(x.text)}»</div><div class="muted">${esc(x.date)} · ${esc(x.branch||"")} · ${esc(x.customer)} · ${esc(SENT[x.sentiment]||"")}${x.score!=null?" · "+n(x.score):""}</div></div>`).join(""):na("لا ملاحظات"))+`<div class="muted">${esc(j.note_ar)}</div>`;}).catch(er=>{$("rB").className="neg";$("rB").textContent=er.message;});}
+  // ── Excel
+  function exportExcel(){const rows=[["القسم","المؤشر","القيمة","الوحدة","السابق","المصدر","الحساب"]];
+    ((R("overview")||{}).cards||[]).forEach(c=>rows.push(["الملخص",c.label,c.value??"غير متاح",c.unit,c.previous??"",c.source_ar,c.calculation||c.reason_ar||""]));
+    ((R("segments")||{}).rfm||[]).forEach(r=>rows.push(["الشرائح",r.ar,r.count,"عميل",r.revenue,"المبيعات",""]));
+    ((R("acquisition")||{}).monthly||[]).forEach(r=>rows.push(["الاكتساب",r.period,r.new,"عميل جديد",r.revenue_90d,"المبيعات",""]));
+    const ch=R("churn");if(ch)Object.entries(ch.counts||{}).forEach(([k,v])=>rows.push(["الفقد",k,v,"عميل","","المبيعات",""]));
+    const csv="﻿"+rows.map(r=>r.map(x=>`"${String(x??"").replace(/"/g,'""')}"`).join(",")).join("\n");window.__csv=csv;
+    const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download=`nabbah-customers-${D.as_of||""}.csv`;a.click();}
+  const VIEWS={overview,active,segments,acquisition,cac,retention,repeat,churn,clv,profitability,journey,satisfaction,sentiment,cohorts,alerts,actions,decisions,data_quality,ai,settings};
+  function render(){EV={};evI=0;const [v]=route();const allowed=new Set((D.sections_index||[]).filter(s=>s.allowed).map(s=>s.key).concat(["ai"]).concat(D.settings?["settings"]:[]));
+    const tabs=TABS.filter(([k])=>allowed.has(k));const cur=tabs.some(([k])=>k===v)?v:"overview";
+    const al=R("alerts"),ac=R("actions");
+    $("tabs").innerHTML=tabs.map(([k,l],i)=>`<button class="tab ${k===cur?"on":""}" data-go="${k}"><span class="muted" style="font-size:10px">${String(i+1).padStart(2,"0")}</span> ${l}${k==="alerts"&&al&&al.items.length?` <span class="b high">${al.items.length}</span>`:""}${k==="actions"&&ac&&ac.open?` <span class="b medium">${ac.open}</span>`:""}</button>`).join("");
+    $("content").innerHTML=(VIEWS[cur]||overview)();bind();}
+  function bind(){document.querySelectorAll("[data-go]").forEach(el=>el.onclick=e=>{e.stopPropagation();go(el.dataset.go);});
+    document.querySelectorAll("#content [data-ev]").forEach(el=>el.onclick=e=>{e.stopPropagation();const m=EV[el.dataset.ev],p=$("pop");
+      p.innerHTML=`<b>${esc(m.label)}</b><div>${m.available===false?esc(m.reason_ar):fv(m.value,m.unit)}</div><div class="muted">المصدر: ${esc(m.source_ar)}</div>${m.period?`<div class="muted">الفترة: ${esc(m.period)}</div>`:""}${m.calculation?`<div class="muted">الحساب: ${esc(m.calculation)}</div>`:""}<div class="muted">الثقة: ${esc(CONF[m.confidence]||m.confidence||"—")}</div>${m.link?`<a href="${esc(m.link)}" style="color:var(--mint,#10b981)">افتح المصدر ↗</a>`:""}`;
+      p.style.display="block";p.style.top=Math.min(window.innerHeight-220,e.clientY+10)+"px";p.style.left=Math.max(8,Math.min(window.innerWidth-350,e.clientX-170))+"px";});
+    document.querySelectorAll("#content [data-q]").forEach(c=>c.onclick=()=>runAI(c.dataset.q));
+    const ag=$("aiGo");if(ag)ag.onclick=()=>{const q=$("aiQ").value.trim();if(q)runAI(q);};
+    const sg=$("sGo");if(sg)sg.onclick=saveSettings;
+    document.querySelectorAll("#content [data-fb]").forEach(b=>b.onclick=fbModal);
+    document.querySelectorAll("#content [data-raw]").forEach(b=>b.onclick=()=>rawModal(b.dataset.raw));
+    document.querySelectorAll("#content [data-newact]").forEach(b=>b.onclick=()=>actModal({customer_id:b.dataset.newact,target:b.dataset.tname,reason:b.dataset.reason,kind:"contact"}));
+    document.querySelectorAll("#content [data-alact]").forEach(b=>b.onclick=()=>{const x=D.alerts.items[Number(b.dataset.alact)];actModal({target:x.title_ar,reason:(x.evidence||[]).join(" · "),alert_kind:x.kind,kind:x.kind==="complaints"?"complaint":"contact"});});
+    document.querySelectorAll("#content [data-aldec]").forEach(b=>b.onclick=()=>{const x=D.alerts.items[Number(b.dataset.aldec)];decModal({title:x.action_ar||x.title_ar,reason:x.title_ar+" — "+(x.evidence||[]).join(" · "),alert_kind:x.kind});});
+    document.querySelectorAll("#content [data-ast]").forEach(b=>b.onclick=()=>statusModal(b.dataset.ast,b.dataset.to));
+    document.querySelectorAll("#content [data-actdec]").forEach(b=>b.onclick=()=>{const x=D.actions.items.find(y=>String(y.id)===b.dataset.actdec);decModal({title:`${x.kind_ar}: ${x.target}`,reason:x.reason,action_id:x.id});});
+    document.querySelectorAll("#content [data-sugg]").forEach(b=>b.onclick=()=>{const s=D.actions.suggestions[Number(b.dataset.sugg)];actModal({target:s.target_ar,reason:s.reason_ar,kind:s.kind});});}
+  document.addEventListener("click",()=>{$("pop").style.display="none";});
+  $("btnAct").onclick=()=>actModal({});$("btnFb").onclick=fbModal;$("btnXls").onclick=exportExcel;
+  $("ov").onclick=e=>{if(e.target===$("ov"))close();};
+  load();
+})();
+</script>
+<script src="nabbah-sidebar.js"></script>
+</body>
+</html>
