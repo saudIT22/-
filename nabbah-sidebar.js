@@ -35,7 +35,8 @@
     { icon: "📈", label: "المبيعات والعملاء", items: [
       { label: "وحدة المبيعات التفصيلية", href: "company-sales-analytics.html" },
       { label: "إدخال بيانات المبيعات", href: "company-sales.html" },
-      { label: "صحة العملاء", href: "company-customer-health.html" },
+      { label: "ذكاء العملاء", href: "company-customer-intelligence.html" },
+      { label: "صحة العملاء (السابق)", href: "company-customer-health.html" },
       { label: "إدخال بيانات العملاء", href: "company-customers.html" },
       { label: "المنافسون", href: "company-competitors.html" },
     ]},
