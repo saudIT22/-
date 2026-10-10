@@ -107,7 +107,7 @@
   const FLOW={open:["in_progress","done","cancelled"],pending_approval:["approved","rejected","cancelled"],approved:["in_progress","cancelled"],in_progress:["done","cancelled"]};
   const SENT={positive:"إيجابي",negative:"سلبي",neutral:"محايد"};
   const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-  const n=(v,d=0)=>{if(v==null||v===""||isNaN(Number(v)))return"—";const x=Number(v),t=Math.abs(x).toLocaleString("ar-SA",{maximumFractionDigits:d});return x<0?"⁦−"+t+"⁩":t;};
+  const n=(v,d=0)=>{if(v==null||v===""||isNaN(Number(v)))return"—";const x=Number(v),t=Math.abs(x).toLocaleString("ar-SA",{maximumFractionDigits:d});return x<0?"\u2066−"+t+"\u2069":t;};
   const fv=(v,u)=>v==null?"غير متاح":(u==="%"?n(v,1)+"%":u==="SAR"?n(v)+" ر.س":n(v,1)+(u?" "+u:""));
   const pp=v=>v==null?"—":n(v,1)+"%";
   const H={Authorization:"Bearer "+TOKEN,"Content-Type":"application/json"},$=id=>document.getElementById(id);
@@ -283,7 +283,7 @@
   function parseCSV(t){const rows=[];let row=[],f="",q=false;for(let i=0;i<t.length;i++){const ch=t[i];if(q){if(ch==='"'&&t[i+1]==='"'){f+='"';i++;}else if(ch==='"')q=false;else f+=ch;}else if(ch==='"')q=true;else if(ch===","){row.push(f);f="";}else if(ch==="\n"||ch==="\r"){if(ch==="\r"&&t[i+1]==="\n")i++;row.push(f);rows.push(row);row=[];f="";}else f+=ch;}
     if(f||row.length){row.push(f);rows.push(row);}return rows.filter(r=>r.some(x=>x.trim()));}
   function fbModal(){$("modal").innerHTML=`<h3 style="margin-top:0">رفع نتائج الاستبيانات والملاحظات</h3><div class="muted" style="line-height:1.9">ملف CSV بالأعمدة: <code>date,customer,branch,product,channel,kind,score,comment,method</code> — kind = nps (0–10) أو csat (1–5) أو comment. كل صف يُتحقق منه؛ المرفوض يظهر بسببه ولا يُحفظ.</div><div class="fg" style="margin-top:8px"><label class="full">الملف<input id="fF" type="file" accept=".csv,text/csv"></label><label class="full">أو الصق المحتوى<textarea id="fT" rows="5" placeholder="date,customer,branch,kind,score,comment"></textarea></label></div><div class="cta"><button class="btn" id="fGo">رفع</button><button class="btn ghost" id="fC">إغلاق</button></div><div id="fM" class="muted"></div>`;$("ov").classList.add("on");
-    $("fC").onclick=close;$("fGo").onclick=async()=>{let t=$("fT").value;const fl=$("fF").files[0];if(fl)t=await fl.text();const rs=parseCSV(t.replace(/^﻿/,""));if(rs.length<2){$("fM").className="neg";$("fM").textContent="لا صفوف";return;}
+    $("fC").onclick=close;$("fGo").onclick=async()=>{let t=$("fT").value;const fl=$("fF").files[0];if(fl)t=await fl.text();const rs=parseCSV(t.replace(/^\uFEFF/,""));if(rs.length<2){$("fM").className="neg";$("fM").textContent="لا صفوف";return;}
       const hd=rs[0].map(h=>h.trim().toLowerCase());const rows=rs.slice(1).map(r=>Object.fromEntries(hd.map((h,i)=>[h,(r[i]||"").trim()])));
       api("/company/customers/feedback",{rows}).then(j=>{$("fM").className="";$("fM").innerHTML=`<div class="pos">✔ حُفظ ${n(j.saved)} صف · رُفض ${n(j.rejected_count)}</div>${(j.rejected||[]).slice(0,20).map(x=>`<div class="neg">صف ${x.row}: ${esc(x.reason_ar)}</div>`).join("")}`;if(j.saved)setTimeout(load,600);}).catch(er=>{$("fM").className="neg";$("fM").textContent=er.message;});};}
   function rawModal(topic){$("modal").innerHTML=`<h3 style="margin-top:0">الملاحظات الأصلية</h3><div id="rB" class="muted">…</div><div class="cta"><button class="btn ghost" id="rC">إغلاق</button></div>`;$("ov").classList.add("on");$("rC").onclick=close;
@@ -294,7 +294,7 @@
     ((R("segments")||{}).rfm||[]).forEach(r=>rows.push(["الشرائح",r.ar,r.count,"عميل",r.revenue,"المبيعات",""]));
     ((R("acquisition")||{}).monthly||[]).forEach(r=>rows.push(["الاكتساب",r.period,r.new,"عميل جديد",r.revenue_90d,"المبيعات",""]));
     const ch=R("churn");if(ch)Object.entries(ch.counts||{}).forEach(([k,v])=>rows.push(["الفقد",k,v,"عميل","","المبيعات",""]));
-    const csv="﻿"+rows.map(r=>r.map(x=>`"${String(x??"").replace(/"/g,'""')}"`).join(",")).join("\n");window.__csv=csv;
+    const csv="\uFEFF"+rows.map(r=>r.map(x=>`"${String(x??"").replace(/"/g,'""')}"`).join(",")).join("\n");window.__csv=csv;
     const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download=`nabbah-customers-${D.as_of||""}.csv`;a.click();}
   const VIEWS={overview,active,segments,acquisition,cac,retention,repeat,churn,clv,profitability,journey,satisfaction,sentiment,cohorts,alerts,actions,decisions,data_quality,ai,settings};
   function render(){EV={};evI=0;const [v]=route();const allowed=new Set((D.sections_index||[]).filter(s=>s.allowed).map(s=>s.key).concat(["ai"]).concat(D.settings?["settings"]:[]));
