@@ -177,6 +177,7 @@ class User(SQLModel, table=True):
     subscription_end: Optional[_DTCOL] = None
     company_id: Optional[int] = None            # مرتبط بشركة؟ (للمدراء والموظفين)
     company_role: str = ""                       # owner/manager/staff — فارغ = فرد
+    token_version: int = 0                       # يزيد عند تغيير كلمة المرور/«إخراج من كل الأجهزة» → تبطل كل الجلسات القديمة
     created_at: _DTCOL = Field(default_factory=_now_naive)
 
 class Entry(SQLModel, table=True):
@@ -1570,6 +1571,7 @@ def run_migrations():
         migrations = [
             'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS company_id INTEGER',
             'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS company_role VARCHAR DEFAULT \'\'',
+            'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS token_version INTEGER DEFAULT 0',
             'ALTER TABLE company ADD COLUMN IF NOT EXISTS cash_reserve DOUBLE PRECISION DEFAULT 0',
             'ALTER TABLE company ADD COLUMN IF NOT EXISTS monthly_obligations DOUBLE PRECISION DEFAULT 0',
             'ALTER TABLE company ADD COLUMN IF NOT EXISTS employees INTEGER DEFAULT 0',
@@ -1608,6 +1610,8 @@ def run_migrations():
                     migrations.append("ALTER TABLE user ADD COLUMN company_id INTEGER")
                 if "company_role" not in cols:
                     migrations.append("ALTER TABLE user ADD COLUMN company_role VARCHAR DEFAULT ''")
+                if "token_version" not in cols:
+                    migrations.append("ALTER TABLE user ADD COLUMN token_version INTEGER DEFAULT 0")
                 # أعمدة التدفق النقدي والتسرّب
                 try:
                     ccols = [row[1] for row in conn.execute(text("PRAGMA table_info(company)"))]
@@ -1781,9 +1785,10 @@ def verify_password(password: str, password_hash: str) -> bool:
     except Exception:
         return False
 
-def create_token(user_id: int) -> str:
+def create_token(user_id: int, token_version: int = 0) -> str:
     payload = {
         "user_id": user_id,
+        "tv": int(token_version or 0),   # نسخة الجلسة — تغيير كلمة المرور يرفعها فتبطل كل الرموز السابقة
         "exp": datetime.utcnow() + timedelta(days=TOKEN_DAYS)
     }
     return jwt.encode(payload, SECRET_KEY, algorithm="HS256")
@@ -1796,12 +1801,15 @@ def get_current_user(authorization: str = Header(default="")) -> User:
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
         user_id = payload.get("user_id")
+        tv = int(payload.get("tv") or 0)
     except Exception:
         raise HTTPException(status_code=401, detail="انتهت الجلسة، سجّل الدخول من جديد")
     with Session(engine) as s:
         user = s.get(User, user_id)
         if not user:
             raise HTTPException(status_code=401, detail="المستخدم غير موجود")
+        if tv != int(getattr(user, "token_version", 0) or 0):
+            raise HTTPException(status_code=401, detail="تم تسجيل خروجك — تغيّرت كلمة المرور أو أُنهيت الجلسات. سجّل الدخول من جديد")
         return user
 
 
@@ -2368,7 +2376,7 @@ def register(data: RegisterData):
         s.add(user)
         s.commit()
         s.refresh(user)
-        token = create_token(user.id)
+        token = create_token(user.id, user.token_version)
         log_activity("عميل جديد", f"سجّل حساباً جديداً ({user.business_name or 'بدون منشأة'})", user.email)
         return {"token": token, "name": user.name, "is_active": user.is_active, "plan": user.plan}
 
@@ -2382,7 +2390,7 @@ def login(data: LoginData, request: Request):
             record_failed_login(request, email)
             raise HTTPException(status_code=401, detail="البريد أو كلمة المرور غير صحيحة")
         clear_login_attempts(request, email)
-        token = create_token(user.id)
+        token = create_token(user.id, user.token_version)
         return {"token": token, "name": user.name, "is_active": user.is_active, "plan": user.plan}
 
 @app.get("/me")
@@ -2592,6 +2600,73 @@ def admin_deactivate_user(data: AdminActionData, _: bool = Depends(verify_admin)
         s.commit()
         log_activity("المسؤول", "أوقف الاشتراك", user.email)
         return {"ok": True, "message": f"تم إيقاف {user.email}"}
+
+
+class AdminPasswordData(BaseModel):
+    user_id: int
+    new_password: str = ""
+
+
+def _bump_sessions(user):
+    user.token_version = int(getattr(user, "token_version", 0) or 0) + 1
+
+
+@app.post("/admin/user/reset-password")
+def admin_reset_password(data: AdminPasswordData, _: bool = Depends(verify_admin)):
+    """تعيين كلمة مرور جديدة لعميل + إخراجه من كل الأجهزة فوراً (كل الرموز القديمة تبطل)."""
+    pw = data.new_password or ""
+    if len(pw) < 8:
+        raise HTTPException(status_code=422, detail="كلمة المرور الجديدة 8 أحرف على الأقل")
+    with Session(engine) as s:
+        user = s.get(User, data.user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="المستخدم غير موجود")
+        user.password_hash = hash_password(pw)
+        _bump_sessions(user)
+        s.add(user)
+        s.commit()
+        log_activity("المسؤول", "غيّر كلمة المرور وأخرج الحساب من كل الأجهزة", user.email)
+        return {"ok": True, "message": f"تم تغيير كلمة مرور {user.email} وإخراجه من كل الأجهزة"}
+
+
+@app.post("/admin/user/logout-all")
+def admin_logout_all(data: AdminActionData, _: bool = Depends(verify_admin)):
+    """إخراج حساب من كل الأجهزة دون تغيير كلمة المرور."""
+    with Session(engine) as s:
+        user = s.get(User, data.user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="المستخدم غير موجود")
+        _bump_sessions(user)
+        s.add(user)
+        s.commit()
+        log_activity("المسؤول", "أخرج الحساب من كل الأجهزة", user.email)
+        return {"ok": True, "message": f"تم إخراج {user.email} من كل الأجهزة"}
+
+
+class ChangePasswordData(BaseModel):
+    current_password: str
+    new_password: str
+
+
+@app.post("/change-password")
+def change_password(data: ChangePasswordData, request: Request, user: User = Depends(get_current_user)):
+    """المستخدم يغيّر كلمة مروره بنفسه: تبطل كل الجلسات الأخرى، ويستلم هذا الجهاز رمزاً جديداً."""
+    check_login_throttle(request, user.email)
+    if len(data.new_password or "") < 8:
+        raise HTTPException(status_code=422, detail="كلمة المرور الجديدة 8 أحرف على الأقل")
+    with Session(engine) as s:
+        u = s.get(User, user.id)
+        if not verify_password(data.current_password or "", u.password_hash):
+            record_failed_login(request, user.email)
+            raise HTTPException(status_code=401, detail="كلمة المرور الحالية غير صحيحة")
+        if verify_password(data.new_password, u.password_hash):
+            raise HTTPException(status_code=422, detail="كلمة المرور الجديدة مطابقة للحالية")
+        u.password_hash = hash_password(data.new_password)
+        _bump_sessions(u)
+        s.add(u)
+        s.commit()
+        log_activity("العميل", "غيّر كلمة المرور (أُخرجت الأجهزة الأخرى)", u.email)
+        return {"ok": True, "token": create_token(u.id, u.token_version), "message": "تم تغيير كلمة المرور وإخراج كل الأجهزة الأخرى"}
 
 
 # ===== كود التجربة (تحليل واحد فقط) =====
