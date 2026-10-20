@@ -180,6 +180,21 @@
   </div>
 </div>
 
+<div class="modal-back" id="pw-modal" onclick="if(event.target===this)closePw()">
+  <div class="modal">
+    <h3>🔑 تغيير كلمة المرور</h3>
+    <div id="pw-email" style="color:#475a52;font-size:14px;margin-bottom:8px"></div>
+    <label>كلمة المرور الجديدة (8 أحرف على الأقل)</label>
+    <div style="display:flex;gap:6px"><input id="pw-new" type="text" autocomplete="new-password" style="flex:1">
+      <button type="button" class="act-btn act-off" style="color:#065f46" onclick="genPw()">توليد</button></div>
+    <div style="font-size:12.5px;color:#8ba89f;margin-top:8px;line-height:1.8">سيُخرج الحساب من <b>كل الأجهزة فوراً</b>، وأي شخص داخل الحساب الآن سيُطلب منه تسجيل الدخول بكلمة المرور الجديدة. انسخ الكلمة قبل الحفظ وأرسلها للعميل بطريقة آمنة.</div>
+    <div class="modal-actions">
+      <button class="cancel" onclick="closePw()">إلغاء</button>
+      <button class="confirm" onclick="confirmPw()">حفظ وإخراج الجميع</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <div class="modal-back" id="detail-modal" onclick="if(event.target===this)closeDetail()">
@@ -354,6 +369,7 @@
       const actionBtn = u.is_active === 1
         ? `<button class="act-btn act-off" onclick="deactivate(${u.id},'${escape(u.email)}')">إيقاف</button>`
         : `<button class="act-btn act-on" onclick="openModal(${u.id},'${escape(u.email)}')">تفعيل</button>`;
+      const secBtns = `<button class="act-btn act-off" style="color:#065f46" onclick="openPw(${u.id},'${escape(u.email)}')">🔑 كلمة المرور</button><button class="act-btn act-off" onclick="logoutAll(${u.id},'${escape(u.email)}')">⏏ إخراج من الأجهزة</button>`;
       return `<tr>
         <td><b style="color:#065f46;cursor:pointer;text-decoration:underline" onclick="showDetail(${u.id})">${escape(u.name)}</b></td>
         <td>${escape(u.email)}</td>
@@ -363,7 +379,7 @@
         <td>${statusBadge}</td>
         <td style="text-align:center"><b>${u.entries_count}</b></td>
         <td>${endDate}</td>
-        <td><div class="actions">${actionBtn}</div></td>
+        <td><div class="actions">${actionBtn}${secBtns}</div></td>
       </tr>`;
     }).join("");
   }
@@ -436,6 +452,46 @@
     } catch (e) { toast("خطأ بالاتصال", true); }
   }
   function closeDetail() { document.getElementById("detail-modal").classList.remove("show"); }
+
+  let pwUserId = null;
+  function openPw(userId, email) {
+    pwUserId = userId;
+    document.getElementById("pw-email").innerText = email;
+    document.getElementById("pw-new").value = "";
+    document.getElementById("pw-modal").classList.add("show");
+  }
+  function closePw() { document.getElementById("pw-modal").classList.remove("show"); pwUserId = null; }
+  function genPw() {
+    const a = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789@#%&*";
+    const r = new Uint32Array(14); crypto.getRandomValues(r);
+    document.getElementById("pw-new").value = Array.from(r, x => a[x % a.length]).join("");
+  }
+  async function confirmPw() {
+    const pw = document.getElementById("pw-new").value;
+    if (pw.length < 8) { toast("كلمة المرور 8 أحرف على الأقل", true); return; }
+    try {
+      const res = await fetch("/admin/user/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Admin-Key": adminKey },
+        body: JSON.stringify({ user_id: pwUserId, new_password: pw })
+      });
+      const out = await res.json();
+      if (res.ok) { toast(out.message); closePw(); loadActivity(); }
+      else toast(out.detail || "فشل تغيير كلمة المرور", true);
+    } catch (e) { toast("خطأ بالاتصال", true); }
+  }
+  async function logoutAll(userId, email) {
+    if (!confirm("إخراج " + email + " من كل الأجهزة؟ كلمة المرور لن تتغير.")) return;
+    try {
+      const res = await fetch("/admin/user/logout-all", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Admin-Key": adminKey },
+        body: JSON.stringify({ user_id: userId })
+      });
+      const out = await res.json();
+      if (res.ok) toast(out.message); else toast(out.detail || "فشل الإخراج", true);
+    } catch (e) { toast("خطأ بالاتصال", true); }
+  }
 
   function toast(msg, isErr) {
     const t = document.getElementById("toast");
