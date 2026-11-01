@@ -1362,6 +1362,72 @@ class CompanyCustomerSetting(SQLModel, table=True):
     updated_at: str = ""
 
 
+class CompanyBranchSetting(SQLModel, table=True):
+    """4.2 — أوزان بطاقة الأداء وحدود التنبيهات وملف كل فرع (الساعات/المساحة/الإيجار/المنطقة/المسؤول) وميزانية المصروفات."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    settings_json: str = "{}"
+    updated_by: str = ""
+    updated_at: str = ""
+
+
+class CompanyBranchPlan(SQLModel, table=True):
+    """4.2 — خطة تحسين فرع: المشكلة، خط الأساس (يُلتقط في الخادم)، الهدف المعتمد، الإجراءات بمسؤول وموعد، المتابعة والقياس."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    branch: str = Field(default="", index=True)
+    metric: str = ""
+    problem: str = ""
+    evidence: str = ""
+    baseline: Optional[float] = None
+    baseline_at: str = ""
+    target: Optional[float] = None
+    target_approved_by: str = ""
+    target_approved_at: str = ""
+    owner: str = ""
+    due: str = ""
+    status: str = "draft"              # draft | pending_approval | approved | in_progress | completed | cancelled
+    actions_json: str = "[]"
+    history_json: str = "[]"
+    result_note: str = ""
+    final_value: Optional[float] = None
+    decision_id: Optional[int] = None
+    created_by: str = ""
+    created_by_id: Optional[int] = None
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+    updated_at: str = ""
+
+
+class CompanyBranchPractice(SQLModel, table=True):
+    """4.2 — ممارسة مرشّحة للنقل: فرضية ← تجربة في فرع مستهدف ← قياس قبل/بعد. لا تُعتمد كسبب قبل الاختبار."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    source_branch: str = ""
+    target_branch: str = ""
+    metric: str = ""
+    practice: str = ""
+    baseline: Optional[float] = None
+    baseline_at: str = ""
+    status: str = "piloting"           # piloting | validated | rejected
+    owner: str = ""
+    note: str = ""
+    created_by: str = ""
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+    updated_at: str = ""
+
+
+class CompanyBranchScenario(SQLModel, table=True):
+    """4.2 — سيناريو محاكاة محفوظ (افتراضات ونتيجة فقط) — لا يغيّر أي بيانات فعلية."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    branch: str = ""
+    name: str = ""
+    assumptions_json: str = "{}"
+    result_json: str = "{}"
+    created_by: str = ""
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+
+
 class BenchmarkDataset(SQLModel, table=True):
     """طبقة المعايير القطاعية (3.5): company_id فارغ = معيار المنصّة (من الإدارة)، وإلا معيار خاص بالشركة.
     كل معيار بمصدره ومنهجيته وفترته وعيّنته وثقته — لا معيار بلا مصدر."""
@@ -2096,6 +2162,11 @@ def page_board_intelligence():
 @app.get("/company-monthly-intelligence.html")
 def page_monthly_intelligence():
     return FileResponse("company-monthly-intelligence.html")
+
+
+@app.get("/company-branch-intelligence.html")
+def page_company_branch_intelligence():
+    return FileResponse("company-branch-intelligence.html")
 
 
 @app.get("/company-customer-intelligence.html")
@@ -5059,7 +5130,7 @@ def _load_p24(name):
     """يحمّل محركات 2.4 من المجلد أو من حزمة nabbah_engines."""
     try:
         import sys as _sys, os as _os, importlib
-        for _d in ("phase21", "phase22", "phase23", "phase24", "phase25", "phase26", "phase27", "phase28", "phase29", "phase210", "phase211", "phase30", "phase31", "phase32", "phase33", "phase34", "phase35", "phase37", "phase38", "phase39", "phase310", "phase311", "phase312", "phase41"):
+        for _d in ("phase21", "phase22", "phase23", "phase24", "phase25", "phase26", "phase27", "phase28", "phase29", "phase210", "phase211", "phase30", "phase31", "phase32", "phase33", "phase34", "phase35", "phase37", "phase38", "phase39", "phase310", "phase311", "phase312", "phase41", "phase42"):
             _p = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), _d)
             if _p not in _sys.path:
                 _sys.path.insert(0, _p)
@@ -11053,6 +11124,452 @@ def company_customer_ai(data: dict, request: Request, user: User = Depends(get_c
     return {"question": q, "ai": out, "as_of": rep_.get("as_of")}
 
 
+# ═══════════════════════════════════════════════════════════
+# Phase 4.2 — Branch Comparison Intelligence — ذكاء المقارنة بين الفروع
+# لا جدول فروع أو مبيعات جديد: CompanyBranch + نتائج الوحدات الأصلية. الجداول الجديدة: الإعدادات، خطط التحسين، تجارب الممارسات، السيناريوهات.
+# ═══════════════════════════════════════════════════════════
+_BR_PRACTICE_FLOW = {"piloting": {"validated", "rejected"}, "validated": set(), "rejected": set()}
+
+
+def _br_scope(s, user):
+    company, role, viewer = _goals_scope(s, user)
+    be = _load_p24("branch_engine")
+    if be is None:
+        raise HTTPException(503, "محرّك مقارنة الفروع غير متاح — " + _p23_diagnostic())
+    sc = be.branch_scope(viewer)
+    if sc["kind"] == "none":
+        raise HTTPException(403, "مقارنة الفروع حسب الصلاحية: المالك/الرئيس التنفيذي، المدير المالي، المديرون، مدير الفرع (فرعه مقابل الشبكة)، الموارد البشرية، ومجلس الإدارة")
+    return company, role, viewer, sc, be
+
+
+def _br_settings(s, company_id):
+    r = s.exec(select(CompanyBranchSetting).where(CompanyBranchSetting.company_id == company_id)).first()
+    try:
+        return json.loads(r.settings_json or "{}") if r else {}
+    except (TypeError, ValueError):
+        return {}
+
+
+def _br_master(s, company_id):
+    return [{"id": b.id, "name": b.name, "city": b.city or "", "area": b.area or "", "branch_type": b.branch_type or "", "target_sales": b.target_sales or 0,
+             "is_active": b.is_active} for b in s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company_id)).all()]
+
+
+def _br_plan_dict(p):
+    try:
+        acts = json.loads(p.actions_json or "[]")
+    except (TypeError, ValueError):
+        acts = []
+    try:
+        hist = json.loads(p.history_json or "[]")
+    except (TypeError, ValueError):
+        hist = []
+    return {"id": p.id, "branch": p.branch, "metric": p.metric, "problem": p.problem, "evidence": p.evidence, "baseline": p.baseline, "baseline_at": p.baseline_at,
+            "target": p.target, "target_approved_by": p.target_approved_by, "target_approved_at": p.target_approved_at, "owner": p.owner, "due": p.due, "status": p.status,
+            "actions": acts if isinstance(acts, list) else [], "history": hist[-30:] if isinstance(hist, list) else [], "result_note": p.result_note, "final_value": p.final_value,
+            "decision_id": p.decision_id, "created_by": p.created_by, "created_at": p.created_at.strftime("%Y-%m-%d") if p.created_at else None}
+
+
+def _br_plans(s, company_id):
+    return [_br_plan_dict(p) for p in s.exec(select(CompanyBranchPlan).where(CompanyBranchPlan.company_id == company_id).order_by(CompanyBranchPlan.created_at.desc()).limit(500)).all()]
+
+
+def _br_practices(s, company_id):
+    return [{"id": p.id, "source_branch": p.source_branch, "target_branch": p.target_branch, "metric": p.metric, "practice": p.practice, "baseline": p.baseline,
+             "baseline_at": p.baseline_at, "status": p.status, "owner": p.owner, "note": p.note, "created_by": p.created_by}
+            for p in s.exec(select(CompanyBranchPractice).where(CompanyBranchPractice.company_id == company_id).limit(500)).all()]
+
+
+def _br_decisions(s, company_id):
+    metas = {m.decision_id: m for m in s.exec(select(CompanyDecisionMeta).where(CompanyDecisionMeta.company_id == company_id)).all()}
+    out = []
+    for d in s.exec(select(CompanyDecision).where(CompanyDecision.company_id == company_id).order_by(CompanyDecision.created_at.desc()).limit(500)).all():
+        m = metas.get(d.id)
+        if not m or not (m.branch or m.category == "branch" or m.source == "branch"):
+            continue
+        out.append({"id": d.id, "title": d.title, "owner": d.owner, "due": d.due_date, "status": d.status, "workflow": m.workflow, "branch": m.branch or None,
+                    "category": m.category, "source": m.source, "expected_impact": d.expected_impact_value, "actual_impact": d.actual_impact_value,
+                    "link": f"company-decisions-intelligence.html#dec/{d.id}"})
+    return out
+
+
+def _br_live(s, company, viewer, be, *, filters=None):
+    """نفس سياق المحركات مرة واحدة (2.5→3.8) + 4.1 → مقارنة الفروع. المحرك يقيّد النتيجة بصلاحية القارئ."""
+    cd = _goals_ctx(s, company)
+    _ctx, d = cd
+    full = {"role": "owner", "user_id": viewer.get("user_id")}
+    errors = dict(d.get("errors") or {})
+    try:
+        gres = _goals_result(s, company, "owner", full, save=False, cd=cd)
+    except Exception as e:
+        _logger.error(f"branches: goals failed: {type(e).__name__}: {str(e)[:200]}")
+        gres, errors["goals"] = None, f"الأهداف غير متاحة: {type(e).__name__}"
+    period = ((d.get("mods") or {}).get("finance") or {}).get("period")
+    try:
+        sales = _sales_result(s, company, period=period, grain="month")
+    except HTTPException as e:
+        sales, errors["sales"] = None, str(e.detail)[:160]
+    except Exception as e:
+        _logger.error(f"branches: sales failed: {type(e).__name__}: {str(e)[:200]}")
+        sales, errors["sales"] = None, f"ذكاء المبيعات غير متاح: {type(e).__name__}"
+    st = _br_settings(s, company.id)
+    owners = {k: v.get("manager") for k, v in (st.get("profiles") or {}).items() if isinstance(v, dict) and v.get("manager")}
+    rep_ = be.analyze_branches(mods=d.get("mods") or {}, sales=sales, sales_rows=_sales_rows(s, company.id), master=_br_master(s, company.id), pred=d.get("pred"),
+                               drivers=d.get("drivers"), goals=gres, cust_master=_cust_master(s, company.id), feedback=_cust_feedback(s, company.id),
+                               sku_cost=_cust_sku_cost(s, company.id), settings=st, sector=_risk_sector(company), plans=_br_plans(s, company.id),
+                               practices_stored=_br_practices(s, company.id), decisions=_br_decisions(s, company.id), owners=owners, viewer=viewer,
+                               today=d.get("today"), filters=filters)
+    rep_["module_errors"] = errors
+    return rep_
+
+
+def _br_check_branch(s, company, sc, branch):
+    names = {b["name"] for b in _br_master(s, company.id)} | {r.get("branch_name") for r in _sales_rows(s, company.id) if r.get("branch_name")}
+    if branch not in names:
+        raise HTTPException(404, "الفرع غير موجود في شركتك")
+    if sc.get("branch") and branch != sc["branch"]:
+        raise HTTPException(403, "مدير الفرع يعمل على فرعه فقط")
+
+
+@app.get("/company/branch-intelligence")
+def company_branch_intelligence(city: str = "", branches: str = "", user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role, viewer, sc, be = _br_scope(s, user)
+        flt = {"city": city.strip()[:80] or None, "branches": [b.strip() for b in branches.split(",") if b.strip()][:20] or None}
+        try:
+            rep_ = _br_live(s, company, viewer, be, filters={k: v for k, v in flt.items() if v})
+        except HTTPException:
+            raise
+        except Exception as e:
+            import traceback as _tb
+            _logger.error("branch-intelligence failed:\n" + _tb.format_exc()[-3000:])
+            raise HTTPException(500, f"خطأ في مقارنة الفروع — {type(e).__name__}: {str(e)[:200]} (التفاصيل في سجل الخادم)")
+        rep_["settings"] = dict(be.DEFAULTS, **_br_settings(s, company.id)) if sc["can_settings"] else None
+        rep_["sector_weights"] = {k: v["weights"] for k, v in be.SECTOR_BRANCH.items()} if sc["can_settings"] else None
+        rep_["metric_ar"] = be.METRIC_AR
+        rep_["scenarios"] = [{"id": x.id, "branch": x.branch, "name": x.name, "created_by": x.created_by, "created_at": x.created_at.strftime("%Y-%m-%d") if x.created_at else None,
+                              "result": json.loads(x.result_json or "{}")} for x in s.exec(select(CompanyBranchScenario).where(CompanyBranchScenario.company_id == company.id)
+                                                                                           .order_by(CompanyBranchScenario.created_at.desc()).limit(20)).all()
+                             if not sc.get("branch") or x.branch == sc["branch"]] if "whatif" in sc["sections"] else []
+        log_audit(company.id, user.id, user.name, "branch_view", "branches:live", f"scope={sc['kind']} period={rep_.get('period')} filters={flt}")
+        return rep_
+
+
+@app.post("/company/branches/simulate")
+def company_branch_simulate(data: dict, user: User = Depends(get_current_user)):
+    """4.2.15 — محاكاة افتراضية على أرقام الفرع الحالية. لا تكتب أي بيانات فعلية؛ الحفظ يخزن الافتراضات والنتيجة فقط."""
+    with Session(engine) as s:
+        company, role, viewer, sc, be = _br_scope(s, user)
+        if "whatif" not in sc["sections"]:
+            raise HTTPException(403, "المحاكاة للمالك والمدير المالي ومدير الفرع (فرعه)")
+        b = str(data.get("branch") or "").strip()
+        _br_check_branch(s, company, sc, b)
+        rep_ = _br_live(s, company, {"role": "owner", "user_id": user.id}, be)
+        base = (rep_.get("whatif") or {}).get("base", {}).get(b)
+        res = be.simulate(base, data.get("assumptions") or {})
+        if not res.get("ok"):
+            raise HTTPException(422, " · ".join(res.get("errors") or ["تعذرت المحاكاة"]))
+        sid = None
+        if data.get("save"):
+            nm = str(data.get("name") or "").strip()[:120]
+            if not nm:
+                raise HTTPException(422, "اسم السيناريو مطلوب للحفظ")
+            x = CompanyBranchScenario(company_id=company.id, branch=b, name=nm, assumptions_json=json.dumps(data.get("assumptions") or {}, ensure_ascii=False),
+                                      result_json=json.dumps(res, ensure_ascii=False, default=str), created_by=(user.name or user.email)[:100])
+            s.add(x); s.commit(); s.refresh(x)
+            sid = x.id
+        log_audit(company.id, user.id, user.name, "branch_simulate", f"branch:{b}", f"saved={sid} assumptions={json.dumps(data.get('assumptions') or {}, ensure_ascii=False)[:200]}")
+        return dict(res, branch=b, scenario_id=sid)
+
+
+@app.post("/company/branches/plans")
+def company_branch_plan_create(data: dict, user: User = Depends(get_current_user)):
+    """4.2.16 — خطة تحسين: خط الأساس يُلتقط من بيانات الفرع في الخادم، والهدف يحدده المسؤول ويعتمده المالك/الرئيس التنفيذي."""
+    with Session(engine) as s:
+        company, role, viewer, sc, be = _br_scope(s, user)
+        if not sc["can_plan"]:
+            raise HTTPException(403, "إنشاء خطط التحسين للمالك والمدير المالي والمديرين ومدير الفرع")
+        b = str(data.get("branch") or "").strip()
+        _br_check_branch(s, company, sc, b)
+        mk = str(data.get("metric") or "")
+        if mk not in be.METRIC_AR:
+            raise HTTPException(422, "مؤشر غير معروف")
+        problem, owner, due = str(data.get("problem") or "").strip()[:400], str(data.get("owner") or "").strip()[:100], str(data.get("due") or "").strip()[:10]
+        if not problem:
+            raise HTTPException(422, "وصف المشكلة مطلوب")
+        if not owner:
+            raise HTTPException(422, "المسؤول مطلوب")
+        if not _valid_date(due):
+            raise HTTPException(422, "الموعد النهائي مطلوب (YYYY-MM-DD)")
+        target = _fnum(data.get("target"), "المستهدف")
+        acts = []
+        for a in data.get("actions") or []:
+            if not isinstance(a, dict) or not str(a.get("action") or "").strip():
+                continue
+            if a.get("due") and not _valid_date(str(a["due"])):
+                raise HTTPException(422, "موعد الإجراء بصيغة YYYY-MM-DD")
+            acts.append({"action": str(a["action"]).strip()[:200], "owner": str(a.get("owner") or owner)[:100], "due": str(a.get("due") or due)[:10],
+                         "kpi": str(a.get("kpi") or "")[:100], "status": "open"})
+        rep_ = _br_live(s, company, {"role": "owner", "user_id": user.id}, be)
+        base = be.current_value(rep_, b, mk)
+        now = datetime.now().strftime("%Y-%m-%d %H:%M")
+        p = CompanyBranchPlan(company_id=company.id, branch=b, metric=mk, problem=problem, evidence=str(data.get("evidence") or "")[:600], baseline=base,
+                              baseline_at=rep_.get("period") or now[:10], target=target, owner=owner, due=due, status="draft", actions_json=json.dumps(acts, ensure_ascii=False),
+                              history_json=json.dumps([{"at": now, "by": user.name or user.email, "event": "created", "note": f"خط الأساس {base}"}], ensure_ascii=False),
+                              created_by=(user.name or user.email)[:100], created_by_id=user.id, updated_at=now)
+        s.add(p); s.commit(); s.refresh(p)
+        log_audit(company.id, user.id, user.name, "branch_plan_create", f"branch_plan:{p.id}", f"branch={b} metric={mk} baseline={base} target={target}")
+        return {"ok": True, "id": p.id, "baseline": base, "status": p.status}
+
+
+@app.post("/company/branches/plans/update")
+def company_branch_plan_update(data: dict, user: User = Depends(get_current_user)):
+    """انتقال حالة الخطة، تعديل الهدف (يعيدها للاعتماد إن كانت معتمدة)، تحديث حالة إجراء، أو إضافة إجراء. كل تغيير في سجل الخطة."""
+    with Session(engine) as s:
+        company, role, viewer, sc, be = _br_scope(s, user)
+        p = s.get(CompanyBranchPlan, int(data.get("id") or 0))
+        if not p or p.company_id != company.id:
+            raise HTTPException(404, "الخطة غير موجودة")
+        if sc.get("branch") and p.branch != sc["branch"]:
+            raise HTTPException(403, "مدير الفرع يعمل على فرعه فقط")
+        if not sc["can_plan"]:
+            raise HTTPException(403, "خارج صلاحيتك")
+        pd_ = _br_plan_dict(p)
+        acts, hist = pd_["actions"], pd_["history"]
+        now, by = datetime.now().strftime("%Y-%m-%d %H:%M"), (user.name or user.email)[:100]
+        ev = None
+        if "target" in data:
+            t = _fnum(data.get("target"), "المستهدف")
+            if t != p.target:
+                if p.status in ("completed", "cancelled"):
+                    raise HTTPException(409, "الخطة مغلقة")
+                ev = {"event": "target_changed", "note": f"{p.target} ← {t}"}
+                p.target = t
+                if p.status in ("approved", "in_progress"):
+                    p.status, p.target_approved_by, p.target_approved_at = "pending_approval", "", ""
+                    ev["note"] += " · أُعيدت للاعتماد"
+        if data.get("to"):
+            to = str(data["to"])
+            if to not in be.PLAN_FLOW.get(p.status, set()):
+                raise HTTPException(409, f"لا يمكن الانتقال من «{be.PLAN_STATUS.get(p.status)}» إلى «{be.PLAN_STATUS.get(to, to)}»")
+            if to == "pending_approval" and p.target is None:
+                raise HTTPException(422, "حدد المستهدف قبل إرسال الخطة للاعتماد — لا قيمة مستهدفة تلقائية")
+            if to == "approved":
+                if not sc["can_approve"]:
+                    raise HTTPException(403, "اعتماد الخطة ومستهدفها للمالك أو الرئيس التنفيذي")
+                p.target_approved_by, p.target_approved_at = by, now[:10]
+            if to == "cancelled" and not str(data.get("note") or "").strip():
+                raise HTTPException(422, "سبب الإلغاء مطلوب")
+            if to == "completed":
+                rep_ = _br_live(s, company, {"role": "owner", "user_id": user.id}, be)
+                p.final_value = be.current_value(rep_, p.branch, p.metric)
+                p.result_note = str(data.get("note") or "")[:500]
+            ev = {"event": f"status:{to}", "note": str(data.get("note") or "")[:300]}
+            p.status = to
+        if data.get("action_index") is not None:
+            i = int(data["action_index"])
+            if not 0 <= i < len(acts):
+                raise HTTPException(404, "الإجراء غير موجود")
+            stv = str(data.get("action_status") or "")
+            if stv not in ("open", "in_progress", "done", "cancelled"):
+                raise HTTPException(422, "حالة الإجراء غير صالحة")
+            ev = {"event": "action", "note": f"{acts[i]['action']}: {acts[i].get('status')} ← {stv}"}
+            acts[i]["status"] = stv
+            acts[i]["updated_at"] = now
+        if data.get("add_action"):
+            a = data["add_action"]
+            if not str((a or {}).get("action") or "").strip():
+                raise HTTPException(422, "نص الإجراء مطلوب")
+            if a.get("due") and not _valid_date(str(a["due"])):
+                raise HTTPException(422, "موعد الإجراء بصيغة YYYY-MM-DD")
+            acts.append({"action": str(a["action"]).strip()[:200], "owner": str(a.get("owner") or p.owner)[:100], "due": str(a.get("due") or p.due)[:10],
+                         "kpi": str(a.get("kpi") or "")[:100], "status": "open"})
+            ev = {"event": "action_added", "note": str(a["action"])[:120]}
+        if ev is None:
+            raise HTTPException(422, "لا يوجد تغيير")
+        hist.append(dict(ev, at=now, by=by))
+        p.actions_json, p.history_json, p.updated_at = json.dumps(acts, ensure_ascii=False), json.dumps(hist[-100:], ensure_ascii=False), now
+        s.add(p); s.commit()
+        log_audit(company.id, user.id, user.name, "branch_plan_update", f"branch_plan:{p.id}", f"{ev['event']} {ev.get('note', '')[:120]}")
+        return {"ok": True, "id": p.id, "status": p.status, "status_ar": be.PLAN_STATUS.get(p.status)}
+
+
+@app.post("/company/branches/practices")
+def company_branch_practice(data: dict, user: User = Depends(get_current_user)):
+    """تجربة ممارسة في فرع مستهدف (خط الأساس من الخادم) أو إغلاقها كـ«مثبتة/مرفوضة» بعد القياس."""
+    with Session(engine) as s:
+        company, role, viewer, sc, be = _br_scope(s, user)
+        if not sc["can_plan"]:
+            raise HTTPException(403, "خارج صلاحيتك")
+        now = datetime.now().strftime("%Y-%m-%d %H:%M")
+        if data.get("id"):
+            x = s.get(CompanyBranchPractice, int(data["id"]))
+            if not x or x.company_id != company.id:
+                raise HTTPException(404, "التجربة غير موجودة")
+            if sc.get("branch") and x.target_branch != sc["branch"]:
+                raise HTTPException(403, "مدير الفرع يعمل على فرعه فقط")
+            to = str(data.get("status") or "")
+            if to not in _BR_PRACTICE_FLOW.get(x.status, set()):
+                raise HTTPException(409, "انتقال غير صالح")
+            if not sc["can_approve"] and to == "validated":
+                raise HTTPException(403, "اعتماد الممارسة كمثبتة للمالك أو الرئيس التنفيذي")
+            x.status, x.note, x.updated_at = to, str(data.get("note") or x.note)[:400], now
+            s.add(x); s.commit()
+            log_audit(company.id, user.id, user.name, "branch_practice_status", f"practice:{x.id}", to)
+            return {"ok": True, "id": x.id, "status": to}
+        src, tgt, mk = str(data.get("source_branch") or ""), str(data.get("target_branch") or ""), str(data.get("metric") or "")
+        _br_check_branch(s, company, {}, src)
+        _br_check_branch(s, company, sc, tgt)
+        if src == tgt:
+            raise HTTPException(422, "الفرع المستهدف يجب أن يختلف عن مصدر الممارسة")
+        if mk not in be.METRIC_AR:
+            raise HTTPException(422, "مؤشر غير معروف")
+        rep_ = _br_live(s, company, {"role": "owner", "user_id": user.id}, be)
+        x = CompanyBranchPractice(company_id=company.id, source_branch=src, target_branch=tgt, metric=mk, practice=str(data.get("practice") or "")[:300],
+                                  baseline=be.current_value(rep_, tgt, mk), baseline_at=rep_.get("period") or now[:10], owner=str(data.get("owner") or "")[:100],
+                                  created_by=(user.name or user.email)[:100], updated_at=now)
+        s.add(x); s.commit(); s.refresh(x)
+        log_audit(company.id, user.id, user.name, "branch_practice_pilot", f"practice:{x.id}", f"{src}→{tgt} {mk} baseline={x.baseline}")
+        return {"ok": True, "id": x.id, "baseline": x.baseline}
+
+
+@app.post("/company/branches/to-decision")
+def company_branch_to_decision(data: dict, user: User = Depends(get_current_user)):
+    """تحويل نتيجة مقارنة أو خطة إلى قرار رسمي في متابعة القرارات (3.9) — نفس مسار الحفظ والاعتماد وخط الأساس."""
+    with Session(engine) as s:
+        company, role, viewer, sc, be = _br_scope(s, user)
+        if not sc["can_plan"]:
+            raise HTTPException(403, "خارج صلاحيتك")
+        b = str(data.get("branch") or "").strip()
+        _br_check_branch(s, company, sc, b)
+        title = str(data.get("title") or "").strip()[:200]
+        if not title:
+            raise HTTPException(422, "عنوان القرار مطلوب")
+        plan = None
+        if data.get("plan_id"):
+            plan = s.get(CompanyBranchPlan, int(data["plan_id"]))
+            if not plan or plan.company_id != company.id or plan.branch != b:
+                raise HTTPException(404, "الخطة غير موجودة لهذا الفرع")
+            if plan.decision_id:
+                raise HTTPException(409, f"أُنشئ قرار لهذه الخطة مسبقاً (#{plan.decision_id})")
+        mk = str(data.get("metric") or (plan.metric if plan else "") or "")
+        kpi = be.DECISION_KPI.get(mk, "revenue")
+        tgt = data.get("target", plan.target if plan else None)
+        payload = {"title": title, "rationale": f"من مقارنة الفروع (4.2) — {b}: {str(data.get('reason') or (plan.problem if plan else ''))}"[:500],
+                   "owner": str(data.get("owner") or (plan.owner if plan else "") or "")[:100], "due": str(data.get("due") or (plan.due if plan else "") or "")[:10] or None,
+                   "category": "branch", "priority": data.get("priority") if data.get("priority") in ("high", "medium", "low") else "medium",
+                   "expected_impact": data.get("expected_impact"), "expected_type": "potential", "source": "branch",
+                   "source_ref": f"branch:{b}:{'plan:' + str(plan.id) if plan else mk}", "branch": b,
+                   "kpis": [{"metric": kpi, "target": tgt, "branch": b}]}
+    out = company_decision_center_save(payload, user=user)
+    with Session(engine) as s:
+        if plan:
+            plan = s.get(CompanyBranchPlan, plan.id)
+            plan.decision_id = out.get("id")
+            s.add(plan); s.commit()
+        log_audit(company.id, user.id, user.name, "branch_to_decision", f"branch:{b}", f"decision={out.get('id')} plan={data.get('plan_id')}")
+        return {"ok": True, "decision_id": out.get("id"), "link": f"company-decisions-intelligence.html#dec/{out.get('id')}"}
+
+
+@app.get("/company/branches/settings")
+def company_branch_settings_get(user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role, viewer, sc, be = _br_scope(s, user)
+        if not sc["can_settings"]:
+            raise HTTPException(403, "إعدادات المقارنة للمالك والمدير المالي")
+        return {"settings": dict(be.DEFAULTS, **_br_settings(s, company.id)), "sector": _risk_sector(company), "sector_weights": be.weights_for(_risk_sector(company), {}),
+                "dims": be.DIMS, "branches": [b["name"] for b in _br_master(s, company.id)]}
+
+
+@app.post("/company/branches/settings")
+def company_branch_settings_save(data: dict, user: User = Depends(get_current_user)):
+    """أوزان الأبعاد، حدود التنبيهات، الحد الأدنى للتغطية، ملف كل فرع، وميزانية المصروفات. كل تغيير في سجل التدقيق."""
+    with Session(engine) as s:
+        company, role, viewer, sc, be = _br_scope(s, user)
+        if not sc["can_settings"]:
+            raise HTTPException(403, "إعدادات المقارنة للمالك والمدير المالي")
+        out = {}
+        w = data.get("weights")
+        if w:
+            if not isinstance(w, dict) or any(k not in be.DIM_AR for k in w):
+                raise HTTPException(422, "أبعاد غير معروفة في الأوزان")
+            ww = {}
+            for k, v in w.items():
+                fv = _fnum(v, f"وزن {be.DIM_AR[k]}")
+                if fv is None or not 0 <= fv <= 100:
+                    raise HTTPException(422, "الأوزان بين 0 و100")
+                ww[k] = fv
+            if sum(ww.values()) <= 0:
+                raise HTTPException(422, "مجموع الأوزان يجب أن يكون أكبر من صفر")
+            out["weights"] = ww
+        else:
+            out["weights"] = None
+        for k, lo, hi in (("min_coverage_pct", 20, 100), ("margin_floor_pp", 0.5, 30), ("sales_drop_pct", 1, 90), ("ops_drop_pp", 0.5, 50),
+                          ("retention_drop_pp", 0.5, 50), ("new_branch_months", 1, 36), ("practice_lead_pct", 1, 100)):
+            v = data.get(k, be.DEFAULTS[k])
+            fv = _fnum(v, k)
+            if fv is None or not lo <= fv <= hi:
+                raise HTTPException(422, f"{k} بين {lo} و{hi}")
+            out[k] = fv
+        names = {b["name"] for b in _br_master(s, company.id)} | {r.get("branch_name") for r in _sales_rows(s, company.id) if r.get("branch_name")}
+        prof = {}
+        for b, pf in (data.get("profiles") or {}).items():
+            if b not in names or not isinstance(pf, dict):
+                raise HTTPException(422, f"فرع غير معروف: {str(b)[:40]}")
+            x = {}
+            for k in ("hours_week", "area_sqm", "rent_monthly"):
+                fv = _fnum(pf.get(k), k)
+                if fv is not None and fv < 0:
+                    raise HTTPException(422, f"{k} رقم موجب")
+                if fv is not None:
+                    x[k] = fv
+            if pf.get("hours_week") and _fnum(pf.get("hours_week"), "hours_week") > 168:
+                raise HTTPException(422, "ساعات الأسبوع لا تتجاوز 168")
+            for k in ("region", "manager"):
+                if pf.get(k):
+                    x[k] = str(pf[k]).strip()[:80]
+            if pf.get("opened"):
+                if not _valid_date(str(pf["opened"])):
+                    raise HTTPException(422, "تاريخ الافتتاح بصيغة YYYY-MM-DD")
+                x["opened"] = str(pf["opened"])
+            prof[b] = x
+        out["profiles"] = prof
+        bud = {}
+        for b, v in (data.get("opex_budget") or {}).items():
+            if b not in names:
+                raise HTTPException(422, f"فرع غير معروف: {str(b)[:40]}")
+            fv = _fnum(v, "ميزانية المصروفات")
+            if fv is None or fv < 0:
+                raise HTTPException(422, "ميزانية المصروفات رقم موجب")
+            bud[b] = fv
+        out["opex_budget"] = bud
+        r = s.exec(select(CompanyBranchSetting).where(CompanyBranchSetting.company_id == company.id)).first() or CompanyBranchSetting(company_id=company.id)
+        old = r.settings_json or "{}"
+        r.settings_json, r.updated_by, r.updated_at = json.dumps(out, ensure_ascii=False), (user.name or user.email)[:100], datetime.now().strftime("%Y-%m-%d %H:%M")
+        s.add(r); s.commit()
+        log_audit(company.id, user.id, user.name, "branch_settings", "branches:settings", f"old={old[:300]} new={r.settings_json[:300]}")
+        return {"ok": True, "settings": out}
+
+
+@app.post("/company/branches/ai-insights")
+def company_branch_ai(data: dict, request: Request, user: User = Depends(get_current_user)):
+    """المساعد: يجيب من نتائج المقارنة ضمن صلاحية السائل، يتحقق من عدالة المقارنة، ولا يخترع أسباباً ولا يعتمد قرارات."""
+    with Session(engine) as s:
+        company, role, viewer, sc, be = _br_scope(s, user)
+        rep_ = _br_live(s, company, viewer, be)
+    gw = _load_p24("ai_gateway")
+    if gw is None:
+        raise HTTPException(503, "بوابة الذكاء الاصطناعي غير متاحة — " + _p23_diagnostic())
+    q = str(data.get("question") or be.AI_QUESTIONS[0])[:300]
+    ctx = be.ai_context(rep_, q)
+    out = gw.request_ai_analysis(gw.GeminiProvider(company_gemini), ctx,
+                                 q + " — أجب من نتائج مقارنة الفروع الموثقة فقط: الجواب، الأدلة مع المصدر والثقة، عدالة المقارنة، ثم إجراء قابل للقياس. لا تخترع أسباباً ولا تعتمد قراراً.",
+                                 trust_report={"overall_score": 75, "status": "pass", "has_critical_fail": False, "main_causes": []},
+                                 lang=get_lang(request), company=company)
+    log_audit(company.id, user.id, user.name, "branch_ai", "branches:ai", f"q={q[:80]}")
+    return {"question": q, "ai": out, "as_of": rep_.get("as_of")}
+
+
 @app.get("/company/executive-intelligence")
 def company_executive_intelligence(request: Request, user: User = Depends(get_current_user),
                                    period: Optional[str] = None, ai: int = 0):
@@ -16535,7 +17052,7 @@ ENGINE_MODULES = ("nabbah_finance", "nabbah_trust", "semantic_layer", "kpi_engin
                   "ai_gateway", "period_aggregation", "legacy_adapters", "platform_bridge",
                   "intelligence_engine", "forecast_engine", "scenario_engine", "decision_memory",
                   "rule_catalog", "canonical_model", "period_model", "metric_registry", "ingestion",
-                  "sales_engine", "inventory_engine", "purchases_engine", "cashflow_engine", "hr_engine", "ops_engine", "finance_engine", "sector_intelligence", "leakage_engine", "tax_engine", "risk_engine", "drivers_engine", "benchmark_engine", "prediction_engine", "goals_engine", "decisions_engine", "board_engine", "monthly_engine", "executive_engine", "customer_engine")
+                  "sales_engine", "inventory_engine", "purchases_engine", "cashflow_engine", "hr_engine", "ops_engine", "finance_engine", "sector_intelligence", "leakage_engine", "tax_engine", "risk_engine", "drivers_engine", "benchmark_engine", "prediction_engine", "goals_engine", "decisions_engine", "board_engine", "monthly_engine", "executive_engine", "customer_engine", "branch_engine")
 
 
 def _runtime_health():
@@ -16885,7 +17402,7 @@ def files_check(_: bool = Depends(verify_admin)):
         "company-data-quality.html", "company-predictions.html", "company-risks.html",
         "company-board.html", "company-root-cause.html", "company-benchmarks.html",
         "company-upload.html", "company-memory.html", "company-decisions.html",
-        "company-monthly-report.html", "company-monthly-intelligence.html", "company-board-intelligence.html", "company-executive-report-intelligence.html", "company-customer-intelligence.html",
+        "company-monthly-report.html", "company-monthly-intelligence.html", "company-board-intelligence.html", "company-executive-report-intelligence.html", "company-customer-intelligence.html", "company-branch-intelligence.html",
         "nabbah-data-template.xlsx",
     ]
     missing, present = [], []
