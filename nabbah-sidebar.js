@@ -47,7 +47,8 @@
     { icon: "⚙️", label: "العمليات", items: [
       { label: "وحدة العمليات", href: "company-ops-analytics.html" },
       { label: "إدخال بيانات العمليات", href: "company-ops.html" },
-      { label: "مقارنة الفروع", href: "company-branches.html" },
+      { label: "ذكاء المقارنة بين الفروع", href: "company-branch-intelligence.html" },
+      { label: "مقارنة الفروع (السابق)", href: "company-branches.html" },
     ]},
     { icon: "📦", label: "سلسلة الإمداد", items: [
       { label: "وحدة المخزون", href: "company-inventory-analytics.html" },
