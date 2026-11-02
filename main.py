@@ -1604,6 +1604,127 @@ class CompanyAISetting(SQLModel, table=True):
     updated_at: str = ""
 
 
+# ═══ Phase 6.7 — الأمان والموثوقية المؤسسية: جداول جديدة فقط (لا تعديل على User ولا نظام مصادقة جديد) ═══
+class UserMFA(SQLModel, table=True):
+    """المصادقة الثنائية (TOTP). السر مشفّر (لا يُخزّن نصاً)، ورموز الاسترداد مُجزّأة فقط."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(index=True)
+    enabled: int = 0
+    secret_enc: str = ""
+    recovery_json: str = "[]"
+    recovery_salt: str = ""
+    last_counter: Optional[int] = None
+    enabled_at: Optional[_DTCOL] = None
+    last_used_at: Optional[_DTCOL] = None
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+class UserSession(SQLModel, table=True):
+    """جلسة دخول لكل جهاز: المعرّف مُجزّأ (sid_hash) · عنوان IP مقنّع · قابلة للإنهاء الفردي."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(index=True)
+    company_id: Optional[int] = Field(default=None, index=True)
+    sid_hash: str = Field(default="", index=True)
+    device_fp: str = ""
+    device_label: str = ""
+    device_kind: str = ""
+    ip: str = ""
+    mfa: int = 0
+    revoked: int = 0
+    revoked_by: str = ""
+    revoked_at: Optional[_DTCOL] = None
+    expires_at: Optional[_DTCOL] = None
+    last_seen: Optional[_DTCOL] = None
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+class SecurityEvent(SQLModel, table=True):
+    """سجل الأحداث الأمنية (دخول، فشل، حظر، MFA، جلسات، سياسات...). IP مقنّع والبريد غير المسجل مقنّع."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: Optional[int] = Field(default=None, index=True)
+    user_id: Optional[int] = Field(default=None, index=True)
+    user_name: str = ""
+    kind: str = Field(default="", index=True)
+    severity: str = "info"
+    ip: str = ""
+    device: str = ""
+    detail: str = ""
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+class CompanySecurityPolicy(SQLModel, table=True):
+    """سياسة أمن الشركة: MFA إلزامي حسب الدور · مدة الجلسة · مهلة الخمول · فترة النسخ · الاحتفاظ بالأحداث · من يصدّر."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    settings_json: str = "{}"
+    updated_by: str = ""
+    updated_at: Optional[_DTCOL] = None
+
+
+class BackupRecord(SQLModel, table=True):
+    """سجل النسخ: company_export (تصدير منطقي) · provider (نسخة المزود مسجلة يدوياً بعد التحقق) · restore_test (اختبار استعادة جاف)."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    kind: str = ""
+    status: str = ""
+    rows: Optional[int] = None
+    size_bytes: Optional[int] = None
+    tables: Optional[int] = None
+    by: str = ""
+    note: str = ""
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+    finished_at: Optional[_DTCOL] = None
+
+
+class CompanyDRPlan(SQLModel, table=True):
+    """خطة التعافي من الكوارث: RPO/RTO · الأنظمة الحرجة · الفريق · السيناريوهات · الاعتماد (المالك)."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    rpo_hours: Optional[float] = None
+    rto_hours: Optional[float] = None
+    systems_json: str = "[]"
+    team_json: str = "[]"
+    scenarios_json: str = "[]"
+    notes: str = ""
+    approved_by: str = ""
+    approved_at: Optional[_DTCOL] = None
+    updated_by: str = ""
+    updated_at: Optional[_DTCOL] = None
+
+
+class CompanyDRTest(SQLModel, table=True):
+    """اختبار تعافٍ منفّذ: التاريخ · السيناريو · النتيجة · زمن التعافي الفعلي."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    date: str = ""
+    scenario: str = ""
+    result: str = ""
+    actual_rto_hours: Optional[float] = None
+    notes: str = ""
+    by: str = ""
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+class SecurityIncident(SQLModel, table=True):
+    """حادثة أمنية بمسار متسلسل: اكتُشفت → فرز → تحقيق → احتواء → إزالة السبب → تعافٍ → إغلاق (مع الدروس المستفادة)."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    title: str = ""
+    severity: str = "medium"
+    status: str = "detected"
+    systems_json: str = "[]"
+    owner: str = ""
+    description: str = ""
+    containment: str = ""
+    remediation: str = ""
+    lessons: str = ""
+    history_json: str = "[]"
+    opened_by: str = ""
+    opened_at: _DTCOL = Field(default_factory=_now_naive)
+    updated_at: Optional[_DTCOL] = None
+    closed_at: Optional[_DTCOL] = None
+
+
 class BenchmarkDataset(SQLModel, table=True):
     """طبقة المعايير القطاعية (3.5): company_id فارغ = معيار المنصّة (من الإدارة)، وإلا معيار خاص بالشركة.
     كل معيار بمصدره ومنهجيته وفترته وعيّنته وثقته — لا معيار بلا مصدر."""
@@ -2027,12 +2148,161 @@ def verify_password(password: str, password_hash: str) -> bool:
     except Exception:
         return False
 
-def create_token(user_id: int, token_version: int = 0) -> str:
+# ═══ 6.7 — جلسات لكل جهاز + أحداث أمنية + مصادقة ثنائية (فوق نظام الدخول الحالي نفسه، لا نظام مصادقة جديد) ═══
+_MFA_LOGIN_UI = True          # صفحة الدخول تدعم خطوة رمز المصادقة → يُسمح بتفعيل MFA
+_SEC_POLICY_CACHE = {}        # {company_id: (وقت القراءة، السياسة)} — 60 ثانية
+_SEC_ROLES = ("owner", "manager", "staff", "ceo", "cfo", "coo", "hr", "it_admin", "auditor", "board", "dept_manager", "branch_manager", "employee")
+
+
+def _sec_engine():
+    return _load_p24("security_engine")
+
+
+def _client_ip(request) -> str:
+    """عنوان العميل الحقيقي خلف وكيل Railway (X-Forwarded-For) — للعرض والتقييم فقط، ويُخزّن مقنّعاً."""
+    try:
+        xff = (request.headers.get("x-forwarded-for") or "").split(",")[0].strip()
+        if xff:
+            return xff[:64]
+        return (request.client.host if request.client else "")[:64]
+    except Exception:
+        return ""
+
+
+def _sid_hash(sid: str) -> str:
+    import hashlib as _hl
+    return _hl.sha256(("nabbah-sid|" + str(sid or "")).encode()).hexdigest()
+
+
+def _sec_policy(company_id) -> dict:
+    """سياسة أمن الشركة مع القيم الافتراضية (تخزين مؤقت 60 ثانية). لا تفشل أبداً."""
+    base = {"mfa_required_roles": [], "session_days": TOKEN_DAYS, "idle_minutes": 0, "backup_interval_days": 7,
+            "event_retention_days": 365, "export_roles": ["owner", "it_admin"]}
+    if not company_id:
+        return base
+    hit = _SEC_POLICY_CACHE.get(company_id)
+    if hit and time.time() - hit[0] < 60:
+        return dict(hit[1])
+    pol = dict(base)
+    try:
+        with Session(engine) as s:
+            row = s.exec(select(CompanySecurityPolicy).where(CompanySecurityPolicy.company_id == company_id)).first()
+            if row:
+                saved = json.loads(row.settings_json or "{}")
+                if isinstance(saved, dict):
+                    pol.update({k: v for k, v in saved.items() if k in base})
+    except Exception as _e:
+        _logger.error(f"sec policy read failed: {type(_e).__name__}")
+        return base
+    _SEC_POLICY_CACHE[company_id] = (time.time(), pol)
+    return dict(pol)
+
+
+def _sec_event(kind, user=None, company_id=None, severity=None, ip="", device="", detail=""):
+    """يسجّل حدثاً أمنياً — لا يفشل أبداً حتى لا يكسر الدخول."""
+    try:
+        se = _sec_engine()
+        sev = severity or (se.EVENT_SEV.get(kind, "info") if se else "info")
+        with Session(engine) as ms:
+            ms.add(SecurityEvent(company_id=company_id if company_id is not None else (getattr(user, "company_id", None) if user else None),
+                                 user_id=getattr(user, "id", None) if user else None, user_name=str(getattr(user, "name", "") or "")[:100] if user else "",
+                                 kind=str(kind)[:40], severity=sev, ip=(se.mask_ip(ip) if se and ip else "")[:64], device=str(device or "")[:80],
+                                 detail=str(detail or "")[:300], created_at=datetime.now()))
+            ms.commit()
+    except Exception as _e:
+        _logger.error(f"sec event failed: {type(_e).__name__}: {str(_e)[:120]}")
+
+
+def _user_title(s, user) -> str:
+    if not getattr(user, "company_id", None):
+        return ""
+    row = s.exec(select(CompanyUserScope).where(CompanyUserScope.company_id == user.company_id, CompanyUserScope.user_id == user.id)).first()
+    return (row.title or "") if row else ""
+
+
+def _mfa_row(s, user_id):
+    return s.exec(select(UserMFA).where(UserMFA.user_id == user_id)).first()
+
+
+def _mfa_master() -> str:
+    """مفتاح تشفير أسرار MFA: MFA_ENC_KEY إن وُجد (موصى به)، وإلا SECRET_KEY."""
+    return os.getenv("MFA_ENC_KEY") or SECRET_KEY
+
+
+def _mfa_required_for(s, user) -> bool:
+    req = set(_sec_policy(user.company_id).get("mfa_required_roles") or [])
+    if not req:
+        return False
+    return get_user_role(s, user) in req or _user_title(s, user) in req
+
+
+def _new_session(s, user, request, mfa=False):
+    """يُنشئ جلسة جهاز جديدة ويقيّمها مقابل سجل المستخدم (جهاز/شبكة جديدة). يُرجع (sid، التقييم، الجهاز، IP)."""
+    import secrets as _sx
+    se = _sec_engine()
+    now = datetime.now()
+    ua = ""
+    try:
+        ua = request.headers.get("user-agent") or ""
+    except Exception:
+        pass
+    ip = _client_ip(request)
+    info = se.parse_ua(ua)
+    fp = se.device_fp(ua, user.id)
+    rows = s.exec(select(UserSession).where(UserSession.user_id == user.id).order_by(UserSession.created_at.desc()).limit(300)).all()
+    hist = [{"at": r.created_at, "fp": r.device_fp, "ip": r.ip} for r in rows if r.created_at]
+    asm = se.assess_login(hist, fp=fp, ip=ip, now=now)
+    for r in rows:   # تنظيف: جلسات أقدم من 120 يوماً
+        if r.created_at and (now - r.created_at).days > 120:
+            s.delete(r)
+    days = int(_sec_policy(user.company_id).get("session_days") or TOKEN_DAYS)
+    days = max(1, min(days, TOKEN_DAYS))
+    sid = _sx.token_urlsafe(32)
+    s.add(UserSession(user_id=user.id, company_id=user.company_id, sid_hash=_sid_hash(sid), device_fp=fp, device_label=info["label"][:80],
+                      device_kind=info["kind"], ip=se.mask_ip(ip) if ip else "", mfa=1 if mfa else 0, revoked=0,
+                      expires_at=now + timedelta(days=days), last_seen=now, created_at=now))
+    s.commit()
+    return sid, asm, info, ip
+
+
+def _revoke_all_sessions(s, user_id, by="", keep_sid_hash=None) -> int:
+    n = 0
+    now = datetime.now()
+    for r in s.exec(select(UserSession).where(UserSession.user_id == user_id, UserSession.revoked == 0)).all():
+        if keep_sid_hash and r.sid_hash == keep_sid_hash:
+            continue
+        r.revoked, r.revoked_by, r.revoked_at = 1, str(by or "")[:60], now
+        s.add(r)
+        n += 1
+    s.commit()
+    return n
+
+
+def _issue_login(s, user, request, mfa=False) -> dict:
+    """يُصدر رمز دخول مربوطاً بجلسة جهاز (sid) — بنفس حقول الاستجابة السابقة + mfa_setup_required."""
+    sid, asm, info, ip = _new_session(s, user, request, mfa)
+    _sec_event("login_success", user, None, "info", ip, info["label"], "بمصادقة ثنائية" if mfa else "")
+    if asm.get("flags"):
+        _sec_event("new_device", user, None, asm.get("severity") or "low", ip, info["label"], asm.get("reason_ar") or "")
+    need_setup = False
+    if not mfa:
+        try:
+            m = _mfa_row(s, user.id)
+            need_setup = (not m or not m.enabled) and _mfa_required_for(s, user)
+        except Exception:
+            need_setup = False
+    return {"token": create_token(user.id, user.token_version, sid=sid), "name": user.name, "is_active": user.is_active, "plan": user.plan,
+            "mfa_setup_required": bool(need_setup)}
+
+
+def create_token(user_id: int, token_version: int = 0, sid: str = None) -> str:
     payload = {
         "user_id": user_id,
         "tv": int(token_version or 0),   # نسخة الجلسة — تغيير كلمة المرور يرفعها فتبطل كل الرموز السابقة
         "exp": datetime.utcnow() + timedelta(days=TOKEN_DAYS)
     }
+    if sid:
+        payload["sid"] = sid             # 6.7: جلسة الجهاز — تُنهى فردياً أو بالخمول أو بانتهاء مدة السياسة
     return jwt.encode(payload, SECRET_KEY, algorithm="HS256")
 
 def get_current_user(authorization: str = Header(default="")) -> User:
@@ -2044,7 +2314,10 @@ def get_current_user(authorization: str = Header(default="")) -> User:
         payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
         user_id = payload.get("user_id")
         tv = int(payload.get("tv") or 0)
+        sid = payload.get("sid")
     except Exception:
+        raise HTTPException(status_code=401, detail="انتهت الجلسة، سجّل الدخول من جديد")
+    if payload.get("typ") == "mfa" or not isinstance(user_id, int) or isinstance(user_id, bool):
         raise HTTPException(status_code=401, detail="انتهت الجلسة، سجّل الدخول من جديد")
     with Session(engine) as s:
         user = s.get(User, user_id)
@@ -2052,7 +2325,34 @@ def get_current_user(authorization: str = Header(default="")) -> User:
             raise HTTPException(status_code=401, detail="المستخدم غير موجود")
         if tv != int(getattr(user, "token_version", 0) or 0):
             raise HTTPException(status_code=401, detail="تم تسجيل خروجك — تغيّرت كلمة المرور أو أُنهيت الجلسات. سجّل الدخول من جديد")
-        return user
+        company_id = user.company_id
+    if sid:
+        # جلسة منفصلة حتى لا يُنتهى كائن المستخدم بعد commit. الرموز القديمة بلا sid تبقى مقبولة (توافق).
+        _dead = None
+        try:
+            with Session(engine) as s2:
+                row = s2.exec(select(UserSession).where(UserSession.sid_hash == _sid_hash(sid))).first()
+                now = datetime.now()
+                if not row or row.revoked or row.user_id != user_id:
+                    _dead = "أُنهيت هذه الجلسة. سجّل الدخول من جديد"
+                elif row.expires_at and row.expires_at < now:
+                    _dead = "انتهت مدة الجلسة حسب سياسة الشركة. سجّل الدخول من جديد"
+                else:
+                    idle = int(_sec_policy(company_id).get("idle_minutes") or 0) if company_id else 0
+                    if idle and row.last_seen and (now - row.last_seen).total_seconds() > idle * 60:
+                        row.revoked, row.revoked_by, row.revoked_at = 1, "خمول", now
+                        s2.add(row)
+                        s2.commit()
+                        _dead = "انتهت الجلسة بسبب عدم النشاط. سجّل الدخول من جديد"
+                    elif not row.last_seen or (now - row.last_seen).total_seconds() > 300:
+                        row.last_seen = now
+                        s2.add(row)
+                        s2.commit()
+        except Exception as _e:
+            _logger.error(f"session check failed (fail-open): {type(_e).__name__}: {str(_e)[:120]}")
+        if _dead:
+            raise HTTPException(status_code=401, detail=_dead)
+    return user
 
 
 # ═══════════════════════════════════════════════════════════
@@ -2360,6 +2660,11 @@ def page_company_assistant():
     return FileResponse("company-assistant.html")
 
 
+@app.get("/company-security.html")
+def page_company_security():
+    return FileResponse("company-security.html")
+
+
 @app.get("/company-customer-intelligence.html")
 def page_company_customer_intelligence():
     return FileResponse("company-customer-intelligence.html")
@@ -2620,7 +2925,7 @@ class LoginData(BaseModel):
     password: str
 
 @app.post("/register")
-def register(data: RegisterData):
+def register(data: RegisterData, request: Request):
     email = data.email.strip().lower()
     if len(data.password) < 6:
         raise HTTPException(status_code=400, detail="كلمة المرور يجب أن تكون 6 أحرف على الأقل")
@@ -2638,22 +2943,104 @@ def register(data: RegisterData):
         s.add(user)
         s.commit()
         s.refresh(user)
-        token = create_token(user.id, user.token_version)
+        try:   # 6.7: جلسة جهاز من أول دخول (تظهر في «الجلسات والأجهزة» ويمكن إنهاؤها)
+            sid = _new_session(s, user, request, mfa=False)[0]
+        except Exception as _e:
+            _logger.error(f"register session failed: {type(_e).__name__}")
+            s.rollback()
+            sid = None
+        token = create_token(user.id, user.token_version, sid=sid)
         log_activity("عميل جديد", f"سجّل حساباً جديداً ({user.business_name or 'بدون منشأة'})", user.email)
         return {"token": token, "name": user.name, "is_active": user.is_active, "plan": user.plan}
+
+class MFALoginData(BaseModel):
+    mfa_token: str
+    code: Optional[str] = ""
+    recovery_code: Optional[str] = ""
+
 
 @app.post("/login")
 def login(data: LoginData, request: Request):
     email = data.email.strip().lower()
-    check_login_throttle(request, email)
+    se = _sec_engine()
+    try:
+        check_login_throttle(request, email)
+    except HTTPException as _e:
+        if _e.status_code == 429:
+            known = None
+            try:
+                with Session(engine) as s0:
+                    known = s0.exec(select(User).where(User.email == email)).first()
+            except Exception:
+                known = None
+            _sec_event("login_throttled", known, None, "high", _client_ip(request), "", "" if known else f"البريد: {se.mask_email(email)}")
+        raise
     with Session(engine) as s:
         user = s.exec(select(User).where(User.email == email)).first()
         if not user or not verify_password(data.password, user.password_hash):
             record_failed_login(request, email)
+            _sec_event("login_failed", user, None, "low", _client_ip(request), "", "كلمة مرور خاطئة" if user else f"بريد غير مسجل: {se.mask_email(email)}")
             raise HTTPException(status_code=401, detail="البريد أو كلمة المرور غير صحيحة")
         clear_login_attempts(request, email)
-        token = create_token(user.id, user.token_version)
-        return {"token": token, "name": user.name, "is_active": user.is_active, "plan": user.plan}
+        m = _mfa_row(s, user.id)
+        if m and m.enabled:
+            mt = jwt.encode({"mfa_uid": user.id, "tv": int(user.token_version or 0), "typ": "mfa",
+                             "exp": datetime.utcnow() + timedelta(minutes=5)}, SECRET_KEY, algorithm="HS256")
+            _sec_event("mfa_required", user, None, "info", _client_ip(request), "", "")
+            return {"mfa_required": True, "mfa_token": mt, "name": user.name}
+        return _issue_login(s, user, request, mfa=False)
+
+
+@app.post("/login/mfa")
+def login_mfa(data: MFALoginData, request: Request):
+    """الخطوة الثانية للدخول: رمز التطبيق (6 أرقام) أو رمز استرداد يُستهلك مرة واحدة."""
+    se = _sec_engine()
+    try:
+        p = jwt.decode(data.mfa_token or "", SECRET_KEY, algorithms=["HS256"])
+        if p.get("typ") != "mfa":
+            raise ValueError("typ")
+        uid = int(p.get("mfa_uid"))
+        tv = int(p.get("tv") or 0)
+    except Exception:
+        raise HTTPException(status_code=401, detail="انتهت مهلة خطوة التحقق (5 دقائق). سجّل الدخول من جديد")
+    tkey = f"mfa:{uid}"
+    check_login_throttle(request, tkey)
+    with Session(engine) as s:
+        user = s.get(User, uid)
+        if not user or tv != int(user.token_version or 0):
+            raise HTTPException(status_code=401, detail="انتهت الجلسة، سجّل الدخول من جديد")
+        m = _mfa_row(s, uid)
+        if not m or not m.enabled:
+            raise HTTPException(status_code=401, detail="المصادقة الثنائية غير مفعّلة لهذا الحساب — سجّل الدخول من جديد")
+        ip = _client_ip(request)
+        rc = (data.recovery_code or "").strip()
+        if rc:
+            hashes = json.loads(m.recovery_json or "[]")
+            i = se.use_recovery(rc, hashes, m.recovery_salt)
+            if i is None:
+                record_failed_login(request, tkey)
+                _sec_event("mfa_failed", user, None, "medium", ip, "", "رمز استرداد غير صحيح")
+                raise HTTPException(status_code=401, detail="رمز الاسترداد غير صحيح أو مستخدم سابقاً")
+            hashes.pop(i)
+            m.recovery_json = json.dumps(hashes)
+            _sec_event("mfa_recovery_used", user, None, "medium", ip, "", f"متبقٍ {len(hashes)} رموز")
+        else:
+            try:
+                secret = se.unseal(m.secret_enc, _mfa_master())
+            except Exception:
+                _sec_event("mfa_failed", user, None, "high", ip, "", "تعذّر فك تشفير سر المصادقة")
+                raise HTTPException(status_code=409, detail="تعذّر التحقق من الرمز لأن مفتاح التشفير تغيّر. استخدم رمز استرداد، أو اطلب من مسؤول المنصة إعادة ضبط المصادقة الثنائية")
+            ctr = se.verify_totp(secret, data.code, last_counter=m.last_counter)
+            if ctr is None:
+                record_failed_login(request, tkey)
+                _sec_event("mfa_failed", user, None, "medium", ip, "", "رمز غير صحيح")
+                raise HTTPException(status_code=401, detail="رمز التحقق غير صحيح أو منتهٍ")
+            m.last_counter = ctr
+        m.last_used_at = datetime.now()
+        s.add(m)
+        s.commit()
+        clear_login_attempts(request, tkey)
+        return _issue_login(s, user, request, mfa=True)
 
 @app.get("/me")
 def me(user: User = Depends(get_current_user)):
@@ -2887,6 +3274,8 @@ def admin_reset_password(data: AdminPasswordData, _: bool = Depends(verify_admin
         _bump_sessions(user)
         s.add(user)
         s.commit()
+        _revoke_all_sessions(s, user.id, "المسؤول")
+        _sec_event("password_changed", user, None, "high", "", "", "أعاد مسؤول المنصة تعيين كلمة المرور")
         log_activity("المسؤول", "غيّر كلمة المرور وأخرج الحساب من كل الأجهزة", user.email)
         return {"ok": True, "message": f"تم تغيير كلمة مرور {user.email} وإخراجه من كل الأجهزة"}
 
@@ -2901,8 +3290,30 @@ def admin_logout_all(data: AdminActionData, _: bool = Depends(verify_admin)):
         _bump_sessions(user)
         s.add(user)
         s.commit()
+        _revoke_all_sessions(s, user.id, "المسؤول")
+        _sec_event("sessions_revoked_all", user, None, "medium", "", "", "بواسطة مسؤول المنصة")
         log_activity("المسؤول", "أخرج الحساب من كل الأجهزة", user.email)
         return {"ok": True, "message": f"تم إخراج {user.email} من كل الأجهزة"}
+
+
+@app.post("/admin/user/reset-mfa")
+def admin_reset_mfa(data: AdminActionData, _: bool = Depends(verify_admin)):
+    """إعادة ضبط المصادقة الثنائية لعميل فقد جهازه ورموز الاسترداد — تُنهى كل جلساته أيضاً."""
+    with Session(engine) as s:
+        user = s.get(User, data.user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="المستخدم غير موجود")
+        m = _mfa_row(s, user.id)
+        if m:
+            m.enabled, m.secret_enc, m.recovery_json, m.recovery_salt, m.last_counter = 0, "", "[]", "", None
+            s.add(m)
+        _bump_sessions(user)
+        s.add(user)
+        s.commit()
+        _revoke_all_sessions(s, user.id, "المسؤول")
+        _sec_event("mfa_admin_reset", user, None, "high", "", "", "أعاد مسؤول المنصة ضبط المصادقة الثنائية")
+        log_activity("المسؤول", "أعاد ضبط المصادقة الثنائية وأخرج الحساب من كل الأجهزة", user.email)
+        return {"ok": True, "message": f"تم إيقاف المصادقة الثنائية لـ {user.email} وإخراجه من كل الأجهزة"}
 
 
 class ChangePasswordData(BaseModel):
@@ -2927,8 +3338,11 @@ def change_password(data: ChangePasswordData, request: Request, user: User = Dep
         _bump_sessions(u)
         s.add(u)
         s.commit()
+        _revoke_all_sessions(s, u.id, "تغيير كلمة المرور")
+        sid, _a, info, ip = _new_session(s, u, request, mfa=False)
+        _sec_event("password_changed", u, None, "medium", ip, info["label"], "أُخرجت الأجهزة الأخرى")
         log_activity("العميل", "غيّر كلمة المرور (أُخرجت الأجهزة الأخرى)", u.email)
-        return {"ok": True, "token": create_token(u.id, u.token_version), "message": "تم تغيير كلمة المرور وإخراج كل الأجهزة الأخرى"}
+        return {"ok": True, "token": create_token(u.id, u.token_version, sid=sid), "message": "تم تغيير كلمة المرور وإخراج كل الأجهزة الأخرى"}
 
 
 # ===== كود التجربة (تحليل واحد فقط) =====
@@ -5321,7 +5735,7 @@ def _load_p24(name):
     """يحمّل محركات 2.4 من المجلد أو من حزمة nabbah_engines."""
     try:
         import sys as _sys, os as _os, importlib
-        for _d in ("phase21", "phase22", "phase23", "phase24", "phase25", "phase26", "phase27", "phase28", "phase29", "phase210", "phase211", "phase30", "phase31", "phase32", "phase33", "phase34", "phase35", "phase37", "phase38", "phase39", "phase310", "phase311", "phase312", "phase41", "phase42", "phase43", "phase44", "phase45"):
+        for _d in ("phase21", "phase22", "phase23", "phase24", "phase25", "phase26", "phase27", "phase28", "phase29", "phase210", "phase211", "phase30", "phase31", "phase32", "phase33", "phase34", "phase35", "phase37", "phase38", "phase39", "phase310", "phase311", "phase312", "phase41", "phase42", "phase43", "phase44", "phase45", "phase67"):
             _p = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), _d)
             if _p not in _sys.path:
                 _sys.path.insert(0, _p)
@@ -8602,7 +9016,7 @@ def company_prediction_ai(data: dict, request: Request, user: User = Depends(get
 #  Phase 3.8 — Goals & Results Intelligence (هدف → فعلي → توقع → فجوة → إجراء → مسؤول → مرحلة → نتيجة → قبل/بعد)
 #  طبقة أهداف فقط: الفعلي والتوقع والمخاطر تُقرأ من محركات 3.3/3.4/3.5/3.7 — لا جداول بيانات مكررة
 # ═══════════════════════════════════════════════════════════
-_GOAL_TITLES = ("", "ceo", "cfo", "coo", "hr", "board", "dept_manager", "branch_manager", "employee")
+_GOAL_TITLES = ("", "ceo", "cfo", "coo", "hr", "board", "dept_manager", "branch_manager", "employee", "it_admin", "auditor")
 _GOAL_COLLAB_KINDS = ("comment", "mention", "evidence", "request_update", "escalate", "assign_owner", "approve", "reject")
 
 
@@ -12992,6 +13406,791 @@ def company_assistant_settings(data: dict, user: User = Depends(get_current_user
         s.add(r); s.commit()
         log_audit(company.id, user.id, user.name, "ai_settings", "assistant:settings", f"old={old} new={r.settings_json}")
         return {"ok": True, "settings": out}
+
+
+# ═══════════════════════════════════════════════════════════
+#  Phase 6.7 — Enterprise Security & Reliability — الأمان والموثوقية المؤسسية
+#  نطاق: المالك/الرئيس التنفيذي كامل · مسؤول التقنية (it_admin) إدارة · المدقق (auditor) اطلاع · البقية حسابهم فقط
+# ═══════════════════════════════════════════════════════════
+_REQ_SAMPLES = _collections.deque(maxlen=20000)
+_PROC_STARTED = datetime.now()
+_SEC_SKIP_TABLES = ("user", "usermfa", "usersession")
+_SEC_SENSITIVE_COL = re.compile(r"(password|secret|token|_hash$|api_?key|_enc$)", re.I)
+_SEC_STATIC_EXT = (".html", ".js", ".css", ".png", ".jpg", ".jpeg", ".svg", ".ico", ".webp", ".woff", ".woff2", ".map")
+
+
+@app.middleware("http")
+async def _reliability_mw(request: Request, call_next):
+    """يقيس زمن وحالة كل طلب API (في الذاكرة فقط) لصفحة الموثوقية. لا يغيّر الطلب أو الاستجابة."""
+    t0 = time.perf_counter()
+    status = 500
+    try:
+        resp = await call_next(request)
+        status = resp.status_code
+        return resp
+    finally:
+        try:
+            path = request.url.path or "/"
+            if not path.lower().endswith(_SEC_STATIC_EXT):
+                rt = request.scope.get("route")
+                _REQ_SAMPLES.append({"at": datetime.now(), "route": f"{request.method} {getattr(rt, 'path', None) or path}"[:120],
+                                     "status": int(status), "ms": round((time.perf_counter() - t0) * 1000, 1)})
+        except Exception:
+            pass
+
+
+def _sec_scope(s, user) -> dict:
+    sc = _sec_engine().sec_scope({"role": get_user_role(s, user), "title": _user_title(s, user)})
+    sc["role"] = get_user_role(s, user)
+    return sc
+
+
+def _sec_need(scope, key):
+    if not scope.get(key):
+        raise HTTPException(403, "هذا القسم لصلاحيات أمن الشركة فقط (المالك، الرئيس التنفيذي، مسؤول التقنية، أو المدقق)")
+
+
+def _sec_company(s, user):
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    return user.company_id
+
+
+def _sec_users(s, company_id) -> list:
+    out = []
+    titles = {r.user_id: r.title for r in s.exec(select(CompanyUserScope).where(CompanyUserScope.company_id == company_id)).all()}
+    for u in s.exec(select(User).where(User.company_id == company_id)).all():
+        out.append({"id": u.id, "name": u.name, "role": get_user_role(s, u), "title": titles.get(u.id, "")})
+    return out
+
+
+def _sec_event_rows(s, user, scope, days=30, kind=""):
+    cut = datetime.now() - timedelta(days=max(1, min(int(days or 30), 3650)))
+    if scope.get("company_view"):
+        q = select(SecurityEvent).where(SecurityEvent.company_id == user.company_id, SecurityEvent.created_at >= cut)
+    else:
+        q = select(SecurityEvent).where(SecurityEvent.user_id == user.id, SecurityEvent.created_at >= cut)
+    if kind:
+        q = q.where(SecurityEvent.kind == kind)
+    return s.exec(q.order_by(SecurityEvent.created_at.desc()).limit(2000)).all()
+
+
+def _sec_sessions(s, user, scope):
+    if scope.get("company_view"):
+        q = select(UserSession).where(UserSession.company_id == user.company_id)
+    else:
+        q = select(UserSession).where(UserSession.user_id == user.id)
+    return s.exec(q.order_by(UserSession.created_at.desc()).limit(500)).all()
+
+
+def _sec_backups(s, company_id) -> list:
+    now = datetime.now()
+    out = []
+    for b in s.exec(select(BackupRecord).where(BackupRecord.company_id == company_id).order_by(BackupRecord.created_at.desc()).limit(200)).all():
+        st = b.status
+        if st == "running" and b.created_at and (now - b.created_at).total_seconds() > 3600:
+            st = "failed"   # تصدير لم يكتمل خلال ساعة (انقطع الاتصال أو أُعيد تشغيل الخادم)
+        out.append({"id": b.id, "kind": b.kind, "status": st, "at": b.created_at, "rows": b.rows, "size_bytes": b.size_bytes, "tables": b.tables,
+                    "by": b.by, "note": b.note, "finished_at": b.finished_at})
+    return out
+
+
+def _sec_dr(s, company_id):
+    p = s.exec(select(CompanyDRPlan).where(CompanyDRPlan.company_id == company_id)).first()
+    if not p:
+        return None, {}
+    return p, {"rpo_hours": p.rpo_hours, "rto_hours": p.rto_hours, "systems": json.loads(p.systems_json or "[]"), "team": json.loads(p.team_json or "[]"),
+               "scenarios": json.loads(p.scenarios_json or "[]"), "notes": p.notes, "approved_by": p.approved_by,
+               "approved_at": p.approved_at, "updated_by": p.updated_by, "updated_at": p.updated_at}
+
+
+def _sec_incidents(s, company_id) -> list:
+    out = []
+    for r in s.exec(select(SecurityIncident).where(SecurityIncident.company_id == company_id).order_by(SecurityIncident.opened_at.desc()).limit(300)).all():
+        out.append({"id": r.id, "title": r.title, "severity": r.severity, "status": r.status, "systems": json.loads(r.systems_json or "[]"), "owner": r.owner,
+                    "description": r.description, "containment": r.containment, "remediation": r.remediation, "lessons": r.lessons,
+                    "history": json.loads(r.history_json or "[]"), "opened_by": r.opened_by, "opened_at": r.opened_at, "closed_at": r.closed_at})
+    return out
+
+
+def _sec_env(request) -> dict:
+    https = False
+    try:
+        https = (request.headers.get("x-forwarded-proto") or "").split(",")[0].strip().lower() == "https" or getattr(request.url, "scheme", "") == "https"
+    except Exception:
+        pass
+    return {"secret_ok": len(SECRET_KEY or "") >= 32, "mfa_key_set": bool(os.getenv("MFA_ENC_KEY")), "https": https}
+
+
+def _sec_mfa_info(s, user) -> dict:
+    m = _mfa_row(s, user.id)
+    on = bool(m and m.enabled)
+    return {"enabled": on, "since": m.enabled_at if on else None, "last_used": m.last_used_at if on else None,
+            "recovery_left": len(json.loads(m.recovery_json or "[]")) if on else 0, "required": _mfa_required_for(s, user),
+            "login_ui": _MFA_LOGIN_UI, "apps_ar": "Google Authenticator · Microsoft Authenticator · Authy أو أي تطبيق TOTP"}
+
+
+def _sec_company_tables(company_id) -> list:
+    """جداول الشركة التي تحتوي company_id (تستثني جداول الحسابات والجلسات وأسرار MFA)."""
+    return [t for t in SQLModel.metadata.sorted_tables if "company_id" in t.c and t.name not in _SEC_SKIP_TABLES]
+
+
+def _sec_counts(company_id) -> dict:
+    from sqlalchemy import func as _f, select as _sel
+    out = {}
+    with engine.connect() as conn:
+        for t in _sec_company_tables(company_id):
+            try:
+                out[t.name] = int(conn.execute(_sel(_f.count()).select_from(t).where(t.c.company_id == company_id)).scalar() or 0)
+            except Exception:
+                out[t.name] = None
+    return out
+
+
+@app.get("/security/overview")
+def security_overview(request: Request, user: User = Depends(get_current_user)):
+    se = _sec_engine()
+    now = datetime.now()
+    with Session(engine) as s:
+        cid = _sec_company(s, user)
+        scope = _sec_scope(s, user)
+        evs = _sec_event_rows(s, user, scope, days=7)
+        sess = _sec_sessions(s, user, scope)
+        policy = _sec_policy(cid)
+        post = {}
+        if scope["company_view"]:
+            users = _sec_users(s, cid)
+            ids = [u["id"] for u in users]
+            mfa_users = {m.user_id for m in s.exec(select(UserMFA).where(UserMFA.enabled == 1)).all() if m.user_id in ids}
+            post = se.posture(users=users, mfa_users=mfa_users, policy=policy, env=_sec_env(request), backups=_sec_backups(s, cid),
+                              dr=_sec_dr(s, cid)[1], incidents=_sec_incidents(s, cid), now=now)
+        ov = se.overview(events=[{"at": e.created_at, "kind": e.kind, "severity": e.severity, "user": e.user_name, "detail": e.detail} for e in evs if e.created_at],
+                         sessions=[{"revoked": x.revoked, "expires": x.expires_at} for x in sess],
+                         devices={(x.user_id, x.device_fp) for x in sess if not x.revoked}, post=post or {}, incidents=[],
+                         backups=_sec_backups(s, cid) if scope["company_view"] else [], now=now, scope=scope)
+        return {"scope": scope, "sections": [{"key": k, "label": l} for k, l in se.SECTIONS if k in scope["sections"]], "overview": ov,
+                "posture": post if scope["company_view"] else None, "policy": policy if scope["company_view"] else None,
+                "mfa": _sec_mfa_info(s, user), "roles": list(_SEC_ROLES), "generated_at": now.strftime("%Y-%m-%d %H:%M")}
+
+
+@app.post("/security/mfa/setup")
+def security_mfa_setup(user: User = Depends(get_current_user)):
+    """يولّد سراً جديداً (يُعرض مرة واحدة) — لا يُفعَّل حتى يُدخل المستخدم رمزاً صحيحاً."""
+    if not _MFA_LOGIN_UI:
+        raise HTTPException(409, "تفعيل المصادقة الثنائية متاح بعد تحديث صفحة الدخول لدعم خطوة الرمز")
+    se = _sec_engine()
+    with Session(engine) as s:
+        m = _mfa_row(s, user.id)
+        if m and m.enabled:
+            raise HTTPException(409, "المصادقة الثنائية مفعّلة بالفعل")
+        secret = se.new_totp_secret()
+        if not m:
+            m = UserMFA(user_id=user.id)
+        m.secret_enc, m.enabled, m.last_counter = se.seal(secret, _mfa_master()), 0, None
+        s.add(m)
+        s.commit()
+        return {"secret": secret, "otpauth": se.otpauth_uri(secret, user.email), "account": user.email,
+                "note_ar": "امسح الرمز أو أدخل المفتاح في تطبيق المصادقة، ثم أدخل الرمز المكوّن من 6 أرقام للتأكيد. لن يُعرض المفتاح مرة أخرى."}
+
+
+@app.post("/security/mfa/enable")
+def security_mfa_enable(body: dict, request: Request, user: User = Depends(get_current_user)):
+    import secrets as _sx
+    se = _sec_engine()
+    with Session(engine) as s:
+        m = _mfa_row(s, user.id)
+        if not m or not m.secret_enc:
+            raise HTTPException(409, "ابدأ الإعداد أولاً")
+        if m.enabled:
+            raise HTTPException(409, "المصادقة الثنائية مفعّلة بالفعل")
+        try:
+            secret = se.unseal(m.secret_enc, _mfa_master())
+        except Exception:
+            raise HTTPException(409, "انتهى الإعداد — ابدأ من جديد")
+        ctr = se.verify_totp(secret, (body or {}).get("code"))
+        if ctr is None:
+            raise HTTPException(422, "الرمز غير صحيح — تأكد من وقت الجهاز وأدخل الرمز الحالي")
+        codes = se.new_recovery_codes(8)
+        m.recovery_salt = _sx.token_hex(8)
+        m.recovery_json = json.dumps([se.hash_code(c, m.recovery_salt) for c in codes])
+        m.enabled, m.last_counter, m.enabled_at = 1, ctr, datetime.now()
+        s.add(m)
+        s.commit()
+        _sec_event("mfa_enabled", user, None, "info", _client_ip(request), "", "")
+        return {"ok": True, "recovery_codes": codes, "note_ar": "احفظ رموز الاسترداد في مكان آمن — كل رمز يُستخدم مرة واحدة ولن تُعرض مرة أخرى."}
+
+
+def _sec_check_second_factor(se, m, body):
+    code, rc = str((body or {}).get("code") or ""), str((body or {}).get("recovery_code") or "")
+    if rc:
+        hashes = json.loads(m.recovery_json or "[]")
+        i = se.use_recovery(rc, hashes, m.recovery_salt)
+        if i is None:
+            raise HTTPException(401, "رمز الاسترداد غير صحيح")
+        hashes.pop(i)
+        m.recovery_json = json.dumps(hashes)
+        return
+    try:
+        secret = se.unseal(m.secret_enc, _mfa_master())
+    except Exception:
+        raise HTTPException(409, "تعذّر فك تشفير السر (تغيّر مفتاح التشفير) — استخدم رمز استرداد")
+    ctr = se.verify_totp(secret, code, last_counter=m.last_counter)
+    if ctr is None:
+        raise HTTPException(401, "رمز التحقق غير صحيح")
+    m.last_counter = ctr
+
+
+@app.post("/security/mfa/disable")
+def security_mfa_disable(body: dict, request: Request, user: User = Depends(get_current_user)):
+    se = _sec_engine()
+    with Session(engine) as s:
+        m = _mfa_row(s, user.id)
+        if not m or not m.enabled:
+            raise HTTPException(409, "المصادقة الثنائية غير مفعّلة")
+        if _mfa_required_for(s, user):
+            raise HTTPException(409, "سياسة الشركة تُلزم دورك بالمصادقة الثنائية — لا يمكن إيقافها")
+        u = s.get(User, user.id)
+        if not verify_password(str((body or {}).get("password") or ""), u.password_hash):
+            raise HTTPException(401, "كلمة المرور غير صحيحة")
+        _sec_check_second_factor(se, m, body)
+        m.enabled, m.secret_enc, m.recovery_json, m.recovery_salt, m.last_counter = 0, "", "[]", "", None
+        s.add(m)
+        s.commit()
+        _sec_event("mfa_disabled", user, None, "medium", _client_ip(request), "", "")
+        return {"ok": True}
+
+
+@app.post("/security/mfa/recovery")
+def security_mfa_recovery(body: dict, request: Request, user: User = Depends(get_current_user)):
+    """توليد رموز استرداد جديدة (تُلغى القديمة) — يتطلب كلمة المرور ورمز التطبيق."""
+    import secrets as _sx
+    se = _sec_engine()
+    with Session(engine) as s:
+        m = _mfa_row(s, user.id)
+        if not m or not m.enabled:
+            raise HTTPException(409, "المصادقة الثنائية غير مفعّلة")
+        u = s.get(User, user.id)
+        if not verify_password(str((body or {}).get("password") or ""), u.password_hash):
+            raise HTTPException(401, "كلمة المرور غير صحيحة")
+        _sec_check_second_factor(se, m, {"code": (body or {}).get("code")})
+        codes = se.new_recovery_codes(8)
+        m.recovery_salt = _sx.token_hex(8)
+        m.recovery_json = json.dumps([se.hash_code(c, m.recovery_salt) for c in codes])
+        s.add(m)
+        s.commit()
+        _sec_event("recovery_regenerated", user, None, "medium", _client_ip(request), "", "")
+        return {"ok": True, "recovery_codes": codes}
+
+
+@app.get("/security/sessions")
+def security_sessions(authorization: str = Header(default=""), user: User = Depends(get_current_user)):
+    se = _sec_engine()
+    now = datetime.now()
+    cur = ""
+    try:
+        cur = _sid_hash(jwt.decode(authorization[len("Bearer "):], SECRET_KEY, algorithms=["HS256"]).get("sid") or "-")
+    except Exception:
+        pass
+    with Session(engine) as s:
+        _sec_company(s, user)
+        scope = _sec_scope(s, user)
+        rows = _sec_sessions(s, user, scope)
+        names = {u.id: u.name for u in s.exec(select(User).where(User.company_id == user.company_id)).all()}
+        items, devs = [], {}
+        for r in rows:
+            active = not r.revoked and (not r.expires_at or r.expires_at > now)
+            it = {"id": r.id, "user_id": r.user_id, "user": names.get(r.user_id, "—"), "device": r.device_label or "غير معروف", "kind": r.device_kind,
+                  "ip": se.mask_ip(r.ip) if r.ip else "—", "created_at": r.created_at, "last_seen": r.last_seen, "expires_at": r.expires_at,
+                  "active": active, "revoked": bool(r.revoked), "revoked_by": r.revoked_by, "mfa": bool(r.mfa), "current": bool(cur) and r.sid_hash == cur,
+                  "can_revoke": active and (r.user_id == user.id or scope["manage_sessions_others"])}
+            items.append(it)
+            d = devs.setdefault((r.user_id, r.device_fp), {"user_id": r.user_id, "user": it["user"], "device": it["device"], "kind": r.device_kind,
+                                                           "sessions": 0, "active": 0, "last_seen": None, "first_seen": r.created_at})
+            d["sessions"] += 1
+            d["active"] += 1 if active else 0
+            ls = r.last_seen or r.created_at
+            if ls and (not d["last_seen"] or ls > d["last_seen"]):
+                d["last_seen"] = ls
+            if r.created_at and (not d["first_seen"] or r.created_at < d["first_seen"]):
+                d["first_seen"] = r.created_at
+        return {"scope": scope, "sessions": items, "devices": sorted(devs.values(), key=lambda d: d["last_seen"] or datetime.min, reverse=True),
+                "active": sum(1 for x in items if x["active"]), "policy": {k: _sec_policy(user.company_id)[k] for k in ("session_days", "idle_minutes")}}
+
+
+@app.post("/security/sessions/revoke")
+def security_session_revoke(body: dict, request: Request, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        scope = _sec_scope(s, user)
+        try:
+            sid = int((body or {}).get("id"))
+        except (TypeError, ValueError):
+            raise HTTPException(422, "معرّف الجلسة غير صالح")
+        r = s.get(UserSession, sid)
+        ok = r and (r.user_id == user.id or (scope["manage_sessions_others"] and user.company_id and r.company_id == user.company_id))
+        if not ok:
+            raise HTTPException(404, "الجلسة غير موجودة")
+        if not r.revoked:
+            r.revoked, r.revoked_by, r.revoked_at = 1, (user.name or "")[:60], datetime.now()
+            s.add(r)
+            s.commit()
+        target = s.get(User, r.user_id)
+        _sec_event("session_revoked", user, user.company_id, "info", _client_ip(request), r.device_label,
+                   f"جلسة {target.name if target else ''} — {r.device_label}" if r.user_id != user.id else r.device_label)
+        return {"ok": True}
+
+
+@app.post("/security/sessions/revoke-all")
+def security_sessions_revoke_all(body: dict, request: Request, authorization: str = Header(default=""), user: User = Depends(get_current_user)):
+    """إنهاء كل الجلسات: لحسابك (يستلم هذا الجهاز رمزاً جديداً) أو لمستخدم في شركتك (للمالك/مسؤول التقنية)."""
+    with Session(engine) as s:
+        scope = _sec_scope(s, user)
+        target_id = (body or {}).get("user_id")
+        if target_id not in (None, "", user.id):
+            try:
+                target_id = int(target_id)
+            except (TypeError, ValueError):
+                raise HTTPException(422, "مستخدم غير صالح")
+            t = s.get(User, target_id)
+            if not scope["manage_sessions_others"] or not t or not user.company_id or t.company_id != user.company_id:
+                raise HTTPException(404, "المستخدم غير موجود في شركتك")
+            n = _revoke_all_sessions(s, t.id, user.name)
+            _bump_sessions(t)
+            s.add(t)
+            s.commit()
+            _sec_event("sessions_revoked_all", user, user.company_id, "medium", _client_ip(request), "", f"لحساب {t.name}")
+            log_audit(user.company_id, user.id, user.name, "security_sessions", t.name, "إنهاء كل الجلسات")
+            return {"ok": True, "revoked": n}
+        u = s.get(User, user.id)
+        n = _revoke_all_sessions(s, u.id, "المستخدم")
+        _bump_sessions(u)
+        s.add(u)
+        s.commit()
+        sid, _a, info, ip = _new_session(s, u, request, mfa=False)
+        _sec_event("sessions_revoked_all", u, None, "medium", ip, info["label"], "كل الأجهزة")
+        return {"ok": True, "revoked": n, "token": create_token(u.id, u.token_version, sid=sid)}
+
+
+@app.get("/security/events")
+def security_events(days: int = 30, kind: str = "", user: User = Depends(get_current_user)):
+    se = _sec_engine()
+    with Session(engine) as s:
+        _sec_company(s, user)
+        scope = _sec_scope(s, user)
+        rows = _sec_event_rows(s, user, scope, days=days, kind=(kind or "").strip()[:40])
+        items = [{"id": e.id, "at": e.created_at, "kind": e.kind, "kind_ar": se.EVENT_AR.get(e.kind, e.kind), "severity": e.severity, "user": e.user_name or "—",
+                  "ip": se.mask_ip(e.ip) if e.ip else "—", "device": e.device, "detail": e.detail} for e in rows]
+        counts = {}
+        for e in items:
+            counts[e["kind"]] = counts.get(e["kind"], 0) + 1
+        return {"scope": scope, "items": items, "counts": [{"kind": k, "kind_ar": se.EVENT_AR.get(k, k), "n": n} for k, n in sorted(counts.items(), key=lambda x: -x[1])],
+                "kinds": [{"kind": k, "kind_ar": v} for k, v in se.EVENT_AR.items()], "days": days,
+                "retention_days": _sec_policy(user.company_id).get("event_retention_days")}
+
+
+@app.get("/security/protection")
+def security_protection(request: Request, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        _sec_company(s, user)
+        scope = _sec_scope(s, user)
+        _sec_need(scope, "company_view")
+        env = _sec_env(request)
+        ck = [("transport", "تشفير الاتصال (HTTPS)", "pass" if env["https"] else "fail", "الطلب الحالي وصل عبر HTTPS" if env["https"] else "الطلب الحالي غير مشفّر"),
+              ("at_rest", "تشفير قاعدة البيانات في وضع السكون", "na", "مسؤولية مزود الاستضافة (Railway) — لا يمكن التحقق منه من داخل التطبيق"),
+              ("passwords", "تخزين كلمات المرور", "pass", "bcrypt مع ملح لكل كلمة — لا تُخزّن نصاً"),
+              ("tokens", "توقيع رموز الدخول", "pass" if env["secret_ok"] else "fail", "HS256 بمفتاح طويل" if env["secret_ok"] else "SECRET_KEY أقصر من 32 حرفاً"),
+              ("mfa_secrets", "أسرار المصادقة الثنائية", "pass" if env["mfa_key_set"] else "warn",
+               "مشفّرة بمفتاح مستقل (MFA_ENC_KEY)" if env["mfa_key_set"] else "مشفّرة بـ SECRET_KEY — اضبط MFA_ENC_KEY حتى لا تتعطل عند تدويره"),
+              ("sessions", "معرّفات الجلسات", "pass", "مُجزّأة SHA-256 — لا يُخزّن المعرّف الأصلي"),
+              ("recovery", "رموز الاسترداد", "pass", "مُجزّأة بملح — تُعرض مرة واحدة فقط"),
+              ("ip_privacy", "خصوصية عناوين IP", "pass", "تُخزّن مقنّعة (آخر جزء مخفي)"),
+              ("isolation", "عزل بيانات الشركات", "pass", "كل استعلام مقيّد بشركة المستخدم"),
+              ("rbac", "الصلاحيات حسب الدور", "pass", "المالك/التقنية إدارة · المدقق اطلاع · البقية حساباتهم"),
+              ("export", "تصدير النسخ الاحتياطية", "pass", "يستثني كلمات المرور والأسرار والرموز وجداول الحسابات"),
+              ("audit", "سجل التدقيق والأحداث", "pass", "كل إجراء أمني مسجّل بالمستخدم والوقت")]
+        return {"scope": scope, "checks": [{"key": k, "label": l, "status": st, "detail": d} for k, l, st, d in ck],
+                "policy": _sec_policy(user.company_id), "can_edit": scope["manage_policy"], "roles": list(_SEC_ROLES),
+                "note_ar": "حالة «غير قابل للتحقق» تعني أن الأمر خارج التطبيق — لا ندّعي ما لا يمكن قياسه"}
+
+
+@app.post("/security/policy")
+def security_policy_save(body: dict, user: User = Depends(get_current_user)):
+    body = body or {}
+    with Session(engine) as s:
+        cid = _sec_company(s, user)
+        scope = _sec_scope(s, user)
+        _sec_need(scope, "manage_policy")
+        pol = _sec_policy(cid)
+        upd = {}
+        for k in ("mfa_required_roles", "export_roles"):
+            if k in body:
+                v = body.get(k) or []
+                if not isinstance(v, list) or any(x not in _SEC_ROLES for x in v):
+                    raise HTTPException(422, "دور غير معروف في السياسة")
+                upd[k] = sorted(set(v))
+        if "export_roles" in upd and not upd["export_roles"]:
+            raise HTTPException(422, "حدّد دوراً واحداً على الأقل للتصدير")
+
+        def _int(k, lo, hi, allow_zero=False):
+            if k not in body:
+                return
+            try:
+                v = int(body.get(k))
+            except (TypeError, ValueError):
+                raise HTTPException(422, f"{k}: رقم غير صالح")
+            if not ((allow_zero and v == 0) or lo <= v <= hi):
+                raise HTTPException(422, f"{k}: خارج النطاق المسموح ({lo}–{hi}{' أو 0' if allow_zero else ''})")
+            upd[k] = v
+        _int("session_days", 1, TOKEN_DAYS)
+        _int("idle_minutes", 15, 1440, allow_zero=True)
+        _int("backup_interval_days", 1, 90)
+        _int("event_retention_days", 30, 3650)
+        pol.update(upd)
+        row = s.exec(select(CompanySecurityPolicy).where(CompanySecurityPolicy.company_id == cid)).first() or CompanySecurityPolicy(company_id=cid)
+        row.settings_json, row.updated_by, row.updated_at = json.dumps(pol, ensure_ascii=False), (user.name or "")[:100], datetime.now()
+        s.add(row)
+        purged = 0
+        cut = datetime.now() - timedelta(days=int(pol["event_retention_days"]))
+        for e in s.exec(select(SecurityEvent).where(SecurityEvent.company_id == cid, SecurityEvent.created_at < cut)).all():
+            s.delete(e)
+            purged += 1
+        s.commit()
+        _SEC_POLICY_CACHE.pop(cid, None)
+        _sec_event("policy_changed", user, cid, "medium", "", "", "، ".join(sorted(upd)) or "بلا تغيير")
+        log_audit(cid, user.id, user.name, "security_policy", "سياسة الأمن", json.dumps(upd, ensure_ascii=False)[:400])
+        return {"ok": True, "policy": _sec_policy(cid), "purged_events": purged}
+
+
+@app.get("/security/backups")
+def security_backups(user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        cid = _sec_company(s, user)
+        scope = _sec_scope(s, user)
+        _sec_need(scope, "company_view")
+        pol = _sec_policy(cid)
+        kar = {"company_export": "تصدير منطقي لبيانات الشركة", "provider": "نسخة المزود (مسجلة يدوياً)", "restore_test": "اختبار استعادة جاف"}
+        items = [dict(b, kind_ar=kar.get(b["kind"], b["kind"])) for b in _sec_backups(s, cid)]
+        role, title = scope.get("role"), _user_title(s, user)
+        can_export = scope["backup"] and (role in pol["export_roles"] or title in pol["export_roles"])
+        return {"scope": scope, "items": items, "tables": len(_sec_company_tables(cid)), "interval_days": pol["backup_interval_days"],
+                "can_export": bool(can_export), "can_test": scope["backup"],
+                "provider_note_ar": "النسخ الكامل لقاعدة البيانات يتم عند مزود الاستضافة (Railway). سجّله هنا بعد التحقق من وجوده — لا نستطيع التحقق منه آلياً.",
+                "format_ar": "ملف NDJSON مضغوط (gzip): سطر بيان + سطر لكل صف + خاتمة بالأعداد وبصمة SHA-256 لكل جدول. لا يشمل كلمات المرور أو الأسرار أو جداول الحسابات."}
+
+
+@app.get("/security/backup/export")
+def security_backup_export(request: Request, user: User = Depends(get_current_user)):
+    """تصدير منطقي متدفّق لبيانات الشركة (gzip NDJSON) — لا يُحمّل البيانات كاملة في الذاكرة."""
+    import zlib as _zl
+    from fastapi.responses import StreamingResponse as _SR
+    from sqlalchemy import select as _sel
+    se = _sec_engine()
+    with Session(engine) as s:
+        cid = _sec_company(s, user)
+        scope = _sec_scope(s, user)
+        _sec_need(scope, "backup")
+        pol = _sec_policy(cid)
+        if scope.get("role") not in pol["export_roles"] and _user_title(s, user) not in pol["export_roles"]:
+            raise HTTPException(403, "سياسة الشركة لا تسمح لدورك بتصدير النسخ الاحتياطية")
+        rec = BackupRecord(company_id=cid, kind="company_export", status="running", by=(user.name or "")[:100], created_at=datetime.now())
+        s.add(rec)
+        s.commit()
+        s.refresh(rec)
+        rec_id = rec.id
+    tables = _sec_company_tables(cid)
+    created = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    uname, ip = user.name, _client_ip(request)
+    stats = {"rows": 0, "size": 0}
+
+    def _rows(t):
+        cols = [c for c in t.c if not _SEC_SENSITIVE_COL.search(c.name)]
+        pk = list(t.primary_key.columns)
+        q = _sel(*cols).where(t.c.company_id == cid)
+        if pk:
+            q = q.order_by(*pk)
+        with engine.connect() as conn:
+            for r in conn.execution_options(stream_results=True).execute(q):
+                stats["rows"] += 1
+                yield dict(r._mapping)
+
+    def _finish(status, note=""):
+        try:
+            with Session(engine) as s3:
+                b = s3.get(BackupRecord, rec_id)
+                if b:
+                    b.status, b.rows, b.size_bytes, b.tables, b.finished_at, b.note = status, stats["rows"], stats["size"], len(tables), datetime.now(), note[:300]
+                    s3.add(b)
+                    s3.commit()
+        except Exception as _e:
+            _logger.error(f"backup record update failed: {type(_e).__name__}")
+
+    def _gen():
+        co = _zl.compressobj(6, _zl.DEFLATED, 31)   # 31 = صيغة gzip
+        try:
+            for line in se.backup_lines(cid, ((t.name, _rows(t)) for t in tables), created_at=created, by=uname):
+                chunk = co.compress((line + "\n").encode("utf-8"))
+                if chunk:
+                    stats["size"] += len(chunk)
+                    yield chunk
+            tail = co.flush()
+            stats["size"] += len(tail)
+            yield tail
+            _finish("ok")
+            _sec_event("backup_exported", user, cid, "medium", ip, "", f"{stats['rows']} صفاً من {len(tables)} جدولاً")
+            log_audit(cid, user.id, uname, "security_backup", "تصدير نسخة احتياطية", f"{stats['rows']} صف")
+        except Exception as _e:
+            _logger.error(f"backup export failed: {type(_e).__name__}: {str(_e)[:150]}")
+            _finish("failed", f"{type(_e).__name__}")
+            raise
+
+    fname = f"nabbah-backup-{cid}-{datetime.now():%Y%m%d-%H%M}.ndjson.gz"
+    return _SR(_gen(), media_type="application/gzip", headers={"Content-Disposition": f'attachment; filename="{fname}"', "Cache-Control": "no-store"})
+
+
+@app.post("/security/backup/provider")
+def security_backup_provider(body: dict, user: User = Depends(get_current_user)):
+    """تسجيل نسخة المزود (Railway) بعد التحقق منها يدوياً — مع ملاحظة التحقق إلزامياً."""
+    body = body or {}
+    with Session(engine) as s:
+        cid = _sec_company(s, user)
+        scope = _sec_scope(s, user)
+        _sec_need(scope, "backup")
+        d, note = str(body.get("date") or ""), str(body.get("note") or "").strip()
+        if not _valid_date(d):
+            raise HTTPException(422, "التاريخ غير صالح (YYYY-MM-DD)")
+        if datetime.strptime(d, "%Y-%m-%d").date() > datetime.now().date():
+            raise HTTPException(422, "تاريخ النسخة لا يكون في المستقبل")
+        if not note:
+            raise HTTPException(422, "اكتب كيف تحققت من وجود النسخة (مثلاً: لوحة Railway › Backups)")
+        b = BackupRecord(company_id=cid, kind="provider", status="ok", by=(user.name or "")[:100], note=note[:300],
+                         created_at=datetime.strptime(d, "%Y-%m-%d"), finished_at=datetime.now())
+        s.add(b)
+        s.commit()
+        log_audit(cid, user.id, user.name, "security_backup", "تسجيل نسخة المزود", d)
+        return {"ok": True}
+
+
+@app.post("/security/backup/restore-test")
+async def security_restore_test(file: UploadFile = File(...), user: User = Depends(get_current_user)):
+    """اختبار استعادة جاف لملف نسخة: يتحقق من الاكتمال والبصمة والأعداد ويقارنها بالحالي — لا يكتب في بيانات الشركة."""
+    import gzip as _gz
+    import io as _io
+    se = _sec_engine()
+    with Session(engine) as s:
+        cid = _sec_company(s, user)
+        scope = _sec_scope(s, user)
+        _sec_need(scope, "backup")
+    raw = await file.read(300 * 1024 * 1024 + 1)
+    if len(raw) > 300 * 1024 * 1024:
+        raise HTTPException(413, "الملف أكبر من 300MB")
+    try:
+        if raw[:2] == b"\x1f\x8b":
+            lines = _gz.GzipFile(fileobj=_io.BytesIO(raw))
+            res = se.verify_lines(lines, company_id=cid, current_counts=_sec_counts(cid))
+        else:
+            res = se.verify_lines(_io.BytesIO(raw), company_id=cid, current_counts=_sec_counts(cid))
+    except (OSError, EOFError) as _e:
+        res = {"ok": False, "errors": ["الملف المضغوط تالف أو مقطوع — لا يمكن فكّه"], "warnings": [], "tables": [], "total_rows": 0}
+    with Session(engine) as s:
+        b = BackupRecord(company_id=cid, kind="restore_test", status="ok" if res["ok"] else "failed", rows=res.get("total_rows"), tables=len(res.get("tables") or []),
+                         by=(user.name or "")[:100], note=("؛ ".join(res.get("errors") or []) or (getattr(file, "filename", "") or ""))[:300],
+                         created_at=datetime.now(), finished_at=datetime.now())
+        s.add(b)
+        s.commit()
+    _sec_event("restore_tested", user, cid, "info" if res["ok"] else "medium", "", "", "ناجح" if res["ok"] else "فشل")
+    return dict(res, filename=getattr(file, "filename", ""))
+
+
+@app.get("/security/reliability")
+def security_reliability(window: int = 60, user: User = Depends(get_current_user)):
+    se = _sec_engine()
+    with Session(engine) as s:
+        cid = _sec_company(s, user)
+        scope = _sec_scope(s, user)
+        _sec_need(scope, "company_view")
+        jobs = [{"name": j.name, "last_run": j.last_run, "status": "failed" if (j.last_status or "").startswith(("fail", "error", "فشل")) else (j.last_status or "—")}
+                for j in s.exec(select(CompanyAISchedule).where(CompanyAISchedule.company_id == cid)).all()]
+    db_ok, db_ms = None, None
+    try:
+        from sqlalchemy import text as _txt
+        t0 = time.perf_counter()
+        with Session(engine) as s:
+            s.exec(_txt("SELECT 1"))
+        db_ok, db_ms = True, round((time.perf_counter() - t0) * 1000, 1)
+    except Exception:
+        db_ok = False
+    window = max(5, min(int(window or 60), 1440))
+    out = se.reliability(list(_REQ_SAMPLES), started_at=_PROC_STARTED, now=datetime.now(), db_ms=db_ms, db_ok=db_ok, jobs=jobs, window_min=window)
+    out["recent_errors"] = len(_RECENT_ERRORS)
+    out["scope"] = scope
+    return out
+
+
+@app.get("/security/dr")
+def security_dr(user: User = Depends(get_current_user)):
+    se = _sec_engine()
+    with Session(engine) as s:
+        cid = _sec_company(s, user)
+        scope = _sec_scope(s, user)
+        _sec_need(scope, "company_view")
+        _p, plan = _sec_dr(s, cid)
+        tests = [{"id": t.id, "date": t.date, "scenario": t.scenario, "result": t.result, "actual_rto_hours": t.actual_rto_hours, "notes": t.notes, "by": t.by}
+                 for t in s.exec(select(CompanyDRTest).where(CompanyDRTest.company_id == cid).order_by(CompanyDRTest.created_at.desc()).limit(100)).all()]
+        return {"scope": scope, "plan": plan, "tests": tests, "status": se.dr_status(plan, tests, datetime.now()),
+                "can_edit": scope["dr_edit"], "can_approve": scope.get("role") == "owner"}
+
+
+@app.post("/security/dr/plan")
+def security_dr_plan(body: dict, user: User = Depends(get_current_user)):
+    body = body or {}
+    with Session(engine) as s:
+        cid = _sec_company(s, user)
+        scope = _sec_scope(s, user)
+        _sec_need(scope, "dr_edit")
+        rpo, rto = _fnum(body.get("rpo_hours"), "RPO غير صالح"), _fnum(body.get("rto_hours"), "RTO غير صالح")
+        if not rpo or not rto or rpo <= 0 or rto <= 0:
+            raise HTTPException(422, "حدّد RPO وRTO بالساعات (أكبر من صفر)")
+        systems = [str(x)[:80] for x in (body.get("systems") or []) if str(x).strip()][:20]
+        if not systems:
+            raise HTTPException(422, "حدّد الأنظمة الحرجة")
+        team = [{"name": str(m.get("name") or "")[:60], "role": str(m.get("role") or "")[:60], "contact": str(m.get("contact") or "")[:80]}
+                for m in (body.get("team") or []) if isinstance(m, dict) and str(m.get("name") or "").strip()][:20]
+        scen = [str(x)[:120] for x in (body.get("scenarios") or []) if str(x).strip()][:20]
+        p, _plan = _sec_dr(s, cid)
+        p = p or CompanyDRPlan(company_id=cid)
+        p.rpo_hours, p.rto_hours = rpo, rto
+        p.systems_json, p.team_json, p.scenarios_json = json.dumps(systems, ensure_ascii=False), json.dumps(team, ensure_ascii=False), json.dumps(scen, ensure_ascii=False)
+        p.notes = str(body.get("notes") or "")[:1000]
+        p.approved_by, p.approved_at = "", None      # أي تعديل يتطلب إعادة الاعتماد
+        p.updated_by, p.updated_at = (user.name or "")[:100], datetime.now()
+        s.add(p)
+        s.commit()
+        log_audit(cid, user.id, user.name, "security_dr", "خطة التعافي", f"RPO {rpo}h RTO {rto}h")
+        return {"ok": True}
+
+
+@app.post("/security/dr/approve")
+def security_dr_approve(user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        cid = _sec_company(s, user)
+        if get_user_role(s, user) != "owner":
+            raise HTTPException(403, "اعتماد خطة التعافي للمالك فقط")
+        p, plan = _sec_dr(s, cid)
+        if not p or not plan.get("rpo_hours") or not plan.get("rto_hours") or not plan.get("systems") or not plan.get("team"):
+            raise HTTPException(409, "أكمل الخطة (RPO وRTO والأنظمة والفريق) قبل الاعتماد")
+        p.approved_by, p.approved_at = (user.name or "")[:100], datetime.now()
+        s.add(p)
+        s.commit()
+        log_audit(cid, user.id, user.name, "security_dr", "اعتماد خطة التعافي", "")
+        return {"ok": True}
+
+
+@app.post("/security/dr/test")
+def security_dr_test(body: dict, user: User = Depends(get_current_user)):
+    body = body or {}
+    with Session(engine) as s:
+        cid = _sec_company(s, user)
+        scope = _sec_scope(s, user)
+        _sec_need(scope, "dr_edit")
+        d = str(body.get("date") or "")
+        if not _valid_date(d) or datetime.strptime(d, "%Y-%m-%d").date() > datetime.now().date():
+            raise HTTPException(422, "تاريخ الاختبار غير صالح أو في المستقبل")
+        res = str(body.get("result") or "")
+        if res not in ("pass", "partial", "fail"):
+            raise HTTPException(422, "النتيجة: ناجح / جزئي / فاشل")
+        scen = str(body.get("scenario") or "").strip()
+        if not scen:
+            raise HTTPException(422, "حدّد السيناريو المختبَر")
+        art = _fnum(body.get("actual_rto_hours"), "زمن التعافي غير صالح")
+        if art is not None and art < 0:
+            raise HTTPException(422, "زمن التعافي لا يكون سالباً")
+        s.add(CompanyDRTest(company_id=cid, date=d, scenario=scen[:120], result=res, actual_rto_hours=art, notes=str(body.get("notes") or "")[:1000],
+                            by=(user.name or "")[:100], created_at=datetime.now()))
+        s.commit()
+        log_audit(cid, user.id, user.name, "security_dr", "اختبار تعافٍ", f"{d} {res}")
+        return {"ok": True}
+
+
+@app.get("/security/incidents")
+def security_incidents(user: User = Depends(get_current_user)):
+    se = _sec_engine()
+    now = datetime.now()
+    with Session(engine) as s:
+        cid = _sec_company(s, user)
+        scope = _sec_scope(s, user)
+        _sec_need(scope, "company_view")
+        items = [se.incident_view(i, now) for i in _sec_incidents(s, cid)]
+        return {"scope": scope, "items": items, "open": sum(1 for i in items if i["status"] != "resolved"), "can_edit": scope["incidents_edit"],
+                "flow": [{"key": k, "ar": se.INC_AR[k]} for k in se.INC_FLOW], "severities": [{"key": k, "ar": v} for k, v in se.SEV_AR.items()],
+                "systems_catalog": se.DR_SYSTEMS}
+
+
+@app.post("/security/incidents")
+def security_incident_create(body: dict, user: User = Depends(get_current_user)):
+    body = body or {}
+    se = _sec_engine()
+    with Session(engine) as s:
+        cid = _sec_company(s, user)
+        scope = _sec_scope(s, user)
+        _sec_need(scope, "incidents_edit")
+        title = str(body.get("title") or "").strip()
+        if not title:
+            raise HTTPException(422, "اكتب عنوان الحادثة")
+        sev = str(body.get("severity") or "")
+        if sev not in se.SEV_AR:
+            raise HTTPException(422, "الخطورة: حرجة / مرتفعة / متوسطة / منخفضة")
+        now = datetime.now()
+        r = SecurityIncident(company_id=cid, title=title[:200], severity=sev, status="detected",
+                             systems_json=json.dumps([str(x)[:80] for x in (body.get("systems") or [])][:20], ensure_ascii=False),
+                             owner=str(body.get("owner") or "")[:100], description=str(body.get("description") or "")[:2000],
+                             history_json=json.dumps([{"at": now.strftime("%Y-%m-%d %H:%M"), "to": "detected", "by": user.name, "note": "فُتحت الحادثة"}], ensure_ascii=False),
+                             opened_by=(user.name or "")[:100], opened_at=now, updated_at=now)
+        s.add(r)
+        s.commit()
+        s.refresh(r)
+        _sec_event("incident_opened", user, cid, "high" if sev in ("critical", "high") else "medium", "", "", title[:120])
+        log_audit(cid, user.id, user.name, "security_incident", title[:100], f"فتح ({sev})")
+        return {"ok": True, "id": r.id}
+
+
+@app.post("/security/incidents/update")
+def security_incident_update(body: dict, user: User = Depends(get_current_user)):
+    """نقل الحادثة للمرحلة التالية فقط (لا قفز) — الاحتواء والإزالة والإغلاق تتطلب توثيقاً."""
+    body = body or {}
+    se = _sec_engine()
+    with Session(engine) as s:
+        try:
+            iid = int(body.get("id"))
+        except (TypeError, ValueError):
+            raise HTTPException(422, "معرّف غير صالح")
+        r = s.get(SecurityIncident, iid)
+        if not r or not user.company_id or r.company_id != user.company_id:
+            raise HTTPException(404, "الحادثة غير موجودة")
+        scope = _sec_scope(s, user)
+        _sec_need(scope, "incidents_edit")
+        for k in ("containment", "remediation", "lessons", "owner", "description"):
+            if str(body.get(k) or "").strip():
+                setattr(r, k, str(body.get(k)).strip()[:2000])
+        hist = json.loads(r.history_json or "[]")
+        now = datetime.now()
+        to = str(body.get("to") or "")
+        if to:
+            if not se.can_move(r.status, to):
+                raise HTTPException(409, f"لا يمكن الانتقال من «{se.INC_AR.get(r.status, r.status)}» إلى «{se.INC_AR.get(to, to)}» — المراحل متسلسلة")
+            need = {"contained": ("containment", "وثّق إجراءات الاحتواء"), "eradicated": ("remediation", "وثّق إزالة السبب"),
+                    "resolved": ("lessons", "وثّق الدروس المستفادة قبل الإغلاق")}.get(to)
+            if need and not (getattr(r, need[0]) or "").strip():
+                raise HTTPException(422, need[1])
+            r.status = to
+            if to == "resolved":
+                r.closed_at = now
+            hist.append({"at": now.strftime("%Y-%m-%d %H:%M"), "to": to, "by": user.name, "note": str(body.get("note") or "")[:300]})
+        elif str(body.get("note") or "").strip():
+            hist.append({"at": now.strftime("%Y-%m-%d %H:%M"), "to": "", "by": user.name, "note": str(body.get("note"))[:300]})
+        r.history_json, r.updated_at = json.dumps(hist, ensure_ascii=False), now
+        s.add(r)
+        s.commit()
+        log_audit(r.company_id, user.id, user.name, "security_incident", r.title[:100], f"→ {to}" if to else "تحديث")
+        return {"ok": True, "status": r.status}
 
 
 @app.get("/company/executive-intelligence")
@@ -18476,7 +19675,7 @@ ENGINE_MODULES = ("nabbah_finance", "nabbah_trust", "semantic_layer", "kpi_engin
                   "ai_gateway", "period_aggregation", "legacy_adapters", "platform_bridge",
                   "intelligence_engine", "forecast_engine", "scenario_engine", "decision_memory",
                   "rule_catalog", "canonical_model", "period_model", "metric_registry", "ingestion",
-                  "sales_engine", "inventory_engine", "purchases_engine", "cashflow_engine", "hr_engine", "ops_engine", "finance_engine", "sector_intelligence", "leakage_engine", "tax_engine", "risk_engine", "drivers_engine", "benchmark_engine", "prediction_engine", "goals_engine", "decisions_engine", "board_engine", "monthly_engine", "executive_engine", "customer_engine", "branch_engine", "competitor_engine", "events_engine", "assistant_engine")
+                  "sales_engine", "inventory_engine", "purchases_engine", "cashflow_engine", "hr_engine", "ops_engine", "finance_engine", "sector_intelligence", "leakage_engine", "tax_engine", "risk_engine", "drivers_engine", "benchmark_engine", "prediction_engine", "goals_engine", "decisions_engine", "board_engine", "monthly_engine", "executive_engine", "customer_engine", "branch_engine", "competitor_engine", "events_engine", "assistant_engine", "security_engine")
 
 
 def _runtime_health():
@@ -18826,7 +20025,7 @@ def files_check(_: bool = Depends(verify_admin)):
         "company-data-quality.html", "company-predictions.html", "company-risks.html",
         "company-board.html", "company-root-cause.html", "company-benchmarks.html",
         "company-upload.html", "company-memory.html", "company-decisions.html",
-        "company-monthly-report.html", "company-monthly-intelligence.html", "company-board-intelligence.html", "company-executive-report-intelligence.html", "company-customer-intelligence.html", "company-branch-intelligence.html", "company-competitor-intelligence.html", "company-events-intelligence.html", "company-assistant.html",
+        "company-monthly-report.html", "company-monthly-intelligence.html", "company-board-intelligence.html", "company-executive-report-intelligence.html", "company-customer-intelligence.html", "company-branch-intelligence.html", "company-competitor-intelligence.html", "company-events-intelligence.html", "company-assistant.html", "company-security.html",
         "nabbah-data-template.xlsx",
     ]
     missing, present = [], []
