@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>نبّاه · المساعد الذكي</title>
+<link href="nabbah-design.css" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{background:var(--bg,#070b09);color:var(--txt,#e8f1ec);font-family:Tajawal,Tahoma,Arial,sans-serif;margin:0}
+  .wrap{max-width:1180px;margin:0 auto;padding:70px 16px 60px}
+  h1{margin:0 0 4px;font-size:24px}.sub{color:var(--txt-soft,#8ba396);margin:0 0 14px;font-size:14px}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+  select{background:var(--panel,#101a15);color:var(--txt,#e8f1ec);border:1px solid var(--line,#1d2c24);border-radius:10px;padding:8px 10px;font:inherit;font-size:13px;max-width:100%}
+  .tabs{display:flex;gap:2px;flex-wrap:wrap;border-bottom:1px solid var(--line,#1d2c24);margin:6px 0 16px}
+  .tab{background:none;border:0;color:var(--txt-soft,#8ba396);padding:9px 11px;font:inherit;font-size:13px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+  .tab.on{color:var(--txt,#e8f1ec);border-color:#14b8a6;font-weight:800}
+  .tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:14px}
+  .tile,.panel{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:14px;padding:14px;min-width:0}
+  .tile{cursor:pointer}.tile:hover{border-color:var(--mint,#10b981)}
+  .tile .l{font-size:12px;color:var(--txt-soft,#8ba396)}.tile .v{font-size:22px;font-weight:800;margin-top:4px;overflow-wrap:anywhere}.tile .c{font-size:12px;margin-top:4px;line-height:1.7}
+  .panel{margin-bottom:14px}.panel h2{margin:0 0 10px;font-size:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .panel h3{margin:12px 0 6px;font-size:13px;color:var(--txt-soft,#8ba396)}
+  .grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+  table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px;border-bottom:1px solid var(--line,#1d2c24);text-align:start;white-space:nowrap}
+  th{color:var(--txt-soft,#8ba396);font-weight:600}.tbl{overflow-x:auto}td.w{white-space:normal;min-width:200px}
+  tr.drill{cursor:pointer}tr.drill:hover td{background:rgba(16,185,129,.06)}
+  .pos{color:#10b981}.neg{color:#ef4444}.warn{color:#f5b301}.muted{color:var(--txt-soft,#8ba396);font-size:12px}
+  .b{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700;display:inline-block;white-space:nowrap}
+  .critical,.intervene{background:rgba(239,68,68,.16);color:#ef4444}.high{background:rgba(234,88,12,.16);color:#f97316}
+  .medium,.watch{background:rgba(245,179,1,.15);color:#f5b301}.low,.good{background:rgba(16,185,129,.15);color:#10b981}.grey,.na,.monitor{background:rgba(148,163,184,.15);color:#94a3b8}
+  .btn{background:var(--mint,#10b981);color:#062b1c;border:0;border-radius:10px;padding:7px 13px;font-weight:800;cursor:pointer;font:inherit;font-size:12px;text-decoration:none;display:inline-block}
+  .btn.ghost{background:transparent;color:var(--txt-soft,#8ba396);border:1px solid var(--line,#1d2c24);font-weight:600}.btn.red{background:#ef4444;color:#fff}
+  .btn:disabled{opacity:.5;cursor:default}
+  .state{padding:36px 16px;text-align:center;color:var(--txt-soft,#8ba396);border:1px dashed var(--line,#1d2c24);border-radius:14px}
+  .na-box{color:var(--txt-soft,#8ba396);font-size:13px;padding:10px;border:1px dashed var(--line,#1d2c24);border-radius:10px;margin:6px 0}
+  .itm{border:1px solid var(--line,#1d2c24);border-inline-start:4px solid #f5b301;border-radius:12px;padding:12px;margin-bottom:10px}
+  .itm.critical,.itm.intervene{border-inline-start-color:#ef4444;background:none;color:inherit}.itm.high{border-inline-start-color:#f97316;background:none;color:inherit}
+  .itm.medium,.itm.watch{background:none;color:inherit}.itm.good,.itm.low{border-inline-start-color:#10b981;background:none;color:inherit}.itm.na,.itm.monitor{border-inline-start-color:#94a3b8;background:none;color:inherit}
+  .itm h4{margin:0 0 6px;font-size:15px}.kv{display:grid;grid-template-columns:120px 1fr;gap:4px 10px;font-size:13px;margin-top:6px}.kv b{color:var(--txt-soft,#8ba396);font-weight:600}
+  .sum p{font-size:15px;line-height:2;margin:4px 0}.sum b{color:var(--mint,#10b981)}.sum a{color:var(--mint,#10b981);font-size:11px;text-decoration:none}
+  .hgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+  .barrow{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:13px}.barrow .t{flex:0 0 140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .barrow .g{flex:1;height:10px;background:var(--line,#1d2c24);border-radius:6px;overflow:hidden;min-width:40px}.barrow .g i{display:block;height:100%;background:var(--mint,#10b981)}.barrow .x{flex:0 0 120px;text-align:end}
+  .pop{position:fixed;display:none;z-index:70;background:var(--panel,#101a15);border:1px solid var(--mint,#10b981);border-radius:12px;padding:12px;font-size:12px;max-width:340px;line-height:1.8}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}.chip{background:rgba(16,185,129,.12);color:var(--mint,#10b981);border:1px solid rgba(16,185,129,.35);border-radius:20px;padding:4px 11px;font-size:12px;cursor:pointer}
+  input.search,.fg input,.fg select,.fg textarea{background:var(--bg,#070b09);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:9px;padding:8px;font:inherit}
+  input.search{flex:1;min-width:160px;background:var(--panel,#101a15);border-radius:10px;padding:9px 12px}
+  .ai-sec{margin:8px 0}.ai-sec b{display:block;font-size:13px;margin-bottom:4px}.ai-sec li{font-size:13px;margin:3px 0}
+  .ov{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:50;padding:14px}
+  .ov.on{display:flex}.modal{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:16px;padding:18px;width:min(580px,100%);max-height:90vh;overflow:auto}
+  .fg{display:grid;grid-template-columns:1fr 1fr;gap:10px}.fg label{font-size:12px;color:var(--txt-soft,#8ba396);display:flex;flex-direction:column;gap:4px}.fg .full{grid-column:1/-1}
+  .cta{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .back{background:none;border:0;color:var(--mint,#10b981);cursor:pointer;font:inherit;padding:0;margin-bottom:10px}
+  .stbadge{font-size:12px;font-weight:800;padding:4px 10px;border-radius:10px;border:1px solid var(--line,#1d2c24)}
+  .flag{padding:10px 12px;border-radius:10px;margin:6px 0 10px;font-size:13px}
+  /* بطاقة القرار */
+  .dc-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;background:linear-gradient(90deg,#0f2a3d,#123047);border-radius:14px;padding:16px 18px;margin-bottom:12px}
+  .dc-head h2{margin:0;font-size:20px}.dc-no{border:1px solid rgba(255,255,255,.3);border-radius:10px;padding:6px 12px;font-weight:800;font-size:13px}
+  .dc-meta{display:grid;grid-template-columns:2fr repeat(4,minmax(0,1fr));gap:10px;align-items:center}.dc-meta>div{border-inline-start:1px solid var(--line,#1d2c24);padding:4px 10px}
+  .dc-meta .l{font-size:12px;color:var(--txt-soft,#8ba396)}.dc-meta .v{font-size:15px;font-weight:800;margin-top:4px}
+  .dc-box{background:rgba(255,255,255,.025);border-radius:10px;padding:12px;font-size:14px;line-height:1.9}
+  .fin3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.fin3 div{background:rgba(255,255,255,.025);border-radius:10px;padding:12px;text-align:center}
+  .fin3 b{display:block;font-size:20px;margin:6px 0}
+  .flow{display:flex;align-items:flex-start;justify-content:space-between;gap:4px;margin:10px 0}.flow .st{text-align:center;flex:1;font-size:12px;position:relative}
+  .flow .dot{width:28px;height:28px;border-radius:50%;margin:0 auto 6px;display:grid;place-items:center;font-weight:900;background:var(--line,#1d2c24);color:#94a3b8}
+  .flow .dot.on{background:#10b981;color:#062b1c}.flow .dot.cur{background:#f5b301;color:#2b1d00}
+  #printv{display:none}
+  @media print{#printv{display:block!important;color:#000;background:#fff}
+    #printv .pg{page-break-after:always;padding:22px}#printv .panel,#printv .tile,#printv .itm{background:#fff;border:1px solid #ccc;color:#000;break-inside:avoid}
+    #printv table{width:100%;border-collapse:collapse}#printv tr{break-inside:avoid}#printv td,#printv th{border:1px solid #ccc;padding:4px;font-size:10.5px;white-space:normal;color:#000}
+    #printv .muted{color:#555}#printv .cover{display:flex;flex-direction:column;justify-content:center;min-height:90vh;text-align:center}}
+  @media(max-width:900px){.hgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.dc-meta{grid-template-columns:1fr 1fr}.dc-meta>div:first-child{grid-column:1/-1}}
+  @media(max-width:760px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.grid2,.grid3,.fin3{grid-template-columns:minmax(0,1fr)}.fg{grid-template-columns:1fr}h1{font-size:20px}
+    .tile{padding:10px}.tile .v{font-size:17px}.kv{grid-template-columns:1fr}.tab{padding:7px 8px;font-size:12px}.barrow .t{flex-basis:90px}.barrow .x{flex-basis:90px}}
+  @media(max-width:1000px){.grid3{grid-template-columns:minmax(0,1fr)}}
+  @media(max-width:760px){.barrow{flex-wrap:wrap}.barrow .x{flex:1 1 100%;text-align:start}.barrow .x .b{white-space:normal}}
+  html,body{overflow-x:hidden}
+  @media(min-width:761px){#content .barrow .x{flex-basis:220px}}
+  .btn.ghost.red{color:#ef4444;border-color:rgba(239,68,68,.4)}
+  @media print{body>*:not(.wrap){display:none!important}.tabs,.bar,.cta,.back,#disc{display:none!important}body{background:#fff;color:#000}.panel{border:1px solid #ccc;background:#fff;color:#000}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🤖 المساعد الذكي ومركز البحث</h1>
+  <p class="sub">اسأل بلغتك عن شركتك: يحدد المساعد الوحدات المطلوبة، ويتحقق من صلاحيتك، ويستدعي محركات نبّاه المعتمدة، ثم يجيب بأدلة مرقّمة ومصادر وفترات — ويحوّل التحليل إلى تقرير أو مسودة قرار.</p>
+  <div class="bar"><span class="stbadge">حي</span><span class="muted" id="asof"></span></div>
+  <div class="na-box" id="disc" style="margin:6px 0 10px"></div>
+  <nav class="tabs" id="tabs"></nav>
+  <div id="content"><div class="state">…</div></div>
+</div>
+<div class="pop" id="pop"></div>
+<div class="ov" id="ov"><div class="modal" id="modal"></div></div>
+<script src="i18n.js"></script>
+<script>
+(function(){
+  const TOKEN=localStorage.getItem("nabbah_token")||"";if(!TOKEN){location.href="login.html";return;}
+  const ICON={executive:"🧭",ask:"💬",research:"🔎",financial:"💰",sales_customers:"📈",operations:"⚙️",risk:"⚠️",root_cause:"🧩",forecast:"🔮",whatif:"🧪",reports:"📝",briefing:"📋",recommendations:"✅",decisions:"⚖️",data_quality:"🩺",sources:"📚",schedules:"⏰",history:"🗂️"};
+  const PRESET={executive:"ما ملخص وضع الشركة الآن وما الذي يحتاج تدخلي؟",financial:"ما الذي أثر في الربحية والسيولة؟",sales_customers:"كيف تغيرت المبيعات والعملاء؟",operations:"أين مشكلات التشغيل والمخزون والموردين؟",
+    risk:"ما أكبر ثلاثة مخاطر تواجهنا حالياً ولماذا؟",root_cause:"لماذا تراجع الأداء؟",forecast:"ما التوقعات للأشهر القادمة ومدى الثقة فيها؟",research:"ما وضعنا مقابل المنافسين والأحداث القادمة؟",briefing:"الملخص التنفيذي"};
+  const QAS=new Set(["executive","ask","research","financial","sales_customers","operations","risk","root_cause","forecast","briefing"]);
+  const CONF={high:"مرتفعة",medium:"متوسطة",low:"منخفضة"};
+  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const n=(v,d=0)=>{if(v==null||v===""||isNaN(Number(v)))return"—";const x=Number(v),t=Math.abs(x).toLocaleString("ar-SA",{maximumFractionDigits:d});return x<0?"\u2066−"+t+"\u2069":t;};
+  const H={Authorization:"Bearer "+TOKEN,"Content-Type":"application/json"},$=id=>document.getElementById(id);
+  let HOME=null,EV={},evI=0,THREAD={},CACHE={},LAST=null;
+  const route=()=>{const h=decodeURIComponent(location.hash.slice(1)||"executive");const i=h.indexOf("/");return i<0?[h,""]:[h.slice(0,i),h.slice(i+1)];};
+  const go=(v,a)=>{location.hash=a?`${v}/${encodeURIComponent(a)}`:v;};
+  window.addEventListener("hashchange",()=>{if(HOME){render();window.scrollTo(0,0);}});
+  const api=(path,body)=>fetch(path,{method:body===undefined?"GET":"POST",headers:H,body:body===undefined?undefined:JSON.stringify(body)}).then(async r=>{if(r.status===401){location.href="login.html";throw new Error("401");}const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(typeof j.detail==="string"?j.detail:"HTTP "+r.status);return j;});
+  const panel=(t,b,x="")=>`<div class="panel"><h2>${t}${x}</h2>${b}</div>`;
+  const na=m=>`<div class="na-box">${esc(m)}</div>`;
+  const conf=c=>c?`<span class="b ${c==="high"?"low":c==="low"?"critical":"medium"}">ثقة ${esc(CONF[c]||c)}</span>`:"";
+  const tbl=(head,rows)=>rows.length?`<div class="tbl"><table><thead><tr>${head.map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>${rows.join("")}</tbody></table></div>`:na("لا بيانات بعد");
+  const ev=m=>{const k="e"+(evI++);EV[k]=m;return k;};
+  function load(){api("/company/assistant").then(h=>{HOME=h;const sc=h.scope||{};
+      $("asof").textContent=`القطاع: ${h.sector} · المصطلح: ${(h.sector_profile||{}).unit||""} / ${(h.sector_profile||{}).customer||""}`;
+      $("disc").textContent=`${h.disclaimer_ar} · صلاحيتك: ${sc.ar}`;render();})
+    .catch(e=>{$("tabs").innerHTML="";$("content").innerHTML=`<div class="state">${/صلاحي|غير مصرّح|403/.test(e.message)?"🔒 ":""}${esc(e.message)}</div>`;});}
+  // ── عرض الإجابة
+  function answerHtml(j){const a=j.answer||{};const sc=HOME.scope||{};LAST=j;
+    const refBadges=s=>esc(s).replace(/\[(\d+)\]/g,(m,k)=>{const f=(j.evidence||[]).find(x=>x.ref==k);return f?`<span class="b grey" data-ev="${ev(f)}" style="cursor:pointer">[${k}]</span>`:m;});
+    const c=a.causes;
+    return `<div class="itm ${a.confidence==="high"?"good":a.confidence==="low"?"critical":"watch"}" style="margin-top:10px"><div class="muted" style="margin-bottom:6px">«${esc(j.question)}» · ${(j.understanding.intents_ar||[]).map(x=>`<span class="chip">${esc(x)}</span>`).join(" ")} · ${esc(a.period_ar)} ${conf(a.confidence)}</div>
+      <h4 style="font-size:16px">${refBadges(a.headline)}</h4>${a.lines.length>1?`<ul style="margin:6px 0;padding-inline-start:18px">${a.lines.slice(1).map(l=>`<li>${refBadges(l)}</li>`).join("")}</ul>`:""}
+      ${c?`<div class="grid3" style="margin-top:8px"><div class="panel" style="margin:0"><h3>✔ مثبت بالقياس</h3>${c.proven.length?`<ul style="padding-inline-start:16px;margin:0">${c.proven.map(x=>`<li>${refBadges(x)}</li>`).join("")}</ul>`:'<span class="muted">—</span>'}</div><div class="panel" style="margin:0"><h3>≈ محتمل (مرتبط بالأدلة)</h3>${c.probable.length?`<ul style="padding-inline-start:16px;margin:0">${c.probable.map(x=>`<li>${refBadges(x)}</li>`).join("")}</ul>`:'<span class="muted">—</span>'}</div><div class="panel" style="margin:0"><h3>? يحتاج تحقيقاً</h3>${c.needs_investigation.length?`<ul style="padding-inline-start:16px;margin:0">${c.needs_investigation.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`:'<span class="muted">—</span>'}</div></div><div class="muted">${esc(c.rule_ar)}</div>`:""}
+      ${a.next_steps.length?`<h3>الخطوة التالية المقترحة</h3>${a.next_steps.map((s,i)=>`<div class="barrow"><span class="b ${s.severity==="high"?"high":"medium"}">${esc(s.module_ar)}</span><span style="flex:1">${esc(s.problem_ar)} ← ${esc(s.action_ar)}</span>${sc.can_draft?`<button class="btn ghost" data-draft="${i}">مسودة قرار</button>`:""}</div>`).join("")}`:""}
+      ${j.narrative?`<h3>قراءة Gemini ${j.verification&&j.verification.ok?'<span class="b low">الأرقام مطابقة للمحركات</span>':`<span class="b critical">أرقام غير موثقة: ${(j.verification.unverified||[]).map(x=>n(x,2)).join("، ")}</span>`}</h3>${Object.entries({FACTS:"الحقائق",INTERPRETATION:"القراءة",HYPOTHESES:"فرضيات (غير مؤكدة)",RECOMMENDATIONS:"توصيات",DATA_GAPS:"بيانات ناقصة"}).map(([k,l])=>(j.narrative[k]||[]).length?`<div class="ai-sec"><b>${l}</b><ul style="margin:0;padding-inline-start:18px">${j.narrative[k].map(x=>`<li>${refBadges(typeof x==="string"?x:JSON.stringify(x))}</li>`).join("")}</ul></div>`:"").join("")}`:`<div class="muted" style="margin-top:6px">${esc(j.llm_ar||"")}</div>`}
+      ${a.gaps.length?`<h3>حدود الإجابة ونقص البيانات</h3><ul style="margin:0;padding-inline-start:18px">${a.gaps.map(g=>`<li>${esc(g.label)}: ${esc(g.reason_ar)}</li>`).join("")}</ul>`:""}
+      <details style="margin-top:8px"><summary class="muted" style="cursor:pointer">الأدلة (${n((j.evidence||[]).length)}) والوحدات المستخدمة: ${a.modules_used.map(m=>esc(m.ar)+" "+esc(m.phase)).join("، ")||"—"}</summary>${tbl(["#","المؤشر","القيمة","التغير","الفترة","المصدر"],(j.evidence||[]).map(f=>`<tr><td>[${f.ref}]</td><td class="w">${esc(f.label)}${f.note?`<div class="muted">${esc(f.note)}</div>`:""}</td><td class="num">${f.value==null?"—":n(f.value,2)+" "+esc(f.unit)}</td><td class="num">${f.change==null?"—":(f.change>0?"+":"")+n(f.change,2)+" "+esc(f.change_unit==="%"?"%":f.change_unit||"")}</td><td>${esc(f.period||"—")}</td><td><a href="${esc(f.link)}" style="color:var(--mint,#10b981)">${esc(f.module_ar)} ${esc(f.phase)}</a></td></tr>`))}</details>
+      <div class="muted" style="margin-top:6px">${esc(a.confidence_rule_ar)}</div></div>`;}
+  function qaView(svc){const th=THREAD[svc]||[];const ex=svc==="ask"?HOME.examples:[PRESET[svc]];
+    return panel(`${ICON[svc]} ${esc(svcName(svc))}`,`<div class="chips">${ex.map(q=>`<span class="chip" data-q="${esc(q)}">${esc(q)}</span>`).join("")}</div><div class="bar" style="margin-top:10px"><input class="search" id="qIn" placeholder="${svc==="research"?"موضوع البحث…":"اكتب سؤالك…"}"><button class="btn" id="qGo">${svc==="research"?"ابحث":"اسأل"}</button></div>
+      ${svc==="research"?`<div class="na-box">الدليل الداخلي من محركات نبّاه، والخارجي من سجل المنافسين والأحداث بمصادره وروابطه. لا بحث مباشر في الإنترنت دون تكامل فعلي.</div>`:""}<div id="qOut">${th.map(answerHtml).join("")||'<div class="muted" style="margin-top:8px">'+(svc==="executive"||svc==="briefing"?"اضغط على السؤال المقترح لتجهيز الملخص من المحركات.":"ابدأ بسؤال أو اختر مثالاً.")+'</div>'}</div>`);}
+  const svcName=k=>((HOME.services||[]).find(s=>s.key===k)||{}).ar||k;
+  function ask(svc,q){const out=$("qOut");if(out)out.insertAdjacentHTML("afterbegin",`<div class="muted" id="qWait" style="margin-top:8px">جارٍ التحليل: فهم السؤال ← الصلاحيات ← المحركات ← الأدلة…</div>`);
+    api("/company/assistant/ask",{question:q,service:svc}).then(j=>{(THREAD[svc]=THREAD[svc]||[]).unshift(j);if(route()[0]===svc)render();}).catch(er=>{const w=$("qWait");if(w){w.className="neg";w.textContent=er.message;}});}
+  // ── مختبر السيناريوهات
+  function whatif(){const F=[["volume_pct","تغير الكمية %"],["price_pct","تغير السعر %"],["purchase_cost_pct","تغير تكلفة الشراء %"],["opex_pct","تغير المصروفات التشغيلية %"]];
+    return `<div class="flag medium">السيناريو لا يعدّل بيانات الشركة ولا يتحول إلى إجراء إلا عبر الموافقات (3.9)</div>`+panel("🧪 مختبر السيناريوهات (محرك التنبؤ 3.7)",`<div class="fg">${F.map(([k,l])=>`<label>${esc(l)}<input type="number" step="0.5" data-wa="${k}"></label>`).join("")}</div><div class="cta"><button class="btn" id="wGo">احسب</button><span id="wMsg" class="muted"></span></div><div id="wOut">${CACHE.whatif?wHtml(CACHE.whatif):""}</div>`);}
+  function wHtml(r){return `<div class="fin3"><div>الإيراد — خط الأساس<b>${n(r.baseline.revenue)}</b><span class="muted">${n(r.horizon_months)} أشهر</span></div><div>الإيراد — السيناريو<b>${n(r.scenario.revenue)}</b></div><div>${r.scenario.net_profit!=null?"صافي الربح — السيناريو<b>"+n(r.scenario.net_profit)+"</b>":"صافي الربح<b class='muted' style='font-size:14px'>خارج صلاحيتك</b>"}</div></div>
+      <div class="kv"><b>الافتراضات</b><span>${r.assumptions.map(a=>esc(a.ar)+": "+n(a.value,1)).join(" · ")}</span><b>ثقة التنبؤ</b><span>${esc(r.confidence_ar||"—")}</span><b>المصدر</b><span>${esc(r.source_ar)}</span><b>القيود</b><span>${esc(r.limits_ar)}</span></div>
+      ${tbl(["الشهر","الإيراد",...(r.months[0]&&r.months[0].net_profit!=null?["صافي الربح"]:[])],r.months.map(m=>`<tr><td>${esc(m.period)}</td><td class="num">${n(m.revenue)}</td>${m.net_profit!=null?`<td class="num">${n(m.net_profit)}</td>`:""}</tr>`))}<div class="muted">${esc(r.rule_ar)}</div>`;}
+  // ── التقارير
+  function reports(){const [,id]=route();if(id)return reportView(id);const R=CACHE.reports;
+    return panel("📝 إنشاء تقرير",`<div class="fg"><label>النوع<select id="rK">${Object.entries(HOME.report_kinds).filter(([k])=>HOME.scope.financial||!["financial","leakage"].includes(k)).map(([k,l])=>`<option value="${k}">${esc(l)}</option>`).join("")}</select></label><label>الموضوع (للتقرير الموضوعي)<input id="rQ"></label></div><div class="cta"><button class="btn" id="rGo">أنشئ مسودة</button><span id="rMsg" class="muted"></span></div><div class="muted">التقرير يُنشأ مسودة بتاريخها ومصادرها، ويُراجع قبل الاعتماد أو الإرسال.</div>`)
+      +panel("التقارير",R?tbl(["التقرير","النوع","الحالة","أنشأه","التاريخ","الثقة",""],R.items.map(r=>`<tr class="drill" data-rep="${r.id}"><td><b>${esc(r.title)}</b>${r.question&&r.question!==r.title?`<div class="muted">${esc(r.question)}</div>`:""}</td><td>${esc(HOME.report_kinds[r.kind]||r.kind)}</td><td>${stB(r.status)}</td><td>${esc(r.created_by)}${r.schedule_id?' <span class="b grey">مجدول</span>':""}</td><td>${esc(r.created_at)}</td><td>${conf(r.confidence)}</td><td>فتح</td></tr>`)):'<div class="muted">…</div>');}
+  const stB=s=>`<span class="b ${({draft:"medium",reviewed:"grey",approved:"low",archived:"grey"})[s]||"grey"}">${esc(({draft:"مسودة",reviewed:"تمت المراجعة",approved:"معتمد",archived:"مؤرشف"})[s]||s)}</span>`;
+  function reportView(id){const r=CACHE["rep"+id];if(!r){api("/company/assistant/report/"+id).then(x=>{CACHE["rep"+id]=x;render();}).catch(er=>{$("content").innerHTML=na(er.message);});return '<div class="state">…</div>';}
+    const c=r.content||{};const flow=(CACHE.reports||{}).flow||{};const nx=(flow[r.status]||[]);
+    return `<button class="back" data-go="reports">→ كل التقارير</button><div class="cta" style="margin-bottom:8px">${HOME.scope.can_review?nx.map(t=>`<button class="btn ${t==="approved"?"":"ghost"}" data-rv="${t}" data-id="${r.id}">${esc(({reviewed:"تمت المراجعة",approved:"اعتماد",archived:"أرشفة",draft:"إعادة لمسودة"})[t]||t)}</button>`).join(""):""}<button class="btn ghost" id="rPrint">🖨 طباعة/PDF</button></div>`
+      +panel(`${esc(c.title||r.title)} ${stB(r.status)} ${conf(c.confidence)}`,`<div class="muted">أُنشئ ${esc(c.generated_at||r.created_at)} · البيانات حتى ${esc(c.as_of||"—")} · ${esc(c.rule_ar||"")}${r.reviewed_by?` · راجعه ${esc(r.reviewed_by)} ${esc(r.reviewed_at)} ${esc(r.review_note||"")}`:""}</div>`
+      +(c.sections||[]).map((s,i)=>`<h3>${i+1}. ${esc(s.title)}</h3>${s.items.length?`<ul style="margin:0;padding-inline-start:18px">${s.items.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`:'<div class="muted">لا بنود</div>'}`).join(""));}
+  // ── التوصيات
+  function recommendations(){const R=CACHE.recs;if(!R)return '<div class="state">جارٍ جمع الإشارات من المحركات…</div>';const sc=HOME.scope;
+    return `<div class="muted" style="margin-bottom:8px">${esc(R.rule_ar)}</div>`+(R.items.length?R.items.map((r,i)=>`<div class="itm ${r.severity==="high"?"high":"medium"}"><h4>${esc(r.problem_ar)} <span class="b ${r.status==="adopted"?"low":"grey"}">${esc(r.status_ar)}</span> ${conf(r.confidence)}</h4>
+      <div class="kv"><b>الإجراء</b><span>${esc(r.action_ar)}</span><b>الأدلة</b><span>${r.evidence.map(esc).join(" · ")}</span><b>الأثر المتوقع</b><span>${r.expected_impact!=null?n(r.expected_impact)+" ر.س ("+esc(r.impact_type||"")+")":"غير مقدّر"}</span><b>التكلفة</b><span>${esc(r.cost_ar)}</span><b>البدائل</b><span>${r.alternatives_ar.map(esc).join(" · ")}</span><b>المسؤول المقترح</b><span>${esc(r.owner_ar)}</span><b>KPI</b><span>${esc(r.kpi_ar)}</span><b>الموعد المقترح</b><span>${esc(r.due)}</span><b>المخاطر والقيود</b><span>${esc(r.risks_ar)}</span><b>المصدر</b><span>${esc(r.module_ar)}</span></div>
+      ${r.decision?`<a class="btn ghost" href="company-decisions-intelligence.html#dec/${r.decision.id}">القرار #${r.decision.id}</a>`:sc.can_draft?`<div class="cta"><button class="btn ghost" data-rdraft="${i}">مسودة قرار</button></div>`:""}</div>`).join(""):na("لا توصيات مدعومة بأدلة حالياً"))
+      +(R.gaps.length?panel("حدود التوصيات",`<ul>${R.gaps.map(g=>`<li>${esc(g.label)}: ${esc(g.reason_ar)}</li>`).join("")}</ul>`):"");}
+  // ── دعم القرار
+  function decisions(){const sc=HOME.scope;
+    return panel("⚖️ دعم اتخاذ القرارات",`<div class="na-box">المساعد يجهّز مسودة القرار بأدلتها ويرسلها إلى متابعة القرارات (3.9). الاعتماد النهائي يخضع لمسار الموافقات في شركتك.</div>`+(sc.can_draft?`<div class="fg"><label class="full">عنوان القرار<input id="dT"></label><label class="full">المبررات<textarea id="dR" rows="2"></textarea></label><label class="full">الأدلة (سطر لكل دليل — من التحليل)<textarea id="dE" rows="3">${LAST?esc((LAST.answer.lines||[]).slice(0,3).join("\n")):""}</textarea></label><label>المسؤول<input id="dO"></label><label>الموعد<input id="dD" type="date"></label><label>مؤشر القياس<select id="dK">${[["revenue","الإيراد"],["gross_margin","هامش مجمل الربح"],["on_time","التسليم في الموعد"],["stockout_rate","نسبة النفاد"],["dso","أيام التحصيل"],["leakage_pct","نسبة التسرب"]].map(([k,l])=>`<option value="${k}">${l}</option>`).join("")}</select></label><label>المستهدف<input id="dTg" type="number"></label>${sc.financial?`<label>الأثر المتوقع ر.س<input id="dX" type="number"></label><label>التكلفة ر.س<input id="dC" type="number"></label>`:""}</div><div class="cta"><button class="btn" id="dGo">أنشئ مسودة القرار</button><span id="dMsg" class="muted"></span></div>`:na("تجهيز المسودات خارج صلاحيتك")));}
+  function draftModal(pre){$("modal").innerHTML=`<h3 style="margin-top:0">مسودة قرار (3.9)</h3><div class="fg"><label class="full">العنوان<input id="mT" value="${esc(pre.title)}"></label><label class="full">الأدلة<textarea id="mE" rows="3">${esc(pre.evidence.join("\n"))}</textarea></label><label>المسؤول<input id="mO" value="${esc(pre.owner||"")}"></label><label>الموعد<input id="mD" type="date" value="${esc(pre.due||"")}"></label></div><div class="muted">تُنشأ مسودة — الاعتماد حسب الصلاحيات</div><div class="cta"><button class="btn" id="mGo">إنشاء</button><button class="btn ghost" id="mC">إلغاء</button><span id="mMsg" class="muted"></span></div>`;$("ov").classList.add("on");
+    $("mC").onclick=close;$("mGo").onclick=()=>{$("mGo").disabled=true;api("/company/assistant/decision-draft",{title:$("mT").value,evidence:$("mE").value.split("\n").map(x=>x.trim()).filter(Boolean),owner:$("mO").value,due:$("mD").value,ref:pre.ref,kpi:pre.kpi,category:pre.category,expected_impact:pre.expected_impact})
+      .then(r=>{$("mMsg").className="pos";$("mMsg").innerHTML=`✔ <a href="${esc(r.link)}" style="color:var(--mint,#10b981)">#${r.decision_id}</a> · ${esc(r.note_ar)}`;delete CACHE.recs;setTimeout(close,1400);}).catch(er=>{$("mGo").disabled=false;$("mMsg").className="neg";$("mMsg").textContent=er.message;});};}
+  const close=()=>$("ov").classList.remove("on");
+  // ── جودة البيانات والمصادر
+  function data_quality(){const d=CACHE.dq;if(!d)return '<div class="state">جارٍ فحص الوحدات…</div>';
+    return `<div class="tiles">${[["درجة توفر الوحدات",n(d.score)+"%"],["وحدات متاحة",n(d.modules.filter(m=>m.status==="ok").length)],["تحتاج إصلاحاً",n(d.modules.filter(m=>m.status!=="ok").length)]].map(([l,v])=>`<div class="tile"><div class="l">${l}</div><div class="v">${v}</div></div>`).join("")}</div>`
+      +d.modules.map(m=>`<div class="itm ${({ok:"good",partial:"watch",missing:"critical",error:"critical"})[m.status]}"><h4>${esc(m.ar)} <span class="muted">${esc(m.phase)}</span> <span class="b ${m.status==="ok"?"low":m.status==="partial"?"medium":"critical"}">${esc(m.status_ar)}</span></h4>${m.error?`<div class="neg">${esc(m.error)}</div>`:""}${m.unavailable.length?`<div><b>لم يُحسب:</b> ${m.unavailable.map(u=>`${esc(u.label)} (${esc(u.reason_ar||"")})`).join(" · ")}</div>`:""}${m.details.length?`<div class="muted">${m.details.map(esc).join(" · ")}</div>`:""}${m.needs_ar?`<div><b>المطلوب لتحسين التحليل:</b> ${esc(m.needs_ar)} · <a href="company-upload.html" style="color:var(--mint,#10b981)">رفع البيانات</a></div>`:""}</div>`).join("")+`<div class="muted">${esc(d.rule_ar)}</div>`;}
+  function sources(){const d=CACHE.src;if(!d)return '<div class="state">…</div>';
+    return panel("الأدلة الداخلية (محركات نبّاه)",tbl(["الوحدة","المرحلة","الفترة","حتى",""],d.internal.map(s=>`<tr><td>${esc(s.ar)}</td><td>${esc(s.phase)}</td><td>${esc(s.period||"—")}</td><td>${esc(s.as_of||"—")}</td><td><a href="${esc(s.link)}" style="color:var(--mint,#10b981)">فتح ↗</a></td></tr>`)))
+      +panel("الأدلة الخارجية المسجلة",tbl(["المعلومة","النوع","المصدر","التاريخ","الثقة","الطبيعة"],d.external.map(e=>`<tr><td class="w">${esc(e.title)}</td><td>${esc(e.kind_ar||"")}</td><td>${e.url?`<a href="${esc(e.url)}" target="_blank" rel="noopener" style="color:var(--mint,#10b981)">${esc(e.source_ar||"رابط")} ↗</a>`:esc(e.source_ar||"—")}</td><td>${esc(e.date||"—")}</td><td>${esc(e.confidence_ar||"—")}</td><td>${esc(e.nature_ar||"")}</td></tr>`)))
+      +(d.configured.length?panel("مصادر خارجية معتمدة لدى الشركة",d.configured.map(c=>`<span class="chip">${esc(c.name)}</span>`).join(" ")):"")+`<div class="na-box">${esc(d.rule_ar)}</div>`+(Object.keys(d.errors||{}).length?`<div class="muted">غير متاح الآن: ${Object.entries(d.errors).map(([k,v])=>esc(k)+": "+esc(v)).join(" · ")}</div>`:"");}
+  // ── الجدولة والسجل
+  function schedules(){const sc=HOME.scope;const S=CACHE.sch;const inbox=HOME.inbox||[];
+    return panel("📥 صندوق تقاريري",inbox.length?tbl(["التقرير","التاريخ","الحالة",""],inbox.map(r=>`<tr class="drill" data-rep="${r.id}"><td>${esc(r.title)}</td><td>${esc(r.created_at)}</td><td>${stB(r.status)}</td><td>فتح</td></tr>`)):na("لا تقارير مسلّمة لك بعد"))
+      +(sc.can_schedule?(S?panel("⏰ التقارير المجدولة",`<div class="na-box">${esc(S.delivery_ar)}</div>`+tbl(["الاسم","النوع","التكرار","الساعة","المستلمون","التالي","آخر تشغيل"],S.items.map(x=>`<tr><td>${esc(x.name)} ${x.active?"":'<span class="b grey">موقوف</span>'}</td><td>${esc(S.kinds[x.kind]||x.kind)}</td><td>${esc(x.freq_ar)}</td><td>${n(x.hour)}:00</td><td>${x.recipients.map(r=>esc(r.name)).join("، ")}</td><td>${esc(x.next_run)}</td><td class="w">${esc(x.last_run||"—")} ${esc(x.last_status||"")}</td></tr>`))
+        +`<h3>جدولة جديدة</h3><div class="fg"><label>الاسم<input id="sN"></label><label>النوع<select id="sK">${Object.entries(S.kinds).map(([k,l])=>`<option value="${k}">${esc(l)}</option>`).join("")}</select></label><label>التكرار<select id="sF">${Object.entries(S.freqs).map(([k,l])=>`<option value="${k}">${esc(l)}</option>`).join("")}</select></label><label>الساعة<input id="sH" type="number" min="0" max="23" value="7"></label><label class="full">المستلمون (يُولَّد لكل مستلم بصلاحياته)<span class="chips">${S.users.map(u=>`<label class="chip" style="cursor:pointer"><input type="checkbox" data-rcp value="${u.id}"> ${esc(u.name)}</label>`).join("")}</span></label></div><div class="cta"><button class="btn" id="sGo">حفظ الجدولة</button><span id="sMsg" class="muted"></span></div>`):'<div class="muted">…</div>'):na("إنشاء الجداول للمالك والمدير المالي"));}
+  function history(){const Hh=CACHE.hist;if(!Hh)return '<div class="state">…</div>';const st=HOME.settings;
+    return panel(`🗂️ سجل التحليلات <span class="muted">${esc(Hh.scope_ar)} · الاحتفاظ ${n(Hh.retention_days)} يوماً</span>`,`<div class="muted">${esc(Hh.stored_ar)}</div>`+tbl(["الوقت","المستخدم","الخدمة","السؤال","الوحدات","مرفوض","الثقة","السرد","نتج عنه"],Hh.items.map(x=>`<tr><td>${esc(x.at)}</td><td>${esc(x.user)}</td><td>${esc(svcName(x.service))}</td><td class="w">${esc(x.question)}</td><td>${esc(x.modules.join("، "))}</td><td>${esc(x.denied.join("، ")||"—")}</td><td>${esc(CONF[x.confidence]||x.confidence||"—")}</td><td>${esc(x.llm)}${x.unverified?` <span class="b critical">${n(x.unverified)} غير موثق</span>`:""}${x.error?` <span class="neg">${esc(x.error)}</span>`:""}</td><td>${x.report_id?`<a href="#reports/${x.report_id}" style="color:var(--mint,#10b981)">تقرير</a>`:""}${x.decision_id?` <a href="company-decisions-intelligence.html#dec/${x.decision_id}" style="color:var(--mint,#10b981)">قرار #${x.decision_id}</a>`:""}</td></tr>`)))
+      +(st?panel("الإعدادات",`<div class="fg"><label>مدة الاحتفاظ بالسجل (يوم)<input id="stR" type="number" value="${st.retention_days}"></label><label style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" id="stA" ${st.use_ai?"checked":""}> تفعيل سرد Gemini المفحوص رقمياً</label></div><div class="cta"><button class="btn" id="stGo">حفظ</button><span id="stMsg" class="muted"></span></div>`):"");}
+  // ── التوجيه
+  const LAZY={reports:()=>api("/company/assistant/reports").then(x=>CACHE.reports=x),recommendations:()=>api("/company/assistant/recommendations").then(x=>CACHE.recs=x),
+    data_quality:()=>api("/company/assistant/data-quality").then(x=>CACHE.dq=x),sources:()=>api("/company/assistant/sources").then(x=>CACHE.src=x),
+    schedules:()=>HOME.scope.can_schedule?api("/company/assistant/schedules").then(x=>CACHE.sch=x):Promise.resolve(),history:()=>api("/company/assistant/history").then(x=>CACHE.hist=x)};
+  const KEYMAP={reports:"reports",recommendations:"recs",data_quality:"dq",sources:"src",schedules:"sch",history:"hist"};
+  function render(){EV={};evI=0;const [v]=route();const svcs=(HOME.services||[]).filter(s=>s.allowed);const cur=svcs.some(s=>s.key===v)?v:(svcs[0]||{}).key;
+    $("tabs").innerHTML=svcs.map((s,i)=>`<button class="tab ${s.key===cur?"on":""}" data-go="${s.key}"><span class="muted" style="font-size:10px">${String(i+1).padStart(2,"0")}</span> ${ICON[s.key]||""} ${esc(s.ar)}</button>`).join("");
+    if(!cur){$("content").innerHTML=na("لا خدمات متاحة لصلاحيتك");return;}
+    if(LAZY[cur]&&!CACHE[KEYMAP[cur]]&&!(cur==="schedules"&&!HOME.scope.can_schedule)){$("content").innerHTML='<div class="state">جارٍ التحميل من المحركات…</div>';LAZY[cur]().then(()=>{if(route()[0]===cur||(!route()[0]&&cur))render();}).catch(er=>{$("content").innerHTML=na(er.message);});return;}
+    $("content").innerHTML=QAS.has(cur)?qaView(cur):({whatif,reports,recommendations,decisions,data_quality,sources,schedules,history}[cur]||(()=>""))();bind(cur);}
+  function bind(cur){document.querySelectorAll("#content [data-go],#tabs [data-go]").forEach(el=>el.onclick=e=>{e.stopPropagation();go(el.dataset.go);});
+    document.querySelectorAll("#content [data-ev]").forEach(el=>el.onclick=e=>{e.stopPropagation();const f=EV[el.dataset.ev],p=$("pop");
+      p.innerHTML=`<b>[${f.ref}] ${esc(f.label)}</b><div>${f.value==null?"غير متاح":n(f.value,2)+" "+esc(f.unit)}${f.change!=null?" · التغير "+n(f.change,2)+" "+esc(f.change_unit||""):""}</div><div class="muted">المصدر: ${esc(f.module_ar)} (${esc(f.phase)})${f.period?" · الفترة "+esc(f.period):""}</div>${f.note?`<div class="muted">${esc(f.note)}</div>`:""}<a href="${esc(f.link)}" style="color:var(--mint,#10b981)">افتح الوحدة ↗</a>`;
+      p.style.display="block";p.style.top=Math.min(window.innerHeight-200,e.clientY+10)+"px";p.style.left=Math.max(8,Math.min(window.innerWidth-350,e.clientX-170))+"px";});
+    document.querySelectorAll("#content [data-q]").forEach(c=>c.onclick=()=>ask(cur,c.dataset.q));
+    const qg=$("qGo");if(qg){const f=()=>{const q=$("qIn").value.trim();if(q)ask(cur,q);};qg.onclick=f;$("qIn").onkeydown=e=>{if(e.key==="Enter")f();};}
+    document.querySelectorAll("#content [data-draft]").forEach(b=>b.onclick=()=>{const j=(THREAD[cur]||[])[Number(b.closest(".itm")?[...document.querySelectorAll("#qOut > .itm")].indexOf(b.closest(".itm")):0)]||LAST;const s=j.answer.next_steps[Number(b.dataset.draft)];
+      draftModal({title:s.action_ar.slice(0,120),evidence:[s.problem_ar].concat(j.answer.lines.slice(0,2)),ref:"assistant:"+s.signal_id});});
+    document.querySelectorAll("#content [data-rdraft]").forEach(b=>b.onclick=()=>{const r=CACHE.recs.items[Number(b.dataset.rdraft)];draftModal({title:r.action_ar.slice(0,120),evidence:r.evidence,owner:r.owner_ar,due:r.due,ref:r.ref,kpi:r.kpi,category:r.category,expected_impact:r.expected_impact});});
+    const wg=$("wGo");if(wg)wg.onclick=()=>{const a={};document.querySelectorAll("[data-wa]").forEach(i=>{if(i.value!=="")a[i.dataset.wa]=Number(i.value);});$("wMsg").className="muted";$("wMsg").textContent="…";
+      api("/company/assistant/whatif",{assumptions:a}).then(r=>{CACHE.whatif=r;$("wMsg").textContent="";$("wOut").innerHTML=wHtml(r);}).catch(er=>{$("wMsg").className="neg";$("wMsg").textContent=er.message;});};
+    const rg=$("rGo");if(rg)rg.onclick=()=>{rg.disabled=true;$("rMsg").className="muted";$("rMsg").textContent="جارٍ التجهيز من المحركات…";api("/company/assistant/report",{kind:$("rK").value,question:$("rQ").value}).then(r=>{CACHE["rep"+r.id]=r;delete CACHE.reports;go("reports",String(r.id));}).catch(er=>{rg.disabled=false;$("rMsg").className="neg";$("rMsg").textContent=er.message;});};
+    document.querySelectorAll("#content [data-rep]").forEach(tr=>tr.onclick=()=>go("reports",tr.dataset.rep));
+    document.querySelectorAll("#content [data-rv]").forEach(b=>b.onclick=()=>api("/company/assistant/report/review",{id:Number(b.dataset.id),status:b.dataset.rv}).then(()=>{delete CACHE["rep"+b.dataset.id];delete CACHE.reports;LAZY.reports().then(render);}).catch(er=>alert(er.message)));
+    const rp=$("rPrint");if(rp)rp.onclick=()=>window.print();
+    const dg=$("dGo");if(dg)dg.onclick=()=>{dg.disabled=true;const v=id=>$(id)?$(id).value:"";api("/company/assistant/decision-draft",{title:v("dT"),rationale:v("dR"),evidence:v("dE").split("\n").map(x=>x.trim()).filter(Boolean),owner:v("dO"),due:v("dD"),kpi:v("dK"),target:v("dTg")||null,expected_impact:v("dX")||null,cost:v("dC")||null,ref:"assistant:manual"})
+      .then(r=>{$("dMsg").className="pos";$("dMsg").innerHTML=`✔ <a href="${esc(r.link)}" style="color:var(--mint,#10b981)">#${r.decision_id}</a> · ${esc(r.note_ar)}`;dg.disabled=false;}).catch(er=>{dg.disabled=false;$("dMsg").className="neg";$("dMsg").textContent=er.message;});};
+    const sg=$("sGo");if(sg)sg.onclick=()=>api("/company/assistant/schedules",{name:$("sN").value,kind:$("sK").value,freq:$("sF").value,hour:$("sH").value,recipients:[...document.querySelectorAll("[data-rcp]:checked")].map(x=>Number(x.value))})
+      .then(()=>{delete CACHE.sch;LAZY.schedules().then(render);}).catch(er=>{$("sMsg").className="neg";$("sMsg").textContent=er.message;});
+    const stg=$("stGo");if(stg)stg.onclick=()=>api("/company/assistant/settings",{retention_days:$("stR").value,use_ai:$("stA").checked}).then(r=>{HOME.settings=r.settings;$("stMsg").className="pos";$("stMsg").textContent="✔ حُفظت";}).catch(er=>{$("stMsg").className="neg";$("stMsg").textContent=er.message;});}
+  document.addEventListener("click",()=>{$("pop").style.display="none";});
+  $("ov").onclick=e=>{if(e.target===$("ov"))close();};
+  load();
+})();
+</script>
+<script src="nabbah-sidebar.js"></script>
+</body>
+</html>
