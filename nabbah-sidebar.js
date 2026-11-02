@@ -86,6 +86,9 @@
       { label: "الأسباب الجذرية", href: "company-root-cause.html" },
       { label: "ذاكرة الشركة", href: "company-memory.html" },
     ]},
+    { icon: "🏢", label: "المنظومة المؤسسية", items: [
+      { label: "الأمان والموثوقية", href: "company-security.html" },
+    ]},
     { icon: "📊", label: "التقارير", items: [
       { label: "مركز التقارير", href: "company-reports.html" },
       { label: "التقرير التنفيذي الذكي", href: "company-executive-report-intelligence.html" },
