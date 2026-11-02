@@ -38,7 +38,6 @@
       { label: "ذكاء العملاء", href: "company-customer-intelligence.html" },
       { label: "صحة العملاء (السابق)", href: "company-customer-health.html" },
       { label: "إدخال بيانات العملاء", href: "company-customers.html" },
-      { label: "المنافسون", href: "company-competitors.html" },
     ]},
     { icon: "👥", label: "الأشخاص", items: [
       { label: "الموارد البشرية", href: "company-hr-analytics.html" },
@@ -71,12 +70,15 @@
       { label: "درجة جاهزية التحليل", href: "company-readiness.html" },
     ]},
     { icon: "🌍", label: "السوق", items: [
-      { label: "المنافسون", href: "company-competitors.html" },
-      { label: "الأحداث المؤثرة", href: "company-events.html" },
+      { label: "ذكاء المنافسين", href: "company-competitor-intelligence.html" },
+      { label: "إدخال المنافسين (السابق)", href: "company-competitors.html" },
+      { label: "ذكاء الأحداث المؤثرة", href: "company-events-intelligence.html" },
+      { label: "إدخال الأحداث (السابق)", href: "company-events.html" },
       { label: "المقارنة بالقطاع", href: "company-sector-benchmark.html" },
       { label: "المقارنة القطاعية (السابقة)", href: "company-benchmark.html" },
     ]},
     { icon: "🤖", label: "ذكاء نبّاه", items: [
+      { label: "المساعد الذكي ومركز البحث", href: "company-assistant.html" },
       { label: "التنبؤ بالأداء", href: "company-performance-prediction.html" },
       { label: "التنبؤ (السابق)", href: "company-predictions.html" },
       { label: "محاكاة السيناريوهات", href: "company-whatif.html" },
