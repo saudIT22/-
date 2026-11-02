@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>نبّاه · الأمان والموثوقية</title>
+<link href="nabbah-design.css" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{background:var(--bg,#070b09);color:var(--txt,#e8f1ec);font-family:Tajawal,Tahoma,Arial,sans-serif;margin:0}
+  .wrap{max-width:1180px;margin:0 auto;padding:70px 16px 60px}
+  h1{margin:0 0 4px;font-size:24px}.sub{color:var(--txt-soft,#8ba396);margin:0 0 14px;font-size:14px}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+  select{background:var(--panel,#101a15);color:var(--txt,#e8f1ec);border:1px solid var(--line,#1d2c24);border-radius:10px;padding:8px 10px;font:inherit;font-size:13px;max-width:100%}
+  .tabs{display:flex;gap:2px;flex-wrap:wrap;border-bottom:1px solid var(--line,#1d2c24);margin:6px 0 16px}
+  .tab{background:none;border:0;color:var(--txt-soft,#8ba396);padding:9px 11px;font:inherit;font-size:13px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+  .tab.on{color:var(--txt,#e8f1ec);border-color:#14b8a6;font-weight:800}
+  .tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:14px}
+  .tile,.panel{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:14px;padding:14px;min-width:0}
+  .tile{cursor:pointer}.tile:hover{border-color:var(--mint,#10b981)}
+  .tile .l{font-size:12px;color:var(--txt-soft,#8ba396)}.tile .v{font-size:22px;font-weight:800;margin-top:4px;overflow-wrap:anywhere}.tile .c{font-size:12px;margin-top:4px;line-height:1.7}
+  .panel{margin-bottom:14px}.panel h2{margin:0 0 10px;font-size:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .panel h3{margin:12px 0 6px;font-size:13px;color:var(--txt-soft,#8ba396)}
+  .grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+  table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px;border-bottom:1px solid var(--line,#1d2c24);text-align:start;white-space:nowrap}
+  th{color:var(--txt-soft,#8ba396);font-weight:600}.tbl{overflow-x:auto}td.w{white-space:normal;min-width:200px}
+  tr.drill{cursor:pointer}tr.drill:hover td{background:rgba(16,185,129,.06)}
+  .pos{color:#10b981}.neg{color:#ef4444}.warn{color:#f5b301}.muted{color:var(--txt-soft,#8ba396);font-size:12px}
+  .b{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700;display:inline-block;white-space:nowrap}
+  .critical,.intervene{background:rgba(239,68,68,.16);color:#ef4444}.high{background:rgba(234,88,12,.16);color:#f97316}
+  .medium,.watch{background:rgba(245,179,1,.15);color:#f5b301}.low,.good{background:rgba(16,185,129,.15);color:#10b981}.grey,.na,.monitor{background:rgba(148,163,184,.15);color:#94a3b8}
+  .btn{background:var(--mint,#10b981);color:#062b1c;border:0;border-radius:10px;padding:7px 13px;font-weight:800;cursor:pointer;font:inherit;font-size:12px;text-decoration:none;display:inline-block}
+  .btn.ghost{background:transparent;color:var(--txt-soft,#8ba396);border:1px solid var(--line,#1d2c24);font-weight:600}.btn.red{background:#ef4444;color:#fff}
+  .btn:disabled{opacity:.5;cursor:default}
+  .state{padding:36px 16px;text-align:center;color:var(--txt-soft,#8ba396);border:1px dashed var(--line,#1d2c24);border-radius:14px}
+  .na-box{color:var(--txt-soft,#8ba396);font-size:13px;padding:10px;border:1px dashed var(--line,#1d2c24);border-radius:10px;margin:6px 0}
+  .itm{border:1px solid var(--line,#1d2c24);border-inline-start:4px solid #f5b301;border-radius:12px;padding:12px;margin-bottom:10px}
+  .itm.critical,.itm.intervene{border-inline-start-color:#ef4444;background:none;color:inherit}.itm.high{border-inline-start-color:#f97316;background:none;color:inherit}
+  .itm.medium,.itm.watch{background:none;color:inherit}.itm.good,.itm.low{border-inline-start-color:#10b981;background:none;color:inherit}.itm.na,.itm.monitor{border-inline-start-color:#94a3b8;background:none;color:inherit}
+  .itm h4{margin:0 0 6px;font-size:15px}.kv{display:grid;grid-template-columns:120px 1fr;gap:4px 10px;font-size:13px;margin-top:6px}.kv b{color:var(--txt-soft,#8ba396);font-weight:600}
+  .sum p{font-size:15px;line-height:2;margin:4px 0}.sum b{color:var(--mint,#10b981)}.sum a{color:var(--mint,#10b981);font-size:11px;text-decoration:none}
+  .hgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+  .barrow{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:13px}.barrow .t{flex:0 0 140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .barrow .g{flex:1;height:10px;background:var(--line,#1d2c24);border-radius:6px;overflow:hidden;min-width:40px}.barrow .g i{display:block;height:100%;background:var(--mint,#10b981)}.barrow .x{flex:0 0 120px;text-align:end}
+  .pop{position:fixed;display:none;z-index:70;background:var(--panel,#101a15);border:1px solid var(--mint,#10b981);border-radius:12px;padding:12px;font-size:12px;max-width:340px;line-height:1.8}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}.chip{background:rgba(16,185,129,.12);color:var(--mint,#10b981);border:1px solid rgba(16,185,129,.35);border-radius:20px;padding:4px 11px;font-size:12px;cursor:pointer}
+  input.search,.fg input,.fg select,.fg textarea{background:var(--bg,#070b09);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:9px;padding:8px;font:inherit}
+  input.search{flex:1;min-width:160px;background:var(--panel,#101a15);border-radius:10px;padding:9px 12px}
+  .ai-sec{margin:8px 0}.ai-sec b{display:block;font-size:13px;margin-bottom:4px}.ai-sec li{font-size:13px;margin:3px 0}
+  .ov{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:50;padding:14px}
+  .ov.on{display:flex}.modal{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:16px;padding:18px;width:min(580px,100%);max-height:90vh;overflow:auto}
+  .fg{display:grid;grid-template-columns:1fr 1fr;gap:10px}.fg label{font-size:12px;color:var(--txt-soft,#8ba396);display:flex;flex-direction:column;gap:4px}.fg .full{grid-column:1/-1}
+  .cta{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .back{background:none;border:0;color:var(--mint,#10b981);cursor:pointer;font:inherit;padding:0;margin-bottom:10px}
+  .stbadge{font-size:12px;font-weight:800;padding:4px 10px;border-radius:10px;border:1px solid var(--line,#1d2c24)}
+  .flag{padding:10px 12px;border-radius:10px;margin:6px 0 10px;font-size:13px}
+  /* بطاقة القرار */
+  .dc-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;background:linear-gradient(90deg,#0f2a3d,#123047);border-radius:14px;padding:16px 18px;margin-bottom:12px}
+  .dc-head h2{margin:0;font-size:20px}.dc-no{border:1px solid rgba(255,255,255,.3);border-radius:10px;padding:6px 12px;font-weight:800;font-size:13px}
+  .dc-meta{display:grid;grid-template-columns:2fr repeat(4,minmax(0,1fr));gap:10px;align-items:center}.dc-meta>div{border-inline-start:1px solid var(--line,#1d2c24);padding:4px 10px}
+  .dc-meta .l{font-size:12px;color:var(--txt-soft,#8ba396)}.dc-meta .v{font-size:15px;font-weight:800;margin-top:4px}
+  .dc-box{background:rgba(255,255,255,.025);border-radius:10px;padding:12px;font-size:14px;line-height:1.9}
+  .fin3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.fin3 div{background:rgba(255,255,255,.025);border-radius:10px;padding:12px;text-align:center}
+  .fin3 b{display:block;font-size:20px;margin:6px 0}
+  .flow{display:flex;align-items:flex-start;justify-content:space-between;gap:4px;margin:10px 0}.flow .st{text-align:center;flex:1;font-size:12px;position:relative}
+  .flow .dot{width:28px;height:28px;border-radius:50%;margin:0 auto 6px;display:grid;place-items:center;font-weight:900;background:var(--line,#1d2c24);color:#94a3b8}
+  .flow .dot.on{background:#10b981;color:#062b1c}.flow .dot.cur{background:#f5b301;color:#2b1d00}
+  #printv{display:none}
+  @media print{#printv{display:block!important;color:#000;background:#fff}
+    #printv .pg{page-break-after:always;padding:22px}#printv .panel,#printv .tile,#printv .itm{background:#fff;border:1px solid #ccc;color:#000;break-inside:avoid}
+    #printv table{width:100%;border-collapse:collapse}#printv tr{break-inside:avoid}#printv td,#printv th{border:1px solid #ccc;padding:4px;font-size:10.5px;white-space:normal;color:#000}
+    #printv .muted{color:#555}#printv .cover{display:flex;flex-direction:column;justify-content:center;min-height:90vh;text-align:center}}
+  @media(max-width:900px){.hgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.dc-meta{grid-template-columns:1fr 1fr}.dc-meta>div:first-child{grid-column:1/-1}}
+  @media(max-width:760px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.grid2,.grid3,.fin3{grid-template-columns:minmax(0,1fr)}.fg{grid-template-columns:1fr}h1{font-size:20px}
+    .tile{padding:10px}.tile .v{font-size:17px}.kv{grid-template-columns:1fr}.tab{padding:7px 8px;font-size:12px}.barrow .t{flex-basis:90px}.barrow .x{flex-basis:90px}}
+  @media(max-width:1000px){.grid3{grid-template-columns:minmax(0,1fr)}}
+  @media(max-width:760px){.barrow{flex-wrap:wrap}.barrow .x{flex:1 1 100%;text-align:start}.barrow .x .b{white-space:normal}}
+  html,body{overflow-x:hidden}
+  @media(min-width:761px){#content .barrow .x{flex-basis:220px}}
+  .btn.ghost.red{color:#ef4444;border-color:rgba(239,68,68,.4)}
+  @media print{body>*:not(.wrap){display:none!important}.tabs,.bar,.cta,.back,#disc{display:none!important}body{background:#fff;color:#000}.panel{border:1px solid #ccc;background:#fff;color:#000}}
+
+  .chip input{vertical-align:middle;margin:0 0 0 4px}.fg textarea{resize:vertical}
+  details summary{list-style:none}
+  @media(max-width:760px){.tiles[style]{grid-template-columns:repeat(2,minmax(0,1fr))!important}.flow .st{font-size:10px}.flow .dot{width:22px;height:22px;font-size:11px}#rcList{grid-template-columns:1fr!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🛡️ الأمان والموثوقية</h1>
+  <p class="sub">حماية الحسابات بالتحقق بخطوتين، ومتابعة الجلسات والأجهزة والأحداث الأمنية، والنسخ الاحتياطي واختبار الاستعادة، ومراقبة الموثوقية، وخطة التعافي، وإدارة الحوادث. كل رقم هنا مقاس من داخل المنصة، وما لا يمكن التحقق منه نذكره صراحة.</p>
+  <div class="bar"><span class="stbadge" id="scopeB">…</span><span class="muted" id="asof"></span></div>
+  <div id="banner"></div>
+  <nav class="tabs" id="tabs"></nav>
+  <div id="content"><div class="state">جارٍ التحميل…</div></div>
+</div>
+<div class="ov" id="ov"><div class="modal" id="modal"></div></div>
+<script src="i18n.js"></script>
+<script>
+// ترميز QR محلي (بايت · تصحيح أخطاء M) — منقول من خوارزمية Nayuki المرجعية (MIT). لا مكتبات خارجية ولا إرسال للسر خارج الصفحة.
+function nbQR(text){
+  const ECC=[-1,10,16,26,18,24,16,18,22,22,26,30,22,22,24,24,28,28,26,26,26,26,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28];
+  const NB=[-1,1,1,1,2,2,4,4,4,5,5,5,8,9,9,10,10,11,13,14,16,17,17,18,20,21,23,25,26,28,29,31,33,35,37,38,40,43,45,47,49];
+  const bytes=Array.from(new TextEncoder().encode(String(text)));
+  const rawMods=v=>{let r=(16*v+128)*v+64;if(v>=2){const n=Math.floor(v/7)+2;r-=(25*n-10)*n-55;if(v>=7)r-=36;}return r;};
+  const dataCw=v=>Math.floor(rawMods(v)/8)-ECC[v]*NB[v];
+  let ver=1;for(;ver<=40;ver++){const cc=ver<10?8:16;if(4+cc+bytes.length*8<=dataCw(ver)*8)break;}
+  if(ver>40)throw new Error("long");
+  const bits=[];const ap=(val,len)=>{for(let i=len-1;i>=0;i--)bits.push((val>>>i)&1);};
+  ap(4,4);ap(bytes.length,ver<10?8:16);bytes.forEach(b=>ap(b,8));
+  const cap=dataCw(ver)*8;ap(0,Math.min(4,cap-bits.length));ap(0,(8-bits.length%8)%8);
+  for(let p=0xEC;bits.length<cap;p^=0xEC^0x11)ap(p,8);
+  const data=[];for(let i=0;i<bits.length;i+=8){let b=0;for(let j=0;j<8;j++)b=(b<<1)|bits[i+j];data.push(b);}
+  // Reed–Solomon
+  const mul=(x,y)=>{let z=0;for(let i=7;i>=0;i--){z=(z<<1)^((z>>>7)*0x11D);z^=((y>>>i)&1)*x;}return z&0xFF;};
+  const deg=ECC[ver];const div=new Array(deg).fill(0);div[deg-1]=1;let root=1;
+  for(let i=0;i<deg;i++){for(let j=0;j<deg;j++){div[j]=mul(div[j],root);if(j+1<deg)div[j]^=div[j+1];}root=mul(root,0x02);}
+  const rem=d=>{const r=new Array(deg).fill(0);for(const b of d){const f=b^r.shift();r.push(0);for(let i=0;i<deg;i++)r[i]^=mul(div[i],f);}return r;};
+  const nb=NB[ver],raw=Math.floor(rawMods(ver)/8),nShort=nb-raw%nb,shortLen=Math.floor(raw/nb);
+  const blocks=[];for(let i=0,k=0;i<nb;i++){const dat=data.slice(k,k+shortLen-deg+(i<nShort?0:1));k+=dat.length;const e=rem(dat);if(i<nShort)dat.push(0);blocks.push(dat.concat(e));}
+  const all=[];for(let i=0;i<blocks[0].length;i++)blocks.forEach((b,j)=>{if(i!==shortLen-deg||j>=nShort)all.push(b[i]);});
+  // المصفوفة
+  const size=ver*4+17;const M=[],F=[];for(let i=0;i<size;i++){M.push(new Array(size).fill(false));F.push(new Array(size).fill(false));}
+  const set=(x,y,d)=>{M[y][x]=d;F[y][x]=true;};
+  for(let i=0;i<size;i++){set(6,i,i%2===0);set(i,6,i%2===0);}
+  const finder=(x,y)=>{for(let dy=-4;dy<=4;dy++)for(let dx=-4;dx<=4;dx++){const d=Math.max(Math.abs(dx),Math.abs(dy)),xx=x+dx,yy=y+dy;if(xx>=0&&xx<size&&yy>=0&&yy<size)set(xx,yy,d!==2&&d!==4);}};
+  finder(3,3);finder(size-4,3);finder(3,size-4);
+  const alignPos=()=>{if(ver===1)return[];const n=Math.floor(ver/7)+2,step=ver===32?26:Math.ceil((ver*4+4)/(n*2-2))*2;const r=[6];for(let p=size-7;r.length<n;p-=step)r.splice(1,0,p);return r;};
+  const al=alignPos();for(let i=0;i<al.length;i++)for(let j=0;j<al.length;j++){if((i===0&&j===0)||(i===0&&j===al.length-1)||(i===al.length-1&&j===0))continue;for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++)set(al[i]+dx,al[j]+dy,Math.max(Math.abs(dx),Math.abs(dy))!==1);}
+  const fmt=mask=>{const d=(0<<3)|mask;let r=d;for(let i=0;i<10;i++)r=(r<<1)^((r>>>9)*0x537);const b=((d<<10)|r)^0x5412;const g=i=>((b>>>i)&1)!==0;
+    for(let i=0;i<=5;i++)set(8,i,g(i));set(8,7,g(6));set(8,8,g(7));set(7,8,g(8));for(let i=9;i<15;i++)set(14-i,8,g(i));
+    for(let i=0;i<8;i++)set(size-1-i,8,g(i));for(let i=8;i<15;i++)set(8,size-15+i,g(i));set(8,size-8,true);};
+  fmt(0);
+  if(ver>=7){let r=ver;for(let i=0;i<12;i++)r=(r<<1)^((r>>>11)*0x1F25);const b=(ver<<12)|r;for(let i=0;i<18;i++){const bt=((b>>>i)&1)!==0,a=size-11+i%3,c=Math.floor(i/3);set(a,c,bt);set(c,a,bt);}}
+  let i=0;for(let right=size-1;right>=1;right-=2){if(right===6)right=5;for(let vert=0;vert<size;vert++)for(let j=0;j<2;j++){const x=right-j,up=((right+1)&2)===0,y=up?size-1-vert:vert;
+    if(!F[y][x]&&i<all.length*8){M[y][x]=((all[i>>>3]>>>(7-(i&7)))&1)!==0;i++;}}}
+  const maskF=[(x,y)=>(x+y)%2===0,(x,y)=>y%2===0,(x,y)=>x%3===0,(x,y)=>(x+y)%3===0,(x,y)=>(Math.floor(x/3)+Math.floor(y/2))%2===0,(x,y)=>x*y%2+x*y%3===0,(x,y)=>(x*y%2+x*y%3)%2===0,(x,y)=>((x+y)%2+x*y%3)%2===0];
+  const applyMask=m=>{for(let y=0;y<size;y++)for(let x=0;x<size;x++)if(!F[y][x]&&maskF[m](x,y))M[y][x]=!M[y][x];};
+  const penalty=()=>{let r=0;   // قواعد 1 و2 و4 (اختيار القناع يؤثر على سهولة المسح فقط، لا على صحة الرمز)
+    for(let a=0;a<size;a++)for(const get of [b=>M[a][b],b=>M[b][a]]){let c=get(0),n=1;for(let b=1;b<size;b++){const v=get(b);if(v===c){n++;if(n===5)r+=3;else if(n>5)r++;}else{c=v;n=1;}}}
+    for(let y=0;y<size-1;y++)for(let x=0;x<size-1;x++){const c=M[y][x];if(c===M[y][x+1]&&c===M[y+1][x]&&c===M[y+1][x+1])r+=3;}
+    let dark=0;M.forEach(row=>row.forEach(c=>{if(c)dark++;}));const tot=size*size;r+=(Math.ceil(Math.abs(dark*20-tot*10)/tot)-1)*10;return r;};
+  let best=0,bestP=Infinity;for(let m=0;m<8;m++){applyMask(m);fmt(m);const p=penalty();if(p<bestP){best=m;bestP=p;}applyMask(m);}
+  applyMask(best);fmt(best);
+  return M;
+}
+function nbQRsvg(text,px){const M=nbQR(text),n=M.length,q=4,S=n+q*2;let d="";for(let y=0;y<n;y++)for(let x=0;x<n;x++)if(M[y][x])d+=`M${x+q} ${y+q}h1v1h-1z`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${S} ${S}" width="${px||200}" height="${px||200}" shape-rendering="crispEdges" role="img" aria-label="رمز QR لإعداد المصادقة"><rect width="${S}" height="${S}" fill="#fff"/><path d="${d}" fill="#000"/></svg>`;}
+
+</script>
+<script>
+(function(){
+  const TOKEN=localStorage.getItem("nabbah_token")||"";if(!TOKEN){location.href="login.html";return;}
+  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const n=(v,d=0)=>{if(v==null||v===""||isNaN(Number(v)))return"—";return Number(v).toLocaleString("ar-SA",{maximumFractionDigits:d});};
+  const dt=v=>v?esc(String(v).replace("T"," ").slice(0,16)):"—";
+  const $=id=>document.getElementById(id);
+  const H={Authorization:"Bearer "+TOKEN,"Content-Type":"application/json"};
+  const api=(path,body)=>fetch(path,{method:body===undefined?"GET":"POST",headers:H,body:body===undefined?undefined:JSON.stringify(body)}).then(async r=>{
+    if(r.status===401){location.href="login.html";throw new Error("401");}const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(typeof j.detail==="string"?j.detail:"HTTP "+r.status);return j;});
+  const panel=(t,b,x="")=>`<div class="panel"><h2>${t}${x}</h2>${b}</div>`;
+  const na=m=>`<div class="na-box">${esc(m)}</div>`;
+  const tbl=(head,rows,empty)=>rows.length?`<div class="tbl"><table><thead><tr>${head.map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>${rows.join("")}</tbody></table></div>`:na(empty||"لا بيانات بعد");
+  const msgEl=(id)=>`<div class="muted" id="${id}" style="margin-top:8px"></div>`;
+  const ok=(id,t)=>{const e=$(id);if(e){e.className="pos";e.textContent=t;}};
+  const bad=(id,t)=>{const e=$(id);if(e){e.className="neg";e.textContent=t;}};
+  const ROLE_AR={owner:"المالك",manager:"مدير",staff:"موظف",ceo:"رئيس تنفيذي",cfo:"مدير مالي",coo:"مدير العمليات",hr:"الموارد البشرية",it_admin:"مسؤول التقنية",auditor:"مدقق",board:"عضو مجلس إدارة",dept_manager:"مدير قسم",branch_manager:"مدير فرع",employee:"موظف (مسمّى)"};
+  const SEV={critical:["critical","حرجة"],high:["high","مرتفعة"],medium:["medium","متوسطة"],low:["low","منخفضة"],info:["grey","معلومة"]};
+  const sevB=s=>{const x=SEV[s]||["grey",s||"—"];return `<span class="b ${x[0]}">${esc(x[1])}</span>`;};
+  const ST={pass:["low","✔ ناجح"],fail:["critical","✖ يحتاج معالجة"],warn:["medium","تنبيه"],na:["grey","غير قابل للتحقق"]};
+  const stB=s=>{const x=ST[s]||["grey",s];return `<span class="b ${x[0]}">${esc(x[1])}</span>`;};
+  const ICON={overview:"🛡️",mfa:"🔐",sessions:"💻",events:"📜",protection:"🔒",backup:"💾",reliability:"📈",dr:"🧯",incidents:"🚨"};
+  let HOME=null,CACHE={};
+  const qs=new URLSearchParams(location.search);
+  const cur=()=>decodeURIComponent(location.hash.slice(1)||qs.get("tab")||"overview");
+  window.addEventListener("hashchange",()=>{if(HOME){render();window.scrollTo(0,0);}});
+  const close=()=>{$("ov").classList.remove("on");$("modal").innerHTML="";};
+  const open=h=>{$("modal").innerHTML=h;$("ov").classList.add("on");};
+
+  function load(){api("/security/overview").then(h=>{HOME=h;
+      $("scopeB").textContent="صلاحيتك: "+h.scope.ar;$("asof").textContent="آخر تحديث: "+h.generated_at;
+      const m=h.mfa||{};
+      $("banner").innerHTML=(m.required&&!m.enabled)?`<div class="flag" style="background:rgba(245,179,1,.12);border:1px solid rgba(245,179,1,.4)">⚠️ سياسة الشركة تُلزم دورك بالتحقق بخطوتين ولم تفعّله بعد. <a href="#mfa" style="color:var(--mint,#10b981);font-weight:800">فعّله الآن</a></div>`:"";
+      render();})
+    .catch(e=>{$("tabs").innerHTML="";$("content").innerHTML=`<div class="state">${/صلاحي|غير مصرّح|403|شركة/.test(e.message)?"🔒 ":""}${esc(e.message)}</div>`;});}
+
+  function render(){const secs=HOME.sections||[];let k=cur();if(!secs.some(s=>s.key===k))k="overview";
+    $("tabs").innerHTML=secs.map(s=>`<button class="tab${s.key===k?" on":""}" data-tab="${s.key}">${ICON[s.key]||""} ${esc(s.label)}</button>`).join("");
+    document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{location.hash=b.dataset.tab;});
+    const fn=VIEW[k];$("content").innerHTML=`<div class="state">جارٍ التحميل…</div>`;
+    Promise.resolve(fn()).then(h=>{if(cur()===k||(k==="overview"&&!secs.some(s=>s.key===cur()))){$("content").innerHTML=h;wire(k);}})
+      .catch(e=>{$("content").innerHTML=`<div class="state">${esc(e.message)}</div>`;});}
+
+  // ═══ نظرة عامة
+  function vOverview(){const o=HOME.overview||{},p=HOME.posture;
+    const tiles=`<div class="tiles" style="grid-template-columns:repeat(4,minmax(0,1fr))" id="ovTiles">${(o.cards||[]).map(c=>`<div class="tile" data-go="${esc(c.go)}"><div class="l">${esc(c.label)}</div><div class="v">${c.value==null?"—":esc(typeof c.value==="number"?n(c.value,1):c.value)}${c.value!=null&&c.unit?`<span class="muted"> ${esc(c.unit)}</span>`:""}</div>${c.sub?`<div class="c muted">${esc(c.sub)}</div>`:""}</div>`).join("")}</div>`;
+    let post="";
+    if(p){const lv={good:["low","جيد"],watch:["medium","يحتاج متابعة"],critical:["critical","حرج"]}[p.level]||["grey","—"];
+      post=panel("وضع الأمان",`<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:10px"><div style="font-size:34px;font-weight:900">${p.score==null?"—":n(p.score)}<span class="muted">/100</span></div><span class="b ${lv[0]}">${lv[1]}</span>${p.open_critical_incidents?`<span class="b critical">حوادث حرجة مفتوحة: ${n(p.open_critical_incidents)}</span>`:""}</div>`+
+        tbl(["الفحص","الحالة","التفصيل","الوزن"],(p.checks||[]).map(c=>`<tr><td>${esc(c.label)}</td><td>${stB(c.status)}</td><td class="w">${esc(c.detail)}</td><td>${n(c.weight)}</td></tr>`))+
+        `<p class="muted" style="margin-top:8px">${esc(p.rule_ar)}</p>`+(p.unverifiable_ar||[]).map(x=>na("ℹ️ "+x)).join(""));}
+    const rc=(o.recent_critical||[]);
+    const crit=panel("تنبيهات حرجة (7 أيام)",rc.length?tbl(["الوقت","الحدث","المستخدم","التفصيل"],rc.map(e=>`<tr><td>${dt(e.at)}</td><td>${esc(e.kind_ar)}</td><td>${esc(e.user||"—")}</td><td class="w">${esc(e.detail||"")}</td></tr>`)):na("لا تنبيهات حرجة خلال 7 أيام"));
+    const m=HOME.mfa||{};
+    const me=panel("حسابك",`<div class="kv"><b>التحقق بخطوتين</b><span>${m.enabled?'<span class="b low">مفعّل</span>':'<span class="b critical">غير مفعّل</span>'}${m.required?' <span class="b medium">إلزامي لدورك</span>':""}</span><b>رموز الاسترداد</b><span>${m.enabled?n(m.recovery_left)+" متبقية":"—"}</span></div><div class="cta"><a class="btn" href="#mfa">${m.enabled?"إدارة التحقق بخطوتين":"فعّل التحقق بخطوتين"}</a><a class="btn ghost" href="#sessions">جلساتي وأجهزتي</a></div>`);
+    return tiles+(p?`<div class="grid2"><div>${post}</div><div>${me}${crit}</div></div>`:`<div class="grid2"><div>${me}</div><div>${crit}</div></div>`);}
+
+  // ═══ التحقق بخطوتين
+  function vMfa(){return api("/security/overview").then(h=>{HOME.mfa=h.mfa;const m=h.mfa||{};
+    if(!m.enabled){return panel("🔐 التحقق بخطوتين (MFA)",`<p>عند التفعيل يطلب الدخول رمزاً من 6 أرقام من تطبيق على جوالك بعد كلمة المرور — فلا يكفي تسرب كلمة المرور للدخول إلى حسابك.</p>
+        <div class="kv"><b>الحالة</b><span><span class="b critical">غير مفعّل</span>${m.required?' <span class="b medium">إلزامي لدورك حسب سياسة الشركة</span>':""}</span><b>التطبيقات</b><span>${esc(m.apps_ar)}</span></div>
+        ${m.login_ui?`<div class="cta"><button class="btn" id="mfaStart">ابدأ التفعيل</button></div>`:na("التفعيل غير متاح حالياً")}<div id="mfaSetup"></div>${msgEl("mfaMsg")}`);}
+    return panel("🔐 التحقق بخطوتين (MFA)",`<div class="kv"><b>الحالة</b><span><span class="b low">مفعّل</span>${m.required?' <span class="b medium">إلزامي لدورك</span>':""}</span><b>منذ</b><span>${dt(m.since)}</span><b>آخر استخدام</b><span>${dt(m.last_used)}</span><b>رموز الاسترداد</b><span>${n(m.recovery_left)} متبقية ${m.recovery_left<=2?'<span class="b medium">ولّد رموزاً جديدة</span>':""}</span></div>
+      <h3>توليد رموز استرداد جديدة (تُلغى القديمة)</h3><div class="fg"><label>كلمة المرور<input type="password" id="rcPw" autocomplete="current-password"></label><label>رمز التطبيق الحالي<input id="rcCode" inputmode="numeric" maxlength="6" dir="ltr"></label></div>
+      <div class="cta"><button class="btn" id="rcGo">ولّد رموزاً جديدة</button></div><div id="rcOut"></div>${msgEl("rcMsg")}
+      ${m.required?na("لا يمكن إيقاف التحقق بخطوتين لأن سياسة الشركة تُلزم دورك به."):`<h3>إيقاف التحقق بخطوتين</h3><div class="fg"><label>كلمة المرور<input type="password" id="dsPw" autocomplete="current-password"></label><label>رمز التطبيق أو رمز استرداد<input id="dsCode" dir="ltr" maxlength="16"></label></div>
+      <div class="cta"><button class="btn ghost red" id="dsGo">إيقاف</button></div>${msgEl("dsMsg")}`}`);});}
+  const recBox=codes=>`<div class="panel" style="border-color:#f5b301;margin-top:10px"><h2>🗝️ رموز الاسترداد — تُعرض مرة واحدة</h2><p class="muted">احفظها في مكان آمن خارج جوالك. كل رمز يُستخدم مرة واحدة إذا فقدت جهاز المصادقة.</p>
+      <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;direction:ltr;font-family:monospace;font-size:15px;font-weight:700" id="rcList">${codes.map(c=>`<div style="background:var(--bg,#070b09);border:1px solid var(--line,#1d2c24);border-radius:8px;padding:8px;text-align:center">${esc(c)}</div>`).join("")}</div>
+      <div class="cta"><button class="btn" id="rcCopy">نسخ</button><button class="btn ghost" id="rcDl">تنزيل ملف نصي</button></div></div>`;
+  function wireRec(codes){const t="رموز استرداد نبّاه — كل رمز يُستخدم مرة واحدة\n\n"+codes.join("\n")+"\n";
+    const c=$("rcCopy");if(c)c.onclick=()=>{(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>{c.textContent="✔ نُسخت";}).catch(()=>{c.textContent="انسخها يدوياً";});};
+    const d=$("rcDl");if(d)d.onclick=()=>{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([t],{type:"text/plain;charset=utf-8"}));a.download="nabbah-recovery-codes.txt";document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);};}
+
+  // ═══ الجلسات والأجهزة
+  function vSessions(){return api("/security/sessions").then(j=>{CACHE.sess=j;const sc=j.scope||{};
+    const pol=j.policy||{};
+    const devs=tbl(["المستخدم","الجهاز","الجلسات","النشطة","أول ظهور","آخر نشاط"],(j.devices||[]).map(d=>`<tr><td>${esc(d.user)}</td><td>${esc(d.device)} <span class="muted">${esc({mobile:"جوال",tablet:"لوحي",desktop:"حاسب"}[d.kind]||"")}</span></td><td>${n(d.sessions)}</td><td>${n(d.active)}</td><td>${dt(d.first_seen)}</td><td>${dt(d.last_seen)}</td></tr>`),"لا أجهزة مسجلة بعد");
+    const rows=(j.sessions||[]).map(x=>`<tr><td>${esc(x.user)}</td><td>${esc(x.device)}${x.current?' <span class="b low">هذا الجهاز</span>':""}${x.mfa?' <span class="b grey">MFA</span>':""}</td><td dir="ltr">${esc(x.ip)}</td><td>${dt(x.created_at)}</td><td>${dt(x.last_seen)}</td><td>${x.active?'<span class="b low">نشطة</span>':`<span class="b grey">${x.revoked?"منتهية"+(x.revoked_by?" ("+esc(x.revoked_by)+")":""):"انتهت مدتها"}</span>`}</td><td>${x.can_revoke&&!x.current?`<button class="btn ghost red" data-rev="${x.id}">إنهاء</button>`:""}</td></tr>`);
+    const users=[...new Map((j.sessions||[]).filter(x=>x.user_id).map(x=>[x.user_id,x.user])).entries()];
+    const admin=sc.manage_sessions_others?`<h3>إنهاء كل جلسات مستخدم في الشركة</h3><div class="bar"><select id="raUser">${users.map(([id,nm])=>`<option value="${id}">${esc(nm)}</option>`).join("")}</select><button class="btn ghost red" id="raUserGo">إنهاء كل جلساته</button></div>`:"";
+    return `<div class="tiles"><div class="tile"><div class="l">الجلسات النشطة</div><div class="v">${n(j.active)}</div></div><div class="tile"><div class="l">مدة الجلسة (السياسة)</div><div class="v">${n(pol.session_days)} <span class="muted">يوم</span></div></div><div class="tile"><div class="l">إنهاء عند الخمول</div><div class="v">${pol.idle_minutes?n(pol.idle_minutes)+' <span class="muted">دقيقة</span>':"غير مفعّل"}</div></div></div>`+
+      panel("💻 الأجهزة",devs)+panel("الجلسات",tbl(["المستخدم","الجهاز","IP (مقنّع)","البداية","آخر نشاط","الحالة",""],rows,"لا جلسات")+
+      `<div class="cta"><button class="btn ghost red" id="raMe">إنهاء كل جلساتي على الأجهزة الأخرى</button></div>${admin}${msgEl("sesMsg")}<p class="muted">عناوين IP تُخزّن مقنّعة. الجلسات التي سبقت هذا التحديث لا تظهر هنا وتنتهي بتغيير كلمة المرور أو «إنهاء كل الجلسات».</p>`);});}
+
+  // ═══ الأحداث
+  let EVF={days:30,kind:""};
+  function vEvents(){return api(`/security/events?days=${EVF.days}&kind=${encodeURIComponent(EVF.kind)}`).then(j=>{
+    const chips=(j.counts||[]).map(c=>`<span class="chip" data-kind="${esc(c.kind)}">${esc(c.kind_ar)}: ${n(c.n)}</span>`).join("");
+    return panel("📜 الأحداث الأمنية",`<div class="bar"><select id="evDays">${[1,7,30,90,365].map(d=>`<option value="${d}"${d==EVF.days?" selected":""}>آخر ${d===1?"يوم":d+" يوماً"}</option>`).join("")}</select>
+      <select id="evKind"><option value="">كل الأنواع</option>${(j.kinds||[]).map(k=>`<option value="${esc(k.kind)}"${k.kind===EVF.kind?" selected":""}>${esc(k.kind_ar)}</option>`).join("")}</select><span class="muted">مدة الاحتفاظ: ${n(j.retention_days)} يوماً</span></div>
+      <div class="chips" style="margin-bottom:10px">${chips}</div>`+
+      tbl(["الوقت","الحدث","الخطورة","المستخدم","IP","الجهاز","التفصيل"],(j.items||[]).map(e=>`<tr><td>${dt(e.at)}</td><td>${esc(e.kind_ar)}</td><td>${sevB(e.severity)}</td><td>${esc(e.user)}</td><td dir="ltr">${esc(e.ip)}</td><td>${esc(e.device||"")}</td><td class="w">${esc(e.detail||"")}</td></tr>`),"لا أحداث في هذه الفترة")+
+      `<p class="muted">${j.scope&&j.scope.company_view?"تعرض أحداث كل مستخدمي الشركة.":"تعرض أحداث حسابك فقط."} محاولات الدخول ببريد غير مسجّل تُحفظ مقنّعة ولا ترتبط بأي شركة.</p>`);});}
+
+  // ═══ حماية البيانات + السياسة
+  function vProtection(){return api("/security/protection").then(j=>{const p=j.policy||{},roles=j.roles||[];
+    const chk=(name,sel)=>`<div class="chips">${roles.map(r=>`<label class="chip" style="cursor:pointer"><input type="checkbox" data-${name}="${r}"${(sel||[]).includes(r)?" checked":""}${j.can_edit?"":" disabled"}> ${esc(ROLE_AR[r]||r)}</label>`).join("")}</div>`;
+    const form=`<div class="fg"><label class="full">إلزام التحقق بخطوتين لهذه الأدوار والمسميات${chk("mfar",p.mfa_required_roles)}</label>
+      <label>مدة الجلسة القصوى (أيام، 1–30)<input type="number" id="pSd" min="1" max="30" value="${esc(p.session_days)}"${j.can_edit?"":" disabled"}></label>
+      <label>إنهاء الجلسة عند الخمول (دقائق، 0 = بلا، أو 15–1440)<input type="number" id="pIdle" min="0" max="1440" value="${esc(p.idle_minutes)}"${j.can_edit?"":" disabled"}></label>
+      <label>فترة النسخ الاحتياطي المطلوبة (أيام)<input type="number" id="pBk" min="1" max="90" value="${esc(p.backup_interval_days)}"${j.can_edit?"":" disabled"}></label>
+      <label>الاحتفاظ بالأحداث الأمنية (أيام، 30–3650)<input type="number" id="pRet" min="30" max="3650" value="${esc(p.event_retention_days)}"${j.can_edit?"":" disabled"}></label>
+      <label class="full">من يصدّر النسخ الاحتياطية${chk("expr",p.export_roles)}</label></div>
+      ${j.can_edit?`<div class="cta"><button class="btn" id="pSave">حفظ السياسة</button></div>`:na("عرض فقط — تعديل السياسة للمالك ومسؤول التقنية")}${msgEl("pMsg")}
+      <p class="muted">السياسة الإلزامية لا تمنع الدخول: يُنبَّه المستخدم ويُوجَّه لتفعيل التحقق بخطوتين، وتظهر الفجوة في درجة وضع الأمان.</p>`;
+    return panel("🔒 ضوابط حماية البيانات",tbl(["الضابط","الحالة","التفصيل"],(j.checks||[]).map(c=>`<tr><td>${esc(c.label)}</td><td>${stB(c.status)}</td><td class="w">${esc(c.detail)}</td></tr>`))+`<p class="muted">${esc(j.note_ar)}</p>`)+panel("سياسة أمن الشركة",form);});}
+
+  // ═══ النسخ الاحتياطي
+  function vBackup(){return api("/security/backups").then(j=>{
+    const today=new Date().toISOString().slice(0,10);
+    const ST2={ok:["low","ناجح"],failed:["critical","فشل"],running:["medium","جارٍ"]};
+    const rows=(j.items||[]).map(b=>{const s=ST2[b.status]||["grey",b.status];return `<tr><td>${dt(b.at)}</td><td>${esc(b.kind_ar)}</td><td><span class="b ${s[0]}">${esc(s[1])}</span></td><td>${b.rows==null?"—":n(b.rows)}</td><td>${b.size_bytes?n(b.size_bytes/1024,1)+" KB":"—"}</td><td>${esc(b.by||"")}</td><td class="w">${esc(b.note||"")}</td></tr>`;});
+    return `<div class="grid2"><div>`+panel("💾 تصدير نسخة منطقية لبيانات الشركة",`<p class="muted">${esc(j.format_ar)}</p><div class="kv"><b>الجداول المشمولة</b><span>${n(j.tables)}</span><b>الفترة المطلوبة</b><span>كل ${n(j.interval_days)} أيام</span></div>
+        ${j.can_export?`<div class="cta"><button class="btn" id="bkExp">تنزيل نسخة الآن</button></div>`:na("سياسة الشركة لا تسمح لدورك بالتصدير")}${msgEl("bkMsg")}`)+
+      panel("نسخة المزود (Railway)",`<p class="muted">${esc(j.provider_note_ar)}</p>${j.can_test?`<div class="fg"><label>تاريخ النسخة<input type="date" id="pvD" max="${today}" value="${today}"></label><label>كيف تحققت منها؟<input id="pvN" placeholder="لوحة Railway › Backups — النسخة موجودة"></label></div><div class="cta"><button class="btn ghost" id="pvGo">تسجيل</button></div>${msgEl("pvMsg")}`:""}`)+`</div><div>`+
+      panel("🧪 اختبار استعادة جاف",`<p class="muted">ارفع ملف نسخة صدّرته من هنا: نتحقق من اكتماله وبصمة كل جدول وأعداده ونقارنها بالبيانات الحالية — دون تعديل أي شيء.</p>${j.can_test?`<div class="bar"><input type="file" id="rtF" accept=".gz,.ndjson,.json,application/gzip"><button class="btn" id="rtGo">اختبر</button></div>`:na("للمالك ومسؤول التقنية")}<div id="rtOut"></div>`)+`</div></div>`+
+      panel("سجل النسخ والاختبارات",tbl(["الوقت","النوع","الحالة","الصفوف","الحجم","بواسطة","ملاحظة"],rows,"لا نسخ أو اختبارات مسجلة بعد"));});}
+  const rtHtml=r=>`<div class="flag" style="background:${r.ok?"rgba(16,185,129,.12)":"rgba(239,68,68,.12)"}">${r.ok?"✔ الملف سليم وقابل للاستعادة":"✖ فشل الاختبار"} — ${n(r.total_rows)} صفاً${r.created_at?" · أُنشئت "+esc(r.created_at):""}</div>`+
+    (r.errors||[]).map(e=>`<div class="neg" style="font-size:13px">• ${esc(e)}</div>`).join("")+(r.warnings||[]).slice(0,8).map(e=>`<div class="warn" style="font-size:13px">• ${esc(e)}</div>`).join("")+
+    ((r.tables||[]).length?tbl(["الجدول","في النسخة","الحالي","الفرق"],r.tables.map(t=>`<tr><td dir="ltr">${esc(t.table)}</td><td>${n(t.in_backup)}</td><td>${t.current==null?"—":n(t.current)}</td><td class="${t.diff?"warn":""}">${t.diff==null?"—":(t.diff>0?"+":"")+n(t.diff)}</td></tr>`)):"");
+
+  // ═══ الموثوقية
+  let RW=60;
+  function vReliability(){return api(`/security/reliability?window=${RW}`).then(r=>{
+    const stt={ok:["low","سليم"],degraded:["critical","متدهور"],unknown:["grey","لا حركة كافية"]}[r.status]||["grey",r.status];
+    const tile=(l,v,u)=>`<div class="tile"><div class="l">${l}</div><div class="v">${v}${u?`<span class="muted"> ${u}</span>`:""}</div></div>`;
+    return `<div class="bar"><select id="rW">${[15,60,360,1440].map(w=>`<option value="${w}"${w==RW?" selected":""}>آخر ${w<60?w+" دقيقة":w/60+" ساعة"}</option>`).join("")}</select><span class="b ${stt[0]}">${stt[1]}</span></div>
+      <div class="tiles" style="grid-template-columns:repeat(4,minmax(0,1fr))">${tile("التوفر",r.availability_pct==null?"—":n(r.availability_pct,2),"%")}${tile("الطلبات",n(r.requests))}${tile("أخطاء الخادم (5xx)",n(r.errors_5xx))}${tile("رفض الصلاحية (401/403)",n(r.auth_denied))}
+      ${tile("زمن الاستجابة p50",r.p50_ms==null?"—":n(r.p50_ms,1),"ms")}${tile("زمن الاستجابة p95",r.p95_ms==null?"—":n(r.p95_ms,1),"ms")}${tile("قاعدة البيانات",r.db&&r.db.ok?"متصلة":r.db&&r.db.ok===false?"✖ تعذّر":"—",r.db&&r.db.ms!=null?n(r.db.ms,1)+" ms":"")}${tile("مدة التشغيل",n(r.uptime_h,1),"ساعة")}</div>`+
+      `<div class="grid2"><div>`+panel("أكثر المسارات طلباً",tbl(["المسار","الطلبات","الأخطاء","p95"],(r.top_routes||[]).map(x=>`<tr><td dir="ltr">${esc(x.route)}</td><td>${n(x.requests)}</td><td class="${x.errors?"neg":""}">${n(x.errors)}</td><td>${n(x.p95_ms,1)} ms</td></tr>`),"لا حركة في هذه الفترة"))+`</div><div>`+
+      panel("أبطأ المسارات",tbl(["المسار","p95"],(r.slow_routes||[]).map(x=>`<tr><td dir="ltr">${esc(x.route)}</td><td>${n(x.p95_ms,1)} ms</td></tr>`),"—"))+
+      panel("المهام المجدولة",tbl(["المهمة","آخر تشغيل","الحالة"],(r.jobs||[]).map(x=>`<tr><td>${esc(x.name)}</td><td>${esc(x.last_run||"—")}</td><td class="${x.status==="failed"?"neg":""}">${esc(x.status)}</td></tr>`),"لا مهام مجدولة"))+`</div></div><p class="muted">${esc(r.scope_ar)}</p>`;});}
+
+  // ═══ التعافي من الكوارث
+  function vDr(){return api("/security/dr").then(j=>{const p=j.plan||{},st=j.status||{},ed=j.can_edit;CACHE.dr=j;
+    const sys=[...new Set([...(st.systems_catalog||[]),...(p.systems||[])])],scen=[...new Set([...(st.scenarios_catalog||[]),...(p.scenarios||[])])];
+    const team=(p.team&&p.team.length?p.team:[{name:"",role:"",contact:""}]);
+    const lt=st.last_test;
+    const stat=`<div class="flag" style="background:${st.ready?"rgba(16,185,129,.12)":"rgba(245,179,1,.12)"}">${st.ready?"✔ الخطة جاهزة: مكتملة ومعتمدة ومختبرة":"⚠️ الخطة غير جاهزة"}</div>${(st.gaps||[]).map(g=>`<div class="warn" style="font-size:13px">• ${esc(g)}</div>`).join("")}
+      <div class="kv"><b>الاعتماد</b><span>${p.approved_by?`${esc(p.approved_by)} · ${dt(p.approved_at)}`:"غير معتمدة"}</span><b>آخر اختبار</b><span>${lt?`${esc(lt.date)} · ${esc(lt.scenario)} · ${esc({pass:"ناجح",partial:"جزئي",fail:"فاشل"}[lt.result]||lt.result)}`:"—"}</span><b>تحقيق RTO</b><span>${st.rto_met==null?"—":st.rto_met?'<span class="b low">تحقق</span>':'<span class="b critical">لم يتحقق</span>'}</span></div><p class="muted">${esc(st.rule_ar)}</p>
+      ${j.can_approve&&p.rpo_hours&&!p.approved_by?`<div class="cta"><button class="btn" id="drApprove">اعتماد الخطة</button></div>`:""}${msgEl("drAMsg")}`;
+    const dis=ed?"":" disabled";
+    const form=`<div class="fg"><label>RPO — أقصى فقد بيانات مقبول (ساعات)<input type="number" id="drRpo" min="0" step="0.5" value="${esc(p.rpo_hours??"")}"${dis}></label><label>RTO — أقصى زمن توقف مقبول (ساعات)<input type="number" id="drRto" min="0" step="0.5" value="${esc(p.rto_hours??"")}"${dis}></label>
+      <label class="full">الأنظمة الحرجة<div class="chips">${sys.map(x=>`<label class="chip"><input type="checkbox" data-sys="${esc(x)}"${(p.systems||[]).includes(x)?" checked":""}${dis}> ${esc(x)}</label>`).join("")}</div></label>
+      <label class="full">سيناريوهات الخطة<div class="chips">${scen.map(x=>`<label class="chip"><input type="checkbox" data-scn="${esc(x)}"${(p.scenarios||[]).includes(x)?" checked":""}${dis}> ${esc(x)}</label>`).join("")}</div></label>
+      <div class="full"><div class="muted" style="margin-bottom:4px">فريق الطوارئ</div><div id="drTeam">${team.map((m,i)=>`<div class="fg" style="grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:6px" data-tm><input placeholder="الاسم" value="${esc(m.name)}" data-tn${dis}><input placeholder="الدور" value="${esc(m.role)}" data-tr${dis}><input placeholder="التواصل" value="${esc(m.contact||"")}" data-tc${dis}></div>`).join("")}</div>${ed?`<button class="btn ghost" id="drAddM" type="button">+ عضو</button>`:""}</div>
+      <label class="full">ملاحظات وخطوات التعافي<textarea id="drNotes" rows="3"${dis}>${esc(p.notes||"")}</textarea></label></div>
+      ${ed?`<div class="cta"><button class="btn" id="drSave">حفظ الخطة</button></div><p class="muted">أي تعديل يُلغي الاعتماد ويتطلب اعتماد المالك من جديد.</p>`:""}${msgEl("drMsg")}`;
+    const today=new Date().toISOString().slice(0,10);
+    const tests=tbl(["التاريخ","السيناريو","النتيجة","زمن التعافي الفعلي","بواسطة","ملاحظات"],(j.tests||[]).map(t=>`<tr><td>${esc(t.date)}</td><td>${esc(t.scenario)}</td><td>${esc({pass:"ناجح",partial:"جزئي",fail:"فاشل"}[t.result]||t.result)}</td><td>${t.actual_rto_hours==null?"—":n(t.actual_rto_hours,1)+" ساعة"}</td><td>${esc(t.by)}</td><td class="w">${esc(t.notes||"")}</td></tr>`),"لم يُجرَ اختبار بعد")+
+      (ed?`<h3>تسجيل اختبار تعافٍ</h3><div class="fg"><label>التاريخ<input type="date" id="dtD" max="${today}" value="${today}"></label><label>السيناريو<select id="dtS">${scen.map(x=>`<option>${esc(x)}</option>`).join("")}</select></label>
+        <label>النتيجة<select id="dtR"><option value="pass">ناجح</option><option value="partial">جزئي</option><option value="fail">فاشل</option></select></label><label>زمن التعافي الفعلي (ساعات)<input type="number" id="dtT" min="0" step="0.5"></label><label class="full">ملاحظات<textarea id="dtN" rows="2"></textarea></label></div>
+        <div class="cta"><button class="btn ghost" id="dtGo">تسجيل الاختبار</button></div>${msgEl("dtMsg")}`:"");
+    return `<div class="grid2"><div>${panel("🧯 جاهزية التعافي",stat)}${panel("اختبارات التعافي",tests)}</div><div>${panel("خطة التعافي",form)}</div></div>`;});}
+
+  // ═══ الحوادث
+  function vIncidents(){return api("/security/incidents").then(j=>{CACHE.inc=j;const ed=j.can_edit;
+    const NEED={contained:["containment","إجراءات الاحتواء"],eradicated:["remediation","كيف أُزيل السبب"],resolved:["lessons","الدروس المستفادة"]};
+    const flowKeys=(j.flow||[]).map(f=>f.key);
+    const card=i=>{const idx=flowKeys.indexOf(i.status),nx=flowKeys[idx+1],need=nx?NEED[nx]:null;
+      return `<div class="itm ${esc(i.severity)}"><h4>${esc(i.title)} ${sevB(i.severity)} <span class="b grey">${esc(i.status_ar)}</span></h4>
+        <div class="flow">${(i.progress||[]).map((p,k)=>`<div class="st"><div class="dot ${p.key===i.status&&i.status!=="resolved"?"cur":p.done?"on":""}">${k+1}</div>${esc(p.ar)}</div>`).join("")}</div>
+        <div class="kv"><b>فُتحت</b><span>${dt(i.opened_at)} · ${esc(i.opened_by)} · منذ ${n(i.age_h,1)} ساعة</span><b>المسؤول</b><span>${esc(i.owner||"—")}</span><b>الأنظمة</b><span>${esc((i.systems||[]).join("، ")||"—")}</span>
+        ${i.description?`<b>الوصف</b><span>${esc(i.description)}</span>`:""}${i.containment?`<b>الاحتواء</b><span>${esc(i.containment)}</span>`:""}${i.remediation?`<b>إزالة السبب</b><span>${esc(i.remediation)}</span>`:""}${i.lessons?`<b>الدروس</b><span>${esc(i.lessons)}</span>`:""}</div>
+        <details style="margin-top:8px"><summary class="muted" style="cursor:pointer">السجل (${n((i.history||[]).length)})</summary>${(i.history||[]).map(h=>`<div class="muted">${esc(h.at)} · ${esc(h.by)} · ${h.to?esc((j.flow.find(f=>f.key===h.to)||{}).ar||h.to):"ملاحظة"}${h.note?" — "+esc(h.note):""}</div>`).join("")}</details>
+        ${ed&&nx?`<div class="fg" style="margin-top:8px">${need?`<label class="full">${esc(need[1])} (مطلوب)<textarea rows="2" data-need="${i.id}" data-field="${need[0]}"></textarea></label>`:""}<label class="full">ملاحظة (اختياري)<input data-note="${i.id}"></label></div>
+          <div class="cta"><button class="btn" data-next="${i.id}" data-to="${nx}">نقل إلى: ${esc((j.flow.find(f=>f.key===nx)||{}).ar||nx)}</button>${i.status==="contained"?`<button class="btn ghost" data-next="${i.id}" data-to="investigating">إعادة التحقيق</button>`:""}</div><div class="muted" id="incMsg${i.id}"></div>`:""}</div>`;};
+    const form=ed?panel("فتح حادثة جديدة",`<div class="fg"><label class="full">العنوان<input id="inT" maxlength="200"></label><label>الخطورة<select id="inS">${(j.severities||[]).map(s=>`<option value="${s.key}"${s.key==="medium"?" selected":""}>${esc(s.ar)}</option>`).join("")}</select></label><label>المسؤول<input id="inO"></label>
+      <label class="full">الأنظمة المتأثرة<div class="chips">${(j.systems_catalog||[]).map(x=>`<label class="chip"><input type="checkbox" data-isys="${esc(x)}"> ${esc(x)}</label>`).join("")}</div></label><label class="full">الوصف<textarea id="inD" rows="3"></textarea></label></div>
+      <div class="cta"><button class="btn red" id="inGo">فتح الحادثة</button></div>${msgEl("inMsg")}`):"";
+    const items=j.items||[];
+    const open_=items.filter(i=>i.status!=="resolved"),closed=items.filter(i=>i.status==="resolved");
+    return `<div class="tiles"><div class="tile"><div class="l">حوادث مفتوحة</div><div class="v">${n(j.open)}</div></div><div class="tile"><div class="l">حرجة/مرتفعة مفتوحة</div><div class="v">${n(open_.filter(i=>["critical","high"].includes(i.severity)).length)}</div></div><div class="tile"><div class="l">مغلقة</div><div class="v">${n(closed.length)}</div></div></div>`+
+      form+panel("🚨 الحوادث المفتوحة",open_.length?open_.map(card).join(""):na("لا حوادث مفتوحة"))+(closed.length?panel("الحوادث المغلقة",closed.map(card).join("")):"")+
+      `<p class="muted">المراحل متسلسلة ولا يمكن القفز بينها. الاحتواء وإزالة السبب والإغلاق تتطلب توثيقاً، والحوادث الحرجة المفتوحة تخفض درجة وضع الأمان 15 نقطة.</p>`;});}
+
+  const VIEW={overview:vOverview,mfa:vMfa,sessions:vSessions,events:vEvents,protection:vProtection,backup:vBackup,reliability:vReliability,dr:vDr,incidents:vIncidents};
+  const refresh=()=>{api("/security/overview").then(h=>{HOME=h;render();}).catch(()=>render());};
+
+  function wire(k){
+    document.querySelectorAll("[data-go]").forEach(t=>t.onclick=()=>{location.hash=t.dataset.go;});
+    if(k==="mfa"){
+      const st=$("mfaStart");if(st)st.onclick=()=>{st.disabled=true;api("/security/mfa/setup",{}).then(r=>{const g=r.secret.replace(/(.{4})/g,"$1 ").trim();let qr="";try{qr=nbQRsvg(r.otpauth,196);}catch(e){qr="";}
+          $("mfaSetup").innerHTML=`<div class="grid2" style="margin-top:12px"><div style="text-align:center"><div style="display:inline-block;background:#fff;padding:8px;border-radius:12px" id="qrBox">${qr}</div><div class="muted" style="margin-top:6px">امسح الرمز بتطبيق المصادقة</div><a class="btn ghost" style="margin-top:6px" href="${esc(r.otpauth)}">فتح في تطبيق المصادقة (من الجوال)</a></div>
+            <div><h3>أو أدخل المفتاح يدوياً</h3><div dir="ltr" style="font-family:monospace;font-size:16px;font-weight:800;background:var(--bg,#070b09);border:1px solid var(--line,#1d2c24);border-radius:10px;padding:10px;word-break:break-all" id="mfaSecret">${esc(g)}</div>
+            <div class="muted" style="margin:6px 0">الحساب: ${esc(r.account)} · النوع: مبني على الوقت (TOTP) · 6 أرقام</div><p class="muted">${esc(r.note_ar)}</p>
+            <div class="fg"><label class="full">الرمز من التطبيق<input id="mfaCode" inputmode="numeric" maxlength="6" dir="ltr" autocomplete="one-time-code"></label></div><div class="cta"><button class="btn" id="mfaEnable">تأكيد التفعيل</button></div></div></div>`;
+          $("mfaEnable").onclick=()=>{const b=$("mfaEnable");b.disabled=true;api("/security/mfa/enable",{code:$("mfaCode").value}).then(r2=>{
+              $("mfaSetup").innerHTML=`<div class="flag" style="background:rgba(16,185,129,.12)">✔ فُعّل التحقق بخطوتين. سيُطلب الرمز في كل دخول جديد.</div>`+recBox(r2.recovery_codes);wireRec(r2.recovery_codes);st.style.display="none";HOME.mfa.enabled=true;$("banner").innerHTML="";})
+            .catch(e=>{b.disabled=false;bad("mfaMsg",e.message);});};})
+        .catch(e=>{st.disabled=false;bad("mfaMsg",e.message);});};
+      const rg=$("rcGo");if(rg)rg.onclick=()=>{rg.disabled=true;api("/security/mfa/recovery",{password:$("rcPw").value,code:$("rcCode").value}).then(r=>{$("rcOut").innerHTML=recBox(r.recovery_codes);wireRec(r.recovery_codes);$("rcPw").value="";$("rcCode").value="";rg.disabled=false;ok("rcMsg","✔ أُلغيت الرموز القديمة");}).catch(e=>{rg.disabled=false;bad("rcMsg",e.message);});};
+      const dg=$("dsGo");if(dg)dg.onclick=()=>{const c=$("dsCode").value.trim(),isRc=/-|[a-fA-F]/.test(c)||c.length>8;if(!confirm("إيقاف التحقق بخطوتين يُضعف حماية حسابك. متأكد؟"))return;dg.disabled=true;
+        api("/security/mfa/disable",isRc?{password:$("dsPw").value,recovery_code:c}:{password:$("dsPw").value,code:c}).then(()=>{refresh();}).catch(e=>{dg.disabled=false;bad("dsMsg",e.message);});};
+    }
+    if(k==="sessions"){
+      document.querySelectorAll("[data-rev]").forEach(b=>b.onclick=()=>{b.disabled=true;api("/security/sessions/revoke",{id:Number(b.dataset.rev)}).then(()=>render()).catch(e=>{b.disabled=false;bad("sesMsg",e.message);});});
+      const rm=$("raMe");if(rm)rm.onclick=()=>{if(!confirm("سيتم إخراجك من كل الأجهزة الأخرى. هذا الجهاز يبقى مسجلاً."))return;rm.disabled=true;api("/security/sessions/revoke-all",{}).then(r=>{if(r.token)localStorage.setItem("nabbah_token",r.token);location.reload();}).catch(e=>{rm.disabled=false;bad("sesMsg",e.message);});};
+      const ru=$("raUserGo");if(ru)ru.onclick=()=>{const sel=$("raUser");if(!sel||!sel.value)return;if(!confirm("إنهاء كل جلسات "+sel.options[sel.selectedIndex].text+"؟"))return;ru.disabled=true;
+        api("/security/sessions/revoke-all",{user_id:Number(sel.value)}).then(r=>{if(r.token){localStorage.setItem("nabbah_token",r.token);location.reload();return;}ok("sesMsg","✔ أُنهيت "+n(r.revoked)+" جلسات");ru.disabled=false;setTimeout(render,700);}).catch(e=>{ru.disabled=false;bad("sesMsg",e.message);});};
+    }
+    if(k==="events"){
+      $("evDays").onchange=e=>{EVF.days=Number(e.target.value);render();};$("evKind").onchange=e=>{EVF.kind=e.target.value;render();};
+      document.querySelectorAll("[data-kind]").forEach(c=>c.onclick=()=>{EVF.kind=c.dataset.kind;render();});
+    }
+    if(k==="protection"){const sv=$("pSave");if(sv)sv.onclick=()=>{const g=a=>[...document.querySelectorAll(`[data-${a}]:checked`)].map(x=>x.getAttribute("data-"+a));sv.disabled=true;
+      api("/security/policy",{mfa_required_roles:g("mfar"),export_roles:g("expr"),session_days:Number($("pSd").value),idle_minutes:Number($("pIdle").value),backup_interval_days:Number($("pBk").value),event_retention_days:Number($("pRet").value)})
+        .then(r=>{sv.disabled=false;ok("pMsg","✔ حُفظت السياسة"+(r.purged_events?` · حُذف ${n(r.purged_events)} حدثاً أقدم من مدة الاحتفاظ`:""));}).catch(e=>{sv.disabled=false;bad("pMsg",e.message);});};}
+    if(k==="backup"){
+      const ex=$("bkExp");if(ex)ex.onclick=()=>{ex.disabled=true;ok("bkMsg","جارٍ تجهيز النسخة…");
+        fetch("/security/backup/export",{headers:{Authorization:"Bearer "+TOKEN}}).then(async r=>{if(!r.ok){const j=await r.json().catch(()=>({}));throw new Error(j.detail||"HTTP "+r.status);}
+          const cd=r.headers.get("Content-Disposition")||"",m=cd.match(/filename="([^"]+)"/);const b=await r.blob();const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=m?m[1]:"nabbah-backup.ndjson.gz";document.body.appendChild(a);a.click();
+          setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);ex.disabled=false;ok("bkMsg",`✔ نُزّلت النسخة (${n(b.size/1024,1)} KB) — اختبرها من «اختبار استعادة جاف»`);setTimeout(render,1500);})
+        .catch(e=>{ex.disabled=false;bad("bkMsg",e.message);});};
+      const pv=$("pvGo");if(pv)pv.onclick=()=>{pv.disabled=true;api("/security/backup/provider",{date:$("pvD").value,note:$("pvN").value}).then(()=>render()).catch(e=>{pv.disabled=false;bad("pvMsg",e.message);});};
+      const rt=$("rtGo");if(rt)rt.onclick=()=>{const f=$("rtF").files[0];if(!f){$("rtOut").innerHTML=na("اختر ملف النسخة أولاً");return;}rt.disabled=true;$("rtOut").innerHTML=`<div class="muted">جارٍ الفحص…</div>`;
+        const fd=new FormData();fd.append("file",f);fetch("/security/backup/restore-test",{method:"POST",headers:{Authorization:"Bearer "+TOKEN},body:fd}).then(async r=>{const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.detail||"HTTP "+r.status);return j;})
+          .then(r=>{rt.disabled=false;$("rtOut").innerHTML=rtHtml(r);}).catch(e=>{rt.disabled=false;$("rtOut").innerHTML=`<div class="neg">${esc(e.message)}</div>`;});};
+    }
+    if(k==="reliability"){$("rW").onchange=e=>{RW=Number(e.target.value);render();};}
+    if(k==="dr"){
+      const am=$("drAddM");if(am)am.onclick=()=>{const d=document.createElement("div");d.className="fg";d.style.cssText="grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:6px";d.setAttribute("data-tm","");
+        d.innerHTML=`<input placeholder="الاسم" data-tn><input placeholder="الدور" data-tr><input placeholder="التواصل" data-tc>`;$("drTeam").appendChild(d);};
+      const sv=$("drSave");if(sv)sv.onclick=()=>{sv.disabled=true;const g=a=>[...document.querySelectorAll(`[data-${a}]:checked`)].map(x=>x.getAttribute("data-"+a));
+        const team=[...document.querySelectorAll("[data-tm]")].map(r=>({name:r.querySelector("[data-tn]").value,role:r.querySelector("[data-tr]").value,contact:r.querySelector("[data-tc]").value})).filter(m=>m.name.trim());
+        api("/security/dr/plan",{rpo_hours:$("drRpo").value,rto_hours:$("drRto").value,systems:g("sys"),scenarios:g("scn"),team,notes:$("drNotes").value}).then(()=>{sv.disabled=false;render();}).catch(e=>{sv.disabled=false;bad("drMsg",e.message);});};
+      const ap=$("drApprove");if(ap)ap.onclick=()=>{ap.disabled=true;api("/security/dr/approve",{}).then(()=>render()).catch(e=>{ap.disabled=false;bad("drAMsg",e.message);});};
+      const dtg=$("dtGo");if(dtg)dtg.onclick=()=>{dtg.disabled=true;api("/security/dr/test",{date:$("dtD").value,scenario:$("dtS").value,result:$("dtR").value,actual_rto_hours:$("dtT").value===""?null:$("dtT").value,notes:$("dtN").value})
+        .then(()=>render()).catch(e=>{dtg.disabled=false;bad("dtMsg",e.message);});};
+    }
+    if(k==="incidents"){
+      const ig=$("inGo");if(ig)ig.onclick=()=>{ig.disabled=true;api("/security/incidents",{title:$("inT").value,severity:$("inS").value,owner:$("inO").value,description:$("inD").value,systems:[...document.querySelectorAll("[data-isys]:checked")].map(x=>x.getAttribute("data-isys"))})
+        .then(()=>refresh()).catch(e=>{ig.disabled=false;bad("inMsg",e.message);});};
+      document.querySelectorAll("[data-next]").forEach(b=>b.onclick=()=>{const id=b.dataset.next,body={id:Number(id),to:b.dataset.to};const ta=document.querySelector(`[data-need="${id}"]`),nt=document.querySelector(`[data-note="${id}"]`);
+        if(ta&&b.dataset.to!=="investigating")body[ta.dataset.field]=ta.value;if(nt)body.note=nt.value;b.disabled=true;
+        api("/security/incidents/update",body).then(()=>refresh()).catch(e=>{b.disabled=false;bad("incMsg"+id,e.message);});});
+    }
+  }
+  $("ov").onclick=e=>{if(e.target===$("ov"))close();};
+  load();
+})();
+</script>
+<script src="nabbah-sidebar.js"></script>
+</body>
+</html>
