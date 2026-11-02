@@ -41,11 +41,20 @@
   .switch a:hover{text-decoration:underline}
   .back{text-align:center;margin-top:14px}
   .back a{color:var(--ink-muted);font-size:13px;text-decoration:none}
+  #mfaStep{display:none}
+  .mfa-ico{width:54px;height:54px;border-radius:16px;background:var(--mint-soft);display:grid;place-items:center;font-size:26px;margin:0 auto 6px}
+  #mfaCode{text-align:center;letter-spacing:8px;font-size:22px;font-weight:800;direction:ltr}
+  #mfaRecovery{text-align:center;letter-spacing:2px;direction:ltr;text-transform:uppercase}
+  .linkbtn{background:none;border:none;color:var(--mint-darker);font-family:'Tajawal';font-weight:700;font-size:14px;cursor:pointer;padding:4px}
+  .linkbtn:hover{text-decoration:underline}
+  .mfa-links{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .hint{color:var(--ink-muted);font-size:13px;text-align:center;margin-top:-10px;margin-bottom:16px;line-height:1.7}
 </style>
 </head>
 <body>
   <div class="box">
     <div class="logo"><span class="bell">🔔</span><span class="name">نبّاه</span></div>
+    <div id="pwStep">
     <h1>تسجيل الدخول</h1>
     <p class="sub">ادخل لحسابك للوصول إلى تحليلاتك</p>
 
@@ -62,6 +71,31 @@
       <span class="spin" id="spin"></span>
       <span id="btn-txt">دخول</span>
     </button>
+
+    </div>
+
+    <div id="mfaStep">
+      <div class="mfa-ico">🔐</div>
+      <h1>التحقق بخطوتين</h1>
+      <p class="sub" id="mfaSub">أدخل الرمز المكوّن من 6 أرقام من تطبيق المصادقة</p>
+      <div class="field" id="codeField">
+        <label for="mfaCode">رمز التحقق</label>
+        <input id="mfaCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="000000">
+      </div>
+      <div class="field" id="recField" style="display:none">
+        <label for="mfaRecovery">رمز الاسترداد</label>
+        <input id="mfaRecovery" type="text" autocomplete="off" maxlength="16" placeholder="XXXX-XXXX-XXXX">
+      </div>
+      <p class="hint" id="mfaHint">الرمز يتجدد كل 30 ثانية. صلاحية هذه الخطوة 5 دقائق.</p>
+      <button class="btn" id="mfaBtn" onclick="verifyMfa()">
+        <span class="spin" id="mfaSpin"></span>
+        <span id="mfaTxt">تحقق ودخول</span>
+      </button>
+      <div class="mfa-links">
+        <button type="button" class="linkbtn" id="recToggle" onclick="toggleRecovery()">فقدت جهازك؟ استخدم رمز استرداد</button>
+        <button type="button" class="linkbtn" onclick="backToPassword()">← رجوع</button>
+      </div>
+    </div>
 
     <div class="msg" id="msg"></div>
 
@@ -94,25 +128,11 @@
       const out = await res.json();
       if (!res.ok) {
         msg.className = "msg error"; msg.innerText = out.detail || "فشل الدخول";
+      } else if (out.mfa_required) {
+        // 6.7: الحساب مفعّل عليه التحقق بخطوتين → خطوة الرمز (لا يُصدر رمز دخول قبلها)
+        showMfa(out);
       } else {
-        localStorage.setItem("nabbah_token", out.token);
-        localStorage.setItem("nabbah_name", out.name);
-        localStorage.setItem("nabbah_active", out.is_active);
-        msg.className = "msg ok"; msg.innerText = "تم الدخول، جارٍ التحويل...";
-        // توجيه ذكي: لو المستخدم عنده شركة → لوحة الشركة مباشرة
-        try {
-          const ci = await fetch("/company/info", { headers: { "Authorization": "Bearer " + out.token } });
-          if (ci.ok) {
-            const info = await ci.json();
-            if (info.has_company) { window.location.href = "company-dashboard.html"; return; }
-          }
-        } catch (e) {}
-        // جاي من مسار الشركات (زر "ابدأ تحليل منشأتك") → تسجيل الشركة بدل التحليل القديم
-        var intent = null; try { intent = localStorage.getItem("nabbah_intent"); } catch (e) {}
-        if (intent === "company" || new URLSearchParams(location.search).get("next") === "company") {
-          window.location.href = "company-register.html"; return;
-        }
-        window.location.href = out.is_active == 1 ? "dashboard.html" : "trial.html";
+        await finishLogin(out);
       }
     } catch (e) {
       msg.className = "msg error"; msg.innerText = "تعذّر الاتصال بالخادم";
@@ -120,6 +140,107 @@
       btn.disabled = false; spin.style.display = "none"; btnTxt.innerText = "دخول";
     }
   }
+
+  // ===== الدخول الناجح: حفظ الرمز ثم التوجيه (نفس المنطق السابق) =====
+  async function finishLogin(out) {
+    const msg = document.getElementById("msg");
+    localStorage.setItem("nabbah_token", out.token);
+    localStorage.setItem("nabbah_name", out.name);
+    localStorage.setItem("nabbah_active", out.is_active);
+    msg.className = "msg ok"; msg.innerText = "تم الدخول، جارٍ التحويل...";
+    // توجيه ذكي: لو المستخدم عنده شركة → لوحة الشركة مباشرة
+    try {
+      const ci = await fetch("/company/info", { headers: { "Authorization": "Bearer " + out.token } });
+      if (ci.ok) {
+        const info = await ci.json();
+        if (info.has_company) {
+          // سياسة الشركة تُلزم دورك بالتحقق بخطوتين ولم تفعّله بعد → صفحة التفعيل (غير مانع)
+          window.location.href = out.mfa_setup_required ? "company-security.html?tab=mfa&required=1" : "company-dashboard.html";
+          return;
+        }
+      }
+    } catch (e) {}
+    // جاي من مسار الشركات (زر "ابدأ تحليل منشأتك") → تسجيل الشركة بدل التحليل القديم
+    var intent = null; try { intent = localStorage.getItem("nabbah_intent"); } catch (e) {}
+    if (intent === "company" || new URLSearchParams(location.search).get("next") === "company") {
+      window.location.href = "company-register.html"; return;
+    }
+    window.location.href = out.is_active == 1 ? "dashboard.html" : "trial.html";
+  }
+
+  // ===== 6.7 — خطوة التحقق بخطوتين =====
+  var mfaToken = "", useRecovery = false;
+  function showMfa(out) {
+    mfaToken = out.mfa_token || "";
+    useRecovery = false;
+    document.getElementById("pwStep").style.display = "none";
+    document.getElementById("mfaStep").style.display = "block";
+    document.getElementById("msg").className = "msg";
+    setRecovery(false);
+    document.getElementById("mfaCode").value = "";
+    document.getElementById("mfaRecovery").value = "";
+    setTimeout(function () { document.getElementById("mfaCode").focus(); }, 50);
+  }
+  function setRecovery(on) {
+    useRecovery = on;
+    document.getElementById("codeField").style.display = on ? "none" : "block";
+    document.getElementById("recField").style.display = on ? "block" : "none";
+    document.getElementById("mfaSub").innerText = on ? "أدخل أحد رموز الاسترداد التي حفظتها عند التفعيل (كل رمز يُستخدم مرة واحدة)" : "أدخل الرمز المكوّن من 6 أرقام من تطبيق المصادقة";
+    document.getElementById("mfaHint").style.display = on ? "none" : "block";
+    document.getElementById("recToggle").innerText = on ? "استخدم رمز التطبيق بدلاً من ذلك" : "فقدت جهازك؟ استخدم رمز استرداد";
+    setTimeout(function () { document.getElementById(on ? "mfaRecovery" : "mfaCode").focus(); }, 50);
+  }
+  function toggleRecovery() { setRecovery(!useRecovery); document.getElementById("msg").className = "msg"; }
+  function backToPassword() {
+    mfaToken = "";
+    document.getElementById("mfaStep").style.display = "none";
+    document.getElementById("pwStep").style.display = "block";
+    document.getElementById("msg").className = "msg";
+    document.getElementById("password").value = "";
+    document.getElementById("password").focus();
+  }
+  function normDigits(v) {
+    return String(v || "").replace(/[\u0660-\u0669]/g, function (d) { return String(d.charCodeAt(0) - 0x0660); })
+                          .replace(/[\u06F0-\u06F9]/g, function (d) { return String(d.charCodeAt(0) - 0x06F0); });
+  }
+  async function verifyMfa() {
+    const msg = document.getElementById("msg");
+    if (document.getElementById("mfaBtn").disabled) return;
+    const btn = document.getElementById("mfaBtn"), spin = document.getElementById("mfaSpin"), txt = document.getElementById("mfaTxt");
+    const code = normDigits(document.getElementById("mfaCode").value).replace(/\D/g, "");
+    const rc = document.getElementById("mfaRecovery").value.trim();
+    msg.className = "msg";
+    if (!useRecovery && code.length !== 6) { msg.className = "msg error"; msg.innerText = "أدخل الرمز المكوّن من 6 أرقام"; return; }
+    if (useRecovery && rc.replace(/[^0-9a-fA-F]/g, "").length !== 12) { msg.className = "msg error"; msg.innerText = "رمز الاسترداد بصيغة XXXX-XXXX-XXXX"; return; }
+    btn.disabled = true; spin.style.display = "block"; txt.innerText = "جارٍ التحقق...";
+    try {
+      const res = await fetch("/login/mfa", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(useRecovery ? { mfa_token: mfaToken, code: "", recovery_code: rc } : { mfa_token: mfaToken, code: code, recovery_code: "" })
+      });
+      const out = await res.json();
+      if (!res.ok) {
+        msg.className = "msg error"; msg.innerText = out.detail || "فشل التحقق";
+        // انتهت مهلة الخطوة (5 دقائق) → رجوع لكلمة المرور
+        if (res.status === 401 && /مهلة|سجّل الدخول من جديد/.test(out.detail || "")) { setTimeout(backToPassword, 1800); }
+        if (!useRecovery) { document.getElementById("mfaCode").value = ""; document.getElementById("mfaCode").focus(); }
+      } else {
+        await finishLogin(out);
+      }
+    } catch (e) {
+      msg.className = "msg error"; msg.innerText = "تعذّر الاتصال بالخادم";
+    } finally {
+      btn.disabled = false; spin.style.display = "none"; txt.innerText = "تحقق ودخول";
+    }
+  }
+  document.getElementById("mfaCode").addEventListener("input", function (e) {
+    var v = normDigits(e.target.value).replace(/\D/g, "").slice(0, 6);
+    if (e.target.value !== v) e.target.value = v;
+    if (v.length === 6) verifyMfa();
+  });
+  document.getElementById("mfaCode").addEventListener("keydown", e => { if (e.key === "Enter") verifyMfa(); });
+  document.getElementById("mfaRecovery").addEventListener("keydown", e => { if (e.key === "Enter") verifyMfa(); });
 
   document.getElementById("password").addEventListener("keydown", e => { if (e.key === "Enter") login(); });
 </script>
