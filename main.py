@@ -1428,6 +1428,182 @@ class CompanyBranchScenario(SQLModel, table=True):
     created_at: _DTCOL = Field(default_factory=_now_naive)
 
 
+class CompanyCompetitor(SQLModel, table=True):
+    """4.3 — ملف منافس (يُحدَّث ولا يُحذف — الأرشفة بدل الحذف)."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    name: str = ""
+    kind: str = "direct"                # direct | indirect
+    sector: str = ""
+    cities: str = ""
+    price_tier: str = ""                # economy | mid | premium
+    segments: str = ""
+    business_model: str = ""
+    products: str = ""
+    differentiators: str = ""
+    description: str = ""
+    website: str = ""
+    source: str = ""
+    status: str = "active"              # active | archived
+    created_by: str = ""
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+    updated_at: str = ""
+
+
+class CompanyCompetitorItem(SQLModel, table=True):
+    """4.3 — معلومة عن منافس أو السوق: حقيقة/ملاحظة/تقدير/سعر/نشاط/درجة/قوة/ضعف/سوق/تفضيل — كلٌّ بمصدره وتاريخه وثقته."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    competitor_id: Optional[int] = Field(default=None, index=True)
+    kind: str = "fact"
+    title: str = ""
+    detail: str = ""
+    value: Optional[float] = None
+    unit: str = ""
+    comp_product: str = ""
+    our_sku: str = ""
+    category: str = ""
+    dimension: str = ""
+    activity_type: str = ""
+    city: str = ""
+    significance: str = ""
+    impact: str = ""
+    period_from: str = ""
+    period_to: str = ""
+    region: str = ""
+    is_published: int = 0
+    observed_on: str = ""
+    published_on: str = ""
+    source_type: str = ""
+    source_url: str = ""
+    confidence: str = "low"
+    status: str = "active"              # active | retracted
+    retract_reason: str = ""
+    created_by: str = ""
+    created_by_id: Optional[int] = None
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+class CompanyCompetitorSetting(SQLModel, table=True):
+    """4.3 — حدود التنبيه ودرجات التموضع الذاتية للشركة (بمصدرها)."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    settings_json: str = "{}"
+    updated_by: str = ""
+    updated_at: str = ""
+
+
+class CompanyEvent(SQLModel, table=True):
+    """4.4 — حدث مؤثر (داخلي/خارجي) بمصدره وتاريخه. الأثر يُقاس من الوحدات الأصلية ولا يُخزَّن هنا."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    title: str = ""
+    type: str = "market"
+    origin: str = "internal"              # internal | external
+    source_type: str = ""
+    source_url: str = ""
+    published_on: str = ""
+    start_date: str = Field(default="", index=True)
+    end_date: str = ""
+    branches: str = ""
+    cities: str = ""
+    categories: str = ""
+    skus: str = ""
+    importance: str = "medium"
+    confidence: str = "medium"
+    status: str = "confirmed"             # confirmed | expected | cancelled
+    direction: str = "unknown"
+    description: str = ""
+    prep: str = ""
+    owner: str = ""
+    initiative_name: str = ""
+    initiative_cost: Optional[float] = None
+    cost_note: str = ""
+    lessons_json: str = ""
+    origin_ref: str = ""
+    cancel_reason: str = ""
+    created_by: str = ""
+    created_by_id: Optional[int] = None
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+    updated_at: str = ""
+
+
+class CompanyEventSetting(SQLModel, table=True):
+    """4.4 — حدود القياس والتنبيه ومصادر الأحداث الخارجية المعتمدة لدى الشركة."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    settings_json: str = "{}"
+    updated_by: str = ""
+    updated_at: str = ""
+
+
+class CompanyAIInteraction(SQLModel, table=True):
+    """4.5 — سجل تفاعلات المساعد: من سأل، متى، الوحدات المستخدمة/المرفوضة، النتيجة العامة — بلا أرقام ولا بيانات عملاء."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    user_id: Optional[int] = Field(default=None, index=True)
+    user_name: str = ""
+    service: str = ""
+    question: str = ""
+    intents_json: str = "[]"
+    modules_json: str = "[]"
+    denied_json: str = "[]"
+    confidence: str = ""
+    llm: str = ""
+    unverified: int = 0
+    error: str = ""
+    report_id: Optional[int] = None
+    decision_id: Optional[int] = None
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+class CompanyAIReport(SQLModel, table=True):
+    """4.5 — تقرير مولّد من المساعد (مسودة قابلة للمراجعة قبل الاعتماد/الإرسال)."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    kind: str = "custom"
+    title: str = ""
+    question: str = ""
+    content_json: str = "{}"
+    status: str = "draft"                 # draft | reviewed | approved | archived
+    created_by: str = ""
+    created_by_id: Optional[int] = None
+    recipient_user_id: Optional[int] = Field(default=None, index=True)
+    schedule_id: Optional[int] = None
+    reviewed_by: str = ""
+    reviewed_at: str = ""
+    review_note: str = ""
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+class CompanyAISchedule(SQLModel, table=True):
+    """4.5 — تقرير مجدول: النوع، التكرار، المستلمون (يُولَّد لكل مستلم بصلاحياته)، التسليم داخل المنصة."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    name: str = ""
+    kind: str = "executive"
+    freq: str = "weekly"
+    hour: int = 7
+    weekday: int = 6
+    day: int = 1
+    recipients: str = ""
+    active: int = 1
+    next_run: str = ""
+    last_run: str = ""
+    last_status: str = ""
+    created_by: str = ""
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+class CompanyAISetting(SQLModel, table=True):
+    """4.5 — سياسة الاحتفاظ بسجل التفاعلات وتفعيل السرد بالذكاء الاصطناعي."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    settings_json: str = "{}"
+    updated_by: str = ""
+    updated_at: str = ""
+
+
 class BenchmarkDataset(SQLModel, table=True):
     """طبقة المعايير القطاعية (3.5): company_id فارغ = معيار المنصّة (من الإدارة)، وإلا معيار خاص بالشركة.
     كل معيار بمصدره ومنهجيته وفترته وعيّنته وثقته — لا معيار بلا مصدر."""
@@ -2167,6 +2343,21 @@ def page_monthly_intelligence():
 @app.get("/company-branch-intelligence.html")
 def page_company_branch_intelligence():
     return FileResponse("company-branch-intelligence.html")
+
+
+@app.get("/company-competitor-intelligence.html")
+def page_company_competitor_intelligence():
+    return FileResponse("company-competitor-intelligence.html")
+
+
+@app.get("/company-events-intelligence.html")
+def page_company_events_intelligence():
+    return FileResponse("company-events-intelligence.html")
+
+
+@app.get("/company-assistant.html")
+def page_company_assistant():
+    return FileResponse("company-assistant.html")
 
 
 @app.get("/company-customer-intelligence.html")
@@ -5130,7 +5321,7 @@ def _load_p24(name):
     """يحمّل محركات 2.4 من المجلد أو من حزمة nabbah_engines."""
     try:
         import sys as _sys, os as _os, importlib
-        for _d in ("phase21", "phase22", "phase23", "phase24", "phase25", "phase26", "phase27", "phase28", "phase29", "phase210", "phase211", "phase30", "phase31", "phase32", "phase33", "phase34", "phase35", "phase37", "phase38", "phase39", "phase310", "phase311", "phase312", "phase41", "phase42"):
+        for _d in ("phase21", "phase22", "phase23", "phase24", "phase25", "phase26", "phase27", "phase28", "phase29", "phase210", "phase211", "phase30", "phase31", "phase32", "phase33", "phase34", "phase35", "phase37", "phase38", "phase39", "phase310", "phase311", "phase312", "phase41", "phase42", "phase43", "phase44", "phase45"):
             _p = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), _d)
             if _p not in _sys.path:
                 _sys.path.insert(0, _p)
@@ -11570,6 +11761,1239 @@ def company_branch_ai(data: dict, request: Request, user: User = Depends(get_cur
     return {"question": q, "ai": out, "as_of": rep_.get("as_of")}
 
 
+# ═══════════════════════════════════════════════════════════
+# Phase 4.3 — Competitors Intelligence — ذكاء المنافسين والسوق
+# سجل المنافسين ومعلوماتهم الموثقة جداول جديدة؛ أداء الشركة يُقرأ من الوحدات الأصلية (لا نسخة من المبيعات).
+# ═══════════════════════════════════════════════════════════
+_COMP_CONF = {"high", "medium", "low"}
+
+
+def _comp_scope(s, user):
+    company, role, viewer = _goals_scope(s, user)
+    ce_ = _load_p24("competitor_engine")
+    if ce_ is None:
+        raise HTTPException(503, "محرّك ذكاء المنافسين غير متاح — " + _p23_diagnostic())
+    if viewer.get("branch"):
+        b = s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company.id, CompanyBranch.name == viewer["branch"])).first()
+        viewer["city"] = (b.city if b else "") or None
+    sc = ce_.comp_scope(viewer)
+    if sc["kind"] == "none":
+        raise HTTPException(403, "ذكاء المنافسين حسب الصلاحية: المالك/الرئيس التنفيذي، المدير المالي، المديرون، مدير الفرع (منافسو مدينته)، ومجلس الإدارة")
+    return company, role, viewer, sc, ce_
+
+
+def _comp_settings(s, company_id):
+    r = s.exec(select(CompanyCompetitorSetting).where(CompanyCompetitorSetting.company_id == company_id)).first()
+    try:
+        return json.loads(r.settings_json or "{}") if r else {}
+    except (TypeError, ValueError):
+        return {}
+
+
+def _comp_rows(s, company_id):
+    comps = [{"id": c.id, "name": c.name, "kind": c.kind, "sector": c.sector, "cities": c.cities, "price_tier": c.price_tier, "segments": c.segments,
+              "business_model": c.business_model, "products": c.products, "differentiators": c.differentiators, "description": c.description,
+              "website": c.website, "source": c.source, "status": c.status} for c in s.exec(select(CompanyCompetitor).where(CompanyCompetitor.company_id == company_id)).all()]
+    items = [{"id": i.id, "competitor_id": i.competitor_id, "kind": i.kind, "title": i.title, "detail": i.detail, "value": i.value, "unit": i.unit,
+              "comp_product": i.comp_product, "our_sku": i.our_sku, "category": i.category, "dimension": i.dimension, "activity_type": i.activity_type,
+              "city": i.city, "significance": i.significance, "impact": i.impact, "period_from": i.period_from, "period_to": i.period_to, "region": i.region,
+              "is_published": bool(i.is_published), "observed_on": i.observed_on, "published_on": i.published_on, "source_type": i.source_type,
+              "source_url": i.source_url, "confidence": i.confidence, "created_by": i.created_by}
+             for i in s.exec(select(CompanyCompetitorItem).where(CompanyCompetitorItem.company_id == company_id).limit(20000)).all() if (i.status or "active") == "active"]
+    return comps, items
+
+
+def _comp_decisions(s, company_id):
+    metas = {m.decision_id: m for m in s.exec(select(CompanyDecisionMeta).where(CompanyDecisionMeta.company_id == company_id)).all()}
+    return [{"id": d.id, "title": d.title, "status": d.status, "workflow": metas[d.id].workflow, "source": metas[d.id].source, "source_ref": metas[d.id].source_ref,
+             "link": f"company-decisions-intelligence.html#dec/{d.id}"}
+            for d in s.exec(select(CompanyDecision).where(CompanyDecision.company_id == company_id).order_by(CompanyDecision.created_at.desc()).limit(500)).all()
+            if d.id in metas and metas[d.id].source == "competitor"]
+
+
+def _comp_live(s, company, viewer, ce_):
+    comps, items = _comp_rows(s, company.id)
+    cd = _goals_ctx(s, company)
+    _ctx, d = cd
+    errors = dict(d.get("errors") or {})
+    mods = d.get("mods") or {}
+    try:
+        gres = _goals_result(s, company, "owner", {"role": "owner", "user_id": viewer.get("user_id")}, save=False, cd=cd)
+    except Exception as e:
+        _logger.error(f"competitors: goals failed: {type(e).__name__}: {str(e)[:200]}")
+        gres, errors["goals"] = None, f"الأهداف غير متاحة: {type(e).__name__}"
+    legacy = []
+    for e in s.exec(select(CompanyModuleEntry).where(CompanyModuleEntry.company_id == company.id, CompanyModuleEntry.module == "competitors")
+                    .order_by(CompanyModuleEntry.created_at.desc()).limit(5)).all():
+        try:
+            legacy.append({"period": e.period, "data": json.loads(e.data or "{}")})
+        except (TypeError, ValueError):
+            pass
+    rep_ = ce_.analyze_competitors(competitors=comps, items=items, sales_rows=_sales_rows(s, company.id), sku_cost=_cust_sku_cost(s, company.id),
+                                   feedback=_cust_feedback(s, company.id), mods=mods, master=_br_master(s, company.id), goals=gres, settings=_comp_settings(s, company.id),
+                                   sector=_risk_sector(company), decisions=_comp_decisions(s, company.id), legacy=legacy, viewer=viewer, today=datetime.now().date())
+    rep_["module_errors"] = errors
+    return rep_
+
+
+@app.get("/company/competitor-intelligence")
+def company_competitor_intelligence(user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role, viewer, sc, ce_ = _comp_scope(s, user)
+        try:
+            rep_ = _comp_live(s, company, viewer, ce_)
+        except HTTPException:
+            raise
+        except Exception as e:
+            import traceback as _tb
+            _logger.error("competitor-intelligence failed:\n" + _tb.format_exc()[-3000:])
+            raise HTTPException(500, f"خطأ في ذكاء المنافسين — {type(e).__name__}: {str(e)[:200]} (التفاصيل في سجل الخادم)")
+        rep_["settings"] = dict(ce_.DEFAULTS, **_comp_settings(s, company.id)) if sc["kind"] in ("full", "cfo") else None
+        log_audit(company.id, user.id, user.name, "competitor_view", "competitors:live", f"scope={sc['kind']}")
+        return rep_
+
+
+@app.post("/company/competitors/save")
+def company_competitor_save(data: dict, user: User = Depends(get_current_user)):
+    """إضافة/تحديث ملف منافس. التعديل يُسجَّل؛ لا حذف — الأرشفة فقط."""
+    with Session(engine) as s:
+        company, role, viewer, sc, ce_ = _comp_scope(s, user)
+        if not sc["can_edit"]:
+            raise HTTPException(403, "إضافة وتعديل ملفات المنافسين للمالك والمدير المالي والمديرين")
+        name = str(data.get("name") or "").strip()[:120]
+        if not name:
+            raise HTTPException(422, "اسم المنافس مطلوب")
+        kind = data.get("kind") or "direct"
+        if kind not in ("direct", "indirect"):
+            raise HTTPException(422, "النوع: مباشر أو غير مباشر")
+        tier = data.get("price_tier") or ""
+        if tier and tier not in ce_.TIERS:
+            raise HTTPException(422, "الفئة السعرية غير معروفة")
+        web = str(data.get("website") or "").strip()[:300]
+        if web and not re.match(r"^https?://", web):
+            raise HTTPException(422, "الرابط يبدأ بـ http:// أو https://")
+        if data.get("id"):
+            c = s.get(CompanyCompetitor, int(data["id"]))
+            if not c or c.company_id != company.id:
+                raise HTTPException(404, "المنافس غير موجود")
+            ev = "competitor_update"
+        else:
+            dup = s.exec(select(CompanyCompetitor).where(CompanyCompetitor.company_id == company.id, CompanyCompetitor.name == name, CompanyCompetitor.status == "active")).first()
+            if dup:
+                raise HTTPException(409, "يوجد منافس نشط بنفس الاسم")
+            c = CompanyCompetitor(company_id=company.id, created_by=(user.name or user.email)[:100])
+            ev = "competitor_create"
+        old = {k: getattr(c, k) for k in ("name", "kind", "cities", "price_tier", "products")}
+        c.name, c.kind, c.price_tier, c.website = name, kind, tier, web
+        for k, n_ in (("sector", 60), ("cities", 300), ("segments", 300), ("business_model", 120), ("products", 500), ("differentiators", 500), ("description", 800), ("source", 200)):
+            setattr(c, k, str(data.get(k) or "").strip()[:n_])
+        c.updated_at = datetime.now().strftime("%Y-%m-%d %H:%M")
+        s.add(c); s.commit(); s.refresh(c)
+        log_audit(company.id, user.id, user.name, ev, f"competitor:{c.id}", f"old={json.dumps(old, ensure_ascii=False)[:200]} name={name}")
+        return {"ok": True, "id": c.id}
+
+
+@app.post("/company/competitors/archive")
+def company_competitor_archive(data: dict, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role, viewer, sc, ce_ = _comp_scope(s, user)
+        if not sc["can_archive"]:
+            raise HTTPException(403, "الأرشفة للمالك أو الرئيس التنفيذي")
+        c = s.get(CompanyCompetitor, int(data.get("id") or 0))
+        if not c or c.company_id != company.id:
+            raise HTTPException(404, "المنافس غير موجود")
+        reason = str(data.get("reason") or "").strip()[:300]
+        if not reason:
+            raise HTTPException(422, "سبب الأرشفة مطلوب")
+        c.status, c.updated_at = ("active" if data.get("restore") else "archived"), datetime.now().strftime("%Y-%m-%d %H:%M")
+        s.add(c); s.commit()
+        log_audit(company.id, user.id, user.name, "competitor_archive", f"competitor:{c.id}", f"status={c.status} reason={reason}")
+        return {"ok": True, "status": c.status}
+
+
+@app.post("/company/competitors/item")
+def company_competitor_item(data: dict, user: User = Depends(get_current_user)):
+    """إضافة معلومة موثقة: لكل نوع شروطه (الحقيقة تحتاج مصدراً، السعر منتجاً وقيمة، السوق فترة ومنطقة وتعريفاً، الدرجة بعداً 1–5)."""
+    with Session(engine) as s:
+        company, role, viewer, sc, ce_ = _comp_scope(s, user)
+        if not sc["can_observe"]:
+            raise HTTPException(403, "إضافة المعلومات للمالك والمدير المالي والمديرين ومدير الفرع")
+        kind = str(data.get("kind") or "")
+        if kind not in ce_.ITEM_KINDS:
+            raise HTTPException(422, "نوع المعلومة غير معروف")
+        if sc["kind"] == "branch" and kind not in ("price", "activity", "note"):
+            raise HTTPException(403, "مدير الفرع يضيف أسعاراً وأنشطة وملاحظات فقط")
+        cid = int(data["competitor_id"]) if str(data.get("competitor_id") or "").isdigit() else None
+        if kind != "market":
+            c = s.get(CompanyCompetitor, cid or 0)
+            if not c or c.company_id != company.id or c.status != "active":
+                raise HTTPException(404, "المنافس غير موجود")
+            if sc.get("city") and sc["city"] not in [x.strip() for x in (c.cities or "").split(",")]:
+                raise HTTPException(403, "مدير الفرع يضيف معلومات منافسي مدينته فقط")
+        elif sc["kind"] not in ("full", "cfo", "manager"):
+            raise HTTPException(403, "حجم السوق للإدارة")
+        title = str(data.get("title") or data.get("comp_product") or "").strip()[:300]
+        obs = str(data.get("observed_on") or "")[:10]
+        if not _valid_date(obs):
+            raise HTTPException(422, "تاريخ الرصد مطلوب (YYYY-MM-DD)")
+        if obs > datetime.now().strftime("%Y-%m-%d"):
+            raise HTTPException(422, "تاريخ الرصد في المستقبل")
+        if data.get("published_on") and not _valid_date(str(data["published_on"])[:10]):
+            raise HTTPException(422, "تاريخ النشر بصيغة YYYY-MM-DD")
+        src = str(data.get("source_type") or "")
+        if kind != "note" and src not in ce_.SOURCE_TYPES:
+            raise HTTPException(422, "مصدر المعلومة مطلوب — المعلومة بلا مصدر تُسجَّل «ملاحظة داخلية»")
+        url = str(data.get("source_url") or "").strip()[:500]
+        if url and not re.match(r"^https?://", url):
+            raise HTTPException(422, "رابط المصدر يبدأ بـ http:// أو https://")
+        conf = data.get("confidence") or "low"
+        if conf not in _COMP_CONF:
+            raise HTTPException(422, "الثقة: مرتفعة/متوسطة/منخفضة")
+        val = _fnum(data.get("value"), "القيمة")
+        it_ = CompanyCompetitorItem(company_id=company.id, competitor_id=cid if kind != "market" else None, kind=kind, title=title, detail=str(data.get("detail") or "")[:1000],
+                                    value=val, unit=str(data.get("unit") or "")[:20], observed_on=obs, published_on=str(data.get("published_on") or "")[:10],
+                                    source_type=src, source_url=url, confidence=conf, is_published=1 if data.get("is_published") else 0,
+                                    created_by=(user.name or user.email)[:100], created_by_id=user.id)
+        if kind == "price":
+            it_.comp_product = str(data.get("comp_product") or "").strip()[:200]
+            if not it_.comp_product or val is None or val <= 0:
+                raise HTTPException(422, "السعر يحتاج اسم منتج المنافس وقيمة أكبر من صفر")
+            sku = str(data.get("our_sku") or "").strip()[:60]
+            if sku and sku not in {r.get("product_sku") for r in _sales_rows(s, company.id)}:
+                raise HTTPException(422, "الصنف المقابل غير موجود في مبيعاتنا")
+            it_.our_sku, it_.category = sku, str(data.get("category") or "")[:80]
+        elif kind == "score":
+            dims = (ce_.SECTOR_COMP.get(_risk_sector(company)) or ce_.SECTOR_COMP["other"])["dims"]
+            if data.get("dimension") not in dims or data.get("dimension") == "price":
+                raise HTTPException(422, "بعد التموضع غير معروف لقطاعك (السعر يُحسب من الأسعار المرصودة)")
+            if val is None or not 1 <= val <= 5:
+                raise HTTPException(422, "الدرجة من 1 إلى 5")
+            it_.dimension = data["dimension"]
+        elif kind == "activity":
+            if data.get("activity_type") not in ce_.ACTIVITY_TYPES:
+                raise HTTPException(422, "نوع النشاط غير معروف")
+            if data.get("significance") not in ("high", "medium", "low"):
+                raise HTTPException(422, "أهمية النشاط مطلوبة")
+            it_.activity_type, it_.significance = data["activity_type"], data["significance"]
+            it_.city, it_.impact = str(data.get("city") or "")[:80], str(data.get("impact") or "")[:400]
+        elif kind == "market":
+            pf_, pt_ = str(data.get("period_from") or "")[:10], str(data.get("period_to") or "")[:10]
+            if not (_valid_date(pf_) and _valid_date(pt_)) or pf_ > pt_:
+                raise HTTPException(422, "فترة حجم السوق (من/إلى) مطلوبة")
+            if not str(data.get("region") or "").strip():
+                raise HTTPException(422, "منطقة السوق مطلوبة (مدينة أو المملكة)")
+            if not str(data.get("detail") or "").strip():
+                raise HTTPException(422, "تعريف السوق مطلوب (ما المشمول؟)")
+            if val is None or val <= 0:
+                raise HTTPException(422, "حجم السوق رقم أكبر من صفر")
+            it_.period_from, it_.period_to, it_.region = pf_, pt_, str(data["region"]).strip()[:80]
+        elif kind in ("estimate", "preference") and val is None:
+            raise HTTPException(422, "التقدير يحتاج قيمة")
+        if not title and kind not in ("price",):
+            raise HTTPException(422, "عنوان المعلومة مطلوب")
+        s.add(it_); s.commit(); s.refresh(it_)
+        log_audit(company.id, user.id, user.name, "competitor_item", f"competitor_item:{it_.id}", f"kind={kind} competitor={cid} source={src} conf={conf}")
+        return {"ok": True, "id": it_.id}
+
+
+@app.post("/company/competitors/item/retract")
+def company_competitor_item_retract(data: dict, user: User = Depends(get_current_user)):
+    """سحب معلومة خاطئة (لا حذف — تبقى في السجل بسببها)."""
+    with Session(engine) as s:
+        company, role, viewer, sc, ce_ = _comp_scope(s, user)
+        it_ = s.get(CompanyCompetitorItem, int(data.get("id") or 0))
+        if not it_ or it_.company_id != company.id:
+            raise HTTPException(404, "المعلومة غير موجودة")
+        if not (sc["can_archive"] or (sc["can_observe"] and it_.created_by_id == user.id)):
+            raise HTTPException(403, "السحب لصاحب المعلومة أو المالك")
+        reason = str(data.get("reason") or "").strip()[:300]
+        if not reason:
+            raise HTTPException(422, "سبب السحب مطلوب")
+        it_.status, it_.retract_reason = "retracted", reason
+        s.add(it_); s.commit()
+        log_audit(company.id, user.id, user.name, "competitor_item_retract", f"competitor_item:{it_.id}", reason)
+        return {"ok": True}
+
+
+@app.post("/company/competitors/simulate")
+def company_competitor_simulate(data: dict, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role, viewer, sc, ce_ = _comp_scope(s, user)
+        if "whatif" not in sc["sections"]:
+            raise HTTPException(403, "المحاكاة للإدارة")
+        rep_ = _comp_live(s, company, {"role": "owner", "user_id": user.id}, ce_)
+        base = rep_["whatif"]["base"].get(str(data.get("category") or ""))
+        if base is None:
+            raise HTTPException(404, "الفئة غير موجودة في مبيعاتنا")
+        cu = rep_["whatif"].get("customers") or {}
+        tot = sum((b.get("revenue") or 0) for b in rep_["whatif"]["base"].values()) or 1
+        res = ce_.simulate(base, data.get("assumptions") or {}, active_customers=cu.get("active"),
+                           avg_spend=(cu.get("avg_spend_month") or 0) * ((base.get("revenue") or 0) / tot) if cu.get("avg_spend_month") else None)
+        if not res.get("ok"):
+            raise HTTPException(422, " · ".join(res.get("errors") or ["تعذرت المحاكاة"]))
+        log_audit(company.id, user.id, user.name, "competitor_simulate", "competitors:whatif", json.dumps(data.get("assumptions") or {}, ensure_ascii=False)[:200])
+        return dict(res, category=data.get("category"))
+
+
+@app.post("/company/competitors/to-decision")
+def company_competitor_to_decision(data: dict, user: User = Depends(get_current_user)):
+    """تحويل فرصة/تهديد/تنبيه تنافسي إلى قرار في متابعة القرارات (3.9) — نفس مسار الاعتماد."""
+    with Session(engine) as s:
+        company, role, viewer, sc, ce_ = _comp_scope(s, user)
+        if not sc["can_edit"]:
+            raise HTTPException(403, "إنشاء القرارات للمالك والمدير المالي والمديرين")
+        title = str(data.get("title") or "").strip()[:200]
+        if not title:
+            raise HTTPException(422, "عنوان القرار مطلوب")
+        cat = data.get("category") if data.get("category") in ("pricing", "marketing", "growth", "other") else "growth"
+        kpi = {"pricing": "gross_margin", "marketing": "revenue", "growth": "revenue"}.get(cat, "revenue")
+        payload = {"title": title, "rationale": f"من ذكاء المنافسين (4.3): {str(data.get('reason') or '')}"[:500], "owner": str(data.get("owner") or "")[:100],
+                   "due": str(data.get("due") or "")[:10] or None, "category": cat, "priority": data.get("priority") if data.get("priority") in ("high", "medium", "low") else "medium",
+                   "expected_impact": data.get("expected_impact"), "expected_type": "potential", "source": "competitor",
+                   "source_ref": str(data.get("ref") or "competitor:manual")[:200], "kpis": [{"metric": kpi}]}
+    out = company_decision_center_save(payload, user=user)
+    with Session(engine) as s:
+        log_audit(company.id, user.id, user.name, "competitor_to_decision", str(data.get("ref") or "competitors"), f"decision={out.get('id')}")
+    return {"ok": True, "decision_id": out.get("id"), "link": f"company-decisions-intelligence.html#dec/{out.get('id')}"}
+
+
+@app.post("/company/competitors/settings")
+def company_competitor_settings(data: dict, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role, viewer, sc, ce_ = _comp_scope(s, user)
+        if sc["kind"] not in ("full", "cfo"):
+            raise HTTPException(403, "الإعدادات للمالك والمدير المالي")
+        out = {}
+        for k, lo, hi in (("price_change_alert_pct", 1, 50), ("activity_alert_days", 7, 180), ("stale_days", 30, 730)):
+            fv = _fnum(data.get(k, ce_.DEFAULTS[k]), k)
+            if fv is None or not lo <= fv <= hi:
+                raise HTTPException(422, f"{k} بين {lo} و{hi}")
+            out[k] = fv
+        dims = (ce_.SECTOR_COMP.get(_risk_sector(company)) or ce_.SECTOR_COMP["other"])["dims"]
+        ss = {}
+        for d_, v in (data.get("self_scores") or {}).items():
+            if d_ not in dims or d_ == "price":
+                raise HTTPException(422, f"بعد غير معروف: {str(d_)[:30]}")
+            sv = _fnum((v or {}).get("score"), "الدرجة")
+            if sv is None:
+                continue
+            if not 1 <= sv <= 5:
+                raise HTTPException(422, "الدرجة من 1 إلى 5")
+            if not str((v or {}).get("source") or "").strip():
+                raise HTTPException(422, "اذكر أساس التقييم الذاتي (مثلاً: نتائج استبيان، عدد الأصناف)")
+            ss[d_] = {"score": sv, "source": str(v["source"]).strip()[:200], "confidence": (v.get("confidence") if v.get("confidence") in _COMP_CONF else "low")}
+        out["self_scores"] = ss
+        r = s.exec(select(CompanyCompetitorSetting).where(CompanyCompetitorSetting.company_id == company.id)).first() or CompanyCompetitorSetting(company_id=company.id)
+        old = r.settings_json or "{}"
+        r.settings_json, r.updated_by, r.updated_at = json.dumps(out, ensure_ascii=False), (user.name or user.email)[:100], datetime.now().strftime("%Y-%m-%d %H:%M")
+        s.add(r); s.commit()
+        log_audit(company.id, user.id, user.name, "competitor_settings", "competitors:settings", f"old={old[:300]} new={r.settings_json[:300]}")
+        return {"ok": True, "settings": out}
+
+
+@app.post("/company/competitors/ai-insights")
+def company_competitor_ai(data: dict, request: Request, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role, viewer, sc, ce_ = _comp_scope(s, user)
+        rep_ = _comp_live(s, company, viewer, ce_)
+    gw = _load_p24("ai_gateway")
+    if gw is None:
+        raise HTTPException(503, "بوابة الذكاء الاصطناعي غير متاحة — " + _p23_diagnostic())
+    q = str(data.get("question") or ce_.AI_QUESTIONS[0])[:300]
+    ctx = ce_.ai_context(rep_, q)
+    out = gw.request_ai_analysis(gw.GeminiProvider(company_gemini), ctx,
+                                 q + " — أجب من سجل المنافسين ونتائج الوحدات فقط: الجواب، الأدلة بمصدرها وتاريخها، ثم إجراء قابل للقياس. افصل الحقائق عن التقديرات ولا تخترع.",
+                                 trust_report={"overall_score": 75, "status": "pass", "has_critical_fail": False, "main_causes": []},
+                                 lang=get_lang(request), company=company)
+    log_audit(company.id, user.id, user.name, "competitor_ai", "competitors:ai", f"q={q[:80]}")
+    return {"question": q, "ai": out, "as_of": rep_.get("as_of")}
+
+
+# ═══════════════════════════════════════════════════════════
+# Phase 4.4 — Influential Events Intelligence — ذكاء الأحداث المؤثرة
+# سجل الأحداث جدول جديد؛ القياس من المبيعات/العملاء/العمليات/المخزون/المشتريات الأصلية (لا نسخ).
+# ═══════════════════════════════════════════════════════════
+_EV_CONF = {"high", "medium", "low"}
+
+
+def _ev_scope(s, user):
+    company, role, viewer = _goals_scope(s, user)
+    ee = _load_p24("events_engine")
+    if ee is None:
+        raise HTTPException(503, "محرّك الأحداث المؤثرة غير متاح — " + _p23_diagnostic())
+    if viewer.get("branch"):
+        b = s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company.id, CompanyBranch.name == viewer["branch"])).first()
+        viewer["city"] = (b.city if b else "") or None
+    sc = ee.ev_scope(viewer)
+    if sc["kind"] == "none":
+        raise HTTPException(403, "الأحداث المؤثرة حسب الصلاحية: المالك/الرئيس التنفيذي، المدير المالي، المديرون، مدير الفرع (أحداث فرعه)، ومجلس الإدارة")
+    return company, role, viewer, sc, ee
+
+
+def _ev_settings(s, company_id):
+    r = s.exec(select(CompanyEventSetting).where(CompanyEventSetting.company_id == company_id)).first()
+    try:
+        return json.loads(r.settings_json or "{}") if r else {}
+    except (TypeError, ValueError):
+        return {}
+
+
+def _ev_dict(e):
+    try:
+        les = json.loads(e.lessons_json or "{}") if e.lessons_json else {}
+    except (TypeError, ValueError):
+        les = {}
+    return {"id": e.id, "title": e.title, "type": e.type, "origin": e.origin, "source_type": e.source_type, "source_url": e.source_url, "published_on": e.published_on,
+            "start_date": e.start_date, "end_date": e.end_date or e.start_date, "branches": e.branches, "cities": e.cities, "categories": e.categories, "skus": e.skus,
+            "importance": e.importance, "confidence": e.confidence, "status": e.status, "direction": e.direction, "description": e.description, "prep": e.prep,
+            "owner": e.owner, "initiative_name": e.initiative_name, "initiative_cost": e.initiative_cost, "cost_note": e.cost_note, "lessons": les,
+            "origin_ref": e.origin_ref, "created_by": e.created_by}
+
+
+def _ev_raw(s, company_id):
+    bmap = {b.id: b.name for b in s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company_id)).all()}
+    orders = [{"date": o.date, "branch_name": bmap.get(o.branch_id), "created_time": o.created_time, "ready_time": o.ready_time, "delivered_time": o.delivered_time,
+               "due_time": o.due_time, "accurate": o.accurate, "status": o.status}
+              for o in s.exec(select(CompanyOpsOrder).where(CompanyOpsOrder.company_id == company_id).limit(300000)).all()]
+    issues = [{"id": i.id, "title": i.title, "opened_time": i.opened_time, "resolved_time": i.resolved_time, "severity": i.severity, "branch_name": bmap.get(i.branch_id)}
+              for i in s.exec(select(CompanyOpsIssue).where(CompanyOpsIssue.company_id == company_id).limit(50000)).all()]
+    inv = [{"period": x.period, "branch_name": bmap.get(x.branch_id), "product_sku": x.product_sku, "closing_qty": x.closing_qty, "sold_qty": x.sold_qty}
+           for x in s.exec(select(CompanyInventory).where(CompanyInventory.company_id == company_id).limit(200000)).all()]
+    purch = [{"supplier_name": p.supplier_name, "date": p.date, "expected_date": p.expected_date, "received_date": p.received_date, "product_sku": p.product_sku,
+              "branch_name": bmap.get(p.branch_id)} for p in s.exec(select(CompanyPurchase).where(CompanyPurchase.company_id == company_id).limit(200000)).all()]
+    return orders, issues, inv, purch
+
+
+def _ev_decisions(s, company_id):
+    metas = {m.decision_id: m for m in s.exec(select(CompanyDecisionMeta).where(CompanyDecisionMeta.company_id == company_id)).all()}
+    return [{"id": d.id, "title": d.title, "status": d.status, "workflow": metas[d.id].workflow, "source": metas[d.id].source, "source_ref": metas[d.id].source_ref,
+             "owner": d.owner, "link": f"company-decisions-intelligence.html#dec/{d.id}"}
+            for d in s.exec(select(CompanyDecision).where(CompanyDecision.company_id == company_id).order_by(CompanyDecision.created_at.desc()).limit(500)).all()
+            if d.id in metas and metas[d.id].source == "event"]
+
+
+def _ev_live(s, company, viewer, ee, *, focus=None):
+    cd = _goals_ctx(s, company)
+    _ctx, d = cd
+    errors = dict(d.get("errors") or {})
+    try:
+        gres = _goals_result(s, company, "owner", {"role": "owner", "user_id": viewer.get("user_id")}, save=False, cd=cd)
+    except Exception as e:
+        _logger.error(f"events: goals failed: {type(e).__name__}: {str(e)[:200]}")
+        gres, errors["goals"] = None, f"الأهداف غير متاحة: {type(e).__name__}"
+    try:
+        orders, issues, inv, purch = _ev_raw(s, company.id)
+    except Exception as e:
+        _logger.error(f"events: raw ops failed: {type(e).__name__}: {str(e)[:200]}")
+        orders, issues, inv, purch = [], [], [], []
+        errors["operations"] = f"بيانات التشغيل/المخزون غير متاحة: {type(e).__name__}"
+    master = _br_master(s, company.id)
+    prof = (_br_settings(s, company.id).get("profiles") or {})
+    for m in master:
+        if isinstance(prof.get(m["name"]), dict) and prof[m["name"]].get("opened"):
+            m["opened"] = prof[m["name"]]["opened"]
+    legacy = []
+    for e in s.exec(select(CompanyModuleEntry).where(CompanyModuleEntry.company_id == company.id, CompanyModuleEntry.module == "events")
+                    .order_by(CompanyModuleEntry.created_at.desc()).limit(5)).all():
+        try:
+            legacy.append({"period": e.period, "data": json.loads(e.data or "{}")})
+        except (TypeError, ValueError):
+            pass
+    evs = [_ev_dict(e) for e in s.exec(select(CompanyEvent).where(CompanyEvent.company_id == company.id).limit(5000)).all()]
+    rep_ = ee.analyze_events(events=evs, sales_rows=_sales_rows(s, company.id), sku_cost=_cust_sku_cost(s, company.id), feedback=_cust_feedback(s, company.id),
+                             orders=orders, issues=issues, inventory=inv, purchases=purch, master=master, pred=d.get("pred"), goals=gres,
+                             settings=_ev_settings(s, company.id), sector=_risk_sector(company), decisions=_ev_decisions(s, company.id), legacy=legacy,
+                             viewer=viewer, today=datetime.now().date(), focus_id=focus)
+    rep_["module_errors"] = errors
+    return rep_
+
+
+@app.get("/company/events-intelligence")
+def company_events_intelligence(focus: Optional[int] = None, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role, viewer, sc, ee = _ev_scope(s, user)
+        try:
+            rep_ = _ev_live(s, company, viewer, ee, focus=focus)
+        except HTTPException:
+            raise
+        except Exception as e:
+            import traceback as _tb
+            _logger.error("events-intelligence failed:\n" + _tb.format_exc()[-3000:])
+            raise HTTPException(500, f"خطأ في الأحداث المؤثرة — {type(e).__name__}: {str(e)[:200]} (التفاصيل في سجل الخادم)")
+        rep_["settings"] = dict(ee.DEFAULTS, **{k: v for k, v in _ev_settings(s, company.id).items()}) if sc["kind"] in ("full", "cfo") else None
+        log_audit(company.id, user.id, user.name, "events_view", "events:live", f"scope={sc['kind']}")
+        return rep_
+
+
+@app.post("/company/events/save")
+def company_event_save(data: dict, user: User = Depends(get_current_user)):
+    """تسجيل/تعديل حدث. لكل حدث مصدر وتاريخ؛ الخارجي يحتاج مصدراً خارجياً؛ مدير الفرع لأحداث فرعه الداخلية فقط."""
+    with Session(engine) as s:
+        company, role, viewer, sc, ee = _ev_scope(s, user)
+        if not sc["can_edit"]:
+            raise HTTPException(403, "تسجيل الأحداث للمالك والمدير المالي والمديرين ومدير الفرع")
+        title = str(data.get("title") or "").strip()[:200]
+        if not title:
+            raise HTTPException(422, "عنوان الحدث مطلوب")
+        typ, origin, src = data.get("type") or "", data.get("origin") or "", data.get("source_type") or ""
+        if typ not in ee.TYPES:
+            raise HTTPException(422, "نوع الحدث غير معروف")
+        if origin not in ee.ORIGINS:
+            raise HTTPException(422, "حدد: داخلي أو خارجي")
+        if src not in ee.SOURCE_TYPES:
+            raise HTTPException(422, "مصدر الحدث مطلوب")
+        if origin == "external" and src not in ee.EXTERNAL_SOURCES:
+            raise HTTPException(422, "الحدث الخارجي يحتاج مصدراً خارجياً (جهة رسمية/أخبار/تقرير/مورد/شريك)")
+        url = str(data.get("source_url") or "").strip()[:500]
+        if url and not re.match(r"^https?://", url):
+            raise HTTPException(422, "رابط المصدر يبدأ بـ http:// أو https://")
+        sd, ed, pub = str(data.get("start_date") or "")[:10], str(data.get("end_date") or data.get("start_date") or "")[:10], str(data.get("published_on") or "")[:10]
+        if not _valid_date(sd):
+            raise HTTPException(422, "تاريخ بداية الحدث مطلوب (YYYY-MM-DD)")
+        if not _valid_date(ed) or ed < sd:
+            raise HTTPException(422, "تاريخ النهاية بعد البداية")
+        if pub and not _valid_date(pub):
+            raise HTTPException(422, "تاريخ النشر بصيغة YYYY-MM-DD")
+        status = data.get("status") or "confirmed"
+        if status not in ("confirmed", "expected"):
+            raise HTTPException(422, "الحالة: مؤكد أو متوقع")
+        conf = data.get("confidence") or "medium"
+        imp = data.get("importance") or "medium"
+        dirn = data.get("direction") or "unknown"
+        if conf not in _EV_CONF or imp not in _EV_CONF or dirn not in ee.DIRECTION:
+            raise HTTPException(422, "الثقة/الأهمية/الاتجاه غير صالحة")
+        branch_names = {b.name for b in s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company.id)).all()}
+        brs = [b.strip() for b in str(data.get("branches") or "").split(",") if b.strip()]
+        bad = [b for b in brs if b not in branch_names]
+        if bad:
+            raise HTTPException(422, f"فرع غير موجود: {bad[0][:40]}")
+        if sc["kind"] == "branch":
+            if brs != [sc["branch"]]:
+                raise HTTPException(403, "مدير الفرع يسجل أحداث فرعه فقط (حدد فرعك)")
+            if origin != "internal":
+                raise HTTPException(403, "مدير الفرع يسجل الأحداث الداخلية لفرعه؛ الأحداث الخارجية للإدارة")
+        cost = _fnum(data.get("initiative_cost"), "تكلفة المبادرة")
+        if cost is not None and cost < 0:
+            raise HTTPException(422, "التكلفة لا تكون سالبة")
+        if cost is not None and not sc["finance"]:
+            raise HTTPException(403, "تكلفة المبادرة للمالك والمدير المالي")
+        if data.get("id"):
+            e = s.get(CompanyEvent, int(data["id"]))
+            if not e or e.company_id != company.id:
+                raise HTTPException(404, "الحدث غير موجود")
+            if sc["kind"] == "branch" and e.created_by_id != user.id:
+                raise HTTPException(403, "مدير الفرع يعدّل الأحداث التي سجلها فقط")
+            if e.status == "cancelled":
+                raise HTTPException(409, "حدث ملغى — لا يُعدّل")
+            ev_ = "event_update"
+        else:
+            e = CompanyEvent(company_id=company.id, created_by=(user.name or user.email)[:100], created_by_id=user.id, origin_ref=str(data.get("origin_ref") or "")[:120])
+            if e.origin_ref and s.exec(select(CompanyEvent).where(CompanyEvent.company_id == company.id, CompanyEvent.origin_ref == e.origin_ref)).first():
+                raise HTTPException(409, "هذا الاقتراح مسجل مسبقاً")
+            ev_ = "event_create"
+        old = json.dumps({k: getattr(e, k) for k in ("title", "start_date", "end_date", "status", "importance", "initiative_cost")}, ensure_ascii=False, default=str)
+        e.title, e.type, e.origin, e.source_type, e.source_url, e.published_on = title, typ, origin, src, url, pub
+        e.start_date, e.end_date, e.status, e.confidence, e.importance, e.direction = sd, ed, status, conf, imp, dirn
+        e.branches = ",".join(brs)
+        for k, n_ in (("cities", 300), ("categories", 300), ("skus", 500), ("description", 1000), ("prep", 600), ("owner", 100), ("initiative_name", 200), ("cost_note", 300)):
+            setattr(e, k, str(data.get(k) or "").strip()[:n_])
+        if sc["finance"]:
+            e.initiative_cost = cost
+        e.updated_at = datetime.now().strftime("%Y-%m-%d %H:%M")
+        s.add(e); s.commit(); s.refresh(e)
+        log_audit(company.id, user.id, user.name, ev_, f"event:{e.id}", f"old={old[:250]} title={title[:80]} source={src}")
+        return {"ok": True, "id": e.id}
+
+
+@app.post("/company/events/cancel")
+def company_event_cancel(data: dict, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role, viewer, sc, ee = _ev_scope(s, user)
+        if not sc["can_cancel"]:
+            raise HTTPException(403, "إلغاء الأحداث للمالك أو الرئيس التنفيذي")
+        e = s.get(CompanyEvent, int(data.get("id") or 0))
+        if not e or e.company_id != company.id:
+            raise HTTPException(404, "الحدث غير موجود")
+        reason = str(data.get("reason") or "").strip()[:300]
+        if not reason:
+            raise HTTPException(422, "سبب الإلغاء مطلوب")
+        e.status, e.cancel_reason, e.updated_at = "cancelled", reason, datetime.now().strftime("%Y-%m-%d %H:%M")
+        s.add(e); s.commit()
+        log_audit(company.id, user.id, user.name, "event_cancel", f"event:{e.id}", reason)
+        return {"ok": True}
+
+
+@app.post("/company/events/lessons")
+def company_event_lessons(data: dict, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role, viewer, sc, ee = _ev_scope(s, user)
+        if not sc["can_edit"]:
+            raise HTTPException(403, "تسجيل الدروس لمن يسجل الأحداث")
+        e = s.get(CompanyEvent, int(data.get("id") or 0))
+        if not e or e.company_id != company.id:
+            raise HTTPException(404, "الحدث غير موجود")
+        if sc["kind"] == "branch" and sc["branch"] not in [b.strip() for b in (e.branches or "").split(",")]:
+            raise HTTPException(403, "مدير الفرع يسجل دروس أحداث فرعه فقط")
+        if ee.phase(_ev_dict(e), datetime.now().date()) != "ended":
+            raise HTTPException(409, "الدروس تُسجَّل بعد انتهاء الحدث")
+        les = {k: str(data.get(k) or "").strip()[:1000] for k in ee.LESSON_FIELDS if str(data.get(k) or "").strip()}
+        if not les.get("what_happened"):
+            raise HTTPException(422, "اكتب ما الذي حدث بالفعل")
+        les["by"], les["at"] = (user.name or user.email)[:100], datetime.now().strftime("%Y-%m-%d")
+        old = e.lessons_json or ""
+        e.lessons_json = json.dumps(les, ensure_ascii=False)
+        s.add(e); s.commit()
+        log_audit(company.id, user.id, user.name, "event_lessons", f"event:{e.id}", f"old={old[:200]}")
+        return {"ok": True}
+
+
+@app.post("/company/events/simulate")
+def company_event_simulate(data: dict, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role, viewer, sc, ee = _ev_scope(s, user)
+        if "whatif" not in sc["sections"]:
+            raise HTTPException(403, "المحاكاة للإدارة")
+        rep_ = _ev_live(s, company, {"role": "owner", "user_id": user.id}, ee)
+        key = str(data.get("scope") or "__all__")
+        base = rep_["whatif"]["base"].get(key)
+        if base is None:
+            raise HTTPException(404, "نطاق المحاكاة غير موجود (الشركة/فرع/فئة)")
+        res = ee.simulate(base, str(data.get("scenario") or ""), data.get("params") or {})
+        if not res.get("ok"):
+            raise HTTPException(422, " · ".join(res.get("errors") or ["تعذرت المحاكاة"]))
+        log_audit(company.id, user.id, user.name, "event_simulate", "events:whatif", json.dumps({"scenario": data.get("scenario"), "scope": key, "params": data.get("params")}, ensure_ascii=False)[:250])
+        return dict(res, scope=key)
+
+
+@app.post("/company/events/to-decision")
+def company_event_to_decision(data: dict, user: User = Depends(get_current_user)):
+    """تحويل حدث/تنبيه إلى إجراء في متابعة القرارات (3.9): الوصف، الأثر، الفرع، المسؤول، الموعد، KPI، الاعتماد."""
+    with Session(engine) as s:
+        company, role, viewer, sc, ee = _ev_scope(s, user)
+        if not sc["can_edit"]:
+            raise HTTPException(403, "إنشاء الإجراءات لمن يسجل الأحداث")
+        e = s.get(CompanyEvent, int(data.get("event_id") or 0))
+        if not e or e.company_id != company.id:
+            raise HTTPException(404, "الحدث غير موجود")
+        if sc["kind"] == "branch" and e.branches and sc["branch"] not in [b.strip() for b in e.branches.split(",")]:
+            raise HTTPException(403, "مدير الفرع ينشئ إجراءات أحداث فرعه فقط")
+        title = str(data.get("title") or "").strip()[:200]
+        if not title:
+            raise HTTPException(422, "عنوان الإجراء مطلوب")
+        ref = str(data.get("ref") or f"event:{e.id}")[:200]
+        if not ref.startswith(f"event:{e.id}"):
+            raise HTTPException(422, "مرجع غير مطابق للحدث")
+        kpi = data.get("kpi") if data.get("kpi") in ("revenue", "gross_margin", "on_time", "stockout_rate") else "revenue"
+        branch = (sc["branch"] if sc["kind"] == "branch" else str(data.get("branch") or "").strip()[:80]) or ""
+        payload = {"title": title, "rationale": f"من الأحداث المؤثرة (4.4): {e.title} ({e.start_date}) · {str(data.get('reason') or '')}"[:500],
+                   "owner": str(data.get("owner") or e.owner or "")[:100], "due": str(data.get("due") or "")[:10] or None, "category": "operations" if e.type == "operational" else "growth",
+                   "priority": e.importance if e.importance in ("high", "medium", "low") else "medium", "expected_impact": data.get("expected_impact"),
+                   "expected_type": "potential", "source": "event", "source_ref": ref, "branch": branch or None, "kpis": [{"metric": kpi, "branch": branch or None}]}
+    out = company_decision_center_save(payload, user=user)
+    with Session(engine) as s:
+        log_audit(company.id, user.id, user.name, "event_to_decision", ref, f"decision={out.get('id')}")
+    return {"ok": True, "decision_id": out.get("id"), "link": f"company-decisions-intelligence.html#dec/{out.get('id')}"}
+
+
+@app.post("/company/events/settings")
+def company_event_settings(data: dict, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role, viewer, sc, ee = _ev_scope(s, user)
+        if sc["kind"] not in ("full", "cfo"):
+            raise HTTPException(403, "الإعدادات للمالك والمدير المالي")
+        out = {}
+        for k, lo, hi in (("baseline_days", 7, 90), ("min_days", 1, 30), ("alert_days", 7, 120), ("decline_alert_pct", 1, 80), ("lessons_due_days", 1, 90),
+                          ("horizon_days", 30, 366), ("noise_k", 1, 4)):
+            fv = _fnum(data.get(k, ee.DEFAULTS[k]), k)
+            if fv is None or not lo <= fv <= hi:
+                raise HTTPException(422, f"{k} بين {lo} و{hi}")
+            out[k] = fv
+        srcs = []
+        for x in (data.get("external_sources") or [])[:30]:
+            nm, u = str((x or {}).get("name") or "").strip()[:100], str((x or {}).get("url") or "").strip()[:300]
+            if not nm:
+                continue
+            if u and not re.match(r"^https?://", u):
+                raise HTTPException(422, f"رابط المصدر «{nm}» يبدأ بـ http(s)://")
+            srcs.append({"name": nm, "url": u, "type": (x.get("type") if x.get("type") in ee.SOURCE_TYPES else "other")})
+        out["external_sources"] = srcs
+        r = s.exec(select(CompanyEventSetting).where(CompanyEventSetting.company_id == company.id)).first() or CompanyEventSetting(company_id=company.id)
+        old = r.settings_json or "{}"
+        r.settings_json, r.updated_by, r.updated_at = json.dumps(out, ensure_ascii=False), (user.name or user.email)[:100], datetime.now().strftime("%Y-%m-%d %H:%M")
+        s.add(r); s.commit()
+        log_audit(company.id, user.id, user.name, "event_settings", "events:settings", f"old={old[:300]} new={r.settings_json[:300]}")
+        return {"ok": True, "settings": out}
+
+
+@app.post("/company/events/ai-insights")
+def company_event_ai(data: dict, request: Request, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role, viewer, sc, ee = _ev_scope(s, user)
+        rep_ = _ev_live(s, company, viewer, ee, focus=int(data["focus"]) if str(data.get("focus") or "").isdigit() else None)
+    gw = _load_p24("ai_gateway")
+    if gw is None:
+        raise HTTPException(503, "بوابة الذكاء الاصطناعي غير متاحة — " + _p23_diagnostic())
+    q = str(data.get("question") or ee.AI_QUESTIONS[0])[:300]
+    out = gw.request_ai_analysis(gw.GeminiProvider(company_gemini), ee.ai_context(rep_, q),
+                                 q + " — أجب من سجل الأحداث ونتائج القياس فقط: ميّز التغير الملحوظ عن المقدّر عن المُسند، اذكر المصدر والفترة، ولا تنسب سبباً دون منهجية.",
+                                 trust_report={"overall_score": 75, "status": "pass", "has_critical_fail": False, "main_causes": []},
+                                 lang=get_lang(request), company=company)
+    log_audit(company.id, user.id, user.name, "event_ai", "events:ai", f"q={q[:80]}")
+    return {"question": q, "ai": out, "as_of": rep_.get("as_of")}
+
+
+# ═══════════════════════════════════════════════════════════
+# Phase 4.5 — AI Chatbot & Research — المساعد الذكي ومركز البحث
+# طبقة تنسيق: الصلاحيات أولاً → المحركات الأصلية → الأدلة → إجابة/تقرير/مسودة قرار. نفس بوابة Gemini (ai_gateway + company_gemini بنماذجه البديلة).
+# ═══════════════════════════════════════════════════════════
+_AI_REPORT_FLOW = {"draft": ("reviewed", "archived"), "reviewed": ("approved", "draft", "archived"), "approved": ("archived",), "archived": ()}
+
+
+def _ai_scope(s, user):
+    company, role, viewer = _goals_scope(s, user)
+    ae = _load_p24("assistant_engine")
+    if ae is None:
+        raise HTTPException(503, "محرّك المساعد الذكي غير متاح — " + _p23_diagnostic())
+    sc = ae.ai_scope(viewer)
+    if sc["kind"] == "none":
+        raise HTTPException(403, "المساعد الذكي متاح حسب الصلاحية — لا وحدات مسموحة لحسابك")
+    return company, role, viewer, sc, ae
+
+
+def _ai_settings(s, company_id):
+    r = s.exec(select(CompanyAISetting).where(CompanyAISetting.company_id == company_id)).first()
+    try:
+        st = json.loads(r.settings_json or "{}") if r else {}
+    except (TypeError, ValueError):
+        st = {}
+    return {"retention_days": int(st.get("retention_days") or 180), "use_ai": st.get("use_ai", True) is not False}
+
+
+def _ai_pack(s, company, viewer, modules):
+    """يستدعي المحركات الأصلية للوحدات المسموحة والمطلوبة فقط. كل فشل يُسجَّل كفجوة — لا أرقام بديلة."""
+    need, pack, errors = set(modules), {}, {}
+    if not need:
+        return pack, errors
+    d, cd = None, None
+    core = {"finance", "cashflow", "inventory", "purchases", "operations", "hr", "leakage", "tax", "risk", "drivers", "prediction", "goals", "decisions", "customers"}
+    if need & core:
+        try:
+            cd = _goals_ctx(s, company)
+            d = cd[1]
+        except Exception as e:
+            _logger.error(f"assistant: core context failed: {type(e).__name__}: {str(e)[:200]}")
+            for m in need & core:
+                errors[m] = f"تعذر تحميل المحركات الأساسية: {type(e).__name__}"
+    if d is not None:
+        de = d.get("errors") or {}
+        for m in ("finance", "cashflow", "inventory", "purchases", "operations", "hr", "leakage", "tax"):
+            if m in need:
+                if (d.get("mods") or {}).get(m) is not None:
+                    pack[m] = d["mods"][m]
+                else:
+                    errors[m] = de.get(m) or "الوحدة غير متاحة أو بلا بيانات"
+        for m, key in (("risk", "risk"), ("drivers", "drivers"), ("prediction", "pred")):
+            if m in need:
+                if d.get(key):
+                    pack[m] = d[key]
+                else:
+                    errors[m] = de.get(m) or de.get(key) or "غير متاح"
+        if "goals" in need:
+            try:
+                pack["goals"] = _goals_result(s, company, viewer["role"], viewer, save=False, cd=cd)
+            except Exception as e:
+                errors["goals"] = f"الأهداف غير متاحة: {type(e).__name__}"
+        if "decisions" in need:
+            try:
+                pack["decisions"] = _dec_result(s, company, viewer["role"], viewer, cd=cd)[0]
+            except Exception as e:
+                errors["decisions"] = f"القرارات غير متاحة: {type(e).__name__}"
+    if "sales" in need:
+        try:
+            pack["sales"] = _sales_result(s, company, period=None, grain="month")
+        except HTTPException as e:
+            errors["sales"] = str(e.detail)[:160]
+        except Exception as e:
+            errors["sales"] = f"ذكاء المبيعات غير متاح: {type(e).__name__}"
+    for m, eng, fn in (("customers", "customer_engine", lambda x: _cust_live(s, company, viewer, x, mods=(d or {}).get("mods"), risk=(d or {}).get("risk"))),
+                       ("branches", "branch_engine", lambda x: _br_live(s, company, viewer, x)),
+                       ("competitors", "competitor_engine", lambda x: _comp_live(s, company, viewer, x)),
+                       ("events", "events_engine", lambda x: _ev_live(s, company, viewer, x))):
+        if m in need:
+            x = _load_p24(eng)
+            if x is None:
+                errors[m] = "المحرك غير متاح"
+                continue
+            try:
+                pack[m] = fn(x)
+            except HTTPException as e:
+                errors[m] = str(e.detail)[:160]
+            except Exception as e:
+                _logger.error(f"assistant: {m} failed: {type(e).__name__}: {str(e)[:200]}")
+                errors[m] = f"{type(e).__name__}"
+    return pack, errors
+
+
+def _ai_master(s, company):
+    brs = [b.name for b in s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company.id)).all()]
+    cats = sorted({r.get("category") for r in _sales_rows(s, company.id)[:20000] if r.get("category")})
+    return brs, cats
+
+
+def _ai_compute(s, company, viewer, sc, ae, question, service, *, modules_override=None):
+    brs, cats = _ai_master(s, company)
+    und = ae.understand(question, service=service, branches=brs, categories=cats)
+    if modules_override is not None:
+        und["modules"] = list(modules_override)
+    if sc.get("branch"):
+        und["branches"] = [sc["branch"]]
+    plan = ae.plan_access(und, sc)
+    pack, errs = _ai_pack(s, company, viewer, plan["call"])
+    facts, e2 = ae.collect(pack, sc, und)
+    errs.update(e2)
+    sigs = ae.filter_signals(ae.signals_of(pack), sc)
+    ans = ae.answer(question, und, facts, sigs, plan, errs, sc, sector=_risk_sector(company))
+    return und, plan, pack, facts, sigs, ans, errs
+
+
+def _ai_narrative(ae, company, question, und, ans, facts, request, use_ai):
+    """سرد اختياري عبر نفس بوابة Gemini (ai_gateway → company_gemini بنماذجه البديلة) ثم فحص كل رقم مقابل الحقائق."""
+    if not use_ai:
+        return None, "disabled", None
+    gw = _load_p24("ai_gateway")
+    if gw is None:
+        return None, "unavailable", None
+    try:
+        out = gw.request_ai_analysis(gw.GeminiProvider(company_gemini), ae.ai_context(question, und, ans, facts, _risk_sector(company)),
+                                     question + " — أجب من الحقائق المرقّمة فقط واذكر [n] بعد كل رقم. لا تحسب أرقاماً جديدة. فرّق بين المثبت والمحتمل واذكر النقص.",
+                                     trust_report={"overall_score": 80 if ans["confidence"] == "high" else 60, "status": "pass", "has_critical_fail": False, "main_causes": []},
+                                     lang=get_lang(request) if request is not None else "ar", company=company)
+    except Exception as e:
+        _logger.error(f"assistant llm failed: {type(e).__name__}: {str(e)[:200]}")
+        return None, "error", None
+    resp = (out or {}).get("response") or {}
+    txt = "\n".join(str(x) for k in ("FACTS", "INTERPRETATION", "HYPOTHESES", "RECOMMENDATIONS", "DATA_GAPS") for x in resp.get(k) or [])
+    if not txt.strip():
+        return None, "empty", None
+    return resp, "gemini", ae.verify_numbers(txt, facts)
+
+
+def _ai_log(s, company, user, ae, question, und, ans, *, service, llm=None, verification=None, error=None, report_id=None, decision_id=None):
+    rec = ae.audit_record(question, und, ans, service=service, llm=llm, verification=verification, error=error)
+    row = CompanyAIInteraction(company_id=company.id, user_id=user.id, user_name=(user.name or user.email or "")[:100], service=rec["service"], question=rec["question"],
+                               intents_json=json.dumps(rec["intents"], ensure_ascii=False), modules_json=json.dumps(rec["modules"]), denied_json=json.dumps(rec["denied"]),
+                               confidence=rec["confidence"], llm=rec["llm"], unverified=rec["unverified"], error=rec["error"] or "", report_id=report_id, decision_id=decision_id)
+    s.add(row)
+    keep = _ai_settings(s, company.id)["retention_days"]
+    cut = datetime.now() - timedelta(days=keep)
+    for old in s.exec(select(CompanyAIInteraction).where(CompanyAIInteraction.company_id == company.id, CompanyAIInteraction.created_at < cut).limit(500)).all():
+        s.delete(old)
+    s.commit()
+    s.refresh(row)
+    return row.id
+
+
+def _ai_history(s, company, user, sc, limit=30):
+    q = select(CompanyAIInteraction).where(CompanyAIInteraction.company_id == company.id)
+    if not sc["sees_all_history"]:
+        q = q.where(CompanyAIInteraction.user_id == user.id)
+    rows = s.exec(q.order_by(CompanyAIInteraction.created_at.desc()).limit(limit)).all()
+    return [{"id": r.id, "at": r.created_at.strftime("%Y-%m-%d %H:%M") if r.created_at else "", "user": r.user_name, "service": r.service, "question": r.question,
+             "modules": json.loads(r.modules_json or "[]"), "denied": json.loads(r.denied_json or "[]"), "confidence": r.confidence, "llm": r.llm,
+             "unverified": r.unverified, "error": r.error, "report_id": r.report_id, "decision_id": r.decision_id} for r in rows]
+
+
+def _ai_report_dict(r, full=True):
+    try:
+        c = json.loads(r.content_json or "{}")
+    except (TypeError, ValueError):
+        c = {}
+    d = {"id": r.id, "kind": r.kind, "title": r.title, "question": r.question, "status": r.status, "created_by": r.created_by,
+         "created_at": r.created_at.strftime("%Y-%m-%d %H:%M") if r.created_at else "", "reviewed_by": r.reviewed_by, "reviewed_at": r.reviewed_at,
+         "review_note": r.review_note, "schedule_id": r.schedule_id, "recipient_user_id": r.recipient_user_id, "confidence": c.get("confidence")}
+    if full:
+        d["content"] = c
+    return d
+
+
+def _ai_report_visible(r, user, sc):
+    return sc["can_review"] or r.created_by_id == user.id or r.recipient_user_id == user.id
+
+
+def _ai_make_report(s, company, user, viewer, sc, ae, kind, question, *, schedule_id=None, recipient_id=None, request=None):
+    kind = kind if kind in ae.REPORT_KINDS else "custom"
+    q = (question or ae.REPORT_KINDS[kind][0]).strip()[:300]
+    mods = None
+    if kind != "custom":
+        mods = []
+        for i in ae.REPORT_KINDS[kind][1]:
+            mods += ae.INTENTS[i][1]
+        mods = list(dict.fromkeys(mods))
+    und, plan, pack, facts, sigs, ans, errs = _ai_compute(s, company, viewer, sc, ae, q, "reports", modules_override=mods)
+    if not und["intents"] or kind != "custom":
+        und["intents"] = ae.REPORT_KINDS[kind][1] or und["intents"]
+    dec_refs = [{"id": m.decision_id, "source_ref": m.source_ref, "workflow": m.workflow} for m in s.exec(select(CompanyDecisionMeta).where(CompanyDecisionMeta.company_id == company.id, CompanyDecisionMeta.source == "assistant")).all()]
+    recs = ae.recommendations(sigs, dec_refs, datetime.now().date(), sc)
+    rep = ae.build_report(kind, q, und, ans, facts, recs, company=f"{company.name or ''} · {sc['ar']}", generated_at=datetime.now().strftime("%Y-%m-%d %H:%M"),
+                          sector=_risk_sector(company), as_of=max([str(v.get("as_of")) for v in pack.values() if isinstance(v, dict) and v.get("as_of")] or [""]) or None)
+    row = CompanyAIReport(company_id=company.id, kind=kind, title=rep["title"], question=q, content_json=json.dumps(rep, ensure_ascii=False, default=str),
+                          created_by=(user.name or user.email or "")[:100] if user else "جدولة", created_by_id=user.id if user else None,
+                          recipient_user_id=recipient_id, schedule_id=schedule_id)
+    s.add(row); s.commit(); s.refresh(row)
+    return row, und, ans
+
+
+def _ai_run_due(s, company_id=None, limit=5):
+    """تشغيل التقارير المجدولة المستحقة: يُولَّد لكل مستلم بصلاحياته الحالية ويُسلَّم داخل المنصة. يُستدعى عند فتح المساعد أو من مهمة Railway Cron."""
+    ae = _load_p24("assistant_engine")
+    if ae is None:
+        return []
+    now = datetime.now()
+    q = select(CompanyAISchedule).where(CompanyAISchedule.active == 1)
+    if company_id:
+        q = q.where(CompanyAISchedule.company_id == company_id)
+    rows = [r for r in s.exec(q.limit(200)).all() if r.next_run and r.next_run <= now.strftime("%Y-%m-%d %H:%M")][:limit]
+    done = []
+    for sch in rows:
+        company = s.get(Company, sch.company_id)
+        sent, failed = 0, []
+        for uid in [int(x) for x in (sch.recipients or "").split(",") if x.strip().isdigit()]:
+            u = s.get(User, uid)
+            if not u or u.company_id != sch.company_id or not company:
+                failed.append(f"{uid}: غير موجود في الشركة")
+                continue
+            try:
+                _c, _role, v = _goals_scope(s, u)
+                sc = ae.ai_scope(v)
+                if sc["kind"] == "none":
+                    failed.append(f"{u.name or uid}: بلا صلاحية")
+                    continue
+                if not sc["financial"] and sch.kind in ("financial", "leakage"):
+                    failed.append(f"{u.name or uid}: التقرير المالي خارج صلاحيته")
+                    continue
+                row, und, ans = _ai_make_report(s, company, None, v, sc, ae, sch.kind, sch.name, schedule_id=sch.id, recipient_id=uid)
+                log_audit(sch.company_id, None, "جدولة", "ai_report_scheduled", f"ai_report:{row.id}", f"schedule={sch.id} recipient={uid}")
+                sent += 1
+            except Exception as e:
+                failed.append(f"{uid}: {type(e).__name__}")
+        sch.last_run = now.strftime("%Y-%m-%d %H:%M")
+        sch.last_status = f"سُلّم داخل المنصة: {sent}" + (f" · تعذر: {'؛ '.join(failed)[:200]}" if failed else "")
+        sch.next_run = ae.next_run(sch.freq, sch.hour, now, weekday=sch.weekday, day=sch.day).strftime("%Y-%m-%d %H:%M")
+        s.add(sch); s.commit()
+        done.append({"id": sch.id, "sent": sent, "failed": failed})
+    return done
+
+
+@app.get("/company/assistant")
+def company_assistant_home(user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role, viewer, sc, ae = _ai_scope(s, user)
+        try:
+            ran = _ai_run_due(s, company.id, limit=3)
+        except Exception as e:
+            _logger.error(f"assistant due run failed: {type(e).__name__}: {str(e)[:200]}")
+            ran = []
+        h = ae.home(sc, _risk_sector(company), _ai_history(s, company, user, sc, 10))
+        inbox = s.exec(select(CompanyAIReport).where(CompanyAIReport.company_id == company.id, CompanyAIReport.recipient_user_id == user.id).order_by(CompanyAIReport.created_at.desc()).limit(20)).all()
+        h["inbox"] = [_ai_report_dict(r, full=False) for r in inbox]
+        h["settings"] = _ai_settings(s, company.id) if sc["kind"] in ("full", "cfo") else None
+        h["ran_schedules"] = ran
+        h["users"] = [{"id": u.id, "name": u.name or u.email} for u in s.exec(select(User).where(User.company_id == company.id)).all()] if sc["can_schedule"] else []
+        log_audit(company.id, user.id, user.name, "ai_view", "assistant:home", f"scope={sc['kind']}")
+        return h
+
+
+@app.post("/company/assistant/ask")
+def company_assistant_ask(data: dict, request: Request, user: User = Depends(get_current_user)):
+    q = str(data.get("question") or "").strip()[:500]
+    if not q:
+        raise HTTPException(422, "اكتب سؤالك")
+    service = str(data.get("service") or "ask")[:30]
+    with Session(engine) as s:
+        company, role, viewer, sc, ae = _ai_scope(s, user)
+        if service not in dict(ae.SERVICES):
+            service = "ask"
+        if not ae._svc_allowed(service, sc):
+            raise HTTPException(403, "هذه الخدمة خارج صلاحيتك")
+        try:
+            und, plan, pack, facts, sigs, ans, errs = _ai_compute(s, company, viewer, sc, ae, q, service)
+        except HTTPException:
+            raise
+        except Exception as e:
+            import traceback as _tb
+            _logger.error("assistant ask failed:\n" + _tb.format_exc()[-3000:])
+            raise HTTPException(500, f"تعذر تجهيز الإجابة — {type(e).__name__} (لم تُعرض أي أرقام غير موثقة)")
+        use_ai = data.get("use_ai", True) is not False and _ai_settings(s, company.id)["use_ai"]
+        narrative, llm, ver = _ai_narrative(ae, company, q, und, ans, facts, request, use_ai)
+        iid = _ai_log(s, company, user, ae, q, und, ans, service=service, llm=llm, verification=ver)
+        log_audit(company.id, user.id, user.name, "ai_ask", f"ai:{iid}", f"service={service} modules={','.join(m['module'] for m in ans['modules_used'])}")
+        return {"question": q, "understanding": und, "answer": ans, "evidence": [f for f in facts if f["available"]][:60],
+                "narrative": narrative, "llm": llm, "llm_ar": {"gemini": "سرد Gemini مفحوص رقمياً", "disabled": "السرد بالذكاء الاصطناعي معطّل", "unavailable": "بوابة الذكاء الاصطناعي غير متاحة",
+                                                                "error": "تعذر الوصول للنموذج — الإجابة من المحركات مباشرة", "empty": "لم يُرجع النموذج سرداً — الإجابة من المحركات مباشرة"}.get(llm),
+                "verification": ver, "interaction_id": iid, "can_draft": sc["can_draft"]}
+
+
+@app.post("/company/assistant/report")
+def company_assistant_report(data: dict, request: Request, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role, viewer, sc, ae = _ai_scope(s, user)
+        kind = data.get("kind") or "executive"
+        if kind not in ae.REPORT_KINDS:
+            raise HTTPException(422, "نوع التقرير غير معروف")
+        if kind in ("financial", "leakage") and not sc["financial"]:
+            raise HTTPException(403, "التقرير المالي خارج صلاحيتك")
+        if kind == "custom" and not str(data.get("question") or "").strip():
+            raise HTTPException(422, "اكتب موضوع التقرير")
+        row, und, ans = _ai_make_report(s, company, user, viewer, sc, ae, kind, str(data.get("question") or ""), request=request)
+        _ai_log(s, company, user, ae, row.question, und, ans, service="reports", report_id=row.id)
+        log_audit(company.id, user.id, user.name, "ai_report", f"ai_report:{row.id}", f"kind={kind}")
+        return _ai_report_dict(row)
+
+
+@app.get("/company/assistant/reports")
+def company_assistant_reports(user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role, viewer, sc, ae = _ai_scope(s, user)
+        rows = s.exec(select(CompanyAIReport).where(CompanyAIReport.company_id == company.id).order_by(CompanyAIReport.created_at.desc()).limit(200)).all()
+        return {"items": [_ai_report_dict(r, full=False) for r in rows if _ai_report_visible(r, user, sc)], "flow": {k: list(v) for k, v in _AI_REPORT_FLOW.items()}, "can_review": sc["can_review"]}
+
+
+@app.get("/company/assistant/report/{rid}")
+def company_assistant_report_get(rid: int, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role, viewer, sc, ae = _ai_scope(s, user)
+        r = s.get(CompanyAIReport, rid)
+        if not r or r.company_id != company.id or not _ai_report_visible(r, user, sc):
+            raise HTTPException(404, "التقرير غير موجود")
+        log_audit(company.id, user.id, user.name, "ai_report_view", f"ai_report:{r.id}", "")
+        return _ai_report_dict(r)
+
+
+@app.post("/company/assistant/report/review")
+def company_assistant_report_review(data: dict, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role, viewer, sc, ae = _ai_scope(s, user)
+        if not sc["can_review"]:
+            raise HTTPException(403, "مراجعة واعتماد التقارير للمالك والمدير المالي")
+        r = s.get(CompanyAIReport, int(data.get("id") or 0))
+        if not r or r.company_id != company.id:
+            raise HTTPException(404, "التقرير غير موجود")
+        to = data.get("status")
+        if to not in _AI_REPORT_FLOW.get(r.status, ()):
+            raise HTTPException(409, f"لا يمكن الانتقال من {r.status} إلى {to}")
+        note = str(data.get("note") or "").strip()[:500]
+        if to == "approved" and r.created_by_id == user.id and r.status != "reviewed":
+            raise HTTPException(409, "راجع التقرير أولاً قبل الاعتماد")
+        old = r.status
+        r.status, r.reviewed_by, r.reviewed_at, r.review_note = to, (user.name or user.email)[:100], datetime.now().strftime("%Y-%m-%d %H:%M"), note
+        s.add(r); s.commit()
+        log_audit(company.id, user.id, user.name, "ai_report_review", f"ai_report:{r.id}", f"{old}→{to} {note[:100]}")
+        return {"ok": True, "status": to}
+
+
+@app.get("/company/assistant/recommendations")
+def company_assistant_recommendations(user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role, viewer, sc, ae = _ai_scope(s, user)
+        mods = [m for m in sc["modules"] if m not in ("goals", "decisions")]
+        und, plan, pack, facts, sigs, ans, errs = _ai_compute(s, company, viewer, sc, ae, "التوصيات", "recommendations", modules_override=mods)
+        dec_refs = [{"id": m.decision_id, "source_ref": m.source_ref, "workflow": m.workflow} for m in s.exec(select(CompanyDecisionMeta).where(CompanyDecisionMeta.company_id == company.id, CompanyDecisionMeta.source == "assistant")).all()]
+        recs = ae.recommendations(sigs, dec_refs, datetime.now().date(), sc)
+        log_audit(company.id, user.id, user.name, "ai_recommendations", "assistant:recs", f"n={len(recs)}")
+        return {"items": recs, "gaps": ans["gaps"], "modules_used": ans["modules_used"],
+                "rule_ar": "كل توصية من إشارة محرك بأدلتها — لا نصائح عامة · المولّدة آلياً منفصلة عن التي اعتمدتها الإدارة · التحويل لقرار يمر بالاعتماد (3.9)"}
+
+
+@app.post("/company/assistant/decision-draft")
+def company_assistant_decision_draft(data: dict, user: User = Depends(get_current_user)):
+    """مسودة قرار رسمية في متابعة القرارات (3.9) — الاعتماد النهائي يخضع لصلاحيات الشركة."""
+    with Session(engine) as s:
+        company, role, viewer, sc, ae = _ai_scope(s, user)
+        if not sc["can_draft"]:
+            raise HTTPException(403, "تجهيز مسودات القرارات للمالك والمدير المالي والمديرين ومدير الفرع")
+        title = str(data.get("title") or "").strip()[:200]
+        if not title:
+            raise HTTPException(422, "عنوان القرار مطلوب")
+        ev = [str(x)[:200] for x in (data.get("evidence") or [])][:6]
+        if not ev:
+            raise HTTPException(422, "مسودة القرار تحتاج أدلة من التحليل")
+        ref = str(data.get("ref") or "assistant:manual")[:200]
+        if not ref.startswith("assistant:"):
+            raise HTTPException(422, "مرجع غير صالح")
+        if ref != "assistant:manual" and s.exec(select(CompanyDecisionMeta).where(CompanyDecisionMeta.company_id == company.id, CompanyDecisionMeta.source == "assistant", CompanyDecisionMeta.source_ref == ref)).first():
+            raise HTTPException(409, "هذه التوصية لها قرار مسبقاً")
+        dx = _load_p24("decisions_engine")
+        cat = data.get("category") if dx and data.get("category") in dx.CATEGORIES else "other"
+        kpi = str(data.get("kpi") or "")[:40] or None
+        exp = _fnum(data.get("expected_impact"), "الأثر المتوقع")
+        if exp is not None and not sc["financial"]:
+            exp = None
+        rationale = (str(data.get("rationale") or "").strip()[:300] + " · الأدلة: " + " | ".join(ev))[:900]
+        payload = {"title": title, "rationale": f"من المساعد الذكي (4.5): {rationale}", "owner": str(data.get("owner") or "")[:100], "due": str(data.get("due") or "")[:10] or None,
+                   "category": cat, "priority": data.get("priority") if data.get("priority") in ("high", "medium", "low") else "medium", "expected_impact": exp,
+                   "expected_type": "potential", "source": "assistant", "source_ref": ref, "branch": sc.get("branch"), "cost": _fnum(data.get("cost"), "التكلفة") if sc["financial"] else None,
+                   "kpis": [{"metric": kpi, "target": _fnum(data.get("target"), "المستهدف"), "branch": sc.get("branch")}] if kpi else []}
+    out = company_decision_center_save(payload, user=user)
+    with Session(engine) as s:
+        company = s.get(Company, user.company_id)
+        und = {"intents": ["decisions"], "modules": []}
+        ans = {"modules_used": [], "denied": [], "confidence": "—"}
+        _ai_log(s, company, user, ae, title, und, ans, service="decisions", decision_id=out.get("id"))
+        log_audit(company.id, user.id, user.name, "ai_decision_draft", ref, f"decision={out.get('id')}")
+    return {"ok": True, "decision_id": out.get("id"), "link": f"company-decisions-intelligence.html#dec/{out.get('id')}",
+            "note_ar": "أُنشئت كمسودة في متابعة القرارات — الاعتماد حسب مسار الموافقات في الشركة"}
+
+
+@app.get("/company/assistant/data-quality")
+def company_assistant_data_quality(user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role, viewer, sc, ae = _ai_scope(s, user)
+        und, plan, pack, facts, sigs, ans, errs = _ai_compute(s, company, viewer, sc, ae, "جودة البيانات", "data_quality", modules_override=sc["modules"])
+        log_audit(company.id, user.id, user.name, "ai_data_quality", "assistant:dq", "")
+        return ae.data_quality(pack, facts, errs, sc)
+
+
+@app.get("/company/assistant/sources")
+def company_assistant_sources(user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role, viewer, sc, ae = _ai_scope(s, user)
+        pack, errs = _ai_pack(s, company, viewer, sc["modules"])
+        ext = ae.external_evidence(pack.get("competitors") if isinstance(pack.get("competitors"), dict) else None, pack.get("events") if isinstance(pack.get("events"), dict) else None)
+        cfg = (_ev_settings(s, company.id).get("external_sources") or []) if "events" in sc["modules"] else []
+        out = ae.sources(pack, sc["modules"], ext, cfg)
+        out["errors"] = errs
+        return out
+
+
+@app.post("/company/assistant/whatif")
+def company_assistant_whatif(data: dict, user: User = Depends(get_current_user)):
+    """مختبر السيناريوهات عبر محرك التنبؤ المعتمد (3.7) — لا يعدّل البيانات ولا يعتمد إجراء."""
+    with Session(engine) as s:
+        company, role, viewer, sc, ae = _ai_scope(s, user)
+        if "prediction" not in sc["modules"]:
+            raise HTTPException(403, "مختبر السيناريوهات خارج صلاحيتك")
+        pe = _load_p24("prediction_engine")
+        d = _goals_data(s, company)
+        pred = d.get("pred") or {}
+        base = pred.get("scenario_baseline")
+        if pe is None or not base:
+            raise HTTPException(409, "لا يوجد خط أساس للتنبؤ — " + str(((pred.get("data") or {}).get("sufficiency_ar")) or "بيانات غير كافية"))
+        lim = pred.get("assumption_limits") or {}
+        a, errs = {}, []
+        for k, v in (data.get("assumptions") or {}).items():
+            if k not in lim:
+                errs.append(f"افتراض غير معروف: {str(k)[:30]}")
+                continue
+            fv = _fnum(v, lim[k].get("ar") or k)
+            if fv is None:
+                continue
+            if not lim[k]["min"] <= fv <= lim[k]["max"]:
+                errs.append(f"{lim[k]['ar']} خارج النطاق ({lim[k]['min']}…{lim[k]['max']})")
+            a[k] = fv
+        if errs:
+            raise HTTPException(422, " · ".join(errs))
+        if not a:
+            raise HTTPException(422, "أدخل افتراضاً واحداً على الأقل")
+        res = pe.simulate(base, a, name="مختبر المساعد")
+        out = {"assumptions": [{"key": k, "ar": lim[k]["ar"], "value": v} for k, v in a.items()], "horizon_months": len(base.get("months") or []),
+               "baseline": {"revenue": round(sum(base.get("revenue") or []), 2)}, "scenario": {"revenue": res.get("revenue")}, "months": res.get("months"),
+               "confidence_ar": ((pred.get("outlook") or {}).get("confidence") or {}).get("label_ar"), "source_ar": "محرك التنبؤ (3.7) — نفس دالة المحاكاة المعتمدة",
+               "rule_ar": "السيناريو لا يعدّل البيانات ولا يتحول لإجراء إلا عبر الموافقات (3.9)", "limits_ar": "الافتراضات منك؛ لا مرونة طلب يفترضها النظام"}
+        if sc["financial"]:
+            out["scenario"].update({"gross_profit": res.get("gross_profit"), "net_profit": res.get("net_profit"), "margin_pct": res.get("margin_pct"), "cash_end": res.get("cash_end")})
+        else:
+            out["months"] = [{"period": m["period"], "revenue": m["revenue"]} for m in res.get("months") or []]
+        log_audit(company.id, user.id, user.name, "ai_whatif", "assistant:whatif", json.dumps(a, ensure_ascii=False)[:200])
+        return out
+
+
+@app.get("/company/assistant/schedules")
+def company_assistant_schedules(user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role, viewer, sc, ae = _ai_scope(s, user)
+        if not sc["can_schedule"]:
+            raise HTTPException(403, "التقارير المجدولة للمالك والمدير المالي")
+        users = {u.id: (u.name or u.email) for u in s.exec(select(User).where(User.company_id == company.id)).all()}
+        rows = s.exec(select(CompanyAISchedule).where(CompanyAISchedule.company_id == company.id)).all()
+        return {"items": [{"id": r.id, "name": r.name, "kind": r.kind, "freq": r.freq, "freq_ar": ae.FREQS.get(r.freq), "hour": r.hour, "weekday": r.weekday, "day": r.day,
+                           "recipients": [{"id": int(x), "name": users.get(int(x), "—")} for x in (r.recipients or "").split(",") if x.strip().isdigit()],
+                           "active": bool(r.active), "next_run": r.next_run, "last_run": r.last_run, "last_status": r.last_status} for r in rows],
+                "delivery_ar": "التسليم داخل المنصة (صندوق التقارير لكل مستلم) — يُولَّد عند حلول الموعد عند فتح المساعد، أو تلقائياً إذا فُعّلت مهمة Railway Cron على /internal/assistant/run-due",
+                "users": [{"id": k, "name": v} for k, v in users.items()], "kinds": {k: v[0] for k, v in ae.REPORT_KINDS.items() if k != "custom"}, "freqs": ae.FREQS}
+
+
+@app.post("/company/assistant/schedules")
+def company_assistant_schedule_save(data: dict, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role, viewer, sc, ae = _ai_scope(s, user)
+        if not sc["can_schedule"]:
+            raise HTTPException(403, "التقارير المجدولة للمالك والمدير المالي")
+        name = str(data.get("name") or "").strip()[:120]
+        if not name:
+            raise HTTPException(422, "اسم التقرير المجدول مطلوب")
+        kind, freq = data.get("kind"), data.get("freq")
+        if kind not in ae.REPORT_KINDS or kind == "custom":
+            raise HTTPException(422, "نوع التقرير غير معروف")
+        if freq not in ae.FREQS:
+            raise HTTPException(422, "التكرار: يومي/أسبوعي/شهري")
+        hour = int(_fnum(data.get("hour"), "الساعة") or 7)
+        if not 0 <= hour <= 23:
+            raise HTTPException(422, "الساعة بين 0 و23")
+        rec = [int(x) for x in (data.get("recipients") or []) if str(x).isdigit()]
+        if not rec:
+            raise HTTPException(422, "حدد مستلماً واحداً على الأقل")
+        members = {u.id for u in s.exec(select(User).where(User.company_id == company.id)).all()}
+        if any(r not in members for r in rec):
+            raise HTTPException(422, "مستلم خارج الشركة")
+        if data.get("id"):
+            r = s.get(CompanyAISchedule, int(data["id"]))
+            if not r or r.company_id != company.id:
+                raise HTTPException(404, "الجدولة غير موجودة")
+        else:
+            r = CompanyAISchedule(company_id=company.id, created_by=(user.name or user.email)[:100])
+        r.name, r.kind, r.freq, r.hour = name, kind, freq, hour
+        r.weekday, r.day = int(_fnum(data.get("weekday"), "اليوم") or 6) % 7, max(1, min(28, int(_fnum(data.get("day"), "اليوم") or 1)))
+        r.recipients, r.active = ",".join(str(x) for x in rec), 1 if data.get("active", True) is not False else 0
+        r.next_run = ae.next_run(freq, hour, datetime.now(), weekday=r.weekday, day=r.day).strftime("%Y-%m-%d %H:%M")
+        s.add(r); s.commit(); s.refresh(r)
+        log_audit(company.id, user.id, user.name, "ai_schedule", f"ai_schedule:{r.id}", f"kind={kind} freq={freq} recipients={r.recipients}")
+        return {"ok": True, "id": r.id, "next_run": r.next_run}
+
+
+@app.post("/internal/assistant/run-due")
+def internal_assistant_run_due(_: bool = Depends(verify_admin)):
+    """لمهمة Railway Cron (X-Admin-Key): يولّد التقارير المجدولة المستحقة لكل الشركات ويسلّمها داخل المنصة."""
+    with Session(engine) as s:
+        return {"ran": _ai_run_due(s, None, limit=50)}
+
+
+@app.get("/company/assistant/history")
+def company_assistant_history(user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role, viewer, sc, ae = _ai_scope(s, user)
+        return {"items": _ai_history(s, company, user, sc, 100), "scope_ar": "كل التفاعلات" if sc["sees_all_history"] else "تفاعلاتك فقط",
+                "retention_days": _ai_settings(s, company.id)["retention_days"],
+                "stored_ar": "يُحفظ السؤال (حتى 300 حرف) والوحدات المستخدمة والنتيجة العامة فقط — لا أرقام ولا بيانات عملاء"}
+
+
+@app.post("/company/assistant/settings")
+def company_assistant_settings(data: dict, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, role, viewer, sc, ae = _ai_scope(s, user)
+        if sc["kind"] not in ("full", "cfo"):
+            raise HTTPException(403, "الإعدادات للمالك والمدير المالي")
+        rd = _fnum(data.get("retention_days", 180), "مدة الاحتفاظ")
+        if rd is None or not 7 <= rd <= 730:
+            raise HTTPException(422, "مدة الاحتفاظ بين 7 و730 يوماً")
+        out = {"retention_days": int(rd), "use_ai": data.get("use_ai", True) is not False}
+        r = s.exec(select(CompanyAISetting).where(CompanyAISetting.company_id == company.id)).first() or CompanyAISetting(company_id=company.id)
+        old = r.settings_json or "{}"
+        r.settings_json, r.updated_by, r.updated_at = json.dumps(out), (user.name or user.email)[:100], datetime.now().strftime("%Y-%m-%d %H:%M")
+        s.add(r); s.commit()
+        log_audit(company.id, user.id, user.name, "ai_settings", "assistant:settings", f"old={old} new={r.settings_json}")
+        return {"ok": True, "settings": out}
+
+
 @app.get("/company/executive-intelligence")
 def company_executive_intelligence(request: Request, user: User = Depends(get_current_user),
                                    period: Optional[str] = None, ai: int = 0):
@@ -17052,7 +18476,7 @@ ENGINE_MODULES = ("nabbah_finance", "nabbah_trust", "semantic_layer", "kpi_engin
                   "ai_gateway", "period_aggregation", "legacy_adapters", "platform_bridge",
                   "intelligence_engine", "forecast_engine", "scenario_engine", "decision_memory",
                   "rule_catalog", "canonical_model", "period_model", "metric_registry", "ingestion",
-                  "sales_engine", "inventory_engine", "purchases_engine", "cashflow_engine", "hr_engine", "ops_engine", "finance_engine", "sector_intelligence", "leakage_engine", "tax_engine", "risk_engine", "drivers_engine", "benchmark_engine", "prediction_engine", "goals_engine", "decisions_engine", "board_engine", "monthly_engine", "executive_engine", "customer_engine", "branch_engine")
+                  "sales_engine", "inventory_engine", "purchases_engine", "cashflow_engine", "hr_engine", "ops_engine", "finance_engine", "sector_intelligence", "leakage_engine", "tax_engine", "risk_engine", "drivers_engine", "benchmark_engine", "prediction_engine", "goals_engine", "decisions_engine", "board_engine", "monthly_engine", "executive_engine", "customer_engine", "branch_engine", "competitor_engine", "events_engine", "assistant_engine")
 
 
 def _runtime_health():
@@ -17402,7 +18826,7 @@ def files_check(_: bool = Depends(verify_admin)):
         "company-data-quality.html", "company-predictions.html", "company-risks.html",
         "company-board.html", "company-root-cause.html", "company-benchmarks.html",
         "company-upload.html", "company-memory.html", "company-decisions.html",
-        "company-monthly-report.html", "company-monthly-intelligence.html", "company-board-intelligence.html", "company-executive-report-intelligence.html", "company-customer-intelligence.html", "company-branch-intelligence.html",
+        "company-monthly-report.html", "company-monthly-intelligence.html", "company-board-intelligence.html", "company-executive-report-intelligence.html", "company-customer-intelligence.html", "company-branch-intelligence.html", "company-competitor-intelligence.html", "company-events-intelligence.html", "company-assistant.html",
         "nabbah-data-template.xlsx",
     ]
     missing, present = [], []
