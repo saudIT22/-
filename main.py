@@ -84,7 +84,7 @@ app.add_middleware(
     allow_origins=_allowed_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "X-Admin-Key"],
+    allow_headers=["Authorization", "Content-Type", "X-Admin-Key", "X-API-Key", "Idempotency-Key", "X-Nabbah-Simulate", "X-Nabbah-Signature"],
 )
 
 
@@ -1725,6 +1725,190 @@ class SecurityIncident(SQLModel, table=True):
     closed_at: Optional[_DTCOL] = None
 
 
+# ═══ Phase 6.1 + 6.2 — مركز التكاملات ومنصة المطورين: جداول جديدة فقط. لا جداول بيانات موازية —
+#     السجلات الواردة تمر إلى CompanyDataset (مركز البيانات) ثم إلى الجداول المعتمدة الحالية. ═══
+class IntegrationConnection(SQLModel, table=True):
+    """اتصال نظام خارجي بالشركة: الطريقة · نوع البيانات · الفروع · الحالة · المزامنة · الأسرار مشفّرة."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    name: str = ""
+    catalog_key: str = ""
+    method: str = "push_api"                 # push_api | webhook_in | rest_pull
+    mode: str = "realtime"                   # realtime | scheduled | manual | webhook
+    dataset_type: str = ""
+    env: str = "live"                        # live | sandbox
+    status: str = "active"                   # active | paused | needs_attention | archived
+    auth_status: str = "unknown"             # ok | failed | unknown
+    owner_name: str = ""
+    branch_ids_json: str = "[]"
+    branch_map_json: str = "{}"              # رمز الفرع في النظام الخارجي ← رقم الفرع في نبّاه
+    id_field: str = ""                       # حقل المعرّف الخارجي لمنع التكرار
+    auto_approve: int = 0                    # اعتماد تلقائي في مركز البيانات عند جودة ALLOW فقط
+    interval_minutes: int = 60
+    expected_hours: int = 24
+    inbound_token: str = Field(default="", index=True)
+    inbound_secret_enc: str = ""
+    pull_config_json: str = "{}"
+    pull_auth_enc: str = ""
+    next_run_at: Optional[_DTCOL] = None
+    retry_attempt: int = 0
+    last_success_at: Optional[_DTCOL] = None
+    last_attempt_at: Optional[_DTCOL] = None
+    last_error: str = ""
+    records_total: int = 0
+    created_by: str = ""
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+    updated_at: Optional[_DTCOL] = None
+
+
+class IntegrationMapping(SQLModel, table=True):
+    """نسخة مطابقة حقول (FieldMapping + MappingVersion): مسودة ← مراجعة الفروق ← اعتماد. نسخة معتمدة واحدة فعّالة."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    connection_id: int = Field(index=True)
+    version: int = 1
+    status: str = "draft"                    # draft | approved | superseded
+    mapping_json: str = "{}"                 # حقل خارجي ← حقل نبّاه
+    transforms_json: str = "{}"
+    note: str = ""
+    created_by: str = ""
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+    approved_by: str = ""
+    approved_at: Optional[_DTCOL] = None
+
+
+class IntegrationSyncJob(SQLModel, table=True):
+    """عملية مزامنة: المستلم/المقبول/المرفوض/المكرر · الدفعة في مركز البيانات · الخطأ · الزمن · مفتاح عدم التكرار."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    connection_id: int = Field(index=True)
+    mode: str = ""
+    status: str = "running"                  # running | success | partial | failed | duplicate_batch | sandbox
+    received: int = 0
+    accepted: int = 0
+    rejected: int = 0
+    duplicates: int = 0
+    dataset_id: Optional[int] = None
+    quality_score: Optional[int] = None
+    error: str = ""
+    auth_error: int = 0
+    network_error: int = 0
+    ms: Optional[float] = None
+    idempotency_key: str = Field(default="", index=True)
+    triggered_by: str = ""
+    attempt: int = 1
+    errors_json: str = "[]"
+    started_at: _DTCOL = Field(default_factory=_now_naive)
+    finished_at: Optional[_DTCOL] = None
+
+
+class IntegrationLog(SQLModel, table=True):
+    """سجل التكاملات: كل عملية وتغيير إعداد بالوقت والمستخدم والنتيجة."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    connection_id: Optional[int] = Field(default=None, index=True)
+    job_id: Optional[int] = None
+    kind: str = ""                           # sync | config | mapping | auth | webhook
+    level: str = "info"                      # info | warn | error
+    message: str = ""
+    records: Optional[int] = None
+    ms: Optional[float] = None
+    user_name: str = ""
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+class IntegrationRecordKey(SQLModel, table=True):
+    """بصمات السجلات المستلمة (مُجزّأة) لكل اتصال — تمنع استيراد السجل نفسه مرتين عند إعادة الإرسال."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    connection_id: int = Field(index=True)
+    key_hash: str = Field(default="", index=True)
+    dataset_id: Optional[int] = None
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+class DeveloperApp(SQLModel, table=True):
+    """تطبيق مطوّر تابع للشركة — تُربط به مفاتيح API وWebhooks."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    name: str = ""
+    description: str = ""
+    status: str = "active"                   # active | suspended
+    created_by: str = ""
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+class APIKey(SQLModel, table=True):
+    """مفتاح API: يُعرض مرة واحدة · يُخزّن HMAC فقط · البادئة ظاهرة · نطاقات · انتهاء · حدود · بيئة live/sandbox."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    app_id: Optional[int] = Field(default=None, index=True)
+    name: str = ""
+    prefix: str = Field(default="", index=True)
+    key_hash: str = ""
+    env: str = "live"
+    scopes_json: str = "[]"
+    status: str = "active"                   # active | suspended | revoked
+    expires_at: Optional[_DTCOL] = None
+    rate_per_min: int = 60
+    quota_day: int = 10000
+    last_used_at: Optional[_DTCOL] = None
+    last_ip: str = ""
+    rotated_from_id: Optional[int] = None
+    created_by: str = ""
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+    revoked_by: str = ""
+    revoked_at: Optional[_DTCOL] = None
+
+
+class APIUsage(SQLModel, table=True):
+    """سجل طلبات API (بلا أجسام الطلبات ولا المفاتيح): المسار · الحالة · الزمن · IP مقنّع."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: Optional[int] = Field(default=None, index=True)
+    key_id: Optional[int] = Field(default=None, index=True)
+    app_id: Optional[int] = None
+    env: str = ""
+    method: str = ""
+    route: str = ""
+    status: int = 0
+    ms: Optional[float] = None
+    ip: str = ""
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+class WebhookEndpoint(SQLModel, table=True):
+    """Webhook صادر: عنوان HTTPS · أحداث · سر توقيع مشفّر · إيقاف/تفعيل · إيقاف تلقائي بعد فشل متكرر."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    app_id: Optional[int] = None
+    url: str = ""
+    description: str = ""
+    events_json: str = "[]"
+    secret_enc: str = ""
+    env: str = "live"
+    status: str = "active"                   # active | disabled | auto_disabled
+    consecutive_failures: int = 0
+    created_by: str = ""
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+class WebhookDelivery(SQLModel, table=True):
+    """محاولة تسليم حدث: الحالة · عدد المحاولات · موعد التالية · رمز الاستجابة · الزمن · الخطأ."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    webhook_id: int = Field(index=True)
+    event: str = ""
+    payload_json: str = "{}"
+    status: str = "pending"                  # pending | delivered | failed | dead
+    attempts: int = 0
+    next_attempt_at: Optional[_DTCOL] = None
+    response_code: Optional[int] = None
+    response_ms: Optional[float] = None
+    error: str = ""
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+    delivered_at: Optional[_DTCOL] = None
+
+
 class BenchmarkDataset(SQLModel, table=True):
     """طبقة المعايير القطاعية (3.5): company_id فارغ = معيار المنصّة (من الإدارة)، وإلا معيار خاص بالشركة.
     كل معيار بمصدره ومنهجيته وفترته وعيّنته وثقته — لا معيار بلا مصدر."""
@@ -2658,6 +2842,16 @@ def page_company_events_intelligence():
 @app.get("/company-assistant.html")
 def page_company_assistant():
     return FileResponse("company-assistant.html")
+
+
+@app.get("/company-integrations.html")
+def page_company_integrations():
+    return FileResponse("company-integrations.html")
+
+
+@app.get("/company-developers.html")
+def page_company_developers():
+    return FileResponse("company-developers.html")
 
 
 @app.get("/company-security.html")
@@ -5735,7 +5929,7 @@ def _load_p24(name):
     """يحمّل محركات 2.4 من المجلد أو من حزمة nabbah_engines."""
     try:
         import sys as _sys, os as _os, importlib
-        for _d in ("phase21", "phase22", "phase23", "phase24", "phase25", "phase26", "phase27", "phase28", "phase29", "phase210", "phase211", "phase30", "phase31", "phase32", "phase33", "phase34", "phase35", "phase37", "phase38", "phase39", "phase310", "phase311", "phase312", "phase41", "phase42", "phase43", "phase44", "phase45", "phase67"):
+        for _d in ("phase21", "phase22", "phase23", "phase24", "phase25", "phase26", "phase27", "phase28", "phase29", "phase210", "phase211", "phase30", "phase31", "phase32", "phase33", "phase34", "phase35", "phase37", "phase38", "phase39", "phase310", "phase311", "phase312", "phase41", "phase42", "phase43", "phase44", "phase45", "phase67", "phase61"):
             _p = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), _d)
             if _p not in _sys.path:
                 _sys.path.insert(0, _p)
@@ -5776,7 +5970,7 @@ def _dataset_json(d, role=None):
     j = {"id": d.id, "dataset_type": d.dataset_type, "source_file": d.source_file, "period": d.period,
          "branches": d.branches, "total_rows": d.total_rows, "valid_rows": d.valid_rows,
          "rejected_rows": d.rejected_rows, "quality_score": d.quality_score, "quality_gate": d.quality_gate,
-         "status": d.status, "uploaded_by": d.uploaded_by,
+         "status": d.status, "uploaded_by": d.uploaded_by, "source_type": getattr(d, "source_type", "upload") or "upload",
          "created_at": d.created_at.isoformat() if d.created_at else None,
          "imported_at": d.imported_at.isoformat() if d.imported_at else None}
     if role not in DATA_ROLES_EDIT:
@@ -6034,62 +6228,68 @@ def company_dataset_import(dataset_id: int, user: User = Depends(get_current_use
             raise HTTPException(422, {"message_ar": "جودة البيانات غير كافية للاعتماد — صحّح الأخطاء وأعد الرفع",
                                       "message_en": "Data quality too low to import — fix the errors and re-upload",
                                       "quality_score": d.quality_score})
-        target = _IMPORT_TARGETS.get(d.dataset_type)
-        if not target:
-            raise HTTPException(422, "نوع بيانات غير مدعوم للاعتماد")
-        model = globals()[target[0]]
-        fields = target[1]
-        rows = json.loads(d.staging_json or "[]")
-        created = updated = 0
-        _depts = None
-        for r in rows:
-            payload = {f: r.get(f) for f in fields if f in r}
-            payload["company_id"] = company.id
-            extra = dict(r.get("extra") or {})
-            if model in (CompanyEmployee, CompanyJobOpening, CompanyOpsOrder, CompanyOpsEvent, CompanyOpsIssue) \
-                    and payload.get("department_id") not in (None, "") \
-                    and not str(payload["department_id"]).isdigit():
-                if _depts is None:
-                    _depts = {x.name.strip(): x.id for x in s.exec(select(CompanyDepartment).where(
-                        CompanyDepartment.company_id == company.id)).all()}
-                name_ = str(payload["department_id"]).strip()
-                payload["department_id"] = _depts.get(name_)
-                if payload["department_id"] is None:
-                    extra["department"] = name_          # لا نضع نصاً في عمود رقمي — نحفظه ولا نفقده
-            elif payload.get("department_id") not in (None, ""):
-                payload["department_id"] = int(payload["department_id"])
-            if hasattr(model, "extra_json") and extra:
-                payload["extra_json"] = json.dumps(extra, ensure_ascii=False, default=str)[:20000]
-            if hasattr(model, "dataset_id"):
-                payload["dataset_id"] = d.id
-            if hasattr(model, "source_row"):
-                payload["source_row"] = r.get("_row")
-            if hasattr(model, "period") and not payload.get("period") and r.get("date") and pm:
-                payload["period"] = pm.period_key(r["date"], "month") or ""
-            key = _MASTER_KEYS.get(model.__name__)
-            existing = None
-            if key and all(payload.get(k) not in (None, "") for k in key):
-                q = select(model).where(model.company_id == company.id)
-                for k in key:
-                    q = q.where(getattr(model, k) == payload[k])
-                existing = s.exec(q).first()
-            if existing is not None:         # بيانات أساسية: تُحدَّث ولا تُكرَّر عند إعادة الرفع
-                for k, v in payload.items():
-                    if k != "company_id" and v not in (None, ""):
-                        setattr(existing, k, v)
-                s.add(existing); updated += 1
-                continue
-            s.add(model(**payload)); created += 1
-            if created % 2000 == 0:          # دفعات: ملفات كبيرة بلا ضغط على الذاكرة
-                s.flush()
-        d.status = "imported" if d.rejected_rows == 0 else "partial"
-        d.imported_at = datetime.now()
-        d.staging_json = "[]"          # لا نحتفظ بالنسخة المؤقتة بعد الاعتماد
-        s.add(d); s.commit()
-        log_audit(company.id, user.id, user.name, "dataset_import", f"dataset:{dataset_id}",
-                  f"type={d.dataset_type} imported={created} updated={updated} rejected={d.rejected_rows} quality={d.quality_score}")
-        return {"ok": True, "imported": created, "updated": updated, "rejected": d.rejected_rows, "status": d.status,
-                "quality_score": d.quality_score, "quality_gate": d.quality_gate}
+        return _dataset_import_core(s, company, d, user.id, user.name)
+
+
+def _dataset_import_core(s, company, d, actor_id, actor_name):
+    """اعتماد دفعة مركز البيانات (مشترك بين الرفع اليدوي والتكاملات): الصفوف الصالحة فقط، والبيانات الأساسية تُحدَّث ولا تُكرَّر."""
+    pm = _load_p24("period_model")
+    target = _IMPORT_TARGETS.get(d.dataset_type)
+    if not target:
+        raise HTTPException(422, "نوع بيانات غير مدعوم للاعتماد")
+    model = globals()[target[0]]
+    fields = target[1]
+    rows = json.loads(d.staging_json or "[]")
+    created = updated = 0
+    _depts = None
+    for r in rows:
+        payload = {f: r.get(f) for f in fields if f in r}
+        payload["company_id"] = company.id
+        extra = dict(r.get("extra") or {})
+        if model in (CompanyEmployee, CompanyJobOpening, CompanyOpsOrder, CompanyOpsEvent, CompanyOpsIssue) \
+                and payload.get("department_id") not in (None, "") \
+                and not str(payload["department_id"]).isdigit():
+            if _depts is None:
+                _depts = {x.name.strip(): x.id for x in s.exec(select(CompanyDepartment).where(
+                    CompanyDepartment.company_id == company.id)).all()}
+            name_ = str(payload["department_id"]).strip()
+            payload["department_id"] = _depts.get(name_)
+            if payload["department_id"] is None:
+                extra["department"] = name_          # لا نضع نصاً في عمود رقمي — نحفظه ولا نفقده
+        elif payload.get("department_id") not in (None, ""):
+            payload["department_id"] = int(payload["department_id"])
+        if hasattr(model, "extra_json") and extra:
+            payload["extra_json"] = json.dumps(extra, ensure_ascii=False, default=str)[:20000]
+        if hasattr(model, "dataset_id"):
+            payload["dataset_id"] = d.id
+        if hasattr(model, "source_row"):
+            payload["source_row"] = r.get("_row")
+        if hasattr(model, "period") and not payload.get("period") and r.get("date") and pm:
+            payload["period"] = pm.period_key(r["date"], "month") or ""
+        key = _MASTER_KEYS.get(model.__name__)
+        existing = None
+        if key and all(payload.get(k) not in (None, "") for k in key):
+            q = select(model).where(model.company_id == company.id)
+            for k in key:
+                q = q.where(getattr(model, k) == payload[k])
+            existing = s.exec(q).first()
+        if existing is not None:         # بيانات أساسية: تُحدَّث ولا تُكرَّر عند إعادة الرفع
+            for k, v in payload.items():
+                if k != "company_id" and v not in (None, ""):
+                    setattr(existing, k, v)
+            s.add(existing); updated += 1
+            continue
+        s.add(model(**payload)); created += 1
+        if created % 2000 == 0:          # دفعات: ملفات كبيرة بلا ضغط على الذاكرة
+            s.flush()
+    d.status = "imported" if d.rejected_rows == 0 else "partial"
+    d.imported_at = datetime.now()
+    d.staging_json = "[]"          # لا نحتفظ بالنسخة المؤقتة بعد الاعتماد
+    s.add(d); s.commit()
+    log_audit(company.id, actor_id, actor_name, "dataset_import", f"dataset:{d.id}",
+              f"type={d.dataset_type} imported={created} updated={updated} rejected={d.rejected_rows} quality={d.quality_score}")
+    return {"ok": True, "imported": created, "updated": updated, "rejected": d.rejected_rows, "status": d.status,
+            "quality_score": d.quality_score, "quality_gate": d.quality_gate}
 
 
 @app.get("/company/datasets/{dataset_id}")
@@ -10092,6 +10292,8 @@ def company_decision_center_transition(data: dict, user: User = Depends(get_curr
             _dec_hist(s, company.id, d.id, "recommended", by, "", "", note)
         s.commit()
         log_audit(company.id, user.id, user.name, f"decision_{to}", f"decision:{d.id}", f"{old}->{to} {note[:120]}")
+        if to in ("approved", "completed"):
+            _dev_emit(company.id, "decision.approved" if to == "approved" else "decision.completed", {"decision_id": d.id, "title": d.title, "by": by, "workflow": to})
         return {"ok": True, "id": d.id, "workflow": to}
 
 
@@ -10831,6 +11033,8 @@ def company_monthly_status(data: dict, user: User = Depends(get_current_user)):
             r.published_at = now
         s.add(r); s.commit()
         log_audit(company.id, user.id, user.name, "monthly_status", f"monthly:{r.id}", f"{old}→{to}" + (f" note={note}" if note else ""))
+        if to == "approved":
+            _dev_emit(company.id, "report.approved", {"kind": "monthly", "id": r.id, "period": r.period, "version": r.version, "by": r.approved_by})
         return {"ok": True, "status": to, "status_ar": me.STATUS_AR[to]}
 
 
@@ -11145,6 +11349,8 @@ def company_exec_report_status(data: dict, user: User = Depends(get_current_user
             r.published_at = now
         s.add(r); s.commit()
         log_audit(company.id, user.id, user.name, "exec_status", f"exec:{r.id}", f"{old}→{to}" + (f" note={note}" if note else ""))
+        if to == "approved":
+            _dev_emit(company.id, "report.approved", {"kind": "executive", "id": r.id, "period": r.period, "version": r.version, "by": r.approved_by})
         return {"ok": True, "status": to, "status_ar": xe.STATUS_AR[to]}
 
 
@@ -14191,6 +14397,1612 @@ def security_incident_update(body: dict, user: User = Depends(get_current_user))
         s.commit()
         log_audit(r.company_id, user.id, user.name, "security_incident", r.title[:100], f"→ {to}" if to else "تحديث")
         return {"ok": True, "status": r.status}
+
+
+# ═══════════════════════════════════════════════════════════
+#  Phase 6.1 — Integration Hub (مركز التكاملات) + 6.2 — Developer Platform (منصة المطورين)
+#  التدفق: النظام الخارجي → الاستقبال والتحقق (هنا) → مركز البيانات (مطابقة ← تحقق ← اعتماد) → الجداول المعتمدة الحالية
+#  الصلاحيات: إدارة = المالك/الرئيس التنفيذي/مسؤول التقنية · اطلاع = المدقق والمحاسب · مفاتيح API تُقيّد بشركتها ونطاقاتها
+# ═══════════════════════════════════════════════════════════
+import threading as _threading
+
+_ECO_LOCK = _threading.Lock()
+_API_RL = {"rl": None}
+_API_DAY = {}
+_HOOK_RL = {"rl": None}
+_ECO_MAX_BODY = 5 * 1024 * 1024
+_ECO_DEAD_AFTER = 20
+
+
+def _int_engine():
+    return _load_p24("integration_engine")
+
+
+def _int_master():
+    """مفتاح تشفير أسرار التكاملات وWebhooks: INTEGRATION_ENC_KEY (موصى به) وإلا SECRET_KEY."""
+    return os.getenv("INTEGRATION_ENC_KEY") or SECRET_KEY
+
+
+def _api_pepper():
+    """مفتاح تجزئة مفاتيح API: API_KEY_PEPPER (موصى به) وإلا SECRET_KEY — تغييره يُبطل كل المفاتيح."""
+    return os.getenv("API_KEY_PEPPER") or SECRET_KEY
+
+
+def _eco_allow_local():
+    return os.getenv("NABBAH_ALLOW_LOCAL_HTTP") == "1" and os.getenv("ENVIRONMENT", "").lower() in ("development", "dev", "local", "test")
+
+
+def _eco_scope(s, user):
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    company = s.get(Company, user.company_id)
+    if not company:
+        raise HTTPException(403, "غير مصرّح")
+    if company.is_active != 1:
+        raise HTTPException(402, "شركتك قيد التفعيل")
+    role, title = get_user_role(s, user), _user_title(s, user)
+    manage = role == "owner" or title in ("ceo", "it_admin")
+    view = manage or title == "auditor" or role == "accountant"
+    if not view:
+        raise HTTPException(403, "التكاملات ومنصة المطورين للمالك والرئيس التنفيذي ومسؤول التقنية (والمدقق والمحاسب للاطلاع)")
+    ar = "إدارة كاملة" if manage else "اطلاع فقط"
+    return company, {"role": role, "title": title, "manage": manage, "view": True, "dev_view": manage or title == "auditor", "ar": ar}
+
+
+def _eco_need_manage(sc):
+    if not sc["manage"]:
+        raise HTTPException(403, "هذا الإجراء للمالك أو الرئيس التنفيذي أو مسؤول التقنية")
+
+
+def _int_log(s, company_id, connection_id, kind, level, message, records=None, ms=None, user_name="", job_id=None):
+    s.add(IntegrationLog(company_id=company_id, connection_id=connection_id, job_id=job_id, kind=kind, level=level, message=str(message)[:500],
+                         records=records, ms=ms, user_name=str(user_name or "")[:100], created_at=datetime.now()))
+
+
+def _int_conn(s, company_id, cid):
+    try:
+        cid = int(cid)
+    except (TypeError, ValueError):
+        raise HTTPException(422, "معرّف الاتصال غير صالح")
+    c = s.get(IntegrationConnection, cid)
+    if not c or c.company_id != company_id or c.status == "archived":
+        raise HTTPException(404, "الاتصال غير موجود")
+    return c
+
+
+def _int_approved_mapping(s, conn_id):
+    return s.exec(select(IntegrationMapping).where(IntegrationMapping.connection_id == conn_id, IntegrationMapping.status == "approved")
+                  .order_by(IntegrationMapping.version.desc())).first()
+
+
+def _int_required(dtype, s=None, company_id=None):
+    ing = _load_p24("ingestion")
+    return list(ing.required_fields(dtype)) if ing else []
+
+
+# ───────── الاستيعاب: نفس محرك مركز البيانات (validate_rows + assess_quality) ثم CompanyDataset ─────────
+def _int_ingest(conn_id, company_id, records, *, mode, by="", idem="", sandbox=False, mapping_override=None):
+    """يستقبل سجلات اتصال ويمررها عبر المطابقة المعتمدة والتحقق ومنع التكرار ثم ينشئ دفعة في مركز البيانات.
+    sandbox=True: تحقق جاف كامل بلا أي كتابة في بيانات الشركة (لاختبار المطابقة قبل اعتمادها ولبيئة Sandbox)."""
+    ie, ing, cm = _int_engine(), _load_p24("ingestion"), _load_p24("canonical_model")
+    if ie is None or ing is None or cm is None:
+        raise HTTPException(503, "محرّك التكاملات غير متاح — " + _p23_diagnostic())
+    t0 = time.perf_counter()
+    if not isinstance(records, list):
+        raise HTTPException(422, "records يجب أن تكون مصفوفة")
+    if not records:
+        raise HTTPException(422, "لا توجد سجلات في الطلب")
+    if len(records) > ie.MAX_RECORDS:
+        raise HTTPException(413, f"الحد {ie.MAX_RECORDS} سجل في الطلب الواحد — قسّم الدفعة")
+    with Session(engine) as s:
+        conn = s.get(IntegrationConnection, conn_id)
+        if not conn or conn.company_id != company_id or conn.status == "archived":
+            raise HTTPException(404, "الاتصال غير موجود")
+        if idem and not sandbox:
+            prev = s.exec(select(IntegrationSyncJob).where(IntegrationSyncJob.connection_id == conn.id, IntegrationSyncJob.idempotency_key == idem[:80])).first()
+            if prev and prev.status != "running":
+                return dict(_int_job_json(prev), idempotent_replay=True)
+        if conn.status == "paused" and not sandbox:
+            raise HTTPException(409, "الاتصال متوقف مؤقتاً — استأنفه من مركز التكاملات")
+        mp = mapping_override or _int_approved_mapping(s, conn.id)
+        if not mp:
+            raise HTTPException(409, "لا توجد مطابقة حقول معتمدة لهذا الاتصال — اعتمدها من مركز التكاملات أولاً")
+        mapping = json.loads(mp.mapping_json or "{}")
+        transforms = json.loads(mp.transforms_json or "{}")
+        dtype = conn.dataset_type
+        job = IntegrationSyncJob(company_id=company_id, connection_id=conn.id, mode=mode, status="running", received=len(records),
+                                 idempotency_key=(idem or "")[:80], triggered_by=str(by or "")[:100], started_at=datetime.now())
+        if not sandbox:
+            s.add(job)
+            s.commit()
+            s.refresh(job)
+        not_obj = [i for i, r in enumerate(records) if not isinstance(r, dict)]
+        flat = [ie.flatten(r) for r in records if isinstance(r, dict)]
+        # منع التكرار: بصمات مستلمة سابقاً في دفعات ما زالت قائمة (المرفوضة كلياً لا تمنع إعادة الإرسال)
+        keys = [ie.record_key(conn.id, r, conn.id_field or None) for r in flat]
+        known = set()
+        if keys and not sandbox:
+            rows = s.exec(select(IntegrationRecordKey).where(IntegrationRecordKey.connection_id == conn.id, IntegrationRecordKey.key_hash.in_(list(set(keys))))).all()
+            ds_ids = {r.dataset_id for r in rows if r.dataset_id}
+            dead = {d.id for d in s.exec(select(CompanyDataset).where(CompanyDataset.id.in_(list(ds_ids)))).all() if d.status == "rejected"} if ds_ids else set()
+            known = {r.key_hash for r in rows if r.dataset_id not in dead}
+        fresh, dups = ie.batch_dedupe(flat, conn.id, conn.id_field or None, known)
+        seen_fields = sorted({k for r in flat for k in r})
+        names, ids = _branch_lookup(s, company_id)
+        linked = [int(x) for x in json.loads(conn.branch_ids_json or "[]") if str(x).isdigit()]
+        bmap = {str(k): v for k, v in json.loads(conn.branch_map_json or "{}").items()}
+        default_branch = linked[0] if len(linked) == 1 else (next(iter(ids)) if len(ids) == 1 else None)
+        headers = list(mapping.keys()) + [f for f in seen_fields if f not in mapping]
+        idx_map = {i: mapping[h] for i, h in enumerate(headers) if h in mapping}
+        branch_src = next((h for h, f in mapping.items() if f == "branch_id"), None)
+        rows_, tnotes = [], set()
+        for _k, r in fresh:
+            r2, notes = ie.apply_transforms(r, transforms)
+            tnotes.update(notes)
+            if branch_src and r2.get(branch_src) not in (None, "") and str(r2[branch_src]) in bmap:
+                r2[branch_src] = str(bmap[str(r2[branch_src])])
+            rows_.append([r2.get(h) for h in headers])
+        validation = ing.validate_rows(rows_, idx_map, dtype, branch_names=names, headers=headers, default_branch_id=default_branch) if rows_ else \
+            {"valid": [], "rejected": [], "total": 0, "valid_count": 0, "rejected_count": 0, "warnings": []}
+        valid, rejected = [], list(validation["rejected"])
+        for v in validation["valid"]:
+            if isinstance(v.get("branch_id"), str) and v["branch_id"].isdigit():
+                v["branch_id"] = int(v["branch_id"])
+            if linked and v.get("branch_id") is not None and int(v["branch_id"]) not in linked:
+                rejected.append({"row": v.get("_row"), "record": v, "errors": [{"field": "branch_id", "value": str(v.get("branch_id")), "error": "فرع غير مرتبط بهذا الاتصال"}]})
+            else:
+                valid.append(v)
+        for i in not_obj:
+            rejected.append({"row": i + 2, "record": {}, "errors": [{"field": "—", "value": "", "error": "السجل ليس كائن JSON"}]})
+        validation.update(valid=valid, rejected=rejected, valid_count=len(valid), rejected_count=len(rejected), total=len(records) - len(dups))
+        quality = ing.assess_quality(validation, dtype) if (valid or rejected) else {"overall_score": None, "gate": "BLOCK"}
+        cov = ie.coverage(mapping, _int_required(dtype), seen_fields)
+        err_out = [{"index": (e.get("row") or 2) - 2, "errors": [f"{x.get('field')}: {x.get('error')}" for x in e.get("errors", [])][:5]} for e in rejected[:20]]
+        res = {"received": len(records), "accepted": len(valid), "rejected": len(rejected), "duplicates": len(dups), "quality_score": quality.get("overall_score"),
+               "quality_gate": quality.get("gate"), "errors": err_out, "duplicates_detail": dups[:20], "unknown_fields": cov["unknown_fields"][:30],
+               "transform_notes": sorted(tnotes)[:10], "dataset_type": dtype, "mapping_version": mp.version}
+        if sandbox:
+            res.update(status="sandbox", job_id=None, dataset_id=None, sample=valid[:5], ms=round((time.perf_counter() - t0) * 1000, 1),
+                       note_ar="اختبار جاف — لم يُكتب أي شيء في بيانات الشركة")
+            return res
+        company = s.get(Company, company_id)
+        d = None
+        if valid:
+            periods = sorted({v.get("period") or (v.get("date") or "")[:7] for v in valid if v.get("period") or v.get("date")})
+            brs = sorted({ids.get(v.get("branch_id"), "") for v in valid if v.get("branch_id")})
+            d = CompanyDataset(company_id=company_id, dataset_type=dtype, source_file=f"{conn.name} · مزامنة #{job.id}"[:200], source_type="integration",
+                               period=", ".join(periods[:6]), branches=", ".join(b for b in brs if b)[:200], total_rows=validation["total"], valid_rows=len(valid),
+                               rejected_rows=len(rejected), quality_score=quality["overall_score"], quality_gate=quality["gate"], status="validated",
+                               mapping_json=json.dumps({str(k): v for k, v in idx_map.items()}, ensure_ascii=False),
+                               staging_json=json.dumps(valid, ensure_ascii=False, default=str), errors_json=json.dumps(rejected[:200], ensure_ascii=False, default=str),
+                               uploaded_by=f"تكامل: {conn.name}"[:100])
+            s.add(d)
+            s.commit()
+            s.refresh(d)
+            vkeys = {fresh[v["_row"] - 2][0] for v in valid if isinstance(v.get("_row"), int) and 0 <= v["_row"] - 2 < len(fresh)}
+            for k in vkeys:
+                s.add(IntegrationRecordKey(company_id=company_id, connection_id=conn.id, key_hash=k, dataset_id=d.id, created_at=datetime.now()))
+            if conn.auto_approve and quality["gate"] == "ALLOW":
+                try:
+                    imp = _dataset_import_core(s, company, d, None, f"تكامل: {conn.name}")
+                    res["auto_imported"] = imp.get("imported")
+                except HTTPException as _he:
+                    res["auto_import_error"] = str(_he.detail)[:200]
+        now = datetime.now()
+        job.status = "success" if valid and not rejected else "partial" if valid else ("duplicate_batch" if dups and not rejected else "failed")
+        job.accepted, job.rejected, job.duplicates, job.dataset_id = len(valid), len(rejected), len(dups), d.id if d else None
+        job.quality_score, job.finished_at, job.ms = quality.get("overall_score"), now, round((time.perf_counter() - t0) * 1000, 1)
+        job.errors_json = json.dumps(err_out, ensure_ascii=False)
+        job.error = "" if valid or (dups and not rejected) else "كل السجلات مرفوضة — راجع المطابقة والأخطاء"
+        s.add(job)
+        if job.status in ("success", "partial", "duplicate_batch"):
+            conn.last_success_at = now
+            conn.records_total = int(conn.records_total or 0) + len(valid)
+            if conn.status == "needs_attention":
+                conn.status = "active"
+            conn.last_error = ""
+        else:
+            conn.last_error = job.error
+        conn.last_attempt_at, conn.auth_status = now, "ok"
+        s.add(conn)
+        _int_log(s, company_id, conn.id, "sync", "info" if job.status in ("success", "duplicate_batch") else "warn" if job.status == "partial" else "error",
+                 f"{ {'success': 'مزامنة ناجحة', 'partial': 'مزامنة جزئية', 'failed': 'فشل المزامنة', 'duplicate_batch': 'كل السجلات مكررة — لم يُستورد شيء'}[job.status]}: "
+                 f"مستلم {len(records)} · مقبول {len(valid)} · مرفوض {len(rejected)} · مكرر {len(dups)}", len(records), job.ms, by, job.id)
+        s.commit()
+        out = dict(_int_job_json(job), **{k: res[k] for k in ("errors", "duplicates_detail", "unknown_fields", "transform_notes", "quality_gate", "mapping_version") if k in res})
+        out["dataset_status"] = d.status if d else None
+        if "auto_imported" in res:
+            out["auto_imported"] = res["auto_imported"]
+        cname = conn.name
+    if out.get("dataset_id"):
+        _dev_emit(company_id, "data.received", {"connection_id": conn_id, "connection": cname, "dataset_id": out["dataset_id"], "dataset_type": dtype, "records": len(valid)})
+    _dev_emit(company_id, "sync.completed" if out["status"] != "failed" else "sync.failed", {"connection_id": conn_id, "connection": cname, "job_id": out["job_id"],
+                                                                                              "status": out["status"], "accepted": len(valid), "rejected": len(rejected), "duplicates": len(dups)})
+    return out
+
+
+def _int_job_json(j):
+    return {"job_id": j.id, "connection_id": j.connection_id, "mode": j.mode, "status": j.status, "received": j.received, "accepted": j.accepted, "rejected": j.rejected,
+            "duplicates": j.duplicates, "dataset_id": j.dataset_id, "quality_score": j.quality_score, "error": j.error, "ms": j.ms, "attempt": j.attempt,
+            "started_at": j.started_at, "finished_at": j.finished_at, "triggered_by": j.triggered_by}
+
+
+def _int_fail_job(conn_id, company_id, mode, by, err, *, auth=False, network=False, attempt=1):
+    """تسجيل فشل اتصال (سحب/مصادقة/شبكة) + جدولة إعادة المحاولة بتأخير أسّي ثم «يحتاج تدخلاً»."""
+    ie = _int_engine()
+    now = datetime.now()
+    with Session(engine) as s:
+        conn = s.get(IntegrationConnection, conn_id)
+        job = IntegrationSyncJob(company_id=company_id, connection_id=conn_id, mode=mode, status="failed", error=str(err)[:300], auth_error=1 if auth else 0,
+                                 network_error=1 if network else 0, triggered_by=str(by)[:100], attempt=attempt, started_at=now, finished_at=now)
+        s.add(job)
+        nxt = ie.next_retry(attempt, now)
+        if conn:
+            conn.last_error, conn.last_attempt_at = str(err)[:300], now
+            if auth:
+                conn.auth_status = "failed"
+            if conn.method == "rest_pull":
+                conn.retry_attempt = attempt
+                if nxt:
+                    conn.next_run_at = nxt
+                else:
+                    conn.status, conn.retry_attempt = "needs_attention", 0
+                    conn.next_run_at = now + timedelta(minutes=max(15, int(conn.interval_minutes or 60)))
+            s.add(conn)
+        s.commit()
+        s.refresh(job)
+        _int_log(s, company_id, conn_id, "auth" if auth else "sync", "error", f"فشل: {err}" + (f" — إعادة المحاولة {nxt:%H:%M}" if nxt and conn and conn.method == "rest_pull" else ""),
+                 None, None, by, job.id)
+        s.commit()
+        out = _int_job_json(job)
+        cname = conn.name if conn else ""
+    _dev_emit(company_id, "sync.failed", {"connection_id": conn_id, "connection": cname, "job_id": out["job_id"], "error": str(err)[:200]})
+    return out
+
+
+# ───────── HTTP صادر آمن (SSRF · بلا تحويلات · حدود حجم وزمن) ─────────
+def _eco_http(method, url, headers=None, body=None, timeout=10, max_bytes=_ECO_MAX_BODY):
+    """يُرجع (status, bytes, ms, error). لا يتبع التحويلات. يرفض العناوين الداخلية بعد حل DNS."""
+    import urllib.request as _ur
+    import urllib.error as _ue
+    import socket as _so
+    from urllib.parse import urlparse as _up
+    ie = _int_engine()
+    t0 = time.perf_counter()
+    if not _eco_allow_local():
+        u = _up(url)
+        try:
+            ips = sorted({ai[4][0] for ai in _so.getaddrinfo(u.hostname, u.port or 443)})
+        except Exception:
+            return None, b"", 0, "تعذّر حل اسم النطاق"
+        ok, why = ie.check_url(url, ips)
+        if not ok:
+            return None, b"", 0, why
+
+    class _NoRedirect(_ur.HTTPRedirectHandler):
+        def redirect_request(self, *a, **k):
+            return None
+    opener = _ur.build_opener(_NoRedirect)
+    req = _ur.Request(url, data=body, method=method, headers=dict(headers or {}, **{"User-Agent": "Nabbah-Integrations/1.0"}))
+    try:
+        with opener.open(req, timeout=timeout) as r:
+            data = r.read(max_bytes + 1)
+            st = r.status
+    except _ue.HTTPError as e:
+        try:
+            data = e.read(4096)
+        except Exception:
+            data = b""
+        return e.code, data, round((time.perf_counter() - t0) * 1000, 1), f"HTTP {e.code}"
+    except Exception as e:
+        return None, b"", round((time.perf_counter() - t0) * 1000, 1), f"{type(e).__name__}: {str(e)[:120]}"
+    if len(data) > max_bytes:
+        return st, b"", round((time.perf_counter() - t0) * 1000, 1), "الاستجابة أكبر من الحد المسموح (5MB)"
+    return st, data, round((time.perf_counter() - t0) * 1000, 1), ""
+
+
+def _int_pull(conn_id, by="مجدول", manual=False):
+    """REST Pull (تجريبي): يسحب صفحات JSON من عنوان HTTPS ثم يمررها لنفس مسار الاستيعاب."""
+    ie, se = _int_engine(), _sec_engine()
+    with Session(engine) as s:
+        conn = s.get(IntegrationConnection, conn_id)
+        if not conn or conn.method != "rest_pull" or conn.status == "archived":
+            return None
+        cfg = json.loads(conn.pull_config_json or "{}")
+        company_id, attempt = conn.company_id, int(conn.retry_attempt or 0) + 1
+        since = conn.last_success_at
+        auth_hdr = ""
+        if conn.pull_auth_enc:
+            try:
+                auth_hdr = se.unseal(conn.pull_auth_enc, _int_master())
+            except Exception:
+                return _int_fail_job(conn_id, company_id, "manual" if manual else "scheduled", by, "تعذّر فك تشفير بيانات المصادقة (تغيّر مفتاح التشفير) — أعد إدخالها", auth=True, attempt=attempt)
+    from urllib.parse import urlencode as _uenc, urlparse as _up, parse_qsl as _pq, urlunparse as _uu
+    headers = {"Accept": "application/json"}
+    if auth_hdr and ":" in auth_hdr:
+        hk, hv = auth_hdr.split(":", 1)
+        headers[hk.strip()] = hv.strip()
+    records = []
+    max_pages = max(1, min(int(cfg.get("max_pages") or 1), 20))
+    for page in range(1, max_pages + 1):
+        u = _up(cfg.get("url", ""))
+        q = dict(_pq(u.query))
+        if cfg.get("since_param") and since:
+            q[cfg["since_param"]] = since.strftime("%Y-%m-%dT%H:%M:%S")
+        if cfg.get("page_param"):
+            q[cfg["page_param"]] = str(page)
+        url = _uu(u._replace(query=_uenc(q)))
+        st, data, ms, err = _eco_http("GET", url, headers, timeout=15)
+        if err or st is None or st >= 400:
+            return _int_fail_job(conn_id, company_id, "manual" if manual else "scheduled", by, err or f"HTTP {st}", auth=st in (401, 403), network=st is None or (st or 0) >= 500, attempt=attempt)
+        try:
+            doc = json.loads(data.decode("utf-8"))
+        except Exception:
+            return _int_fail_job(conn_id, company_id, "manual" if manual else "scheduled", by, "الاستجابة ليست JSON صالحاً", attempt=attempt)
+        items = ie.get_path(doc, cfg.get("records_path", "")) if cfg.get("records_path") else doc
+        if not isinstance(items, list):
+            return _int_fail_job(conn_id, company_id, "manual" if manual else "scheduled", by, f"المسار «{cfg.get('records_path', '')}» لا يشير إلى مصفوفة سجلات", attempt=attempt)
+        records += items
+        if not cfg.get("page_param") or not items or len(records) >= ie.MAX_RECORDS:
+            break
+    now = datetime.now()
+    if not records:
+        with Session(engine) as s:
+            conn = s.get(IntegrationConnection, conn_id)
+            conn.last_attempt_at, conn.last_success_at, conn.retry_attempt, conn.auth_status = now, now, 0, "ok"
+            conn.next_run_at = now + timedelta(minutes=max(15, int(conn.interval_minutes or 60)))
+            s.add(conn)
+            _int_log(s, company_id, conn_id, "sync", "info", "مزامنة ناجحة: لا سجلات جديدة", 0, None, by)
+            s.commit()
+        return {"status": "success", "received": 0, "accepted": 0}
+    try:
+        out = _int_ingest(conn_id, company_id, records[:ie.MAX_RECORDS], mode="manual" if manual else "scheduled", by=by)
+    except HTTPException as e:
+        return _int_fail_job(conn_id, company_id, "manual" if manual else "scheduled", by, str(e.detail), attempt=attempt)
+    with Session(engine) as s:
+        conn = s.get(IntegrationConnection, conn_id)
+        conn.retry_attempt = 0
+        conn.next_run_at = datetime.now() + timedelta(minutes=max(15, int(conn.interval_minutes or 60)))
+        s.add(conn)
+        s.commit()
+    return out
+
+
+# ───────── Webhooks الصادرة ─────────
+def _dev_emit(company_id, event, payload, env="live"):
+    """يضع الحدث في طابور التسليم لكل Webhook مشترك. لا يفشل أبداً ولا يؤخر العملية الأصلية."""
+    try:
+        with Session(engine) as s:
+            n = 0
+            for w in s.exec(select(WebhookEndpoint).where(WebhookEndpoint.company_id == company_id, WebhookEndpoint.status == "active", WebhookEndpoint.env == env)).all():
+                if event in json.loads(w.events_json or "[]"):
+                    s.add(WebhookDelivery(company_id=company_id, webhook_id=w.id, event=event, payload_json=json.dumps(payload, ensure_ascii=False, default=str),
+                                          status="pending", next_attempt_at=datetime.now(), created_at=datetime.now()))
+                    n += 1
+            if n:
+                s.commit()
+                _eco_kick()
+    except Exception as _e:
+        _logger.error(f"webhook emit failed: {type(_e).__name__}: {str(_e)[:120]}")
+
+
+def _dev_deliver(delivery_id):
+    """محاولة تسليم واحدة موقّعة. النجاح = 2xx. الفشل يجدول إعادة المحاولة (1د، 5د، 30د، 2س، 12س) ثم «ميت»."""
+    ie, se = _int_engine(), _sec_engine()
+    with Session(engine) as s:
+        dlv = s.get(WebhookDelivery, delivery_id)
+        if not dlv or dlv.status in ("delivered", "dead"):
+            return None
+        w = s.get(WebhookEndpoint, dlv.webhook_id)
+        if not w or w.status != "active":
+            dlv.status, dlv.error = "dead", "الـWebhook موقوف أو محذوف"
+            s.add(dlv)
+            s.commit()
+            return {"status": dlv.status}
+        try:
+            secret = se.unseal(w.secret_enc, _int_master())
+        except Exception:
+            dlv.status, dlv.error = "dead", "تعذّر فك تشفير سر التوقيع — دوّر السر"
+            s.add(dlv)
+            s.commit()
+            return {"status": dlv.status}
+        body = json.dumps({"id": f"evt_{dlv.id}", "event": dlv.event, "created_at": (dlv.created_at or datetime.now()).isoformat(timespec="seconds"),
+                           "env": w.env, "company_id": dlv.company_id, "data": json.loads(dlv.payload_json or "{}")}, ensure_ascii=False).encode("utf-8")
+        url, wid = w.url, w.id
+    hdrs = {"Content-Type": "application/json", "X-Nabbah-Event": dlv.event, "X-Nabbah-Delivery": str(delivery_id), "X-Nabbah-Signature": ie.sign(secret, body)}
+    st, _data, ms, err = _eco_http("POST", url, hdrs, body, timeout=10, max_bytes=65536)
+    now = datetime.now()
+    with Session(engine) as s:
+        dlv, w = s.get(WebhookDelivery, delivery_id), s.get(WebhookEndpoint, wid)
+        dlv.attempts = int(dlv.attempts or 0) + 1
+        dlv.response_code, dlv.response_ms = st, ms
+        if st is not None and 200 <= st < 300:
+            dlv.status, dlv.delivered_at, dlv.error, dlv.next_attempt_at = "delivered", now, "", None
+            w.consecutive_failures = 0
+        else:
+            dlv.error = (err or f"HTTP {st}")[:300]
+            nxt = ie.next_retry(dlv.attempts, now)
+            dlv.status, dlv.next_attempt_at = ("failed", nxt) if nxt else ("dead", None)
+            w.consecutive_failures = int(w.consecutive_failures or 0) + 1
+            if w.consecutive_failures >= _ECO_DEAD_AFTER:
+                w.status = "auto_disabled"
+        s.add(dlv)
+        s.add(w)
+        s.commit()
+        return {"status": dlv.status, "response_code": st, "ms": ms, "error": dlv.error}
+
+
+def _eco_run_due(limit=50):
+    """المهام المستحقة: سحب REST المجدول + تسليمات Webhooks المستحقة. تُشغَّل من Railway Cron أو تلقائياً عند فتح الصفحات."""
+    now = datetime.now()
+    done = {"pulls": 0, "deliveries": 0}
+    with Session(engine) as s:
+        pulls = [c.id for c in s.exec(select(IntegrationConnection).where(IntegrationConnection.method == "rest_pull", IntegrationConnection.status == "active",
+                                                                          IntegrationConnection.next_run_at <= now).limit(10)).all()]
+        dl = [d.id for d in s.exec(select(WebhookDelivery).where(WebhookDelivery.status.in_(["pending", "failed"]), WebhookDelivery.next_attempt_at <= now)
+                                   .order_by(WebhookDelivery.id).limit(limit)).all()]
+    for cid in pulls:
+        try:
+            _int_pull(cid)
+            done["pulls"] += 1
+        except Exception as _e:
+            _logger.error(f"pull {cid} failed: {type(_e).__name__}: {str(_e)[:120]}")
+    for did in dl:
+        try:
+            _dev_deliver(did)
+            done["deliveries"] += 1
+        except Exception as _e:
+            _logger.error(f"delivery {did} failed: {type(_e).__name__}: {str(_e)[:120]}")
+    return done
+
+
+def _eco_kick():
+    """يشغّل المهام المستحقة في خيط خلفي واحد (لا يتزامن تشغيلان)."""
+    if not _ECO_LOCK.acquire(blocking=False):
+        return False
+
+    def _run():
+        try:
+            _eco_run_due()
+        except Exception as _e:
+            _logger.error(f"eco runner failed: {type(_e).__name__}")
+        finally:
+            _ECO_LOCK.release()
+    _threading.Thread(target=_run, daemon=True).start()
+    return True
+
+
+@app.post("/internal/integrations/run-due")
+def internal_integrations_run_due(_: bool = Depends(verify_admin)):
+    """لـ Railway Cron (كل 5 دقائق): curl -X POST -H "X-Admin-Key: $ADMIN_KEY" https://nabbah.com/internal/integrations/run-due"""
+    return {"ok": True, **_eco_run_due()}
+
+
+# ═══ واجهات مركز التكاملات (لمستخدمي الشركة) ═══
+def _int_conn_json(c, s=None, ie=None, now=None, approved=None, jobs=None, qualities=None, single_branch=False):
+    ie = ie or _int_engine()
+    now = now or datetime.now()
+    cov = None
+    if approved is not None:
+        req = _int_required(c.dataset_type)
+        mapped = set(json.loads(approved.mapping_json or "{}").values()) if approved else set()
+        cov = round(sum(1 for f in req if f in mapped or (f == "branch_id" and single_branch)) / len(req) * 100) if req and approved else (0 if req else None)
+    h = ie.health(jobs=[{"at": j.finished_at or j.started_at, "status": j.status, "auth_error": j.auth_error, "network_error": j.network_error} for j in (jobs or [])],
+                  now=now, expected_hours=int(c.expected_hours or 24), mapping_cov=cov, quality_scores=qualities, paused=c.status == "paused")
+    item = ie.catalog_item(c.catalog_key) or {}
+    return {"id": c.id, "name": c.name, "catalog_key": c.catalog_key, "system": item.get("name", c.catalog_key), "method": c.method, "method_ar": ie.METHODS_AR.get(c.method, c.method),
+            "mode": c.mode, "mode_ar": ie.MODES_AR.get(c.mode, c.mode), "dataset_type": c.dataset_type, "env": c.env, "status": c.status,
+            "status_ar": {"active": "نشط", "paused": "متوقف", "needs_attention": "يحتاج تدخلاً", "archived": "مؤرشف"}.get(c.status, c.status),
+            "auth_status": c.auth_status, "owner": c.owner_name, "branch_ids": json.loads(c.branch_ids_json or "[]"), "branch_map": json.loads(c.branch_map_json or "{}"),
+            "id_field": c.id_field, "auto_approve": bool(c.auto_approve), "interval_minutes": c.interval_minutes, "expected_hours": c.expected_hours,
+            "created_at": c.created_at, "created_by": c.created_by, "last_success_at": c.last_success_at, "last_attempt_at": c.last_attempt_at, "last_error": c.last_error,
+            "records_total": c.records_total, "next_run_at": c.next_run_at, "has_mapping": bool(approved), "mapping_version": approved.version if approved else None, "health": h}
+
+
+@app.get("/integrations/overview")
+def integrations_overview(user: User = Depends(get_current_user)):
+    ie, cm = _int_engine(), _load_p24("canonical_model")
+    if ie is None:
+        raise HTTPException(503, "محرّك التكاملات غير متاح")
+    _eco_kick()
+    now = datetime.now()
+    with Session(engine) as s:
+        company, sc = _eco_scope(s, user)
+        conns = s.exec(select(IntegrationConnection).where(IntegrationConnection.company_id == company.id, IntegrationConnection.status != "archived")
+                       .order_by(IntegrationConnection.created_at.desc())).all()
+        cut = now - timedelta(days=30)
+        jobs = s.exec(select(IntegrationSyncJob).where(IntegrationSyncJob.company_id == company.id, IntegrationSyncJob.started_at >= cut)
+                      .order_by(IntegrationSyncJob.started_at.desc()).limit(3000)).all()
+        by_conn = {}
+        for j in jobs:
+            by_conn.setdefault(j.connection_id, []).append(j)
+        ds_q = {d.id: d.quality_score for d in s.exec(select(CompanyDataset).where(CompanyDataset.company_id == company.id, CompanyDataset.source_type == "integration")
+                                                         .order_by(CompanyDataset.created_at.desc()).limit(500)).all()}
+        items = []
+        nb_ids = _branch_lookup(s, company.id)[1]
+        for c in conns:
+            ap = _int_approved_mapping(s, c.id)
+            cj = by_conn.get(c.id, [])
+            single = len(nb_ids) == 1 or len(json.loads(c.branch_ids_json or "[]")) == 1
+            items.append(_int_conn_json(c, s, ie, now, ap, cj, [ds_q.get(j.dataset_id) for j in cj if j.dataset_id in ds_q][:20], single))
+        real = [j for j in jobs if j.status != "duplicate_batch"]
+        ok = [j for j in real if j.status in ("success", "partial")]
+        last = max([c.last_success_at for c in conns if c.last_success_at] or [None], key=lambda x: x or datetime.min)
+        errs = [{"at": j.finished_at or j.started_at, "connection": next((c.name for c in conns if c.id == j.connection_id), "—"), "error": j.error}
+                for j in jobs if j.status == "failed"][:8]
+        cards = [{"key": "total", "label": "إجمالي التكاملات", "value": len(conns)},
+                 {"key": "active", "label": "النشطة", "value": sum(1 for c in conns if c.status == "active")},
+                 {"key": "paused", "label": "المتوقفة", "value": sum(1 for c in conns if c.status == "paused")},
+                 {"key": "attention", "label": "تحتاج تدخلاً", "value": sum(1 for i in items if i["status"] == "needs_attention" or i["health"]["status"] == "failing")},
+                 {"key": "last", "label": "آخر مزامنة ناجحة", "value": last.strftime("%Y-%m-%d %H:%M") if last else None},
+                 {"key": "received", "label": "السجلات المستلمة (30 يوماً)", "value": sum(j.received or 0 for j in jobs)},
+                 {"key": "accepted", "label": "المقبولة / المرفوضة", "value": f"{sum(j.accepted or 0 for j in jobs)} / {sum(j.rejected or 0 for j in jobs)}"},
+                 {"key": "rate", "label": "معدل نجاح المزامنة", "value": round(len(ok) / len(real) * 100, 1) if real else None, "unit": "%"}]
+        cn = {c.id: c.name for c in conns}
+        recent_jobs = [dict(_int_job_json(j), connection=cn.get(j.connection_id, "—")) for j in jobs[:60]]
+        return {"scope": sc, "cards": cards, "connections": items, "recent_errors": errs, "recent_jobs": recent_jobs, "catalog": ie.catalog(), "categories": ie.CATEGORIES,
+                "support_ar": ie.SUPPORT_AR, "methods_ar": ie.METHODS_AR, "modes_ar": ie.MODES_AR, "transforms": ie.TRANSFORMS, "date_formats": ie.DATE_FORMATS,
+                "dataset_types": {k: v["ar"] for k, v in cm.ENTITIES.items()} if cm else {},
+                "branches": [{"id": b.id, "name": b.name} for b in s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company.id, CompanyBranch.is_active == 1)).all()],
+                "enc_key_set": bool(os.getenv("INTEGRATION_ENC_KEY")), "flow_ar": "النظام الخارجي ← مركز التكاملات (استقبال وتحقق) ← مركز البيانات (مطابقة ← تحقق ← اعتماد) ← المصدر الموحد ← كل وحدات نبّاه"}
+
+
+@app.post("/integrations/connections")
+def integrations_connection_create(body: dict, user: User = Depends(get_current_user)):
+    import secrets as _sx
+    ie, se, cm = _int_engine(), _sec_engine(), _load_p24("canonical_model")
+    body = body or {}
+    with Session(engine) as s:
+        company, sc = _eco_scope(s, user)
+        _eco_need_manage(sc)
+        item = ie.catalog_item(str(body.get("catalog_key") or "push_api"))
+        if not item or item["key"] == "file":
+            raise HTTPException(422, "اختر نظاماً من سوق التكاملات (رفع الملفات يتم من مركز البيانات)")
+        method = str(body.get("method") or item["methods"][0])
+        if method not in item["methods"] or method not in ("push_api", "webhook_in", "rest_pull"):
+            raise HTTPException(422, "طريقة اتصال غير مدعومة لهذا النظام")
+        dtype = str(body.get("dataset_type") or "")
+        if not cm or dtype not in cm.ENTITIES:
+            raise HTTPException(422, "حدّد نوع البيانات")
+        name = str(body.get("name") or "").strip()[:120]
+        if not name:
+            raise HTTPException(422, "اكتب اسماً للاتصال")
+        env = "sandbox" if body.get("env") == "sandbox" else "live"
+        bids = _eco_branch_ids(s, company.id, body.get("branch_ids"))
+        c = IntegrationConnection(company_id=company.id, name=name, catalog_key=item["key"], method=method, dataset_type=dtype, env=env,
+                                  mode={"push_api": "realtime", "webhook_in": "webhook", "rest_pull": "scheduled"}[method], owner_name=str(body.get("owner") or user.name or "")[:100],
+                                  branch_ids_json=json.dumps(bids), id_field=str(body.get("id_field") or "")[:80], auto_approve=1 if body.get("auto_approve") else 0,
+                                  interval_minutes=_eco_int(body.get("interval_minutes"), 60, 15, 1440), expected_hours=_eco_int(body.get("expected_hours"), 24, 1, 720),
+                                  created_by=(user.name or "")[:100], created_at=datetime.now(), updated_at=datetime.now())
+        shown = {}
+        if method == "webhook_in":
+            c.inbound_token = _sx.token_urlsafe(24)
+            sec = "whin_" + _sx.token_urlsafe(24)
+            c.inbound_secret_enc = se.seal(sec, _int_master())
+            shown = {"inbound_url": f"/hooks/in/{c.inbound_token}", "inbound_secret": sec}
+        if method == "rest_pull":
+            cfg, auth = _eco_pull_cfg(ie, body)
+            c.pull_config_json = json.dumps(cfg, ensure_ascii=False)
+            c.pull_auth_enc = se.seal(auth, _int_master()) if auth else ""
+            c.next_run_at = None          # لا سحب قبل اعتماد المطابقة
+        s.add(c)
+        s.commit()
+        s.refresh(c)
+        _int_log(s, company.id, c.id, "config", "info", f"أُنشئ الاتصال «{name}» ({ie.METHODS_AR[method]} · {cm.ENTITIES[dtype]['ar']})", user_name=user.name)
+        s.commit()
+        log_audit(company.id, user.id, user.name, "integration_create", f"integration:{c.id}", f"{item['key']} {method} {dtype}")
+        return {"ok": True, "id": c.id, **shown, "note_ar": "السر يُعرض مرة واحدة — احفظه في النظام المرسل الآن." if shown else "الخطوة التالية: مطابقة الحقول واعتمادها."}
+
+
+def _eco_int(v, default, lo, hi):
+    try:
+        x = int(v)
+    except (TypeError, ValueError):
+        return default
+    return max(lo, min(hi, x))
+
+
+def _eco_branch_ids(s, company_id, raw):
+    valid = {b.id for b in s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company_id)).all()}
+    out = []
+    for x in raw or []:
+        try:
+            x = int(x)
+        except (TypeError, ValueError):
+            raise HTTPException(422, "فرع غير صالح")
+        if x not in valid:
+            raise HTTPException(422, "الفرع ليس من شركتك")
+        out.append(x)
+    return sorted(set(out))
+
+
+def _eco_pull_cfg(ie, body):
+    p = body.get("pull") or {}
+    url = str(p.get("url") or "").strip()
+    ok, why = ie.check_url(url, allow_http=_eco_allow_local(), allow_private=_eco_allow_local())
+    if not ok:
+        raise HTTPException(422, f"عنوان السحب: {why}")
+    cfg = {"url": url[:500], "records_path": str(p.get("records_path") or "")[:120], "page_param": str(p.get("page_param") or "")[:40],
+           "since_param": str(p.get("since_param") or "")[:40], "max_pages": _eco_int(p.get("max_pages"), 1, 1, 20)}
+    auth = str(p.get("auth_header") or "").strip()
+    if auth and (":" not in auth or len(auth) > 1000):
+        raise HTTPException(422, "رأس المصادقة بصيغة «Name: value» مثل Authorization: Bearer …")
+    return cfg, auth
+
+
+@app.get("/integrations/connections/{conn_id}")
+def integrations_connection_detail(conn_id: int, user: User = Depends(get_current_user)):
+    ie = _int_engine()
+    now = datetime.now()
+    with Session(engine) as s:
+        company, sc = _eco_scope(s, user)
+        c = _int_conn(s, company.id, conn_id)
+        maps = s.exec(select(IntegrationMapping).where(IntegrationMapping.connection_id == c.id).order_by(IntegrationMapping.version.desc()).limit(30)).all()
+        ap = next((m for m in maps if m.status == "approved"), None)
+        jobs = s.exec(select(IntegrationSyncJob).where(IntegrationSyncJob.connection_id == c.id).order_by(IntegrationSyncJob.started_at.desc()).limit(100)).all()
+        logs = s.exec(select(IntegrationLog).where(IntegrationLog.connection_id == c.id).order_by(IntegrationLog.created_at.desc()).limit(100)).all()
+        qs = []
+        dids = [j.dataset_id for j in jobs if j.dataset_id][:20]
+        if dids:
+            qs = [d.quality_score for d in s.exec(select(CompanyDataset).where(CompanyDataset.id.in_(dids))).all()]
+        single = len(_branch_lookup(s, company.id)[1]) == 1 or len(json.loads(c.branch_ids_json or "[]")) == 1
+        cj = _int_conn_json(c, s, ie, now, ap, [j for j in jobs if (now - (j.started_at or now)).days <= 30], qs, single)
+        cfg = json.loads(c.pull_config_json or "{}")
+        req = _int_required(c.dataset_type)
+        cm = _load_p24("canonical_model")
+        return {"scope": sc, "connection": cj, "pull": cfg if c.method == "rest_pull" else None, "pull_auth_set": bool(c.pull_auth_enc),
+                "inbound_url": f"/hooks/in/{c.inbound_token}" if c.method == "webhook_in" and sc["manage"] else None,
+                "mappings": [{"id": m.id, "version": m.version, "status": m.status, "mapping": json.loads(m.mapping_json or "{}"), "transforms": json.loads(m.transforms_json or "{}"),
+                              "note": m.note, "created_by": m.created_by, "created_at": m.created_at, "approved_by": m.approved_by, "approved_at": m.approved_at} for m in maps],
+                "fields": list(cm.ENTITIES[c.dataset_type]["fields"]) if cm else [], "required": req,
+                "jobs": [_int_job_json(j) for j in jobs], "logs": [{"at": l.created_at, "kind": l.kind, "level": l.level, "message": l.message, "records": l.records,
+                                                                   "ms": l.ms, "user": l.user_name, "job_id": l.job_id} for l in logs]}
+
+
+@app.post("/integrations/connections/update")
+def integrations_connection_update(body: dict, user: User = Depends(get_current_user)):
+    ie, se = _int_engine(), _sec_engine()
+    body = body or {}
+    with Session(engine) as s:
+        company, sc = _eco_scope(s, user)
+        _eco_need_manage(sc)
+        c = _int_conn(s, company.id, body.get("id"))
+        ch = []
+        if "name" in body and str(body["name"]).strip():
+            c.name = str(body["name"]).strip()[:120]; ch.append("الاسم")
+        if "owner" in body:
+            c.owner_name = str(body.get("owner") or "")[:100]; ch.append("المسؤول")
+        if "branch_ids" in body:
+            c.branch_ids_json = json.dumps(_eco_branch_ids(s, company.id, body.get("branch_ids"))); ch.append("الفروع")
+        if "branch_map" in body:
+            bm = body.get("branch_map") or {}
+            if not isinstance(bm, dict):
+                raise HTTPException(422, "ربط رموز الفروع غير صالح")
+            valid = {b.id for b in s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company.id)).all()}
+            clean = {}
+            for k, v in bm.items():
+                try:
+                    v = int(v)
+                except (TypeError, ValueError):
+                    raise HTTPException(422, f"رمز «{k}»: فرع غير صالح")
+                if v not in valid:
+                    raise HTTPException(422, f"رمز «{k}»: الفرع ليس من شركتك")
+                clean[str(k)[:60]] = v
+            c.branch_map_json = json.dumps(clean, ensure_ascii=False); ch.append("ربط رموز الفروع")
+        if "id_field" in body:
+            c.id_field = str(body.get("id_field") or "")[:80]; ch.append("حقل المعرّف")
+        if "auto_approve" in body:
+            c.auto_approve = 1 if body.get("auto_approve") else 0; ch.append("الاعتماد التلقائي")
+        if "interval_minutes" in body:
+            c.interval_minutes = _eco_int(body.get("interval_minutes"), 60, 15, 1440); ch.append("فترة المزامنة")
+        if "expected_hours" in body:
+            c.expected_hours = _eco_int(body.get("expected_hours"), 24, 1, 720); ch.append("الحداثة المتوقعة")
+        if c.method == "rest_pull" and "pull" in body:
+            cfg, auth = _eco_pull_cfg(ie, body)
+            c.pull_config_json = json.dumps(cfg, ensure_ascii=False)
+            if auth:
+                c.pull_auth_enc = se.seal(auth, _int_master())
+            ch.append("إعدادات السحب")
+        c.updated_at = datetime.now()
+        s.add(c)
+        _int_log(s, company.id, c.id, "config", "info", "تعديل: " + ("، ".join(ch) or "بلا تغيير"), user_name=user.name)
+        s.commit()
+        log_audit(company.id, user.id, user.name, "integration_update", f"integration:{c.id}", "، ".join(ch)[:200])
+        return {"ok": True, "changed": ch}
+
+
+@app.post("/integrations/connections/action")
+def integrations_connection_action(body: dict, user: User = Depends(get_current_user)):
+    import secrets as _sx
+    se = _sec_engine()
+    body = body or {}
+    act = str(body.get("action") or "")
+    with Session(engine) as s:
+        company, sc = _eco_scope(s, user)
+        _eco_need_manage(sc)
+        c = _int_conn(s, company.id, body.get("id"))
+        cid, method, name = c.id, c.method, c.name
+        out = {"ok": True}
+        if act == "pause":
+            c.status = "paused"
+            msg = "إيقاف مؤقت للمزامنة"
+        elif act == "resume":
+            c.status, c.retry_attempt = "active", 0
+            if c.method == "rest_pull" and _int_approved_mapping(s, c.id):
+                c.next_run_at = datetime.now()
+            msg = "استئناف المزامنة"
+        elif act == "archive":
+            c.status = "archived"
+            msg = "أرشفة الاتصال (يبقى السجل والتاريخ)"
+        elif act == "rotate_secret":
+            if c.method != "webhook_in":
+                raise HTTPException(422, "تدوير السر للـWebhook الوارد فقط")
+            sec = "whin_" + _sx.token_urlsafe(24)
+            c.inbound_secret_enc = se.seal(sec, _int_master())
+            out["inbound_secret"] = sec
+            msg = "تدوير سر التوقيع الوارد"
+        elif act == "sync_now":
+            if c.method != "rest_pull":
+                raise HTTPException(422, "المزامنة اليدوية للسحب المجدول فقط — اتصالات Push/Webhook تصل عند إرسال النظام")
+            if c.status == "paused":
+                raise HTTPException(409, "الاتصال متوقف — استأنفه أولاً")
+            if not _int_approved_mapping(s, c.id):
+                raise HTTPException(409, "اعتمد مطابقة الحقول أولاً")
+            msg = "مزامنة يدوية"
+        else:
+            raise HTTPException(422, "إجراء غير معروف")
+        c.updated_at = datetime.now()
+        s.add(c)
+        _int_log(s, company.id, cid, "config", "info", msg, user_name=user.name)
+        s.commit()
+        log_audit(company.id, user.id, user.name, "integration_action", f"integration:{cid}", act)
+    if act == "sync_now":
+        out["result"] = _int_pull(cid, by=user.name or "", manual=True)
+    return out
+
+
+@app.post("/integrations/mapping/suggest")
+def integrations_mapping_suggest(body: dict, user: User = Depends(get_current_user)):
+    """اقتراح مطابقة من عينة سجلات أو قائمة حقول: أسماء API الشائعة أولاً، ثم مطابق مركز البيانات (العربي/الإنجليزي)."""
+    ie, ing, cm = _int_engine(), _load_p24("ingestion"), _load_p24("canonical_model")
+    body = body or {}
+    with Session(engine) as s:
+        company, sc = _eco_scope(s, user)
+        c = _int_conn(s, company.id, body.get("connection_id"))
+        dtype = c.dataset_type
+    sample = body.get("sample")
+    fields = body.get("fields")
+    if isinstance(sample, dict):
+        sample = [sample]
+    if isinstance(sample, list) and sample:
+        fl = [ie.flatten(r) for r in sample[:50] if isinstance(r, dict)]
+        fields = []
+        for r in fl:
+            for k in r:
+                if k not in fields:
+                    fields.append(k)
+    if not isinstance(fields, list) or not fields:
+        raise HTTPException(422, "أرسل عينة سجلات JSON أو قائمة أسماء الحقول")
+    fields = [str(f)[:120] for f in fields][:300]
+    allowed = list(cm.ENTITIES[dtype]["fields"])
+    sug = ie.suggest_mapping(fields, allowed)
+    rest = [f for f in fields if f not in sug]
+    if rest and ing:
+        used = set(sug.values())
+        mc = ing.map_columns([ie.humanize(f) for f in rest], dtype)
+        for i, tgt in mc["mapping"].items():
+            if tgt not in used and i < len(rest):
+                sug[rest[i]] = tgt
+                used.add(tgt)
+    req = _int_required(dtype)
+    return {"suggested": sug, "fields": fields, "nabbah_fields": allowed, "required": req, "coverage": ie.coverage(sug, req, fields),
+            "note_ar": "اقتراح آلي فقط — راجعه ثم احفظه كمسودة واعتمده"}
+
+
+@app.post("/integrations/mapping/save")
+def integrations_mapping_save(body: dict, user: User = Depends(get_current_user)):
+    ie, cm = _int_engine(), _load_p24("canonical_model")
+    body = body or {}
+    with Session(engine) as s:
+        company, sc = _eco_scope(s, user)
+        _eco_need_manage(sc)
+        c = _int_conn(s, company.id, body.get("connection_id"))
+        mapping = body.get("mapping") or {}
+        if not isinstance(mapping, dict) or not mapping:
+            raise HTTPException(422, "المطابقة فارغة")
+        allowed = set(cm.ENTITIES[c.dataset_type]["fields"])
+        clean, used = {}, set()
+        for k, v in mapping.items():
+            k, v = str(k).strip()[:120], str(v or "").strip()
+            if not k or not v:
+                continue
+            if v not in allowed:
+                raise HTTPException(422, f"«{v}» ليس حقلاً معتمداً لهذا النوع")
+            if v in used:
+                raise HTTPException(422, f"الحقل «{v}» مربوط بأكثر من حقل خارجي")
+            used.add(v)
+            clean[k] = v
+        transforms = body.get("transforms") or {}
+        errs = ie.validate_transforms(transforms, list(clean))
+        if errs:
+            raise HTTPException(422, " · ".join(errs))
+        last = s.exec(select(IntegrationMapping).where(IntegrationMapping.connection_id == c.id).order_by(IntegrationMapping.version.desc())).first()
+        ap = _int_approved_mapping(s, c.id)
+        for d in s.exec(select(IntegrationMapping).where(IntegrationMapping.connection_id == c.id, IntegrationMapping.status == "draft")).all():
+            d.status = "superseded"
+            s.add(d)
+        m = IntegrationMapping(company_id=company.id, connection_id=c.id, version=(last.version + 1) if last else 1, status="draft",
+                               mapping_json=json.dumps(clean, ensure_ascii=False), transforms_json=json.dumps(transforms, ensure_ascii=False),
+                               note=str(body.get("note") or "")[:300], created_by=(user.name or "")[:100], created_at=datetime.now())
+        s.add(m)
+        if "id_field" in body:
+            c.id_field = str(body.get("id_field") or "")[:80]
+            s.add(c)
+        s.commit()
+        s.refresh(m)
+        req = _int_required(c.dataset_type)
+        cov = ie.coverage(clean, req, list(clean))
+        if len(_branch_lookup(s, company.id)[1]) == 1 or len(json.loads(c.branch_ids_json or "[]")) == 1:
+            cov["missing_required"] = [f for f in cov["missing_required"] if f != "branch_id"]
+        _int_log(s, company.id, c.id, "mapping", "info", f"حفظ مسودة المطابقة v{m.version}", user_name=user.name)
+        s.commit()
+        return {"ok": True, "id": m.id, "version": m.version, "diff": ie.mapping_diff(json.loads(ap.mapping_json) if ap else {}, clean),
+                "missing_required": cov["missing_required"], "can_approve": not cov["missing_required"]}
+
+
+@app.post("/integrations/mapping/approve")
+def integrations_mapping_approve(body: dict, user: User = Depends(get_current_user)):
+    ie = _int_engine()
+    with Session(engine) as s:
+        company, sc = _eco_scope(s, user)
+        _eco_need_manage(sc)
+        try:
+            m = s.get(IntegrationMapping, int((body or {}).get("id")))
+        except (TypeError, ValueError):
+            raise HTTPException(422, "معرّف غير صالح")
+        if not m or m.company_id != company.id:
+            raise HTTPException(404, "النسخة غير موجودة")
+        if m.status != "draft":
+            raise HTTPException(409, "يُعتمد من المسودات فقط")
+        c = _int_conn(s, company.id, m.connection_id)
+        mp = json.loads(m.mapping_json or "{}")
+        miss = ie.coverage(mp, _int_required(c.dataset_type), [])["missing_required"]
+        if len(_branch_lookup(s, company.id)[1]) == 1 or len(json.loads(c.branch_ids_json or "[]")) == 1:
+            miss = [f for f in miss if f != "branch_id"]
+        if miss:
+            raise HTTPException(409, "حقول إلزامية غير مربوطة: " + "، ".join(miss))
+        for old in s.exec(select(IntegrationMapping).where(IntegrationMapping.connection_id == c.id, IntegrationMapping.status == "approved")).all():
+            old.status = "superseded"
+            s.add(old)
+        m.status, m.approved_by, m.approved_at = "approved", (user.name or "")[:100], datetime.now()
+        s.add(m)
+        if c.method == "rest_pull" and c.status == "active" and not c.next_run_at:
+            c.next_run_at = datetime.now()
+            s.add(c)
+        _int_log(s, company.id, c.id, "mapping", "info", f"اعتماد المطابقة v{m.version}", user_name=user.name)
+        s.commit()
+        log_audit(company.id, user.id, user.name, "integration_mapping", f"integration:{c.id}", f"approve v{m.version}")
+        return {"ok": True, "version": m.version}
+
+
+@app.post("/integrations/test")
+def integrations_test(body: dict, user: User = Depends(get_current_user)):
+    """اختبار جاف بعينة: يطبّق المسودة (أو المعتمدة) ويتحقق كما في الإنتاج — بلا كتابة في بيانات الشركة."""
+    body = body or {}
+    with Session(engine) as s:
+        company, sc = _eco_scope(s, user)
+        c = _int_conn(s, company.id, body.get("connection_id"))
+        m = None
+        if body.get("mapping_id"):
+            try:
+                m = s.get(IntegrationMapping, int(body["mapping_id"]))
+            except (TypeError, ValueError):
+                m = None
+            if not m or m.connection_id != c.id:
+                raise HTTPException(404, "نسخة المطابقة غير موجودة")
+        cid = c.id
+    recs = body.get("records")
+    if isinstance(recs, dict):
+        recs = [recs]
+    return _int_ingest(cid, company.id, recs, mode="manual", by=user.name, sandbox=True, mapping_override=m)
+
+
+@app.get("/integrations/logs")
+def integrations_logs(days: int = 7, connection_id: int = 0, level: str = "", user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, sc = _eco_scope(s, user)
+        q = select(IntegrationLog).where(IntegrationLog.company_id == company.id, IntegrationLog.created_at >= datetime.now() - timedelta(days=max(1, min(int(days or 7), 90))))
+        if connection_id:
+            q = q.where(IntegrationLog.connection_id == connection_id)
+        if level in ("info", "warn", "error"):
+            q = q.where(IntegrationLog.level == level)
+        names = {c.id: c.name for c in s.exec(select(IntegrationConnection).where(IntegrationConnection.company_id == company.id)).all()}
+        return {"items": [{"at": l.created_at, "connection": names.get(l.connection_id, "—"), "connection_id": l.connection_id, "kind": l.kind, "level": l.level,
+                           "message": l.message, "records": l.records, "ms": l.ms, "user": l.user_name, "job_id": l.job_id}
+                          for l in s.exec(q.order_by(IntegrationLog.created_at.desc()).limit(500)).all()]}
+
+
+@app.post("/hooks/in/{token}")
+async def integrations_inbound_hook(token: str, request: Request):
+    """Webhook وارد من نظام خارجي — يُقبل فقط بتوقيع HMAC صحيح خلال 5 دقائق."""
+    ie, se = _int_engine(), _sec_engine()
+    if not token or len(token) < 20:
+        raise HTTPException(404, "غير موجود")
+    with Session(engine) as s:
+        c = s.exec(select(IntegrationConnection).where(IntegrationConnection.inbound_token == token)).first()
+        if not c or c.method != "webhook_in" or c.status == "archived":
+            raise HTTPException(404, "غير موجود")
+        cid, company_id, sec_enc, status = c.id, c.company_id, c.inbound_secret_enc, c.status
+    if _HOOK_RL["rl"] is None:
+        _HOOK_RL["rl"] = ie.RateLimiter()
+    ok, retry, _rem = _HOOK_RL["rl"].hit(f"hook:{cid}", 300)
+    if not ok:
+        raise HTTPException(429, "تجاوز حد الاستقبال (300/دقيقة)")
+    raw = await request.body()
+    if len(raw) > _ECO_MAX_BODY:
+        raise HTTPException(413, "الحجم أكبر من 5MB")
+    try:
+        secret = se.unseal(sec_enc, _int_master())
+    except Exception:
+        raise HTTPException(503, "تعذّر التحقق من التوقيع — دوّر سر الاتصال من مركز التكاملات")
+    good, why = ie.verify_signature(secret, raw, request.headers.get("x-nabbah-signature", ""))
+    if not good:
+        with Session(engine) as s:
+            _int_log(s, company_id, cid, "auth", "error", f"Webhook وارد مرفوض: {why}")
+            c = s.get(IntegrationConnection, cid)
+            c.auth_status = "failed"
+            s.add(c)
+            s.commit()
+        raise HTTPException(401, why)
+    if status == "paused":
+        raise HTTPException(409, "الاتصال متوقف مؤقتاً")
+    try:
+        doc = json.loads(raw.decode("utf-8"))
+    except Exception:
+        raise HTTPException(400, "الجسم ليس JSON صالحاً")
+    recs = doc.get("records") if isinstance(doc, dict) and isinstance(doc.get("records"), list) else (doc if isinstance(doc, list) else [doc])
+    from starlette.concurrency import run_in_threadpool as _rtp
+    idem = request.headers.get("idempotency-key", "") or request.headers.get("x-nabbah-delivery", "")
+    return await _rtp(lambda: _int_ingest(cid, company_id, recs, mode="webhook", by="Webhook وارد", idem=idem))
+
+
+# ═══ منصة المطورين — إدارة (لمستخدمي الشركة) ═══
+def _dev_key_json(k, apps, now, ie):
+    st = ie.key_state({"status": k.status, "expires_at": k.expires_at}, now)
+    return {"id": k.id, "name": k.name, "app_id": k.app_id, "app": apps.get(k.app_id, "—"), "masked": f"nbk_{'live' if k.env == 'live' else 'test'}_{k.prefix}_••••••••",
+            "env": k.env, "scopes": json.loads(k.scopes_json or "[]"), "state": st, "state_ar": ie.KEY_STATE_AR[st], "expires_at": k.expires_at, "last_used_at": k.last_used_at,
+            "last_ip": k.last_ip or "—", "rate_per_min": k.rate_per_min, "quota_day": k.quota_day, "created_by": k.created_by, "created_at": k.created_at,
+            "rotated_from_id": k.rotated_from_id}
+
+
+@app.get("/developer/overview")
+def developer_overview(user: User = Depends(get_current_user)):
+    ie = _int_engine()
+    if ie is None:
+        raise HTTPException(503, "محرّك منصة المطورين غير متاح")
+    _eco_kick()
+    now = datetime.now()
+    with Session(engine) as s:
+        company, sc = _eco_scope(s, user)
+        if not sc["dev_view"]:
+            raise HTTPException(403, "منصة المطورين للمالك والرئيس التنفيذي ومسؤول التقنية والمدقق")
+        apps = s.exec(select(DeveloperApp).where(DeveloperApp.company_id == company.id).order_by(DeveloperApp.created_at.desc())).all()
+        an = {a.id: a.name for a in apps}
+        keys = s.exec(select(APIKey).where(APIKey.company_id == company.id).order_by(APIKey.created_at.desc()).limit(300)).all()
+        hooks = s.exec(select(WebhookEndpoint).where(WebhookEndpoint.company_id == company.id).order_by(WebhookEndpoint.created_at.desc())).all()
+        cut = now - timedelta(days=30)
+        use = s.exec(select(APIUsage).where(APIUsage.company_id == company.id, APIUsage.created_at >= cut).order_by(APIUsage.created_at.desc()).limit(50000)).all()
+        stats = ie.usage_stats([{"at": u.created_at, "route": f"{u.method} {u.route}", "status": u.status, "ms": u.ms, "app": an.get(u.app_id, "—")} for u in use], now,
+                               quota_day=sum(k.quota_day or 0 for k in keys if ie.key_state({"status": k.status, "expires_at": k.expires_at}, now) == "active") or None)
+        kj = [_dev_key_json(k, an, now, ie) for k in keys]
+        conns = [{"id": c.id, "name": c.name, "env": c.env, "method": c.method} for c in s.exec(select(IntegrationConnection).where(
+            IntegrationConnection.company_id == company.id, IntegrationConnection.status != "archived")).all()]
+        return {"scope": sc, "cards": [{"key": "apps", "label": "التطبيقات", "value": len(apps)},
+                                       {"key": "keys", "label": "مفاتيح API النشطة", "value": sum(1 for k in kj if k["state"] == "active")},
+                                       {"key": "day", "label": "طلبات اليوم", "value": stats["day"]["requests"]},
+                                       {"key": "month", "label": "طلبات 30 يوماً", "value": stats["month"]["requests"]},
+                                       {"key": "success", "label": "معدل النجاح", "value": stats["month"]["success_pct"], "unit": "%"},
+                                       {"key": "errors", "label": "معدل الأخطاء", "value": stats["month"]["error_pct"], "unit": "%"},
+                                       {"key": "latency", "label": "متوسط زمن الاستجابة", "value": stats["month"]["avg_ms"], "unit": "ms"},
+                                       {"key": "quota", "label": "استهلاك الحد اليومي", "value": stats["quota_used_pct"], "unit": "%"}],
+                "apps": [{"id": a.id, "name": a.name, "description": a.description, "status": a.status, "created_at": a.created_at, "created_by": a.created_by,
+                          "keys": sum(1 for k in kj if k["app_id"] == a.id and k["state"] == "active")} for a in apps],
+                "keys": kj, "webhooks": [_dev_hook_json(w, an) for w in hooks], "usage": stats, "connections": conns,
+                "recent": [{"at": u.created_at, "method": u.method, "route": u.route, "status": u.status, "ms": u.ms, "env": u.env, "app": an.get(u.app_id, "—"), "ip": u.ip}
+                           for u in use[:200]],
+                "scopes": ie.SCOPES, "events": ie.EVENTS, "api_ref": ie.API_REF, "errors": [{"code": c, "ar": a} for c, a in ie.ERRORS],
+                "simulate": list(ie.SIMULATE), "retry_minutes": ie.RETRY_DELAYS_MIN, "version": ie.API_VERSION,
+                "pepper_set": bool(os.getenv("API_KEY_PEPPER")), "enc_key_set": bool(os.getenv("INTEGRATION_ENC_KEY"))}
+
+
+def _dev_hook_json(w, an):
+    return {"id": w.id, "url": w.url, "description": w.description, "events": json.loads(w.events_json or "[]"), "env": w.env, "status": w.status,
+            "status_ar": {"active": "نشط", "disabled": "موقوف", "auto_disabled": "أُوقف تلقائياً بعد فشل متكرر"}.get(w.status, w.status),
+            "app": an.get(w.app_id, "—"), "app_id": w.app_id, "failures": w.consecutive_failures, "created_at": w.created_at}
+
+
+def _dev_app(s, company_id, app_id, required=True):
+    if app_id in (None, "", 0) and not required:
+        return None
+    try:
+        a = s.get(DeveloperApp, int(app_id))
+    except (TypeError, ValueError):
+        a = None
+    if not a or a.company_id != company_id:
+        raise HTTPException(404, "التطبيق غير موجود")
+    return a
+
+
+@app.post("/developer/apps")
+def developer_app_save(body: dict, user: User = Depends(get_current_user)):
+    body = body or {}
+    with Session(engine) as s:
+        company, sc = _eco_scope(s, user)
+        _eco_need_manage(sc)
+        if body.get("id"):
+            a = _dev_app(s, company.id, body.get("id"))
+            if "status" in body:
+                if body["status"] not in ("active", "suspended"):
+                    raise HTTPException(422, "حالة غير صالحة")
+                a.status = body["status"]
+            if str(body.get("name") or "").strip():
+                a.name = str(body["name"]).strip()[:100]
+            if "description" in body:
+                a.description = str(body.get("description") or "")[:300]
+        else:
+            name = str(body.get("name") or "").strip()[:100]
+            if not name:
+                raise HTTPException(422, "اكتب اسم التطبيق")
+            a = DeveloperApp(company_id=company.id, name=name, description=str(body.get("description") or "")[:300], created_by=(user.name or "")[:100], created_at=datetime.now())
+        s.add(a)
+        s.commit()
+        s.refresh(a)
+        log_audit(company.id, user.id, user.name, "developer_app", f"app:{a.id}", f"{a.name} {a.status}")
+        return {"ok": True, "id": a.id}
+
+
+def _dev_new_key(s, company_id, user, *, name, app_id, env, scopes, expires_days, rate, quota, rotated_from=None):
+    ie = _int_engine()
+    full, prefix = ie.new_api_key(env)
+    while s.exec(select(APIKey).where(APIKey.prefix == prefix)).first():
+        full, prefix = ie.new_api_key(env)
+    k = APIKey(company_id=company_id, app_id=app_id, name=name[:100], prefix=prefix, key_hash=ie.hash_key(full, _api_pepper()), env=env,
+               scopes_json=json.dumps(sorted(set(scopes))), status="active", expires_at=(datetime.now() + timedelta(days=expires_days)) if expires_days else None,
+               rate_per_min=rate, quota_day=quota, rotated_from_id=rotated_from, created_by=(user.name or "")[:100], created_at=datetime.now())
+    s.add(k)
+    s.commit()
+    s.refresh(k)
+    return k, full
+
+
+@app.post("/developer/keys")
+def developer_key_create(body: dict, user: User = Depends(get_current_user)):
+    ie = _int_engine()
+    body = body or {}
+    with Session(engine) as s:
+        company, sc = _eco_scope(s, user)
+        _eco_need_manage(sc)
+        a = _dev_app(s, company.id, body.get("app_id"))
+        if a.status != "active":
+            raise HTTPException(409, "التطبيق موقوف")
+        scopes = body.get("scopes") or []
+        if not isinstance(scopes, list) or not scopes or any(x not in ie.SCOPES for x in scopes):
+            raise HTTPException(422, "حدّد صلاحية واحدة على الأقل من القائمة")
+        env = "sandbox" if body.get("env") == "sandbox" else "live"
+        exp = _eco_int(body.get("expires_days"), 90, 0, 730)
+        name = str(body.get("name") or "").strip() or f"مفتاح {a.name}"
+        k, full = _dev_new_key(s, company.id, user, name=name, app_id=a.id, env=env, scopes=scopes, expires_days=exp,
+                               rate=_eco_int(body.get("rate_per_min"), 60, 1, 600), quota=_eco_int(body.get("quota_day"), 10000, 100, 1000000))
+        log_audit(company.id, user.id, user.name, "api_key_create", f"apikey:{k.id}", f"{env} {','.join(scopes)}")
+        _sec_event("policy_changed", user, company.id, "medium", "", "", f"إنشاء مفتاح API ({env}) بصلاحيات: {', '.join(scopes)}")
+        return {"ok": True, "id": k.id, "key": full, "note_ar": "انسخ المفتاح الآن — لن يُعرض مرة أخرى. نخزّن بصمته فقط."}
+
+
+@app.post("/developer/keys/action")
+def developer_key_action(body: dict, user: User = Depends(get_current_user)):
+    ie = _int_engine()
+    body = body or {}
+    act = str(body.get("action") or "")
+    with Session(engine) as s:
+        company, sc = _eco_scope(s, user)
+        _eco_need_manage(sc)
+        try:
+            k = s.get(APIKey, int(body.get("id")))
+        except (TypeError, ValueError):
+            k = None
+        if not k or k.company_id != company.id:
+            raise HTTPException(404, "المفتاح غير موجود")
+        now = datetime.now()
+        st = ie.key_state({"status": k.status, "expires_at": k.expires_at}, now)
+        out = {"ok": True}
+        if act == "suspend":
+            if st != "active":
+                raise HTTPException(409, "المفتاح ليس نشطاً")
+            k.status = "suspended"
+        elif act == "resume":
+            if k.status != "suspended" or st == "expired":
+                raise HTTPException(409, "يُستأنف المفتاح الموقوف غير المنتهي فقط")
+            k.status = "active"
+        elif act == "revoke":
+            if k.status == "revoked":
+                raise HTTPException(409, "ملغى مسبقاً")
+            k.status, k.revoked_by, k.revoked_at = "revoked", (user.name or "")[:100], now
+        elif act == "rotate":
+            if st not in ("active", "suspended"):
+                raise HTTPException(409, "لا يُدوّر مفتاح ملغى أو منتهٍ — أنشئ مفتاحاً جديداً")
+            grace = _eco_int(body.get("grace_hours"), 24, 0, 168)
+            days_left = max(1, (k.expires_at - now).days) if k.expires_at else 0
+            nk, full = _dev_new_key(s, company.id, user, name=k.name, app_id=k.app_id, env=k.env, scopes=json.loads(k.scopes_json or "[]"),
+                                    expires_days=days_left if k.expires_at else 0, rate=k.rate_per_min, quota=k.quota_day, rotated_from=k.id)
+            if grace == 0:
+                k.status, k.revoked_by, k.revoked_at = "revoked", (user.name or "")[:100], now
+            else:
+                k.expires_at = min(k.expires_at, now + timedelta(hours=grace)) if k.expires_at else now + timedelta(hours=grace)
+            out.update(key=full, new_id=nk.id, old_valid_until=k.expires_at if grace else None,
+                       note_ar=f"المفتاح الجديد يُعرض مرة واحدة. القديم يعمل {grace} ساعة ثم ينتهي." if grace else "المفتاح الجديد يُعرض مرة واحدة. القديم أُلغي فوراً.")
+        else:
+            raise HTTPException(422, "إجراء غير معروف")
+        s.add(k)
+        s.commit()
+        log_audit(company.id, user.id, user.name, "api_key_" + act, f"apikey:{k.id}", "")
+        return out
+
+
+@app.post("/developer/webhooks")
+def developer_webhook_save(body: dict, user: User = Depends(get_current_user)):
+    import secrets as _sx
+    ie, se = _int_engine(), _sec_engine()
+    body = body or {}
+    with Session(engine) as s:
+        company, sc = _eco_scope(s, user)
+        _eco_need_manage(sc)
+        events = body.get("events") or []
+        if not isinstance(events, list) or not events or any(e not in ie.EVENTS or e == "ping" for e in events):
+            raise HTTPException(422, "اختر حدثاً واحداً على الأقل من القائمة")
+        url = str(body.get("url") or "").strip()
+        ok, why = ie.check_url(url, allow_http=_eco_allow_local(), allow_private=_eco_allow_local())
+        if not ok:
+            raise HTTPException(422, f"عنوان الاستقبال: {why}")
+        a = _dev_app(s, company.id, body.get("app_id"), required=False)
+        if body.get("id"):
+            try:
+                w = s.get(WebhookEndpoint, int(body["id"]))
+            except (TypeError, ValueError):
+                w = None
+            if not w or w.company_id != company.id:
+                raise HTTPException(404, "الـWebhook غير موجود")
+            w.url, w.events_json, w.description = url[:500], json.dumps(sorted(set(events))), str(body.get("description") or "")[:200]
+            w.app_id = a.id if a else None
+            shown = {}
+        else:
+            sec = "whsec_" + _sx.token_urlsafe(24)
+            w = WebhookEndpoint(company_id=company.id, app_id=a.id if a else None, url=url[:500], description=str(body.get("description") or "")[:200],
+                                events_json=json.dumps(sorted(set(events))), secret_enc=se.seal(sec, _int_master()), env="sandbox" if body.get("env") == "sandbox" else "live",
+                                created_by=(user.name or "")[:100], created_at=datetime.now())
+            shown = {"secret": sec}
+        s.add(w)
+        s.commit()
+        s.refresh(w)
+        log_audit(company.id, user.id, user.name, "webhook_save", f"webhook:{w.id}", f"{url[:80]} {','.join(events)}")
+        return {"ok": True, "id": w.id, **shown}
+
+
+@app.post("/developer/webhooks/action")
+def developer_webhook_action(body: dict, user: User = Depends(get_current_user)):
+    import secrets as _sx
+    se = _sec_engine()
+    body = body or {}
+    act = str(body.get("action") or "")
+    with Session(engine) as s:
+        company, sc = _eco_scope(s, user)
+        _eco_need_manage(sc)
+        try:
+            w = s.get(WebhookEndpoint, int(body.get("id")))
+        except (TypeError, ValueError):
+            w = None
+        if not w or w.company_id != company.id:
+            raise HTTPException(404, "الـWebhook غير موجود")
+        out = {"ok": True}
+        if act == "disable":
+            w.status = "disabled"
+        elif act == "enable":
+            w.status, w.consecutive_failures = "active", 0
+        elif act == "rotate_secret":
+            sec = "whsec_" + _sx.token_urlsafe(24)
+            w.secret_enc = se.seal(sec, _int_master())
+            out["secret"] = sec
+        elif act == "test":
+            if w.status != "active":
+                raise HTTPException(409, "فعّل الـWebhook أولاً")
+            d = WebhookDelivery(company_id=company.id, webhook_id=w.id, event="ping", payload_json=json.dumps({"message": "اختبار من نبّاه", "by": user.name}, ensure_ascii=False),
+                                status="pending", next_attempt_at=None, created_at=datetime.now())
+            s.add(d)
+            s.commit()
+            s.refresh(d)
+            out["delivery_id"] = d.id
+        else:
+            raise HTTPException(422, "إجراء غير معروف")
+        s.add(w)
+        s.commit()
+        log_audit(company.id, user.id, user.name, "webhook_" + act, f"webhook:{w.id}", "")
+    if act == "test":
+        out["result"] = _dev_deliver(out["delivery_id"])
+        with Session(engine) as s:     # اختبار الاتصال لا يُعاد تلقائياً
+            d = s.get(WebhookDelivery, out["delivery_id"])
+            if d.status == "failed":
+                d.status, d.next_attempt_at = "dead", None
+                s.add(d)
+                s.commit()
+    return out
+
+
+@app.get("/developer/webhooks/deliveries")
+def developer_webhook_deliveries(webhook_id: int = 0, status: str = "", user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, sc = _eco_scope(s, user)
+        if not sc["dev_view"]:
+            raise HTTPException(403, "غير مصرّح")
+        q = select(WebhookDelivery).where(WebhookDelivery.company_id == company.id)
+        if webhook_id:
+            q = q.where(WebhookDelivery.webhook_id == webhook_id)
+        if status:
+            q = q.where(WebhookDelivery.status == status)
+        st_ar = {"pending": "بالانتظار", "delivered": "سُلّم", "failed": "فشل — سيُعاد", "dead": "فشل نهائي"}
+        return {"items": [{"id": d.id, "webhook_id": d.webhook_id, "event": d.event, "status": d.status, "status_ar": st_ar.get(d.status, d.status), "attempts": d.attempts,
+                           "next_attempt_at": d.next_attempt_at, "response_code": d.response_code, "response_ms": d.response_ms, "error": d.error,
+                           "created_at": d.created_at, "delivered_at": d.delivered_at} for d in s.exec(q.order_by(WebhookDelivery.created_at.desc()).limit(300)).all()]}
+
+
+@app.post("/developer/webhooks/redeliver")
+def developer_webhook_redeliver(body: dict, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, sc = _eco_scope(s, user)
+        _eco_need_manage(sc)
+        try:
+            d = s.get(WebhookDelivery, int((body or {}).get("id")))
+        except (TypeError, ValueError):
+            d = None
+        if not d or d.company_id != company.id:
+            raise HTTPException(404, "التسليم غير موجود")
+        if d.status == "delivered":
+            raise HTTPException(409, "سُلّم بنجاح مسبقاً")
+        d.status, d.attempts, d.next_attempt_at = "pending", 0, datetime.now()
+        s.add(d)
+        s.commit()
+        did = d.id
+    return {"ok": True, "result": _dev_deliver(did)}
+
+
+# ═══ واجهة API العامة v1 (مفاتيح API) ═══
+class _ApiErr(Exception):
+    def __init__(self, status, detail, headers=None):
+        self.status, self.detail, self.headers = status, detail, headers or {}
+
+
+def _api_ctx(request, scope):
+    ie, se = _int_engine(), _sec_engine()
+    raw = (request.headers.get("x-api-key") or "").strip()
+    if not raw:
+        au = request.headers.get("authorization") or ""
+        if au.startswith("Bearer nbk_"):
+            raw = au[7:].strip()
+    pk = ie.parse_key(raw)
+    if not pk:
+        raise _ApiErr(401, "مفتاح API مفقود أو بصيغة غير صحيحة (X-API-Key)")
+    now = datetime.now()
+    with Session(engine) as s:
+        k = s.exec(select(APIKey).where(APIKey.prefix == pk["prefix"])).first()
+        import hmac as _hm
+        if not k or not _hm.compare_digest(k.key_hash, ie.hash_key(raw, _api_pepper())):
+            raise _ApiErr(401, "مفتاح API غير صالح")
+        st = ie.key_state({"status": k.status, "expires_at": k.expires_at}, now)
+        ctx = {"key_id": k.id, "company_id": k.company_id, "env": k.env, "app_id": k.app_id, "scopes": json.loads(k.scopes_json or "[]"),
+               "rate": int(k.rate_per_min or 60), "quota": int(k.quota_day or 10000)}
+        request.state.nb_api = ctx      # لتسجيل الطلب باسم شركة المفتاح حتى عند الرفض
+        if st != "active":
+            raise _ApiErr(401, f"المفتاح {ie.KEY_STATE_AR[st]}")
+        company = s.get(Company, k.company_id)
+        if not company or company.is_active != 1:
+            raise _ApiErr(403, "الشركة غير نشطة")
+        if k.app_id:
+            a = s.get(DeveloperApp, k.app_id)
+            if not a or a.status != "active":
+                raise _ApiErr(403, "التطبيق المرتبط بالمفتاح موقوف")
+        if not k.last_used_at or (now - k.last_used_at).total_seconds() > 60:
+            k.last_used_at = now
+            ip = _client_ip(request)
+            k.last_ip = se.mask_ip(ip) if ip else ""
+            s.add(k)
+            s.commit()
+    if _API_RL["rl"] is None:
+        _API_RL["rl"] = ie.RateLimiter()
+    ok, retry, remaining = _API_RL["rl"].hit(ctx["key_id"], ctx["rate"])
+    ctx["remaining"] = remaining
+    if not ok:
+        raise _ApiErr(429, f"تجاوز حد الاستخدام ({ctx['rate']} طلب/دقيقة)", {"Retry-After": str(retry), "X-RateLimit-Limit": str(ctx["rate"]), "X-RateLimit-Remaining": "0"})
+    day = now.strftime("%Y-%m-%d")
+    dk = _API_DAY.get(ctx["key_id"])
+    if not dk or dk[0] != day:
+        dk = [day, 0]
+    dk[1] += 1
+    _API_DAY[ctx["key_id"]] = dk
+    if dk[1] > ctx["quota"]:
+        raise _ApiErr(429, f"تجاوز الحصة اليومية ({ctx['quota']} طلب)", {"Retry-After": "3600"})
+    if scope and not ie.scope_ok(ctx["scopes"], scope):
+        raise _ApiErr(403, f"المفتاح لا يملك صلاحية {scope}")
+    return ctx
+
+
+def _api_run(request, route, scope, fn, status_ok=200):
+    """غلاف موحد: مصادقة ← حدود ← صلاحية ← محاكاة (Sandbox) ← التنفيذ ← تسجيل آمن للطلب (بلا الجسم أو المفتاح)."""
+    from fastapi.responses import JSONResponse as _JR
+    from fastapi.encoders import jsonable_encoder as _je
+    ie, se = _int_engine(), _sec_engine()
+    t0 = time.perf_counter()
+    ctx, status, hdr = None, status_ok, {"X-Nabbah-API-Version": "1"}
+    try:
+        if ie is None:
+            raise _ApiErr(503, "الخدمة غير متاحة مؤقتاً")
+        ctx = _api_ctx(request, scope)
+        hdr.update({"X-RateLimit-Limit": str(ctx["rate"]), "X-RateLimit-Remaining": str(ctx.get("remaining", 0)), "X-Nabbah-Env": ctx["env"]})
+        sim = (request.headers.get("x-nabbah-simulate") or "").strip()
+        if sim:
+            if ctx["env"] != "sandbox":
+                raise _ApiErr(400, "محاكاة الأخطاء متاحة لمفاتيح Sandbox فقط")
+            code, msg = ie.SIMULATE.get(sim, (400, "قيمة محاكاة غير معروفة"))
+            raise _ApiErr(code, msg, {"Retry-After": "30"} if code == 429 else None)
+        body = fn(ctx)
+        resp = _JR(_je(body), status_code=status_ok, headers=hdr)
+    except _ApiErr as e:
+        status = e.status
+        resp = _JR({"error": {"code": e.status, "message": e.detail}}, status_code=e.status, headers=dict(hdr, **e.headers))
+    except HTTPException as e:
+        status = e.status_code
+        resp = _JR(_je({"error": {"code": e.status_code, "message": e.detail}}), status_code=e.status_code, headers=hdr)
+    except Exception as e:
+        status = 500
+        _logger.error(f"api {route} failed: {type(e).__name__}: {str(e)[:150]}")
+        resp = _JR({"error": {"code": 500, "message": "خطأ داخلي — أعد المحاولة (آمن مع Idempotency-Key)"}}, status_code=500, headers=hdr)
+    try:
+        ip = _client_ip(request)
+        c = ctx or getattr(request.state, "nb_api", None) or {}
+        with Session(engine) as s:
+            s.add(APIUsage(company_id=c.get("company_id"), key_id=c.get("key_id"), app_id=c.get("app_id"), env=c.get("env", ""), method=request.method, route=route,
+                           status=status, ms=round((time.perf_counter() - t0) * 1000, 1), ip=se.mask_ip(ip) if ip else "", created_at=datetime.now()))
+            s.commit()
+    except Exception as _e:
+        _logger.error(f"api usage log failed: {type(_e).__name__}")
+    return resp
+
+
+def _api_q(request, name, default=""):
+    try:
+        return request.query_params.get(name, default)
+    except Exception:
+        return default
+
+
+def _api_page(request):
+    lim = _eco_int(_api_q(request, "limit", "100"), 100, 1, 500)
+    cur = _api_q(request, "cursor", "")
+    try:
+        cur = int(cur) if cur not in ("", None) else 0
+    except (TypeError, ValueError):
+        raise _ApiErr(400, "cursor غير صالح")
+    return lim, cur
+
+
+def _api_date(v, name):
+    if v in ("", None):
+        return None
+    if not _valid_date(v):
+        raise _ApiErr(400, f"{name}: الصيغة YYYY-MM-DD")
+    return v
+
+
+def _api_list(s, model, cid, request, fields, extra=None):
+    lim, cur = _api_page(request)
+    q = select(model).where(model.company_id == cid, model.id > cur)
+    for cond in extra or []:
+        q = q.where(cond)
+    rows = s.exec(q.order_by(model.id).limit(lim + 1)).all()
+    more = len(rows) > lim
+    rows = rows[:lim]
+    return {"data": [{f: getattr(r, f) for f in fields} for r in rows], "next_cursor": str(rows[-1].id) if more and rows else None}
+
+
+@app.get("/api/v1/company")
+def api_v1_company(request: Request):
+    def fn(ctx):
+        if ctx["env"] == "sandbox":
+            return {"data": _int_engine().sandbox_data("company"), "sandbox": True}
+        with Session(engine) as s:
+            c = s.get(Company, ctx["company_id"])
+            nb = len(s.exec(select(CompanyBranch).where(CompanyBranch.company_id == c.id, CompanyBranch.is_active == 1)).all())
+            return {"data": {"id": c.id, "name": c.name, "sector": c.sector, "currency": c.currency, "country": c.country, "fiscal_year_start": c.fiscal_year_start, "branches": nb}}
+    return _api_run(request, "/api/v1/company", "company.read", fn)
+
+
+@app.get("/api/v1/branches")
+def api_v1_branches(request: Request):
+    def fn(ctx):
+        if ctx["env"] == "sandbox":
+            return {"data": _int_engine().sandbox_data("branches"), "sandbox": True}
+        with Session(engine) as s:
+            return {"data": [{"id": b.id, "name": b.name, "city": b.city, "area": b.area, "branch_type": b.branch_type}
+                             for b in s.exec(select(CompanyBranch).where(CompanyBranch.company_id == ctx["company_id"], CompanyBranch.is_active == 1).order_by(CompanyBranch.id)).all()]}
+    return _api_run(request, "/api/v1/branches", "branches.read", fn)
+
+
+def _api_range(request, model, field="date"):
+    f, t = _api_date(_api_q(request, "from"), "from"), _api_date(_api_q(request, "to"), "to")
+    out = []
+    col = getattr(model, field)
+    if f:
+        out.append(col >= f)
+    if t:
+        out.append(col < (datetime.strptime(t, "%Y-%m-%d") + timedelta(days=1)).strftime("%Y-%m-%d"))
+    return out
+
+
+@app.get("/api/v1/sales")
+def api_v1_sales(request: Request):
+    def fn(ctx):
+        if ctx["env"] == "sandbox":
+            return {"data": _int_engine().sandbox_data("sales"), "next_cursor": None, "sandbox": True}
+        with Session(engine) as s:
+            ex = _api_range(request, CompanySale)
+            b = _api_q(request, "branch_id")
+            if b:
+                if not str(b).isdigit():
+                    raise _ApiErr(400, "branch_id رقم")
+                ex.append(CompanySale.branch_id == int(b))
+            return _api_list(s, CompanySale, ctx["company_id"], request, ("id", "date", "period", "branch_id", "reference", "channel", "product_sku", "category",
+                                                                         "quantity", "gross_sales", "discounts", "returns", "net_sales", "vat", "payment_method", "dataset_id"), ex)
+    return _api_run(request, "/api/v1/sales", "sales.read", fn)
+
+
+@app.get("/api/v1/products")
+def api_v1_products(request: Request):
+    def fn(ctx):
+        if ctx["env"] == "sandbox":
+            return {"data": _int_engine().sandbox_data("products"), "next_cursor": None, "sandbox": True}
+        with Session(engine) as s:
+            return _api_list(s, CompanyProduct, ctx["company_id"], request, ("id", "sku", "name", "category", "unit", "cost", "selling_price", "active"))
+    return _api_run(request, "/api/v1/products", "products.read", fn)
+
+
+@app.get("/api/v1/inventory")
+def api_v1_inventory(request: Request):
+    def fn(ctx):
+        if ctx["env"] == "sandbox":
+            return {"data": _int_engine().sandbox_data("inventory"), "next_cursor": None, "sandbox": True}
+        with Session(engine) as s:
+            p = _api_q(request, "period")
+            if p and not re.match(r"^\d{4}-\d{2}$", p):
+                raise _ApiErr(400, "period بصيغة YYYY-MM")
+            return _api_list(s, CompanyInventory, ctx["company_id"], request, ("id", "period", "branch_id", "product_sku", "opening_qty", "purchases_qty", "sold_qty",
+                                                                              "adjustments_qty", "closing_qty", "closing_value"), [CompanyInventory.period == p] if p else [])
+    return _api_run(request, "/api/v1/inventory", "inventory.read", fn)
+
+
+@app.get("/api/v1/purchases")
+def api_v1_purchases(request: Request):
+    def fn(ctx):
+        if ctx["env"] == "sandbox":
+            return {"data": _int_engine().sandbox_data("purchases"), "next_cursor": None, "sandbox": True}
+        with Session(engine) as s:
+            return _api_list(s, CompanyPurchase, ctx["company_id"], request, ("id", "date", "period", "branch_id", "supplier_name", "reference", "product_sku", "quantity",
+                                                                             "unit_cost", "total_cost", "vat", "status"), _api_range(request, CompanyPurchase))
+    return _api_run(request, "/api/v1/purchases", "purchases.read", fn)
+
+
+def _api_period_sums(s, model, col, cid, p_from, p_to, by_date=False):
+    """مجاميع شهرية بـ SQL (SUM يتجاهل الفراغات؛ الشهر بلا قيم = null). يُرجع {period: (sum, count)}."""
+    from sqlalchemy import func as _f, select as _sel
+    pe = _f.substr(model.date, 1, 7) if by_date else model.period
+    q = _sel(pe, _f.sum(col), _f.count(model.id)).where(model.company_id == cid).group_by(pe)
+    out = {}
+    for p, sm, n in s.exec(q).all():
+        if p and (not p_from or p >= p_from) and (not p_to or p <= p_to):
+            out[str(p)[:7]] = (None if sm is None else round(float(sm), 2), int(n or 0))
+    return out
+
+
+@app.get("/api/v1/metrics/financial")
+def api_v1_metrics(request: Request):
+    def fn(ctx):
+        f, t = _api_q(request, "from"), _api_q(request, "to")
+        for v, nm in ((f, "from"), (t, "to")):
+            if v and not re.match(r"^\d{4}-\d{2}$", v):
+                raise _ApiErr(400, f"{nm} بصيغة YYYY-MM")
+        if ctx["env"] == "sandbox":
+            return {"data": _int_engine().sandbox_data("metrics"), "sandbox": True}
+        with Session(engine) as s:
+            sales = _api_period_sums(s, CompanySale, CompanySale.net_sales, ctx["company_id"], f, t)
+            purch = _api_period_sums(s, CompanyPurchase, CompanyPurchase.total_cost, ctx["company_id"], f, t)
+            exps = _api_period_sums(s, CompanyExpense, CompanyExpense.amount, ctx["company_id"], f, t, by_date=True)
+        periods = sorted(set(sales) | set(purch) | set(exps))
+        return {"data": [{"period": p, "net_sales": sales.get(p, (None, 0))[0], "purchases": purch.get(p, (None, 0))[0], "expenses": exps.get(p, (None, 0))[0],
+                          "sales_records": sales.get(p, (None, 0))[1]} for p in periods],
+                "note": "مجاميع من البيانات المعتمدة فقط · null = لا بيانات (ليس صفراً) · لا تقديرات"}
+    return _api_run(request, "/api/v1/metrics/financial", "metrics.read", fn)
+
+
+@app.get("/api/v1/reports")
+def api_v1_reports(request: Request):
+    def fn(ctx):
+        if ctx["env"] == "sandbox":
+            return {"data": _int_engine().sandbox_data("reports"), "sandbox": True}
+        with Session(engine) as s:
+            out = []
+            for kind, model in (("monthly", CompanyMonthlyReport), ("executive", CompanyExecReport)):
+                for r in s.exec(select(model).where(model.company_id == ctx["company_id"]).order_by(model.id.desc()).limit(200)).all():
+                    if r.status in ("approved", "published"):
+                        out.append({"kind": kind, "id": r.id, "period": r.period, "title": r.title, "version": r.version, "status": r.status,
+                                    "approved_at": r.approved_at, "published_at": r.published_at, "checksum": r.checksum})
+            return {"data": out}
+    return _api_run(request, "/api/v1/reports", "reports.read", fn)
+
+
+@app.get("/api/v1/reports/{kind}/{rid}")
+def api_v1_report(kind: str, rid: int, request: Request):
+    def fn(ctx):
+        model = {"monthly": CompanyMonthlyReport, "executive": CompanyExecReport}.get(kind)
+        if not model:
+            raise _ApiErr(404, "النوع monthly أو executive")
+        if ctx["env"] == "sandbox":
+            raise _ApiErr(404, "لا تقارير حقيقية في Sandbox")
+        with Session(engine) as s:
+            r = s.get(model, rid)
+            if not r or r.company_id != ctx["company_id"] or r.status not in ("approved", "published"):
+                raise _ApiErr(404, "التقرير غير موجود أو غير معتمد")
+            return {"data": {"kind": kind, "id": r.id, "period": r.period, "title": r.title, "status": r.status, "version": r.version,
+                             "report": json.loads(r.report_json or "{}"), "checksum": r.checksum}}
+    return _api_run(request, f"/api/v1/reports/{kind}/{{id}}", "reports.read", fn)
+
+
+@app.post("/api/v1/integrations/{connection_id}/records")
+async def api_v1_push(connection_id: int, request: Request):
+    raw = await request.body()
+
+    def fn(ctx):
+        if len(raw) > _ECO_MAX_BODY:
+            raise _ApiErr(413, "الطلب أكبر من 5MB")
+        try:
+            doc = json.loads(raw.decode("utf-8") or "{}")
+        except Exception:
+            raise _ApiErr(400, "الجسم ليس JSON صالحاً")
+        if not isinstance(doc, dict) or not isinstance(doc.get("records"), list):
+            raise _ApiErr(422, "الجسم: {\"records\": [ ... ]}")
+        with Session(engine) as s:
+            c = s.get(IntegrationConnection, connection_id)
+            if not c or c.company_id != ctx["company_id"] or c.status == "archived":
+                raise _ApiErr(404, "الاتصال غير موجود ضمن شركة المفتاح")
+            if c.method != "push_api":
+                raise _ApiErr(409, "هذا الاتصال ليس من نوع Push API")
+            if (c.env or "live") != ctx["env"]:
+                raise _ApiErr(403, f"بيئة المفتاح ({ctx['env']}) لا تطابق بيئة الاتصال ({c.env}) — بيانات Sandbox لا تصل للإنتاج")
+            if doc.get("dataset_type") and doc["dataset_type"] != c.dataset_type:
+                raise _ApiErr(422, f"هذا الاتصال يستقبل «{c.dataset_type}» فقط")
+            cid = c.id
+        idem = request.headers.get("idempotency-key", "")
+        if ctx["env"] == "sandbox":
+            return _int_ingest(cid, ctx["company_id"], doc["records"], mode="realtime", by="API (Sandbox)", sandbox=True)
+        return _int_ingest(cid, ctx["company_id"], doc["records"], mode="realtime", by=f"API key #{ctx['key_id']}", idem=idem)
+    from starlette.concurrency import run_in_threadpool as _rtp
+    return await _rtp(lambda: _api_run(request, "/api/v1/integrations/{id}/records", "integrations.write", fn))
+
+
+@app.get("/api/v1/integrations/{connection_id}/jobs/{job_id}")
+def api_v1_job(connection_id: int, job_id: int, request: Request):
+    def fn(ctx):
+        with Session(engine) as s:
+            j = s.get(IntegrationSyncJob, job_id)
+            if not j or j.company_id != ctx["company_id"] or j.connection_id != connection_id:
+                raise _ApiErr(404, "العملية غير موجودة")
+            return dict(_int_job_json(j), errors=json.loads(j.errors_json or "[]"))
+    return _api_run(request, "/api/v1/integrations/{id}/jobs/{job_id}", "integrations.read", fn)
 
 
 @app.get("/company/executive-intelligence")
@@ -19675,7 +21487,7 @@ ENGINE_MODULES = ("nabbah_finance", "nabbah_trust", "semantic_layer", "kpi_engin
                   "ai_gateway", "period_aggregation", "legacy_adapters", "platform_bridge",
                   "intelligence_engine", "forecast_engine", "scenario_engine", "decision_memory",
                   "rule_catalog", "canonical_model", "period_model", "metric_registry", "ingestion",
-                  "sales_engine", "inventory_engine", "purchases_engine", "cashflow_engine", "hr_engine", "ops_engine", "finance_engine", "sector_intelligence", "leakage_engine", "tax_engine", "risk_engine", "drivers_engine", "benchmark_engine", "prediction_engine", "goals_engine", "decisions_engine", "board_engine", "monthly_engine", "executive_engine", "customer_engine", "branch_engine", "competitor_engine", "events_engine", "assistant_engine", "security_engine")
+                  "sales_engine", "inventory_engine", "purchases_engine", "cashflow_engine", "hr_engine", "ops_engine", "finance_engine", "sector_intelligence", "leakage_engine", "tax_engine", "risk_engine", "drivers_engine", "benchmark_engine", "prediction_engine", "goals_engine", "decisions_engine", "board_engine", "monthly_engine", "executive_engine", "customer_engine", "branch_engine", "competitor_engine", "events_engine", "assistant_engine", "security_engine", "integration_engine")
 
 
 def _runtime_health():
@@ -20025,7 +21837,7 @@ def files_check(_: bool = Depends(verify_admin)):
         "company-data-quality.html", "company-predictions.html", "company-risks.html",
         "company-board.html", "company-root-cause.html", "company-benchmarks.html",
         "company-upload.html", "company-memory.html", "company-decisions.html",
-        "company-monthly-report.html", "company-monthly-intelligence.html", "company-board-intelligence.html", "company-executive-report-intelligence.html", "company-customer-intelligence.html", "company-branch-intelligence.html", "company-competitor-intelligence.html", "company-events-intelligence.html", "company-assistant.html", "company-security.html",
+        "company-monthly-report.html", "company-monthly-intelligence.html", "company-board-intelligence.html", "company-executive-report-intelligence.html", "company-customer-intelligence.html", "company-branch-intelligence.html", "company-competitor-intelligence.html", "company-events-intelligence.html", "company-assistant.html", "company-security.html", "company-integrations.html", "company-developers.html",
         "nabbah-data-template.xlsx",
     ]
     missing, present = [], []

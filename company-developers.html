@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>نبّاه · منصة المطورين</title>
+<link href="nabbah-design.css" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{background:var(--bg,#070b09);color:var(--txt,#e8f1ec);font-family:Tajawal,Tahoma,Arial,sans-serif;margin:0}
+  .wrap{max-width:1180px;margin:0 auto;padding:70px 16px 60px}
+  h1{margin:0 0 4px;font-size:24px}.sub{color:var(--txt-soft,#8ba396);margin:0 0 14px;font-size:14px}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+  select{background:var(--panel,#101a15);color:var(--txt,#e8f1ec);border:1px solid var(--line,#1d2c24);border-radius:10px;padding:8px 10px;font:inherit;font-size:13px;max-width:100%}
+  .tabs{display:flex;gap:2px;flex-wrap:wrap;border-bottom:1px solid var(--line,#1d2c24);margin:6px 0 16px}
+  .tab{background:none;border:0;color:var(--txt-soft,#8ba396);padding:9px 11px;font:inherit;font-size:13px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+  .tab.on{color:var(--txt,#e8f1ec);border-color:#14b8a6;font-weight:800}
+  .tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:14px}
+  .tile,.panel{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:14px;padding:14px;min-width:0}
+  .tile{cursor:pointer}.tile:hover{border-color:var(--mint,#10b981)}
+  .tile .l{font-size:12px;color:var(--txt-soft,#8ba396)}.tile .v{font-size:22px;font-weight:800;margin-top:4px;overflow-wrap:anywhere}.tile .c{font-size:12px;margin-top:4px;line-height:1.7}
+  .panel{margin-bottom:14px}.panel h2{margin:0 0 10px;font-size:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .panel h3{margin:12px 0 6px;font-size:13px;color:var(--txt-soft,#8ba396)}
+  .grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+  table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px;border-bottom:1px solid var(--line,#1d2c24);text-align:start;white-space:nowrap}
+  th{color:var(--txt-soft,#8ba396);font-weight:600}.tbl{overflow-x:auto}td.w{white-space:normal;min-width:200px}
+  tr.drill{cursor:pointer}tr.drill:hover td{background:rgba(16,185,129,.06)}
+  .pos{color:#10b981}.neg{color:#ef4444}.warn{color:#f5b301}.muted{color:var(--txt-soft,#8ba396);font-size:12px}
+  .b{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700;display:inline-block;white-space:nowrap}
+  .critical,.intervene{background:rgba(239,68,68,.16);color:#ef4444}.high{background:rgba(234,88,12,.16);color:#f97316}
+  .medium,.watch{background:rgba(245,179,1,.15);color:#f5b301}.low,.good{background:rgba(16,185,129,.15);color:#10b981}.grey,.na,.monitor{background:rgba(148,163,184,.15);color:#94a3b8}
+  .btn{background:var(--mint,#10b981);color:#062b1c;border:0;border-radius:10px;padding:7px 13px;font-weight:800;cursor:pointer;font:inherit;font-size:12px;text-decoration:none;display:inline-block}
+  .btn.ghost{background:transparent;color:var(--txt-soft,#8ba396);border:1px solid var(--line,#1d2c24);font-weight:600}.btn.red{background:#ef4444;color:#fff}
+  .btn:disabled{opacity:.5;cursor:default}
+  .state{padding:36px 16px;text-align:center;color:var(--txt-soft,#8ba396);border:1px dashed var(--line,#1d2c24);border-radius:14px}
+  .na-box{color:var(--txt-soft,#8ba396);font-size:13px;padding:10px;border:1px dashed var(--line,#1d2c24);border-radius:10px;margin:6px 0}
+  .itm{border:1px solid var(--line,#1d2c24);border-inline-start:4px solid #f5b301;border-radius:12px;padding:12px;margin-bottom:10px}
+  .itm.critical,.itm.intervene{border-inline-start-color:#ef4444;background:none;color:inherit}.itm.high{border-inline-start-color:#f97316;background:none;color:inherit}
+  .itm.medium,.itm.watch{background:none;color:inherit}.itm.good,.itm.low{border-inline-start-color:#10b981;background:none;color:inherit}.itm.na,.itm.monitor{border-inline-start-color:#94a3b8;background:none;color:inherit}
+  .itm h4{margin:0 0 6px;font-size:15px}.kv{display:grid;grid-template-columns:120px 1fr;gap:4px 10px;font-size:13px;margin-top:6px}.kv b{color:var(--txt-soft,#8ba396);font-weight:600}
+  .sum p{font-size:15px;line-height:2;margin:4px 0}.sum b{color:var(--mint,#10b981)}.sum a{color:var(--mint,#10b981);font-size:11px;text-decoration:none}
+  .hgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+  .barrow{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:13px}.barrow .t{flex:0 0 140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .barrow .g{flex:1;height:10px;background:var(--line,#1d2c24);border-radius:6px;overflow:hidden;min-width:40px}.barrow .g i{display:block;height:100%;background:var(--mint,#10b981)}.barrow .x{flex:0 0 120px;text-align:end}
+  .pop{position:fixed;display:none;z-index:70;background:var(--panel,#101a15);border:1px solid var(--mint,#10b981);border-radius:12px;padding:12px;font-size:12px;max-width:340px;line-height:1.8}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}.chip{background:rgba(16,185,129,.12);color:var(--mint,#10b981);border:1px solid rgba(16,185,129,.35);border-radius:20px;padding:4px 11px;font-size:12px;cursor:pointer}
+  input.search,.fg input,.fg select,.fg textarea{background:var(--bg,#070b09);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:9px;padding:8px;font:inherit}
+  input.search{flex:1;min-width:160px;background:var(--panel,#101a15);border-radius:10px;padding:9px 12px}
+  .ai-sec{margin:8px 0}.ai-sec b{display:block;font-size:13px;margin-bottom:4px}.ai-sec li{font-size:13px;margin:3px 0}
+  .ov{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:50;padding:14px}
+  .ov.on{display:flex}.modal{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:16px;padding:18px;width:min(580px,100%);max-height:90vh;overflow:auto}
+  .fg{display:grid;grid-template-columns:1fr 1fr;gap:10px}.fg label{font-size:12px;color:var(--txt-soft,#8ba396);display:flex;flex-direction:column;gap:4px}.fg .full{grid-column:1/-1}
+  .cta{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .back{background:none;border:0;color:var(--mint,#10b981);cursor:pointer;font:inherit;padding:0;margin-bottom:10px}
+  .stbadge{font-size:12px;font-weight:800;padding:4px 10px;border-radius:10px;border:1px solid var(--line,#1d2c24)}
+  .flag{padding:10px 12px;border-radius:10px;margin:6px 0 10px;font-size:13px}
+  /* بطاقة القرار */
+  .dc-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;background:linear-gradient(90deg,#0f2a3d,#123047);border-radius:14px;padding:16px 18px;margin-bottom:12px}
+  .dc-head h2{margin:0;font-size:20px}.dc-no{border:1px solid rgba(255,255,255,.3);border-radius:10px;padding:6px 12px;font-weight:800;font-size:13px}
+  .dc-meta{display:grid;grid-template-columns:2fr repeat(4,minmax(0,1fr));gap:10px;align-items:center}.dc-meta>div{border-inline-start:1px solid var(--line,#1d2c24);padding:4px 10px}
+  .dc-meta .l{font-size:12px;color:var(--txt-soft,#8ba396)}.dc-meta .v{font-size:15px;font-weight:800;margin-top:4px}
+  .dc-box{background:rgba(255,255,255,.025);border-radius:10px;padding:12px;font-size:14px;line-height:1.9}
+  .fin3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.fin3 div{background:rgba(255,255,255,.025);border-radius:10px;padding:12px;text-align:center}
+  .fin3 b{display:block;font-size:20px;margin:6px 0}
+  .flow{display:flex;align-items:flex-start;justify-content:space-between;gap:4px;margin:10px 0}.flow .st{text-align:center;flex:1;font-size:12px;position:relative}
+  .flow .dot{width:28px;height:28px;border-radius:50%;margin:0 auto 6px;display:grid;place-items:center;font-weight:900;background:var(--line,#1d2c24);color:#94a3b8}
+  .flow .dot.on{background:#10b981;color:#062b1c}.flow .dot.cur{background:#f5b301;color:#2b1d00}
+  #printv{display:none}
+  @media print{#printv{display:block!important;color:#000;background:#fff}
+    #printv .pg{page-break-after:always;padding:22px}#printv .panel,#printv .tile,#printv .itm{background:#fff;border:1px solid #ccc;color:#000;break-inside:avoid}
+    #printv table{width:100%;border-collapse:collapse}#printv tr{break-inside:avoid}#printv td,#printv th{border:1px solid #ccc;padding:4px;font-size:10.5px;white-space:normal;color:#000}
+    #printv .muted{color:#555}#printv .cover{display:flex;flex-direction:column;justify-content:center;min-height:90vh;text-align:center}}
+  @media(max-width:900px){.hgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.dc-meta{grid-template-columns:1fr 1fr}.dc-meta>div:first-child{grid-column:1/-1}}
+  @media(max-width:760px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.grid2,.grid3,.fin3{grid-template-columns:minmax(0,1fr)}.fg{grid-template-columns:1fr}h1{font-size:20px}
+    .tile{padding:10px}.tile .v{font-size:17px}.kv{grid-template-columns:1fr}.tab{padding:7px 8px;font-size:12px}.barrow .t{flex-basis:90px}.barrow .x{flex-basis:90px}}
+  @media(max-width:1000px){.grid3{grid-template-columns:minmax(0,1fr)}}
+  @media(max-width:760px){.barrow{flex-wrap:wrap}.barrow .x{flex:1 1 100%;text-align:start}.barrow .x .b{white-space:normal}}
+  html,body{overflow-x:hidden}
+  @media(min-width:761px){#content .barrow .x{flex-basis:220px}}
+  .btn.ghost.red{color:#ef4444;border-color:rgba(239,68,68,.4)}
+  @media print{body>*:not(.wrap){display:none!important}.tabs,.bar,.cta,.back,#disc{display:none!important}body{background:#fff;color:#000}.panel{border:1px solid #ccc;background:#fff;color:#000}}
+
+  .chip input{vertical-align:middle;margin:0 0 0 4px}.chip.on{background:var(--mint,#10b981);color:#062b1c;font-weight:800}.fg textarea{resize:vertical}
+  .code{background:var(--bg,#070b09);border:1px solid var(--line,#1d2c24);border-radius:10px;padding:10px;font-size:12px;white-space:pre-wrap;word-break:break-word;overflow-x:auto;text-align:left;font-family:ui-monospace,Consolas,monospace;margin:6px 0}
+  code{font-family:ui-monospace,Consolas,monospace;font-size:12px;background:rgba(255,255,255,.05);padding:1px 5px;border-radius:5px}
+  .spark{display:flex;align-items:flex-end;gap:3px;height:110px;padding:6px 0}.spark i{flex:1;background:var(--mint,#10b981);border-radius:3px 3px 0 0;min-width:3px;opacity:.85}
+  .btn.ghost.red{background:transparent}.fg label{min-width:0}.fg input,.fg select,.fg textarea{width:100%;min-width:0;box-sizing:border-box}
+  details summary{list-style:none}.itm h4{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  @media(max-width:760px){.tiles[style]{grid-template-columns:repeat(2,minmax(0,1fr))!important}[data-mr]{grid-template-columns:1fr 1fr!important}[data-mr] .btn{grid-column:1/-1}[data-tm],[data-bm]{grid-template-columns:1fr!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🧑‍💻 منصة المطورين</h1>
+  <p class="sub">واجهات API موثقة وآمنة لربط أنظمتك بنبّاه: مفاتيح بصلاحيات محددة ومدة انتهاء، وWebhooks موقّعة بإعادة محاولة، وبيئة Sandbox منفصلة ببيانات مصطنعة، وتحليلات الاستخدام. كل مفتاح مقيّد بشركته فقط.</p>
+  <div class="bar"><span class="stbadge" id="scopeB">…</span><span class="muted" id="ver"></span></div>
+  <div id="banner"></div>
+  <nav class="tabs" id="tabs"></nav>
+  <div id="content"><div class="state">جارٍ التحميل…</div></div>
+</div>
+<div class="ov" id="ov"><div class="modal" id="modal"></div></div>
+<script src="i18n.js"></script>
+<script>
+(function(){
+  const TOKEN=localStorage.getItem("nabbah_token")||"";if(!TOKEN){location.href="login.html";return;}
+  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const n=(v,d=0)=>{if(v==null||v===""||isNaN(Number(v)))return"—";return Number(v).toLocaleString("ar-SA",{maximumFractionDigits:d});};
+  const dt=v=>v?esc(String(v).replace("T"," ").slice(0,16)):"—";
+  const $=id=>document.getElementById(id);
+  const H={Authorization:"Bearer "+TOKEN,"Content-Type":"application/json"};
+  const api=(path,body)=>fetch(path,{method:body===undefined?"GET":"POST",headers:H,body:body===undefined?undefined:JSON.stringify(body)}).then(async r=>{
+    if(r.status===401){location.href="login.html";throw new Error("401");}const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(typeof j.detail==="string"?j.detail:"HTTP "+r.status);return j;});
+  const panel=(t,b,x="")=>`<div class="panel"><h2>${t}${x}</h2>${b}</div>`;
+  const na=m=>`<div class="na-box">${esc(m)}</div>`;
+  const tbl=(head,rows,empty)=>rows.length?`<div class="tbl"><table><thead><tr>${head.map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>${rows.join("")}</tbody></table></div>`:na(empty||"لا بيانات بعد");
+  const msgEl=id=>`<div class="muted" id="${id}" style="margin-top:8px"></div>`;
+  const ok=(id,t)=>{const e=$(id);if(e){e.className="pos";e.textContent=t;}};
+  const bad=(id,t)=>{const e=$(id);if(e){e.className="neg";e.textContent=t;}};
+  const code=t=>`<pre dir="ltr" class="code">${esc(t)}</pre>`;
+  const KST={active:"low",suspended:"medium",revoked:"grey",expired:"grey"};
+  const DST={delivered:"low",pending:"medium",failed:"medium",dead:"critical"};
+  const TABS=[["overview","🧭 نظرة عامة"],["apis","📚 إدارة الواجهات"],["keys","🔑 المفاتيح والتطبيقات"],["webhooks","📣 Webhooks"],["docs","📖 التوثيق"],["sandbox","🧪 Sandbox"],["analytics","📈 التحليلات والسجل"]];
+  let HOME=null,DLV={wid:0};
+  const BASE=location.origin;
+  const route=()=>decodeURIComponent(location.hash.slice(1)||"overview");
+  window.addEventListener("hashchange",()=>{if(HOME){render();window.scrollTo(0,0);}});
+  const close=()=>{$("ov").classList.remove("on");$("modal").innerHTML="";};
+  const open=h=>{$("modal").innerHTML=h;$("ov").classList.add("on");};
+  function load(){return api("/developer/overview").then(h=>{HOME=h;$("scopeB").textContent="صلاحيتك: "+h.scope.ar;$("ver").textContent=`إصدار API: ${h.version} · ${BASE}/api/v1`;
+      const w=[];if(h.scope.manage&&!h.pepper_set)w.push("مفاتيح API تُجزّأ حالياً بـ SECRET_KEY — اضبط API_KEY_PEPPER في Railway قبل إنشاء مفاتيح الإنتاج (تغييره لاحقاً يُبطل كل المفاتيح).");
+      if(h.scope.manage&&!h.enc_key_set)w.push("أسرار Webhooks مشفّرة بـ SECRET_KEY — اضبط INTEGRATION_ENC_KEY.");
+      $("banner").innerHTML=w.map(x=>`<div class="flag" style="background:rgba(245,179,1,.12);border:1px solid rgba(245,179,1,.4)">ℹ️ ${esc(x)}</div>`).join("");render();})
+    .catch(e=>{$("tabs").innerHTML="";$("content").innerHTML=`<div class="state">${/صلاحي|غير مصرّح|للمالك/.test(e.message)?"🔒 ":""}${esc(e.message)}</div>`;});}
+  function render(){let k=route();if(!TABS.some(t=>t[0]===k))k="overview";
+    $("tabs").innerHTML=TABS.map(t=>`<button class="tab${t[0]===k?" on":""}" data-tab="${t[0]}">${t[1]}</button>`).join("");
+    document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{location.hash=b.dataset.tab;});
+    Promise.resolve(VIEW[k]()).then(h=>{$("content").innerHTML=h;wire(k);}).catch(e=>{$("content").innerHTML=`<div class="state">${esc(e.message)}</div>`;});}
+
+  function vOverview(){const h=HOME,u=h.usage;const mx=Math.max(1,...u.daily.map(d=>d.requests));
+    return `<div class="tiles" style="grid-template-columns:repeat(4,minmax(0,1fr))" id="ovTiles">${h.cards.map(c=>`<div class="tile"><div class="l">${esc(c.label)}</div><div class="v">${c.value==null?"—":n(c.value,1)}${c.value!=null&&c.unit?`<span class="muted"> ${c.unit}</span>`:""}</div></div>`).join("")}</div>`+
+      `<div class="grid2"><div>`+panel("الطلبات اليومية (30 يوماً)",u.daily.length?`<div class="spark">${u.daily.map(d=>`<i title="${esc(d.date)}: ${d.requests}" style="height:${Math.max(4,Math.round(d.requests/mx*100))}%"></i>`).join("")}</div><div class="muted">${esc(u.daily[0].date)} ← ${esc(u.daily[u.daily.length-1].date)}</div>`:na("لا طلبات بعد"))+`</div><div>`+
+      panel("أكثر الواجهات استخداماً",tbl(["الواجهة","الطلبات","الأخطاء"],u.top_routes.map(r=>`<tr><td dir="ltr">${esc(r.route)}</td><td>${n(r.requests)}</td><td class="${r.errors?"neg":""}">${n(r.errors)}</td></tr>`),"—"))+`</div></div>`+
+      panel("البدء السريع",`<ol style="line-height:2;font-size:14px"><li>أنشئ تطبيقاً ثم مفتاحاً بصلاحيات محددة من «المفاتيح والتطبيقات».</li><li>جرّب أولاً بمفتاح Sandbox (nbk_test_…) — بيانات مصطنعة لا تلمس بياناتك.</li><li>لإرسال بيانات: أنشئ اتصال «Push API» في <a href="company-integrations.html" style="color:var(--mint,#10b981)">مركز التكاملات</a> واعتمد مطابقة الحقول.</li><li>اشترك في Webhooks لتصلك الأحداث موقّعة.</li></ol>`);}
+
+  function vApis(){const g={};HOME.api_ref.forEach(r=>{(g[r.group]=g[r.group]||[]).push(r);});
+    return `<div class="na-box">الإصدار الحالي <b>v1</b> — المسار ${esc(BASE)}/api/v1 · المصادقة بالرأس <code dir="ltr">X-API-Key</code> · كل استجابة تحمل <code dir="ltr">X-Nabbah-API-Version</code>. التغييرات الكاسرة لا تدخل v1 أبداً: تصدر في v2 مع إبقاء v1 تعمل 12 شهراً على الأقل.</div>`+
+      Object.entries(g).map(([grp,rs])=>panel(esc(grp),rs.map(r=>`<div class="itm good" style="margin-bottom:10px"><h4><span class="b ${r.method==="GET"?"low":"medium"}" dir="ltr">${esc(r.method)}</span> <code dir="ltr">${esc(r.path)}</code></h4>
+        <div class="kv"><b>الوصف</b><span>${esc(r.desc)}</span><b>الصلاحية</b><span dir="ltr">${esc(r.scope)}</span>${r.params.length?`<b>المعاملات</b><span>${r.params.map(p=>`<code dir="ltr">${esc(p[0])}</code> ${esc(p[1])} ${p[2]?`<span class="muted">(${esc(p[2])})</span>`:""}`).join("<br>")}</span>`:""}</div>
+        <details><summary class="muted" style="cursor:pointer">شكل الاستجابة</summary>${code(JSON.stringify(r.response,null,2))}</details></div>`).join(""))).join("")+
+      panel("رموز الأخطاء",tbl(["الرمز","المعنى"],HOME.errors.map(e=>`<tr><td>${e.code}</td><td class="w">${esc(e.ar)}</td></tr>`))+`<p class="muted">شكل الخطأ دائماً: <code dir="ltr">{"error": {"code": 403, "message": "..."}}</code></p>`);}
+
+  function vKeys(){const h=HOME,m=h.scope.manage;
+    const apps=tbl(["التطبيق","الوصف","المفاتيح النشطة","الحالة","أنشأه",""],h.apps.map(a=>`<tr><td>${esc(a.name)}</td><td class="w">${esc(a.description||"")}</td><td>${n(a.keys)}</td><td><span class="b ${a.status==="active"?"low":"medium"}">${a.status==="active"?"نشط":"موقوف"}</span></td><td>${esc(a.created_by)} · ${dt(a.created_at)}</td>
+      <td>${m?`<button class="btn ghost" data-app="${a.id}" data-st="${a.status==="active"?"suspended":"active"}">${a.status==="active"?"إيقاف":"تفعيل"}</button>`:""}</td></tr>`),"لا تطبيقات بعد");
+    const keys=tbl(["الاسم والإجراءات","المفتاح","التطبيق","البيئة","الصلاحيات","الحالة","الانتهاء","آخر استخدام","الحد"],h.keys.map(k=>`<tr><td>${esc(k.name)}${m&&(k.state==="active"||k.state==="suspended")?`<div class="cta" style="margin:6px 0 0">${k.state==="active"?`<button class="btn ghost" data-key="${k.id}" data-act="suspend">إيقاف</button>`:`<button class="btn ghost" data-key="${k.id}" data-act="resume">تفعيل</button>`}<button class="btn ghost" data-key="${k.id}" data-act="rotate">تدوير</button><button class="btn ghost red" data-key="${k.id}" data-act="revoke">إلغاء</button></div>`:""}</td><td dir="ltr" style="font-family:monospace">${esc(k.masked)}</td><td>${esc(k.app)}</td><td>${k.env==="sandbox"?'<span class="b medium">Sandbox</span>':'<span class="b low">إنتاج</span>'}</td>
+      <td class="w" dir="ltr" style="font-size:11px">${esc(k.scopes.join(", "))}</td><td><span class="b ${KST[k.state]}">${esc(k.state_ar)}</span></td><td>${k.expires_at?dt(k.expires_at):"بلا انتهاء"}</td><td>${dt(k.last_used_at)} <span class="muted" dir="ltr">${esc(k.last_ip)}</span></td><td>${n(k.rate_per_min)}/د · ${n(k.quota_day)}/يوم</td></tr>`),"لا مفاتيح بعد");
+    const scopes=Object.entries(h.scopes).map(([k,v])=>`<label class="chip"><input type="checkbox" data-scope="${k}"> <span dir="ltr">${esc(k)}</span> — ${esc(v)}</label>`).join("");
+    const form=m?panel("إنشاء مفتاح",h.apps.length?`<div class="fg"><label>التطبيق<select id="kApp">${h.apps.filter(a=>a.status==="active").map(a=>`<option value="${a.id}">${esc(a.name)}</option>`).join("")}</select></label><label>اسم المفتاح<input id="kName" placeholder="مثلاً: خادم نقاط البيع"></label>
+      <label>البيئة<select id="kEnv"><option value="sandbox">Sandbox (اختبار)</option><option value="live">إنتاج</option></select></label><label>ينتهي بعد (أيام، 0 = بلا انتهاء)<input id="kExp" type="number" min="0" max="730" value="90"></label>
+      <label>حد الطلبات في الدقيقة<input id="kRate" type="number" min="1" max="600" value="60"></label><label>الحصة اليومية<input id="kQuota" type="number" min="100" max="1000000" value="10000"></label>
+      <label class="full">الصلاحيات (امنح الأقل الضروري)<div class="chips">${scopes}</div></label></div><div class="cta"><button class="btn" id="kGo">إنشاء المفتاح</button></div>${msgEl("kMsg")}`:na("أنشئ تطبيقاً أولاً")):"";
+    const appForm=m?`<div class="fg" style="margin-top:10px"><label>اسم التطبيق<input id="aName"></label><label>الوصف<input id="aDesc"></label></div><div class="cta"><button class="btn ghost" id="aGo">+ تطبيق</button></div>${msgEl("aMsg")}`:"";
+    return panel("التطبيقات",apps+appForm)+form+panel("المفاتيح",keys+msgEl("keyMsg")+`<p class="muted">نخزّن بصمة HMAC للمفتاح فقط — لا يمكن عرضه مرة أخرى بعد إنشائه. التدوير يُصدر مفتاحاً جديداً (يُعرض مرة واحدة) ويُبقي القديم فترة سماح تختارها ثم ينتهي.</p>`);}
+  const keyBox=(k,extra)=>`<h2 style="margin-top:0">🔑 مفتاحك — يُعرض مرة واحدة</h2><div dir="ltr" class="code" style="word-break:break-all;font-size:14px;font-weight:800" id="newKey">${esc(k)}</div>
+    <div class="cta"><button class="btn" id="cpKey">نسخ</button><button class="btn ghost" id="clKey">تم، أغلق</button></div><p class="muted">${esc(extra||"احفظه في مدير أسرار خادمك. لن تتمكن من رؤيته مجدداً.")}</p>`;
+  function wireKeyBox(k){$("cpKey").onclick=()=>{(navigator.clipboard?navigator.clipboard.writeText(k):Promise.reject()).then(()=>{$("cpKey").textContent="✔ نُسخ";}).catch(()=>{$("cpKey").textContent="انسخه يدوياً";});};$("clKey").onclick=()=>{close();load();};}
+
+  function vWebhooks(){const h=HOME,m=h.scope.manage;
+    const rows=tbl(["العنوان","الأحداث","البيئة","الحالة","الفشل المتتالي",""],h.webhooks.map(w=>`<tr><td dir="ltr" class="w" style="word-break:break-all">${esc(w.url)}</td><td class="w" dir="ltr" style="font-size:11px">${esc(w.events.join(", "))}</td><td>${w.env==="sandbox"?"Sandbox":"إنتاج"}</td>
+      <td><span class="b ${w.status==="active"?"low":"critical"}">${esc(w.status_ar)}</span></td><td>${n(w.failures)}</td>
+      <td><div class="cta" style="margin:0"><button class="btn ghost" data-dlv="${w.id}">السجل</button>${m?`${w.status==="active"?`<button class="btn" data-wh="${w.id}" data-act="test">اختبار</button><button class="btn ghost" data-wh="${w.id}" data-act="disable">إيقاف</button>`:`<button class="btn ghost" data-wh="${w.id}" data-act="enable">تفعيل</button>`}<button class="btn ghost" data-wh="${w.id}" data-act="rotate_secret">تدوير السر</button>`:""}</div></td></tr>`),"لا Webhooks بعد");
+    const ev=Object.entries(h.events).filter(([k])=>k!=="ping").map(([k,v])=>`<label class="chip"><input type="checkbox" data-ev="${k}"> <span dir="ltr">${esc(k)}</span> — ${esc(v)}</label>`).join("");
+    const form=m?panel("إضافة Webhook",`<div class="fg"><label class="full">عنوان الاستقبال (HTTPS عام)<input id="wUrl" dir="ltr" placeholder="https://example.com/nabbah/webhook"></label><label>التطبيق (اختياري)<select id="wApp"><option value="">—</option>${h.apps.map(a=>`<option value="${a.id}">${esc(a.name)}</option>`).join("")}</select></label>
+      <label>البيئة<select id="wEnv"><option value="live">إنتاج</option><option value="sandbox">Sandbox</option></select></label><label class="full">الأحداث<div class="chips">${ev}</div></label></div><div class="cta"><button class="btn" id="wGo">إضافة</button></div>${msgEl("wMsg")}`):"";
+    return form+panel("📣 Webhooks",rows+msgEl("whMsg")+`<div id="whOut"></div>`)+`<div id="dlvBox"></div>`+
+      panel("التحقق من التوقيع في خادمك",`<p class="muted">كل تسليم يحمل <code dir="ltr">X-Nabbah-Signature: t=&lt;unix&gt;,v1=&lt;hex&gt;</code> حيث v1 = HMAC-SHA256(السر، t + "." + جسم الطلب الخام). ارفض الطلب إن اختلف التوقيع أو كان أقدم من 5 دقائق. إعادة المحاولة عند أي رد غير 2xx بعد ${h.retry_minutes.map(x=>x<60?x+"د":x/60+"س").join("، ")} ثم يتوقف، ويُوقف العنوان تلقائياً بعد 20 فشلاً متتالياً.</p>`+
+        code(`# Python\nimport hmac, hashlib, time\ndef verify(secret, raw_body, header):\n    p = dict(x.split("=", 1) for x in header.split(","))\n    if abs(time.time() - int(p["t"])) > 300: return False\n    mac = hmac.new(secret.encode(), p["t"].encode() + b"." + raw_body, hashlib.sha256).hexdigest()\n    return hmac.compare_digest(mac, p["v1"])`)+
+        code(`// Node.js\nconst crypto = require("crypto");\nfunction verify(secret, rawBody, header) {\n  const p = Object.fromEntries(header.split(",").map(x => x.split("=")));\n  if (Math.abs(Date.now() / 1000 - Number(p.t)) > 300) return false;\n  const mac = crypto.createHmac("sha256", secret).update(p.t + "." + rawBody).digest("hex");\n  return crypto.timingSafeEqual(Buffer.from(mac), Buffer.from(p.v1));\n}`));}
+  function loadDlv(wid){return api(`/developer/webhooks/deliveries?webhook_id=${wid}`).then(j=>{$("dlvBox").innerHTML=panel("سجل التسليم",tbl(["الوقت","الحدث","الحالة","المحاولات","الرد","الزمن","التالية","الخطأ",""],j.items.map(d=>`<tr><td>${dt(d.created_at)}</td><td dir="ltr">${esc(d.event)}</td><td><span class="b ${DST[d.status]}">${esc(d.status_ar)}</span></td><td>${n(d.attempts)}</td><td>${d.response_code??"—"}</td><td>${d.response_ms==null?"—":n(d.response_ms)+" ms"}</td><td>${dt(d.next_attempt_at)}</td><td class="w neg">${esc(d.error||"")}</td>
+      <td>${HOME.scope.manage&&d.status!=="delivered"?`<button class="btn ghost" data-redo="${d.id}">إعادة الإرسال</button>`:""}</td></tr>`),"لا تسليمات بعد")+msgEl("dlvMsg"));
+    document.querySelectorAll("[data-redo]").forEach(b=>b.onclick=()=>{b.disabled=true;api("/developer/webhooks/redeliver",{id:Number(b.dataset.redo)}).then(r=>{ok("dlvMsg",r.result&&r.result.status==="delivered"?"✔ سُلّم":"✖ "+((r.result||{}).error||"فشل"));loadDlv(wid);}).catch(e=>{b.disabled=false;bad("dlvMsg",e.message);});});});}
+
+  function vDocs(){const ex=HOME.api_ref.find(r=>r.path.includes("/records"));
+    const sec=(t,b)=>panel(t,b);
+    return sec("Getting Started — البدء",`<p>1) أنشئ مفتاح Sandbox من «المفاتيح». 2) جرّب أول طلب:</p>`+code(`curl -s ${BASE}/api/v1/company \\\n  -H "X-API-Key: nbk_test_xxxxxxxx_..."`)+`<p>3) عند الجاهزية أنشئ مفتاح إنتاج بأقل صلاحيات لازمة.</p>`)+
+      sec("Authentication — المصادقة",`<p>أرسل المفتاح في الرأس <code dir="ltr">X-API-Key</code> (أو <code dir="ltr">Authorization: Bearer nbk_…</code>). المفاتيح نوعان: <code dir="ltr">nbk_live_</code> للإنتاج و<code dir="ltr">nbk_test_</code> لـ Sandbox. المفتاح يرى شركته فقط، وصلاحياته (scopes) تحدد ما يصل إليه.</p>`)+
+      sec("Request / Response Examples — أمثلة",code(`# قراءة المبيعات مع ترقيم الصفحات\ncurl -s "${BASE}/api/v1/sales?from=2026-10-01&to=2026-10-31&limit=100" -H "X-API-Key: $NABBAH_KEY"\n# الاستجابة\n{"data": [{"id": 901, "date": "2026-10-01", "net_sales": 1520.5, ...}], "next_cursor": "901"}\n# الصفحة التالية\ncurl -s "${BASE}/api/v1/sales?cursor=901" -H "X-API-Key: $NABBAH_KEY"`)+
+        code(`# إرسال سجلات إلى اتصال Push API (حتى 5000 سجل)\ncurl -s -X POST ${BASE}/api/v1/integrations/<CONNECTION_ID>/records \\\n  -H "X-API-Key: $NABBAH_KEY" -H "Content-Type: application/json" \\\n  -H "Idempotency-Key: batch-2026-10-31-001" \\\n  -d '{"records": [{"id": "INV-1", "transaction_date": "2026-10-31", "branch_code": "R1", "invoice_total": 120.5}]}'\n# الاستجابة\n${JSON.stringify(ex?ex.response:{},null,2)}`))+
+      sec("Error Codes — الأخطاء",tbl(["الرمز","المعنى"],HOME.errors.map(e=>`<tr><td>${e.code}</td><td class="w">${esc(e.ar)}</td></tr>`)))+
+      sec("Webhooks Guide — دليل Webhooks",`<p>الأحداث المتاحة:</p><ul>${Object.entries(HOME.events).map(([k,v])=>`<li><code dir="ltr">${esc(k)}</code> — ${esc(v)}</li>`).join("")}</ul>`+code(`POST <your url>\nX-Nabbah-Event: data.received\nX-Nabbah-Delivery: 812\nX-Nabbah-Signature: t=1762160000,v1=5f2c...\n\n{"id": "evt_812", "event": "data.received", "created_at": "2026-11-03T10:00:00", "env": "live", "company_id": 12, "data": {"connection_id": 3, "dataset_id": 301, "records": 118}}`)+`<p class="muted">تحقق من التوقيع (انظر تبويب Webhooks) وأجب بـ 2xx خلال 10 ثوانٍ. استخدم <code dir="ltr">id</code> لمنع معالجة الحدث مرتين.</p>`)+
+      sec("Rate Limits — حدود الاستخدام",`<p>لكل مفتاح حد في الدقيقة (افتراضي 60، حتى 600) وحصة يومية. الرؤوس <code dir="ltr">X-RateLimit-Limit</code> و<code dir="ltr">X-RateLimit-Remaining</code> في كل استجابة، وعند التجاوز 429 مع <code dir="ltr">Retry-After</code>. الحد لكل خادم تطبيق ويُصفَّر عند إعادة تشغيله.</p>`)+
+      sec("Versioning — الإصدارات",`<p>الإصدار في المسار (<code dir="ltr">/api/v1</code>). داخل v1 نضيف حقولاً ومسارات فقط — لا حذف ولا تغيير معنى. أي تغيير كاسر يصدر في v2، ويبقى v1 يعمل 12 شهراً على الأقل مع إشعار مسبق.</p>`)+
+      sec("Security Guidelines — إرشادات الأمان",`<ul style="line-height:2"><li>المفتاح على الخادم فقط — لا تضعه في تطبيق جوال أو صفحة ويب.</li><li>امنح أقل صلاحيات ممكنة، ومفتاحاً لكل تطبيق، وحدد تاريخ انتهاء.</li><li>دوّر المفاتيح دورياً وفوراً عند الاشتباه بتسربها، وألغِ غير المستخدم.</li><li>تحقق من توقيع كل Webhook وارد ومن حداثته.</li><li>استخدم Idempotency-Key عند إعادة الإرسال — آمن ولا يكرر البيانات.</li><li>لا نسجل أجسام الطلبات ولا المفاتيح؛ نسجل المسار والحالة والزمن وIP مقنّعاً.</li></ul>`);}
+
+  function vSandbox(){const eps=HOME.api_ref.filter(r=>r.path.startsWith("/api/v1"));
+    return panel("🧪 وحدة اختبار Sandbox",`<p class="muted">مفاتيح Sandbox (<code dir="ltr">nbk_test_</code>) ترى بيانات مصطنعة ثابتة، والإرسال بها يُتحقق منه كاملاً ولا يُكتب شيء. لا تصل بيانات Sandbox إلى بيانات شركتك إطلاقاً، ومفتاح Sandbox لا يستطيع الإرسال لاتصال إنتاج.</p>
+      <div class="fg"><label class="full">مفتاح Sandbox (لا يُحفظ)<input id="sbKey" dir="ltr" placeholder="nbk_test_..." autocomplete="off"></label>
+      <label>الواجهة<select id="sbEp">${eps.map((r,i)=>`<option value="${i}">${esc(r.method+" "+r.path)}</option>`).join("")}</select></label>
+      <label>محاكاة خطأ<select id="sbSim"><option value="">بلا</option>${HOME.simulate.map(s=>`<option>${s}</option>`).join("")}</select></label>
+      <label class="full">المسار الفعلي<input id="sbPath" dir="ltr"></label><label class="full">الجسم (POST)<textarea id="sbBody" rows="5" dir="ltr">{"records": [{"id": "T-1", "date": "2026-01-05", "branch": "1", "total": 99.5}]}</textarea></label></div>
+      <div class="cta"><button class="btn" id="sbGo">إرسال الطلب</button></div><div id="sbOut"></div>`);}
+
+  function vAnalytics(){const u=HOME.usage;
+    const t=(l,v,x)=>`<div class="tile"><div class="l">${l}</div><div class="v">${v}${x?`<span class="muted"> ${x}</span>`:""}</div></div>`;
+    return `<div class="tiles" style="grid-template-columns:repeat(4,minmax(0,1fr))">${t("طلبات اليوم",n(u.day.requests))}${t("طلبات 30 يوماً",n(u.month.requests))}${t("الطلبات الفاشلة",n(u.failed_30d))}${t("أخطاء المصادقة",n(u.auth_errors_30d))}${t("تجاوز الحدود (429)",n(u.throttled_30d))}${t("متوسط الزمن",u.month.avg_ms==null?"—":n(u.month.avg_ms,1),"ms")}${t("p95",u.month.p95_ms==null?"—":n(u.month.p95_ms,1),"ms")}${t("معدل النجاح",u.month.success_pct==null?"—":n(u.month.success_pct,1),"%")}</div>`+
+      `<div class="grid2"><div>${panel("التطبيقات الأكثر نشاطاً",tbl(["التطبيق","الطلبات"],u.top_apps.map(a=>`<tr><td>${esc(a.app)}</td><td>${n(a.requests)}</td></tr>`),"—"))}</div><div>${panel("أكثر الواجهات استخداماً",tbl(["الواجهة","الطلبات","الأخطاء"],u.top_routes.map(r=>`<tr><td dir="ltr">${esc(r.route)}</td><td>${n(r.requests)}</td><td>${n(r.errors)}</td></tr>`),"—"))}</div></div>`+
+      panel("آخر الطلبات",tbl(["الوقت","الطلب","الحالة","الزمن","البيئة","التطبيق","IP"],HOME.recent.map(r=>`<tr><td>${dt(r.at)}</td><td dir="ltr">${esc(r.method+" "+r.route)}</td><td class="${r.status>=400?"neg":"pos"}">${r.status}</td><td>${r.ms==null?"—":n(r.ms,1)+" ms"}</td><td>${r.env==="sandbox"?"Sandbox":r.env?"إنتاج":"—"}</td><td>${esc(r.app)}</td><td dir="ltr">${esc(r.ip||"—")}</td></tr>`),"لا طلبات بعد")+`<p class="muted">يُسجَّل لكل طلب: المسار والحالة والزمن وIP مقنّعاً — بلا أجسام الطلبات ولا المفاتيح.</p>`);}
+
+  const VIEW={overview:vOverview,apis:vApis,keys:vKeys,webhooks:vWebhooks,docs:vDocs,sandbox:vSandbox,analytics:vAnalytics};
+  function wire(k){
+    if(k==="keys"){
+      const ag=$("aGo");if(ag)ag.onclick=()=>{ag.disabled=true;api("/developer/apps",{name:$("aName").value,description:$("aDesc").value}).then(()=>load()).catch(e=>{ag.disabled=false;bad("aMsg",e.message);});};
+      document.querySelectorAll("[data-app]").forEach(b=>b.onclick=()=>{b.disabled=true;api("/developer/apps",{id:Number(b.dataset.app),status:b.dataset.st}).then(()=>load()).catch(e=>{b.disabled=false;bad("keyMsg",e.message);});});
+      const kg=$("kGo");if(kg)kg.onclick=()=>{kg.disabled=true;api("/developer/keys",{app_id:Number($("kApp").value),name:$("kName").value,env:$("kEnv").value,expires_days:$("kExp").value,rate_per_min:$("kRate").value,quota_day:$("kQuota").value,
+          scopes:[...document.querySelectorAll("[data-scope]:checked")].map(x=>x.dataset.scope)}).then(r=>{kg.disabled=false;open(keyBox(r.key,r.note_ar));wireKeyBox(r.key);}).catch(e=>{kg.disabled=false;bad("kMsg",e.message);});};
+      document.querySelectorAll("[data-key]").forEach(b=>b.onclick=()=>{const act=b.dataset.act,id=Number(b.dataset.key);const body={id,action:act};
+        if(act==="revoke"&&!confirm("إلغاء المفتاح نهائي — أي نظام يستخدمه سيتوقف فوراً. متأكد؟"))return;
+        if(act==="rotate"){const g=prompt("فترة السماح للمفتاح القديم بالساعات (0–168):","24");if(g===null)return;body.grace_hours=Number(g);}
+        b.disabled=true;api("/developer/keys/action",body).then(r=>{if(r.key){open(keyBox(r.key,r.note_ar));wireKeyBox(r.key);}else load();}).catch(e=>{b.disabled=false;bad("keyMsg",e.message);});});}
+    if(k==="webhooks"){
+      const wg=$("wGo");if(wg)wg.onclick=()=>{wg.disabled=true;api("/developer/webhooks",{url:$("wUrl").value,app_id:$("wApp").value?Number($("wApp").value):null,env:$("wEnv").value,events:[...document.querySelectorAll("[data-ev]:checked")].map(x=>x.dataset.ev)})
+        .then(r=>{wg.disabled=false;open(keyBox(r.secret,"سر التوقيع — استخدمه للتحقق من X-Nabbah-Signature. يُعرض مرة واحدة."));wireKeyBox(r.secret);}).catch(e=>{wg.disabled=false;bad("wMsg",e.message);});};
+      document.querySelectorAll("[data-wh]").forEach(b=>b.onclick=()=>{const act=b.dataset.act;b.disabled=true;api("/developer/webhooks/action",{id:Number(b.dataset.wh),action:act}).then(r=>{
+          if(r.secret){open(keyBox(r.secret,"السر الجديد — السابق لم يعد صالحاً للتوقيع."));wireKeyBox(r.secret);return;}
+          if(act==="test"){const x=r.result||{};(x.status==="delivered"?ok:bad)("whMsg",x.status==="delivered"?`✔ سُلّم (${x.response_code}) خلال ${n(x.ms)} ms`:`✖ لم يُسلَّم: ${x.error||x.response_code}`);b.disabled=false;loadDlv(Number(b.dataset.wh));return;}
+          load();}).catch(e=>{b.disabled=false;bad("whMsg",e.message);});});
+      document.querySelectorAll("[data-dlv]").forEach(b=>b.onclick=()=>loadDlv(Number(b.dataset.dlv)));}
+    if(k==="sandbox"){const eps=HOME.api_ref.filter(r=>r.path.startsWith("/api/v1"));
+      const setP=()=>{const r=eps[Number($("sbEp").value)];let p=r.path;if(p.includes("{connection_id}")){const c=HOME.connections.find(x=>x.env==="sandbox"&&x.method==="push_api")||HOME.connections[0];p=p.replace("{connection_id}",c?c.id:"1");}
+        $("sbPath").value=p.replace("{kind}","monthly").replace("{id}","1").replace("{job_id}","1");$("sbBody").closest("label").style.display=r.method==="POST"?"flex":"none";};
+      $("sbEp").onchange=setP;setP();
+      $("sbGo").onclick=()=>{const key=$("sbKey").value.trim(),r=eps[Number($("sbEp").value)];if(!key){$("sbOut").innerHTML=na("الصق مفتاح Sandbox أولاً");return;}
+        const h={"X-API-Key":key};if($("sbSim").value)h["X-Nabbah-Simulate"]=$("sbSim").value;if(r.method==="POST")h["Content-Type"]="application/json";
+        const t0=performance.now();fetch($("sbPath").value,{method:r.method,headers:h,body:r.method==="POST"?$("sbBody").value:undefined}).then(async res=>{const txt=await res.text();let body=txt;try{body=JSON.stringify(JSON.parse(txt),null,2);}catch(e){}
+          const hs=["X-Nabbah-API-Version","X-Nabbah-Env","X-RateLimit-Limit","X-RateLimit-Remaining","Retry-After"].map(x=>res.headers.get(x)?`${x}: ${res.headers.get(x)}`:"").filter(Boolean).join("\n");
+          $("sbOut").innerHTML=`<div class="flag" style="background:${res.ok?"rgba(16,185,129,.12)":"rgba(239,68,68,.12)"}" id="sbStatus">${res.status} · ${n(performance.now()-t0)} ms</div>${code(hs)}${code(body)}`;})
+          .catch(e=>{$("sbOut").innerHTML=`<div class="neg">${esc(e.message)}</div>`;});};}
+  }
+  $("ov").onclick=e=>{if(e.target===$("ov"))close();};
+  load();
+})();
+</script>
+<script src="nabbah-sidebar.js"></script>
+</body>
+</html>

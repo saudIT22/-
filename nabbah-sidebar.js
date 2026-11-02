@@ -87,6 +87,8 @@
       { label: "ذاكرة الشركة", href: "company-memory.html" },
     ]},
     { icon: "🏢", label: "المنظومة المؤسسية", items: [
+      { label: "مركز التكاملات", href: "company-integrations.html" },
+      { label: "منصة المطورين", href: "company-developers.html" },
       { label: "الأمان والموثوقية", href: "company-security.html" },
     ]},
     { icon: "📊", label: "التقارير", items: [
