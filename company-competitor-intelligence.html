@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>نبّاه · ذكاء المنافسين</title>
+<link href="nabbah-design.css" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{background:var(--bg,#070b09);color:var(--txt,#e8f1ec);font-family:Tajawal,Tahoma,Arial,sans-serif;margin:0}
+  .wrap{max-width:1180px;margin:0 auto;padding:70px 16px 60px}
+  h1{margin:0 0 4px;font-size:24px}.sub{color:var(--txt-soft,#8ba396);margin:0 0 14px;font-size:14px}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+  select{background:var(--panel,#101a15);color:var(--txt,#e8f1ec);border:1px solid var(--line,#1d2c24);border-radius:10px;padding:8px 10px;font:inherit;font-size:13px;max-width:100%}
+  .tabs{display:flex;gap:2px;flex-wrap:wrap;border-bottom:1px solid var(--line,#1d2c24);margin:6px 0 16px}
+  .tab{background:none;border:0;color:var(--txt-soft,#8ba396);padding:9px 11px;font:inherit;font-size:13px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+  .tab.on{color:var(--txt,#e8f1ec);border-color:#14b8a6;font-weight:800}
+  .tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:14px}
+  .tile,.panel{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:14px;padding:14px;min-width:0}
+  .tile{cursor:pointer}.tile:hover{border-color:var(--mint,#10b981)}
+  .tile .l{font-size:12px;color:var(--txt-soft,#8ba396)}.tile .v{font-size:22px;font-weight:800;margin-top:4px;overflow-wrap:anywhere}.tile .c{font-size:12px;margin-top:4px;line-height:1.7}
+  .panel{margin-bottom:14px}.panel h2{margin:0 0 10px;font-size:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .panel h3{margin:12px 0 6px;font-size:13px;color:var(--txt-soft,#8ba396)}
+  .grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+  table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px;border-bottom:1px solid var(--line,#1d2c24);text-align:start;white-space:nowrap}
+  th{color:var(--txt-soft,#8ba396);font-weight:600}.tbl{overflow-x:auto}td.w{white-space:normal;min-width:200px}
+  tr.drill{cursor:pointer}tr.drill:hover td{background:rgba(16,185,129,.06)}
+  .pos{color:#10b981}.neg{color:#ef4444}.warn{color:#f5b301}.muted{color:var(--txt-soft,#8ba396);font-size:12px}
+  .b{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700;display:inline-block;white-space:nowrap}
+  .critical,.intervene{background:rgba(239,68,68,.16);color:#ef4444}.high{background:rgba(234,88,12,.16);color:#f97316}
+  .medium,.watch{background:rgba(245,179,1,.15);color:#f5b301}.low,.good{background:rgba(16,185,129,.15);color:#10b981}.grey,.na,.monitor{background:rgba(148,163,184,.15);color:#94a3b8}
+  .btn{background:var(--mint,#10b981);color:#062b1c;border:0;border-radius:10px;padding:7px 13px;font-weight:800;cursor:pointer;font:inherit;font-size:12px;text-decoration:none;display:inline-block}
+  .btn.ghost{background:transparent;color:var(--txt-soft,#8ba396);border:1px solid var(--line,#1d2c24);font-weight:600}.btn.red{background:#ef4444;color:#fff}
+  .btn:disabled{opacity:.5;cursor:default}
+  .state{padding:36px 16px;text-align:center;color:var(--txt-soft,#8ba396);border:1px dashed var(--line,#1d2c24);border-radius:14px}
+  .na-box{color:var(--txt-soft,#8ba396);font-size:13px;padding:10px;border:1px dashed var(--line,#1d2c24);border-radius:10px;margin:6px 0}
+  .itm{border:1px solid var(--line,#1d2c24);border-inline-start:4px solid #f5b301;border-radius:12px;padding:12px;margin-bottom:10px}
+  .itm.critical,.itm.intervene{border-inline-start-color:#ef4444;background:none;color:inherit}.itm.high{border-inline-start-color:#f97316;background:none;color:inherit}
+  .itm.medium,.itm.watch{background:none;color:inherit}.itm.good,.itm.low{border-inline-start-color:#10b981;background:none;color:inherit}.itm.na,.itm.monitor{border-inline-start-color:#94a3b8;background:none;color:inherit}
+  .itm h4{margin:0 0 6px;font-size:15px}.kv{display:grid;grid-template-columns:120px 1fr;gap:4px 10px;font-size:13px;margin-top:6px}.kv b{color:var(--txt-soft,#8ba396);font-weight:600}
+  .sum p{font-size:15px;line-height:2;margin:4px 0}.sum b{color:var(--mint,#10b981)}.sum a{color:var(--mint,#10b981);font-size:11px;text-decoration:none}
+  .hgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+  .barrow{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:13px}.barrow .t{flex:0 0 140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .barrow .g{flex:1;height:10px;background:var(--line,#1d2c24);border-radius:6px;overflow:hidden;min-width:40px}.barrow .g i{display:block;height:100%;background:var(--mint,#10b981)}.barrow .x{flex:0 0 120px;text-align:end}
+  .pop{position:fixed;display:none;z-index:70;background:var(--panel,#101a15);border:1px solid var(--mint,#10b981);border-radius:12px;padding:12px;font-size:12px;max-width:340px;line-height:1.8}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}.chip{background:rgba(16,185,129,.12);color:var(--mint,#10b981);border:1px solid rgba(16,185,129,.35);border-radius:20px;padding:4px 11px;font-size:12px;cursor:pointer}
+  input.search,.fg input,.fg select,.fg textarea{background:var(--bg,#070b09);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:9px;padding:8px;font:inherit}
+  input.search{flex:1;min-width:160px;background:var(--panel,#101a15);border-radius:10px;padding:9px 12px}
+  .ai-sec{margin:8px 0}.ai-sec b{display:block;font-size:13px;margin-bottom:4px}.ai-sec li{font-size:13px;margin:3px 0}
+  .ov{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:50;padding:14px}
+  .ov.on{display:flex}.modal{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:16px;padding:18px;width:min(580px,100%);max-height:90vh;overflow:auto}
+  .fg{display:grid;grid-template-columns:1fr 1fr;gap:10px}.fg label{font-size:12px;color:var(--txt-soft,#8ba396);display:flex;flex-direction:column;gap:4px}.fg .full{grid-column:1/-1}
+  .cta{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .back{background:none;border:0;color:var(--mint,#10b981);cursor:pointer;font:inherit;padding:0;margin-bottom:10px}
+  .stbadge{font-size:12px;font-weight:800;padding:4px 10px;border-radius:10px;border:1px solid var(--line,#1d2c24)}
+  .flag{padding:10px 12px;border-radius:10px;margin:6px 0 10px;font-size:13px}
+  /* بطاقة القرار */
+  .dc-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;background:linear-gradient(90deg,#0f2a3d,#123047);border-radius:14px;padding:16px 18px;margin-bottom:12px}
+  .dc-head h2{margin:0;font-size:20px}.dc-no{border:1px solid rgba(255,255,255,.3);border-radius:10px;padding:6px 12px;font-weight:800;font-size:13px}
+  .dc-meta{display:grid;grid-template-columns:2fr repeat(4,minmax(0,1fr));gap:10px;align-items:center}.dc-meta>div{border-inline-start:1px solid var(--line,#1d2c24);padding:4px 10px}
+  .dc-meta .l{font-size:12px;color:var(--txt-soft,#8ba396)}.dc-meta .v{font-size:15px;font-weight:800;margin-top:4px}
+  .dc-box{background:rgba(255,255,255,.025);border-radius:10px;padding:12px;font-size:14px;line-height:1.9}
+  .fin3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.fin3 div{background:rgba(255,255,255,.025);border-radius:10px;padding:12px;text-align:center}
+  .fin3 b{display:block;font-size:20px;margin:6px 0}
+  .flow{display:flex;align-items:flex-start;justify-content:space-between;gap:4px;margin:10px 0}.flow .st{text-align:center;flex:1;font-size:12px;position:relative}
+  .flow .dot{width:28px;height:28px;border-radius:50%;margin:0 auto 6px;display:grid;place-items:center;font-weight:900;background:var(--line,#1d2c24);color:#94a3b8}
+  .flow .dot.on{background:#10b981;color:#062b1c}.flow .dot.cur{background:#f5b301;color:#2b1d00}
+  #printv{display:none}
+  @media print{body>*:not(#printv){display:none!important}#printv{display:block!important;color:#000;background:#fff}
+    #printv .pg{page-break-after:always;padding:22px}#printv .panel,#printv .tile,#printv .itm{background:#fff;border:1px solid #ccc;color:#000;break-inside:avoid}
+    #printv table{width:100%;border-collapse:collapse}#printv tr{break-inside:avoid}#printv td,#printv th{border:1px solid #ccc;padding:4px;font-size:10.5px;white-space:normal;color:#000}
+    #printv .muted{color:#555}#printv .cover{display:flex;flex-direction:column;justify-content:center;min-height:90vh;text-align:center}}
+  @media(max-width:900px){.hgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.dc-meta{grid-template-columns:1fr 1fr}.dc-meta>div:first-child{grid-column:1/-1}}
+  @media(max-width:760px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.grid2,.grid3,.fin3{grid-template-columns:minmax(0,1fr)}.fg{grid-template-columns:1fr}h1{font-size:20px}
+    .tile{padding:10px}.tile .v{font-size:17px}.kv{grid-template-columns:1fr}.tab{padding:7px 8px;font-size:12px}.barrow .t{flex-basis:90px}.barrow .x{flex-basis:90px}}
+  @media(max-width:1000px){.grid3{grid-template-columns:minmax(0,1fr)}}
+  @media(max-width:760px){.barrow{flex-wrap:wrap}.barrow .x{flex:1 1 100%;text-align:start}.barrow .x .b{white-space:normal}}
+  html,body{overflow-x:hidden}
+  @media(min-width:761px){#content .barrow .x{flex-basis:220px}}
+  .btn.ghost.red{color:#ef4444;border-color:rgba(239,68,68,.4)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🎯 ذكاء المنافسين والسوق</h1>
+  <p class="sub">أين نتفوق وأين نتأخر؟ كيف نقارن بالسعر والقيمة؟ ماذا يفعل المنافسون، وما الفرص والتهديدات — بمصدر وتاريخ لكل معلومة، والحقائق منفصلة عن التقديرات.</p>
+  <div class="bar">
+    <span class="stbadge">حي</span>
+    <button class="btn" id="btnComp" style="display:none">➕ منافس</button>
+    <button class="btn" id="btnItem" style="display:none">➕ معلومة موثقة</button>
+    <button class="btn ghost" id="btnXls">📊 Excel</button>
+    <span class="muted" id="asof"></span>
+  </div>
+  <div class="na-box" id="disc" style="margin:6px 0 10px"></div>
+  <nav class="tabs" id="tabs"></nav>
+  <div id="content"><div class="state">…</div></div>
+</div>
+<div class="pop" id="pop"></div>
+<div class="ov" id="ov"><div class="modal" id="modal"></div></div>
+<script src="i18n.js"></script>
+<script>
+(function(){
+  const TOKEN=localStorage.getItem("nabbah_token")||"";if(!TOKEN){location.href="login.html";return;}
+  const TABS=[["overview","ملخص المشهد"],["landscape","خريطة المنافسين"],["profiles","ملفات المنافسين"],["positioning","التموضع"],["market_share","الحصة السوقية"],
+    ["pricing","مقارنة الأسعار"],["products","المنتجات والفئات"],["preference","تفضيلات العملاء"],["activity","نشاط المنافسين"],["trends","اتجاهات المنافسة"],
+    ["map","خريطة التموضع"],["strengths","نقاط القوة والضعف"],["swot","SWOT"],["opportunities","فرص السوق"],["threats","التهديدات"],["whatif","محاكاة القرارات"],
+    ["alerts","التنبيهات والقرارات"],["ai","AI Competitive Intelligence"],["settings","الإعدادات"]];
+  const CONF={high:"مرتفعة",medium:"متوسطة",low:"منخفضة"};
+  const NAT={fact:["low","حقيقة"],observation:["medium","ملاحظة"],estimate:["grey","تقدير"]};
+  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const n=(v,d=0)=>{if(v==null||v===""||isNaN(Number(v)))return"—";const x=Number(v),t=Math.abs(x).toLocaleString("ar-SA",{maximumFractionDigits:d});return x<0?"\u2066−"+t+"\u2069":t;};
+  const pp=v=>v==null?"—":n(v,1)+"%";
+  const sg=v=>v==null?"—":`<span class="${v>0?"pos":v<0?"neg":"muted"}">${v>0?"+":""}${n(v,1)}%</span>`;
+  const H={Authorization:"Bearer "+TOKEN,"Content-Type":"application/json"},$=id=>document.getElementById(id);
+  let D=null,EV={},evI=0,SIM=null;
+  const route=()=>{const h=decodeURIComponent(location.hash.slice(1)||"overview");const i=h.indexOf("/");return i<0?[h,""]:[h.slice(0,i),h.slice(i+1)];};
+  const go=(v,a)=>{location.hash=a?`${v}/${encodeURIComponent(a)}`:v;};
+  window.addEventListener("hashchange",()=>{if(D){render();window.scrollTo(0,0);}});
+  const api=(path,body)=>fetch(path,{method:"POST",headers:H,body:JSON.stringify(body)}).then(async r=>{const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(typeof j.detail==="string"?j.detail:"HTTP "+r.status);return j;});
+  function load(){$("content").innerHTML=`<div class="state">جارٍ جمع سجل المنافسين ونتائج الوحدات…</div>`;
+    fetch("/company/competitor-intelligence",{headers:H}).then(async r=>{
+      if(r.status===401){location.href="login.html";return null;}
+      if(r.status===403||r.status===402){let d="";try{d=(await r.json()).detail;}catch(_){}$("tabs").innerHTML="";$("content").innerHTML=`<div class="state">🔒 ${esc(d||"ليست لديك صلاحية.")}</div>`;return null;}
+      if(!r.ok){let d="";try{const j=await r.json();d=typeof j.detail==="string"?j.detail:JSON.stringify(j.detail||j);}catch(_){}err(`HTTP ${r.status}${d?" — "+d:""}`);return null;}
+      return r.json();}).then(d=>{if(!d)return;D=d;const sc=d.scope||{};
+        $("btnComp").style.display=sc.can_edit?"":"none";$("btnItem").style.display=sc.can_observe?"":"none";
+        $("asof").textContent=`حتى ${d.as_of||"—"} · القطاع: ${d.sector||"—"} · المصطلح: ${(d.sector_profile||{}).term||"المنافس"}`;
+        $("disc").textContent=`${d.disclaimer_ar||""} · صلاحيتك: ${sc.ar||""}${sc.city?" ("+sc.city+")":""}`+(Object.keys(d.module_errors||{}).length?" · غير متاح الآن: "+Object.values(d.module_errors).join("، "):"");
+        try{render();}catch(e){console.error(e);err("render: "+(e&&e.message||e));}}).catch(e=>err("network: "+(e&&e.message||e)));}
+  function err(m){$("content").innerHTML=`<div class="state neg">تعذّر تحميل ذكاء المنافسين.<div class="muted" style="margin-top:8px">${esc(m)}</div></div>`;}
+  const panel=(t,b,x="")=>`<div class="panel"><h2>${t}${x}</h2>${b}</div>`;
+  const na=m=>`<div class="na-box">${esc(m)}</div>`;
+  const R=k=>{const x=D[k];return x&&!x.restricted?x:null;};
+  const restricted=()=>`<div class="state">🔒 خارج صلاحيتك</div>`;
+  const ev=m=>{const k="e"+(evI++);EV[k]=m;return k;};
+  const conf=c=>c?`<span class="b ${c==="high"?"low":c==="low"?"critical":"medium"}">ثقة ${esc(CONF[c]||c)}</span>`:"";
+  const nat=x=>{const k=NAT[x]||["grey",x||""];return x?`<span class="b ${k[0]}">${esc(k[1])}</span>`:"";};
+  const tbl=(head,rows)=>rows.length?`<div class="tbl"><table><thead><tr>${head.map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>${rows.join("")}</tbody></table></div>`:na("لا بيانات مسجلة بعد");
+  const bars=(items,lab,val,fmt)=>{const mx=Math.max(1,...items.map(i=>Math.abs(Number(val(i))||0)));return items.map(i=>`<div class="barrow"><span class="t" title="${esc(lab(i))}">${esc(lab(i))}</span><span class="g"><i style="width:${Math.max(0,Math.abs(Number(val(i))||0)/mx*100)}%"></i></span><span class="x">${fmt(i)}</span></div>`).join("");};
+  const simple=(l,v,sub,go_)=>`<div class="tile" ${go_?`data-go="${go_}"`:""}><div class="l">${l}</div><div class="v">${v}</div>${sub?`<div class="c muted">${sub}</div>`:""}</div>`;
+  // بطاقة الدليل: المصدر · التاريخ · الثقة · معلن/مقدّر — تُفتح بالنقر
+  const evd=e=>{if(!e)return"";const k=ev(e);return `<span class="b grey" data-ev="${k}" style="cursor:pointer" title="الدليل">📎 ${esc(e.source_ar||"ملاحظة داخلية")} · ${esc(e.observed_on||"—")}</span>`;};
+  const lnk=(k,l)=>D.links&&D.links[k]?`<a href="${esc(D.links[k])}" style="color:var(--mint,#10b981);font-size:12px">${esc(l)} ↗</a>`:"";
+  const empty=()=>`<div class="state">لا منافسون مسجلون بعد.${(D.scope||{}).can_edit?`<div class="cta" style="justify-content:center"><button class="btn" data-newcomp>➕ أضف أول منافس</button></div>`:""}${(D.legacy_suggestions||[]).length?`<div class="muted" style="margin-top:10px">من إدخالاتك السابقة: ${D.legacy_suggestions.map(x=>`<span class="chip" data-legacy="${esc(x.name)}">${esc(x.name)}</span>`).join(" ")}</div>`:""}</div>`;
+  // ── 01
+  function overview(){const o=R("overview");if(!o)return restricted();if(!(D.competitors_list||[]).length)return empty();
+    return `<div class="tiles">${(o.cards||[]).map(c=>simple(esc(c.label),c.value==null?'<span class="muted" style="font-size:14px">غير متاح</span>':(c.unit==="%"?pp(c.value):n(c.value)),esc(c.sub||c.reason_ar||""),{share:"market_share",price_position:"pricing",activities:"activity",threats:"threats",observations:"profiles",competitors:"landscape"}[c.key])).join("")}</div>`
+      +((o.stale||[]).length?`<div class="flag medium">ملفات تحتاج تحديثاً (معلومات قديمة): ${o.stale.map(s=>esc(s.name||s)).join("، ")}</div>`:"")
+      +((o.top_alerts||[]).length?panel("تنبيهات تحتاج انتباهك",o.top_alerts.map(a=>`<div class="itm ${a.severity}"><h4>${esc(a.title_ar)}</h4><div class="muted">${esc(a.rule_ar)} · ${esc(a.date||"")} ${a.handled?'<span class="b low">قيد المتابعة</span>':""}</div></div>`).join("")+`<div class="cta"><button class="btn ghost" data-go="alerts">كل التنبيهات</button></div>`):"")
+      +panel("روابط الأداء الداخلي",`<div class="chips">${lnk("sales","ذكاء المبيعات 2.5")} ${lnk("customers","ذكاء العملاء 4.1")} ${lnk("branches","المقارنة بين الفروع 4.2")} ${lnk("financial","الوحدة المالية 2.11")} ${lnk("leakage","التسرب 3.1")} ${lnk("benchmark","مقارنة القطاع 3.5")} ${lnk("prediction","التنبؤ 3.7")} ${lnk("goals","الأهداف 3.8")} ${lnk("executive","التقرير التنفيذي 3.12")}</div>`);}
+  // ── 02
+  function landscape(){const l=R("landscape");if(!l)return restricted();if(!l.rows.length)return empty();
+    return panel("خريطة المنافسين",tbl(["المنافس","النوع","المدن","الفئة السعرية","نموذج العمل","المنتجات","التميز","المعلومات","آخر تحديث",""],l.rows.map(r=>`<tr class="drill" data-prof="${r.id}"><td><b>${esc(r.name)}</b></td><td>${esc(r.kind_ar)}</td><td>${(r.cities||[]).map(esc).join("، ")||"—"}</td><td>${esc(r.price_tier_ar||"—")}</td><td>${esc(r.business_model||"—")}</td><td class="w">${esc(r.products||"—")}</td><td class="w">${esc(r.differentiators||"—")}</td><td class="num">${n(r.observations)}</td><td>${esc(r.last_update||"—")}</td><td>${(D.scope||{}).can_edit?`<button class="btn ghost" data-editc="${r.id}">تعديل</button>`:""}</td></tr>`))+`<div class="muted">${esc(l.rule_ar)}</div>`)
+      +`<div class="grid2">${panel("حسب النوع والفئة السعرية",bars((l.by.kind||[]).concat(l.by.price_tier||[]),x=>({direct:"مباشر",indirect:"غير مباشر"})[x.key]||(D.tiers||{})[x.key]||x.key,x=>x.count,x=>n(x.count)))}${panel("التداخل الجغرافي مع مدننا",(l.overlap||[]).map(o=>`<div class="barrow"><span class="t">${esc(o.city)}</span><span>${o.competitors.length?o.competitors.map(esc).join("، "):'<span class="muted">لا منافس مسجل</span>'}</span></div>`).join(""))}</div>`;}
+  // ── 03
+  function profiles(){const p=R("profiles");if(!p)return restricted();if(!p.items.length)return empty();const [,a]=route();
+    if(a){const c=p.items.find(x=>String(x.id)===a);if(c)return profDetail(c);}
+    return `<div class="grid3">${p.items.map(c=>`<div class="panel drill" data-prof="${c.id}" style="cursor:pointer"><h2>${esc(c.name)} ${conf(c.confidence)}</h2><div class="muted">${esc(c.description||"")}</div><div style="margin-top:8px;font-size:13px">حقائق ${n(c.facts.length)} · أسعار ${n(c.prices.length)} · أنشطة ${n(c.activities.length)} · ملاحظات ${n(c.notes.length)} · تقديرات ${n(c.estimates.length)}</div><div class="muted">آخر تحديث ${esc(c.last_update||"—")}</div>${c.stale?`<div class="flag medium" style="padding:6px 8px;font-size:12px">${esc(c.stale_ar)}</div>`:""}</div>`).join("")}</div>`;}
+  function itemRows(list,cols){const sc=D.scope||{};return list.map(i=>`<tr><td class="w">${esc(i.title||i.comp_product||"")}${i.value!=null&&i.kind!=="price"?` <b>${n(i.value,2)}${esc(i.unit||"")}</b>`:""}${i.detail?`<div class="muted">${esc(i.detail)}</div>`:""}</td>${cols?cols(i):""}<td>${evd(i.evidence)}</td><td>${conf(i.confidence)}</td><td class="muted">${esc(i.created_by||"")}</td><td>${sc.can_archive||sc.can_observe?`<button class="btn ghost" data-retract="${i.id}" title="سحب معلومة خاطئة — تبقى في السجل">سحب</button>`:""}</td></tr>`);}
+  function profDetail(c){const sc=D.scope||{};const h=["المعلومة","الدليل","الثقة","أدخلها",""];
+    return `<button class="back" data-go="profiles">→ كل المنافسين</button>`
+      +panel(`${esc(c.name)} ${conf(c.confidence)}`,`<div class="muted">${esc(c.description||"")} ${c.website?`· <a href="${esc(c.website)}" target="_blank" rel="noopener" style="color:var(--mint,#10b981)">الموقع ↗</a>`:""}</div>${c.stale?`<div class="flag medium">${esc(c.stale_ar)}</div>`:""}<div class="na-box">${esc(c.separation_ar||"")}</div>
+        <div class="cta">${sc.can_observe?`<button class="btn" data-additem="${c.id}">➕ معلومة</button>`:""}${sc.can_edit?`<button class="btn ghost" data-editc="${c.id}">تعديل الملف</button>`:""}${sc.can_archive?`<button class="btn ghost red" data-archive="${c.id}">أرشفة</button>`:""}</div>`)
+      +panel(`حقائق موثقة ${nat("fact")}`,tbl(h,itemRows(c.facts)))
+      +panel("أسعار منشورة",tbl(["المنتج","السعر","يقابل صنفنا",...h.slice(1)],itemRows(c.prices,i=>`<td class="num">${n(i.value,2)} ر.س</td><td>${esc(i.our_sku||"—")}</td>`)))
+      +panel("أنشطة مرصودة",tbl(["النشاط","النوع","المدينة","الأهمية","الأثر المحتمل",...h.slice(1)],itemRows(c.activities,i=>`<td>${esc((D.activity_types||{})[i.activity_type]||i.activity_type)}</td><td>${esc(i.city||"—")}</td><td><span class="b ${i.significance==="high"?"high":i.significance==="low"?"grey":"medium"}">${esc(CONF[i.significance]||i.significance||"")}</span></td><td class="w">${esc(i.impact||"—")}</td>`)))
+      +`<div class="grid2">${panel("نقاط القوة المرصودة",tbl(h,itemRows(c.strengths)))}${panel("نقاط الضعف المرصودة",tbl(h,itemRows(c.weaknesses)))}</div>`
+      +panel("درجات التموضع (1–5)",tbl(["البعد","الدرجة",...h.slice(1)],itemRows(c.scores,i=>`<td>${esc(((D.sector_profile||{}).dims||[]).find(d=>d.key===i.dimension)?.ar||i.dimension)}</td>`)))
+      +panel(`تقديرات ${nat("estimate")}`,tbl(h,itemRows(c.estimates))+`<div class="muted">التقدير ليس حقيقة — يُعرض بمصدره وثقته فقط.</div>`)
+      +panel(`ملاحظات داخلية ${nat("observation")}`,tbl(h,itemRows(c.notes))+`<div class="muted">انطباعات الفريق منفصلة عن المعلومات الموثقة ولا تدخل في الحسابات.</div>`);}
+  // ── 04
+  function positioning(){const p=R("positioning");if(!p)return restricted();
+    return panel("التموضع التنافسي لكل بعد",(p.table||[]).map(t=>`<h3>${esc(t.ar)} ${t.rank?`<span class="b medium">${esc(t.rank_ar)}</span>`:""}</h3>`+(t.comparable?bars(t.cells.filter(c=>c.score!=null),c=>(c.self?"★ ":"")+c.entity,c=>c.score,c=>`${t.dim==="price"?n(c.score,0):n(c.score,2)+"/5"} ${c.evidence?evd(c.evidence):`<span class="muted" title="${esc(c.basis_ar||"")}">ⓘ</span>`}`):na(t.reason_ar||"لا درجات كافية للمقارنة"))).join("")
+      +`<div class="muted" style="margin-top:8px">${esc(p.rule_ar)}<br>${esc(p.self_note_ar||"")}</div>`);}
+  // ── 05
+  function market_share(){const m=R("market_share");if(!m)return restricted();
+    return panel("الحصة السوقية",((m.items||[]).length?m.items.map(i=>`<div class="itm ${i.share!=null?"good":"na"}"><h4>${esc(i.title)} ${evd(i.evidence)}</h4><div class="kv"><b>حجم السوق</b><span>${n(i.market_size)} ر.س</span><b>الفترة</b><span>${esc(i.period_from)} → ${esc(i.period_to)}</span><b>المنطقة</b><span>${esc(i.region)}</span><b>تعريف السوق</b><span>${esc(i.definition||"")}</span><b>مبيعاتنا</b><span>${i.our_sales!=null?n(i.our_sales)+" ر.س":"—"}</span><b>الحصة</b><span>${i.share!=null?`<b class="pos">${pp(i.share)}</b>`:`<span class="muted">${esc(i.reason_ar||"غير متاح")}</span>`}</span></div><div class="muted">${esc(i.method_ar||"")}</div></div>`).join(""):na(m.reason_ar||"لا يوجد حجم سوق موثق — أضفه كمعلومة «حجم سوق» بفترة ومنطقة وتعريف"))
+      +`<div class="muted">${esc(m.rule_ar)}</div>`)
+      +((m.competitor_estimates||[]).length?panel(`أرقام المنافسين ${nat("estimate")}`,tbl(["المنافس","البند","القيمة","الدليل"],m.competitor_estimates.map(e=>`<tr><td>${esc(e.competitor)}</td><td>${esc(e.title)}</td><td class="num">${n(e.value)} ${esc(e.unit||"")}</td><td>${evd(e.evidence)}</td></tr>`))+`<div class="muted">${esc(m.estimates_rule_ar||"")}</div>`):"");}
+  // ── 06
+  function pricing(){const p=R("pricing");if(!p)return restricted();
+    return panel("مقارنة الأسعار على منتجات مطابقة",tbl(["المنافس","منتجه","سعره","صنفنا","سعرنا","الصافي بعد الخصم","هامشنا","الفرق","التقييم","الدليل"],p.rows.map(r=>`<tr><td>${esc(r.competitor)}</td><td>${esc(r.comp_product)}</td><td class="num">${n(r.comp_price,2)}</td><td>${esc(r.our_sku||"—")}</td><td class="num">${n(r.our_price,2)}</td><td class="num">${n(r.our_net_price,2)}</td><td class="num">${r.our_margin==null?'<span class="muted">—</span>':pp(r.our_margin)}</td><td>${r.matched?sg(r.gap_pct):`<span class="muted">${esc(r.match_ar||"غير مطابق")}</span>`}</td><td class="w">${esc(r.assessment_ar||"")}</td><td>${evd(r.evidence)}</td></tr>`))
+      +`<div class="muted">${esc(p.rule_ar)}</div><div class="na-box">${esc(p.no_auto_cut_ar||"")}</div>`)
+      +`<div class="grid2">${panel("موقع كل منافس سعرياً",tbl(["المنافس","متوسط الفرق","منتجات","الموقع"],(p.summary||[]).map(s=>`<tr><td>${esc(s.competitor)}</td><td>${sg(s.avg_gap_pct)}</td><td class="num">${n(s.n)}</td><td>${esc(s.position_ar)}</td></tr>`)))}
+        ${panel("تغيرات الأسعار المرصودة",tbl(["المنافس","المنتج","من","إلى","التغير","التاريخ","الدليل"],(p.changes||[]).map(c=>`<tr><td>${esc(c.competitor)}</td><td>${esc(c.product)}</td><td class="num">${n(c.from,2)}</td><td class="num">${n(c.to,2)}</td><td>${sg(c.change_pct)}</td><td>${esc(c.date)}</td><td>${evd(c.evidence)}</td></tr>`)))}</div>`
+      +((p.offers||[]).length?panel("العروض الترويجية",p.offers.map(o=>`<div class="itm medium"><h4>${esc(o.competitor)}: ${esc(o.title)}</h4>${evd(o.evidence)}</div>`).join("")+`<div class="muted">قارن عروض المنافسين بخصوماتنا في ${lnk("leakage","التسرب 3.1")}</div>`):"");}
+  // ── 07
+  function products(){const p=R("products");if(!p)return restricted();
+    return panel("فئاتنا مقابل المنافسين",tbl(["الفئة","الإيراد (90 يوماً)","الأصناف","الهامش","منافسون بأسعار مرصودة","منافسون يقدمونها"],p.rows.map(r=>`<tr><td><b>${esc(r.category)}</b></td><td class="num">${n(r.revenue)}</td><td class="num">${n(r.skus)}</td><td class="num">${r.margin_pct==null?"—":pp(r.margin_pct)}</td><td>${(r.competitors_priced||[]).map(esc).join("، ")||"—"}</td><td>${(r.competitors_listed||[]).map(esc).join("، ")||"—"}</td></tr>`))+`<div class="muted">${esc(p.rule_ar)} · ${lnk("sales","ذكاء المبيعات")}</div>`)
+      +((p.only_competitors||[]).length?panel("فئات يقدمها المنافسون ولا نقدمها",p.only_competitors.map(o=>`<div class="barrow"><span class="t">${esc(o.category)}</span><span>${o.competitors.map(esc).join("، ")}</span></div>`).join("")+`<div class="na-box">${esc(p.uncovered_ar)}</div>`):"");}
+  // ── 08
+  function preference(){const p=R("preference");if(!p)return restricted();
+    return `<div class="flag medium">${esc(p.label_ar)}</div>`
+      +panel("أسباب الاختيار من ملاحظات عملائنا",((p.reasons||[]).length?bars(p.reasons,r=>r.ar,r=>r.n,r=>`<span class="pos">${n(r.positive)}+</span> / <span class="neg">${n(r.negative)}−</span>`):na("لا ملاحظات عملاء كافية"))+`<div class="muted">${esc(p.rule_ar)} · ${lnk("customers","ذكاء العملاء")}</div>`)
+      +panel("إشارات العملاء إلى المنافسين",tbl(["المنافس","النص","الانطباع","التاريخ","الفرع"],(p.mentions||[]).map(m=>`<tr><td>${m.competitors.map(esc).join("، ")}</td><td class="w">${esc(m.text)}</td><td><span class="b ${m.sentiment==="negative"?"critical":m.sentiment==="positive"?"low":"grey"}">${esc({negative:"سلبي",positive:"إيجابي",neutral:"محايد"}[m.sentiment]||m.sentiment)}</span></td><td>${esc(m.date||"")}</td><td>${esc(m.branch||"")}</td></tr>`)))
+      +((p.surveys||[]).length?panel("استبيانات ومصادر مسجلة",tbl(["البند","القيمة","الدليل"],p.surveys.map(s=>`<tr><td class="w">${esc(s.title)}</td><td class="num">${n(s.value,1)}${esc(s.unit||"")}</td><td>${evd(s.evidence)}</td></tr>`))):"");}
+  // ── 09
+  function activity(){const a=R("activity");if(!a)return restricted();
+    return panel("نشاط المنافسين",((a.items||[]).length?a.items.map(i=>`<div class="itm ${i.significance==="high"?"high":i.significance==="low"?"low":"medium"}"><h4>${esc(i.competitor)}: ${esc(i.title)} ${i.recent?'<span class="b high">حديث</span>':""} ${i.in_our_city?'<span class="b critical">في مدينة لنا فيها فرع</span>':""}</h4><div class="kv"><b>النوع</b><span>${esc(i.type_ar)}</span><b>المدينة</b><span>${esc(i.city||"—")}</span><b>الأثر المحتمل</b><span>${esc(i.impact||"—")}</span></div>${evd(i.evidence)} ${conf(i.confidence)}${(D.scope||{}).can_edit?` <button class="btn ghost" data-todec="${esc("competitor:activity:"+i.id)}" data-t="${esc("الاستجابة: "+i.competitor+" — "+i.title)}">إلى قرار</button>`:""}</div>`).join(""):na("لا أنشطة مرصودة — أضفها كمعلومة «نشاط»"))+`<div class="muted">${esc(a.rule_ar)}</div>`);}
+  // ── 10
+  function trends(){const t=R("trends");if(!t)return restricted();
+    return panel("نشاط المنافسين ومبيعاتنا شهرياً",tbl(["الشهر","أنشطة","تغيرات أسعار","مبيعاتنا"],(t.series||[]).map(s=>`<tr><td>${esc(s.period)}</td><td class="num">${n(s.activities)}</td><td class="num">${n(s.price_changes)}</td><td class="num">${n(s.our_sales)}</td></tr>`))+`<div class="na-box">${esc(t.note_ar)}</div>`)
+      +panel("تاريخ الأسعار المرصودة",Object.entries(t.price_history||{}).map(([c,h])=>`<h3>${esc(c)}</h3>`+(h.length?h.map(x=>`<span class="chip">${esc(x.product)} · ${esc(x.date)}: ${n(x.price,2)}</span>`).join(" "):'<span class="muted">—</span>')).join(""));}
+  // ── 11
+  function map(){const m=R("map");if(!m)return restricted();if(!m.available)return na(m.reason_ar);
+    const pts=m.points||[],xs=pts.map(p=>p.x),ys=pts.map(p=>p.y);const x0=Math.min(...xs)-10,x1=Math.max(...xs)+10,y0=Math.max(0,Math.min(...ys)-.5),y1=Math.min(5,Math.max(...ys)+.5);
+    const W=560,Hh=340,P=40,sx=x=>P+(x-x0)/((x1-x0)||1)*(W-2*P),sy=y=>Hh-P-(y-y0)/((y1-y0)||1)*(Hh-2*P);
+    const svg=`<svg viewBox="0 0 ${W} ${Hh}" style="width:100%;max-width:${W}px;display:block;margin:auto" role="img" aria-label="خريطة التموضع"><line x1="${P}" y1="${Hh-P}" x2="${W-P}" y2="${Hh-P}" stroke="currentColor" opacity=".3"/><line x1="${P}" y1="${P}" x2="${P}" y2="${Hh-P}" stroke="currentColor" opacity=".3"/>`
+      +pts.map(p=>`<circle cx="${sx(p.x)}" cy="${sy(p.y)}" r="${p.self?9:7}" fill="${p.self?"#10b981":"#f5b301"}"/><text x="${sx(p.x)}" y="${sy(p.y)-12}" text-anchor="middle" font-size="12" fill="currentColor">${esc(p.entity)}</text>`).join("")
+      +`<text x="${W/2}" y="${Hh-8}" text-anchor="middle" font-size="12" fill="currentColor" opacity=".7">${esc(m.x_ar)} (أسعارنا = 100) →</text><text x="12" y="${Hh/2}" font-size="12" fill="currentColor" opacity=".7" transform="rotate(-90 12 ${Hh/2})" text-anchor="middle">${esc(m.y_ar)} (1–5)</text></svg>`;
+    return panel("خريطة التموضع",svg+tbl(["الكيان",esc(m.x_ar),esc(m.y_ar)],pts.map(p=>`<tr><td>${p.self?"★ ":""}${esc(p.entity)}</td><td class="num">${n(p.x,0)}</td><td class="num">${n(p.y,2)}</td></tr>`))+`<div class="muted">${esc(m.rule_ar)}</div>`);}
+  // ── 12
+  function strengths(){const s=R("strengths");if(!s)return restricted();
+    return panel("موقعنا لكل بعد مقابل متوسط المنافسين",tbl(["البعد","درجتنا","متوسط المنافسين","التصنيف","الأساس","الترتيب"],(s.ours||[]).map(o=>`<tr><td>${esc(o.ar)}</td><td class="num">${n(o.ours,2)}</td><td class="num">${n(o.competitors_avg,2)}</td><td><span class="b ${o.type==="strength"?"low":o.type==="weakness"?"critical":"grey"}">${esc({strength:"قوة",weakness:"ضعف",parity:"متقارب"}[o.type]||o.type)}</span></td><td class="muted w">${esc(o.basis_ar)}</td><td class="muted w">${esc(o.rank_ar||"")}</td></tr>`))+`<div class="muted">${esc(s.rule_ar)}</div>`)
+      +panel("قوة وضعف المنافسين المرصودة",tbl(["المنافس","البند","النوع","الدليل"],(s.competitors||[]).map(c=>`<tr><td>${esc(c.competitor)}</td><td class="w">${esc(c.title)}</td><td><span class="b ${c.kind==="strength"?"high":"low"}">${c.kind==="strength"?"قوة":"ضعف"}</span></td><td>${evd(c.evidence)}</td></tr>`)));}
+  // ── 13
+  function swotBox(sw){const Q=[["S","نقاط القوة","low"],["W","نقاط الضعف","critical"],["O","الفرص","medium"],["T","التهديدات","high"]];
+    return `<div class="grid2">${Q.map(([k,l,c])=>`<div class="itm ${c}"><h4>${l}</h4>${(sw[k]||[]).length?`<ul style="margin:0;padding-inline-start:18px">${sw[k].map(x=>`<li>${esc(x.text)} ${nat(x.nature)} ${x.source_ar?`<span class="muted">· ${esc(x.source_ar)}</span>`:""}</li>`).join("")}</ul>`:'<span class="muted">لا بنود موثقة</span>'}</div>`).join("")}</div>`;}
+  function swot(){const s=R("swot");if(!s)return restricted();
+    return panel("SWOT الشركة",swotBox(s.company)+`<div class="muted">${esc(s.rule_ar)}</div>`)+(s.competitors||[]).map(c=>panel(`SWOT — ${esc(c.competitor)}`,c.empty?na("لا معلومات كافية لهذا المنافس"):swotBox(c.swot))).join("");}
+  // ── 14–15
+  function opportunities(){const o=R("opportunities");if(!o)return restricted();const sc=D.scope||{};
+    return panel("فرص السوق",((o.items||[]).length?o.items.map((i,ix)=>`<div class="itm good"><h4>${esc(i.title_ar)} ${nat(i.nature)}</h4><ul style="margin:0">${(i.evidence||[]).map(e=>`<li>${esc(e)}</li>`).join("")}</ul><div class="kv"><b>التعرّض</b><span>${i.exposure!=null?n(i.exposure)+" ر.س — "+esc(i.exposure_ar||""):"—"}</span><b>مؤشر القياس</b><span>${esc(i.kpi||"—")}</span></div>${sc.can_edit?`<div class="cta"><button class="btn ghost" data-todec="${esc("competitor:opp:"+ix)}" data-t="${esc(i.title_ar)}" data-cat="${i.type==="pricing"?"pricing":"growth"}">إلى قرار</button></div>`:""}</div>`).join(""):na("لا فرص موثقة بعد"))+`<div class="muted">${esc(o.rule_ar)}</div>`);}
+  function threats(){const t=R("threats");if(!t)return restricted();const sc=D.scope||{};
+    return panel("التهديدات التنافسية",((t.items||[]).length?t.items.map((i,ix)=>`<div class="itm ${i.severity||"medium"}"><h4>${esc(i.title_ar)} ${nat(i.nature)}</h4><ul style="margin:0">${(i.evidence||[]).map(e=>`<li>${esc(e)}</li>`).join("")}</ul><div class="muted">${esc(i.date||"")} ${i.exposure!=null?" · التعرّض المحتمل: "+n(i.exposure)+" ر.س":""}</div>${sc.can_edit?`<div class="cta"><button class="btn ghost" data-todec="${esc("competitor:threat:"+ix)}" data-t="${esc("الاستجابة: "+i.title_ar)}">إلى قرار</button></div>`:""}</div>`).join(""):na("لا تهديدات موثقة"))+`<div class="muted">${esc(t.rule_ar)}</div>`);}
+  // ── 16
+  function whatif(){const w=R("whatif");if(!w)return restricted();const cats=Object.keys(w.base||{});if(!cats.length)return na("لا فئات بإيراد وتكلفة لمحاكاتها");
+    return `<div class="flag medium">${esc(w.rule_ar)}</div>`+panel("محاكاة قرار تنافسي",`<div class="fg"><label class="full">الفئة<select id="wCat">${cats.map(c=>`<option>${esc(c)}</option>`).join("")}</select></label>${Object.entries(w.assumptions_ar).map(([k,l])=>`<label>${esc(l)} <span class="muted">(${w.limits[k].join("…")})</span><input type="number" step="0.5" data-wa="${k}"></label>`).join("")}</div><div class="cta"><button class="btn" id="wGo">احسب</button><span id="wMsg" class="muted"></span></div><div id="wOut">${SIM?simHtml(SIM):""}</div>`);}
+  function simHtml(r){return `<div class="fin3"><div>الإيراد<b>${n(r.scenario.revenue)}</b>${sg(r.base.revenue?r.diff.revenue/r.base.revenue*100:null)}</div><div>مجمل الربح<b>${n(r.scenario.gross_profit)}</b>${sg(r.base.gross_profit?r.diff.gross_profit/Math.abs(r.base.gross_profit)*100:null)}</div><div>الهامش<b>${pp(r.scenario.margin_pct)}</b><span class="muted">كان ${pp(r.base.margin_pct)}</span></div></div>
+      <div class="kv"><b>الافتراضات</b><span>${r.assumptions.map(a=>esc(a.ar)+": "+n(a.value,1)).join(" · ")||"—"}</span><b>الثقة</b><span>${conf(r.confidence)}</span></div>${(r.notes||[]).map(x=>`<div class="na-box">${esc(x)}</div>`).join("")}<div class="muted">${esc(r.limits_ar)} · ${esc(r.rule_ar)}</div>`;}
+  function runSim(){const a={};document.querySelectorAll("[data-wa]").forEach(i=>{if(i.value!=="")a[i.dataset.wa]=Number(i.value);});$("wMsg").textContent="…";
+    api("/company/competitors/simulate",{category:$("wCat").value,assumptions:a}).then(r=>{SIM=r;$("wMsg").textContent="";$("wOut").innerHTML=simHtml(r);}).catch(er=>{$("wMsg").className="neg";$("wMsg").textContent=er.message;});}
+  // ── 17
+  function alerts(){const a=R("alerts");if(!a)return restricted();const sc=D.scope||{};
+    return panel("التنبيهات التنافسية",((a.items||[]).length?a.items.map(i=>`<div class="itm ${i.severity}"><h4>${esc(i.title_ar)} ${i.handled?'<span class="b low">قيد المتابعة بقرار</span>':""}</h4><div class="muted">${esc(i.rule_ar)} · ${esc(i.date||"")} · ${(i.evidence||[]).map(esc).join("، ")}</div>${sc.can_edit&&!i.handled?`<div class="cta"><button class="btn ghost" data-todec="${esc(i.ref)}" data-t="${esc(i.title_ar)}" data-cat="${i.kind==="price"?"pricing":"growth"}">إلى قرار</button></div>`:""}</div>`).join(""):na("لا تنبيهات حالياً"))+`<div class="muted">${esc(a.note_ar)}</div>`)
+      +panel("القرارات التنافسية (من 3.9)",tbl(["القرار","الحالة","المرجع",""],(a.decisions||[]).map(d=>`<tr><td>${esc(d.title)}</td><td>${esc(d.workflow||d.status)}</td><td class="muted">${esc(d.source_ref||"")}</td><td><a href="${esc(d.link)}" style="color:var(--mint,#10b981)">فتح ↗</a></td></tr>`)));}
+  // ── AI
+  function ai(){return panel("اسأل عن منافسيك",`<div class="chips">${(D.ai_questions||[]).map(q=>`<span class="chip" data-q="${esc(q)}">${esc(q)}</span>`).join("")}</div><div class="bar" style="margin-top:10px"><input class="search" id="aiQ" placeholder="سؤالك…"><button class="btn" id="aiGo">اسأل</button></div><div id="aiOut"></div><div class="muted">يجيب من سجل المنافسين ونتائج الوحدات ضمن صلاحيتك، يفصل الحقائق عن التقديرات، ولا يخترع أرقام سوق ولا يقترح خفض الأسعار تلقائياً.</div>`);}
+  function aiHtml(j){const a=j.ai||{},resp=a.response||{},L={FACTS:"من السجل والنتائج الموثقة",INTERPRETATION:"القراءة",HYPOTHESES:"عوامل محتملة (غير مؤكدة)",RECOMMENDATIONS:"إجراء قابل للقياس",DATA_GAPS:"بيانات ناقصة"};
+    return `<div class="muted" style="margin:6px 0">«${esc(j.question)}»</div>`+(a.message?`<div class="na-box">${esc(a.message)}</div>`:"")+Object.keys(L).map(k=>resp[k]&&resp[k].length?`<div class="ai-sec"><b>${L[k]}</b><ul style="margin:0;padding-inline-start:18px">${resp[k].map(x=>`<li>${esc(typeof x==="string"?x:JSON.stringify(x))}</li>`).join("")}</ul></div>`:"").join("");}
+  function runAI(q){if(route()[0]!=="ai"){go("ai");setTimeout(()=>runAI(q),60);return;}$("aiOut").innerHTML=`<div class="muted">جارٍ التحليل…</div>`;
+    api("/company/competitors/ai-insights",{question:q}).then(j=>{$("aiOut").innerHTML=aiHtml(j);}).catch(er=>{$("aiOut").innerHTML=`<div class="neg">${esc(er.message)}</div>`;});}
+  // ── الإعدادات
+  function settings(){const s=D.settings;if(!s)return restricted();const dims=((D.sector_profile||{}).dims||[]).filter(d=>d.key!=="price");const ss=s.self_scores||{};
+    const TH=[["price_change_alert_pct","تنبيه تغير سعر المنافس %"],["activity_alert_days","نافذة الأنشطة الحديثة (يوم)"],["stale_days","المعلومة قديمة بعد (يوم)"]];
+    return panel("حدود التنبيه",`<div class="fg">${TH.map(([k,l])=>`<label>${esc(l)}<input type="number" data-st="${k}" value="${s[k]}"></label>`).join("")}</div>`)
+      +panel("التقييم الذاتي للشركة (1–5)",`<div class="muted">إن تُرك فارغاً تُشتق الدرجة من البيانات حيث أمكن (الجودة من CSAT، التجربة من NPS، السرعة من التسليم في الموعد). السعر يُحسب من الأسعار المرصودة ولا يُقيَّم ذاتياً.</div>`
+        +tbl(["البعد","الدرجة","أساس التقييم (إلزامي)","الثقة"],dims.map(d=>{const v=ss[d.key]||{};return `<tr data-ss="${d.key}"><td>${esc(d.ar)}</td><td><input type="number" min="1" max="5" step="0.1" data-k="score" value="${v.score??""}" style="width:80px"></td><td><input data-k="source" value="${esc(v.source||"")}" style="width:240px"></td><td><select data-k="confidence">${Object.entries(CONF).map(([k,l])=>`<option value="${k}" ${k===(v.confidence||"low")?"selected":""}>${l}</option>`).join("")}</select></td></tr>`;})))
+      +`<div class="cta"><button class="btn" id="sGo">حفظ الإعدادات</button><span id="sMsg" class="muted"></span></div>`;}
+  function saveSettings(){const body={};document.querySelectorAll("[data-st]").forEach(i=>body[i.dataset.st]=i.value);const ss={};
+    document.querySelectorAll("[data-ss]").forEach(tr=>{const g=k=>tr.querySelector(`[data-k="${k}"]`).value;if(g("score")!=="")ss[tr.dataset.ss]={score:Number(g("score")),source:g("source"),confidence:g("confidence")};});body.self_scores=ss;
+    api("/company/competitors/settings",body).then(()=>{$("sMsg").className="pos";$("sMsg").textContent="✔ حُفظت — يُعاد الحساب";setTimeout(load,400);}).catch(er=>{$("sMsg").className="neg";$("sMsg").textContent=er.message;});}
+  // ── النوافذ
+  const close=()=>$("ov").classList.remove("on");
+  const opts=(o,sel)=>Object.entries(o||{}).map(([k,l])=>`<option value="${k}" ${k===sel?"selected":""}>${esc(l)}</option>`).join("");
+  function compModal(c){c=c||{};$("modal").innerHTML=`<h3 style="margin-top:0">${c.id?"تعديل ملف منافس":"منافس جديد"}</h3><div class="fg">
+      <label>الاسم<input id="cN" value="${esc(c.name||"")}"></label><label>النوع<select id="cK">${opts({direct:"مباشر",indirect:"غير مباشر"},c.kind||"direct")}</select></label>
+      <label>المدن (افصل بفاصلة)<input id="cC" value="${esc(Array.isArray(c.cities)?c.cities.join(", "):(c.cities||""))}"></label><label>الفئة السعرية<select id="cT"><option value="">—</option>${opts(D.tiers,c.price_tier)}</select></label>
+      <label>الشرائح المستهدفة<input id="cS" value="${esc(c.segments||"")}"></label><label>نموذج العمل<input id="cB" value="${esc(c.business_model||"")}"></label>
+      <label class="full">الفئات/المنتجات (افصل بفاصلة)<input id="cP" value="${esc(c.products||"")}"></label><label class="full">نقاط التميز<input id="cD" value="${esc(c.differentiators||"")}"></label>
+      <label class="full">وصف<textarea id="cX" rows="2">${esc(c.description||"")}</textarea></label><label>الموقع الإلكتروني<input id="cW" value="${esc(c.website||"")}" placeholder="https://"></label><label>مصدر الملف<input id="cR" value="${esc(c.source_of_profile||c.source||"")}"></label></div>
+      <div class="cta"><button class="btn" id="cGo">حفظ</button><button class="btn ghost" id="cCx">إلغاء</button><span id="cMsg" class="muted"></span></div>`;$("ov").classList.add("on");
+    $("cCx").onclick=close;$("cGo").onclick=()=>{$("cGo").disabled=true;api("/company/competitors/save",{id:c.id||null,name:$("cN").value,kind:$("cK").value,cities:$("cC").value,price_tier:$("cT").value,segments:$("cS").value,business_model:$("cB").value,products:$("cP").value,differentiators:$("cD").value,description:$("cX").value,website:$("cW").value,source:$("cR").value})
+      .then(()=>{close();load();}).catch(er=>{$("cGo").disabled=false;$("cMsg").className="neg";$("cMsg").textContent=er.message;});};}
+  function itemModal(pre){pre=pre||{};const sc=D.scope||{};const kinds=Object.fromEntries(Object.entries(D.kinds||{}).filter(([k])=>sc.kind!=="branch"||["price","activity","note"].includes(k)).filter(([k])=>k!=="market"||["full","cfo","manager"].includes(sc.kind)));
+    const today=new Date().toISOString().slice(0,10);
+    $("modal").innerHTML=`<h3 style="margin-top:0">معلومة موثقة</h3><div class="fg">
+      <label>النوع<select id="iK">${opts(kinds,pre.kind||"fact")}</select></label><label id="wC">المنافس<select id="iC">${(D.competitors_list||[]).map(c=>`<option value="${c.id}" ${String(c.id)===String(pre.competitor_id)?"selected":""}>${esc(c.name)}</option>`).join("")}</select></label>
+      <label class="full">العنوان<input id="iT"></label><label class="full">التفاصيل/التعريف<textarea id="iD" rows="2"></textarea></label>
+      <label class="f-price f-score f-estimate f-preference f-market">القيمة<input id="iV" type="number" step="0.01"></label><label class="f-estimate f-preference">الوحدة<input id="iU" placeholder="SAR أو %"></label>
+      <label class="f-price">منتج المنافس<input id="iP"></label><label class="f-price">يقابل صنفنا<select id="iS"><option value="">— غير مطابق —</option>${(D.our_skus||[]).map(s=>`<option value="${esc(s.sku)}">${esc(s.sku)} · ${esc(s.category)} · ${n(s.price,2)}</option>`).join("")}</select></label>
+      <label class="f-score">البعد<select id="iDm">${((D.sector_profile||{}).dims||[]).filter(d=>d.key!=="price").map(d=>`<option value="${d.key}">${esc(d.ar)}</option>`).join("")}</select></label>
+      <label class="f-activity">نوع النشاط<select id="iA">${opts(D.activity_types)}</select></label><label class="f-activity">الأهمية<select id="iG">${opts(CONF,"medium")}</select></label>
+      <label class="f-activity">المدينة<input id="iCi"></label><label class="f-activity">الأثر المحتمل<input id="iI"></label>
+      <label class="f-market">الفترة من<input id="iF" type="date"></label><label class="f-market">إلى<input id="iTo" type="date"></label><label class="f-market">المنطقة<input id="iR" placeholder="المملكة أو مدينة"></label>
+      <label>المصدر<select id="iSrc"><option value="">— بلا مصدر (ملاحظة) —</option>${opts(D.source_types)}</select></label><label>رابط المصدر<input id="iUrl" placeholder="https://"></label>
+      <label>تاريخ الرصد<input id="iO" type="date" value="${today}" max="${today}"></label><label>تاريخ النشر<input id="iPb" type="date"></label>
+      <label>الثقة<select id="iCf">${opts(CONF,"medium")}</select></label><label style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" id="iPub"> منشور رسمياً</label></div>
+      <div class="muted">المعلومة بلا مصدر تُسجَّل «ملاحظة داخلية» ولا تدخل الحسابات · لا تُحذف المعلومة — تُسحب بسبب.</div>
+      <div class="cta"><button class="btn" id="iGo">حفظ</button><button class="btn ghost" id="iCx">إلغاء</button><span id="iMsg" class="muted"></span></div>`;$("ov").classList.add("on");
+    const sync=()=>{const k=$("iK").value;document.querySelectorAll("#modal [class*='f-']").forEach(el=>el.style.display=el.classList.contains("f-"+k)?"":"none");$("wC").style.display=k==="market"?"none":"";};$("iK").onchange=sync;sync();
+    $("iCx").onclick=close;$("iGo").onclick=()=>{const k=$("iK").value;$("iGo").disabled=true;
+      api("/company/competitors/item",{kind:k,competitor_id:k==="market"?null:$("iC").value,title:$("iT").value,detail:$("iD").value,value:$("iV").value===""?null:$("iV").value,unit:$("iU").value,comp_product:$("iP").value,our_sku:$("iS").value,
+        category:((D.our_skus||[]).find(s=>s.sku===$("iS").value)||{}).category||"",dimension:$("iDm").value,activity_type:$("iA").value,significance:$("iG").value,city:$("iCi").value,impact:$("iI").value,
+        period_from:$("iF").value,period_to:$("iTo").value,region:$("iR").value,source_type:$("iSrc").value,source_url:$("iUrl").value,observed_on:$("iO").value,published_on:$("iPb").value,confidence:$("iCf").value,is_published:$("iPub").checked})
+      .then(()=>{close();load();}).catch(er=>{$("iGo").disabled=false;$("iMsg").className="neg";$("iMsg").textContent=er.message;});};}
+  function simpleModal(title,fields,onOk){$("modal").innerHTML=`<h3 style="margin-top:0">${esc(title)}</h3><div class="fg">${fields.map(f=>`<label class="full">${esc(f[1])}<input id="m_${f[0]}" type="${f[2]||"text"}" value="${esc(f[3]||"")}"></label>`).join("")}</div><div class="cta"><button class="btn" id="mGo">تأكيد</button><button class="btn ghost" id="mC">إلغاء</button><span id="mMsg" class="muted"></span></div>`;$("ov").classList.add("on");
+    $("mC").onclick=close;$("mGo").onclick=()=>{const v={};fields.forEach(f=>v[f[0]]=$("m_"+f[0]).value);onOk(v).then(r=>{if(r&&r.link){$("mMsg").className="pos";$("mMsg").innerHTML=`✔ <a href="${esc(r.link)}" style="color:var(--mint,#10b981)">#${r.decision_id}</a>`;setTimeout(()=>{close();load();},900);}else{close();load();}}).catch(er=>{$("mMsg").className="neg";$("mMsg").textContent=er.message;});};}
+  // ── Excel
+  function exportExcel(){const rows=[["القسم","المنافس","البند","القيمة","المصدر","التاريخ","الثقة","الطبيعة"]];
+    ((R("pricing")||{}).rows||[]).forEach(r=>rows.push(["الأسعار",r.competitor,r.comp_product+" ↔ "+(r.our_sku||"—"),r.gap_pct??"غير مطابق",(r.evidence||{}).source_ar||"",r.observed_on||"",(r.evidence||{}).confidence_ar||"","معلن"]));
+    ((R("activity")||{}).items||[]).forEach(i=>rows.push(["النشاط",i.competitor,i.title,i.type_ar,(i.evidence||{}).source_ar||"",i.observed_on||"",(i.evidence||{}).confidence_ar||"",""]));
+    ((R("market_share")||{}).items||[]).forEach(i=>rows.push(["الحصة السوقية","",i.title,i.share??"غير متاح",(i.evidence||{}).source_ar||"",i.period_from+"→"+i.period_to,(i.evidence||{}).confidence_ar||"",""]));
+    const csv="\uFEFF"+rows.map(r=>r.map(x=>`"${String(x??"").replace(/"/g,'""')}"`).join(",")).join("\n");window.__csv=csv;
+    const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download=`nabbah-competitors-${D.as_of||""}.csv`;a.click();}
+  const VIEWS={overview,landscape,profiles,positioning,market_share,pricing,products,preference,activity,trends,map,strengths,swot,opportunities,threats,whatif,alerts,ai,settings};
+  function render(){EV={};evI=0;const [v]=route();const allowed=new Set((D.sections_index||[]).filter(s=>s.allowed).map(s=>s.key).concat(["ai"]).concat(D.settings?["settings"]:[]));
+    const tabs=TABS.filter(([k])=>allowed.has(k));const cur=tabs.some(([k])=>k===v)?v:"overview";const al=R("alerts");
+    $("tabs").innerHTML=tabs.map(([k,l],i)=>`<button class="tab ${k===cur?"on":""}" data-go="${k}"><span class="muted" style="font-size:10px">${String(i+1).padStart(2,"0")}</span> ${l}${k==="alerts"&&al&&al.items.filter(x=>!x.handled).length?` <span class="b high">${al.items.filter(x=>!x.handled).length}</span>`:""}</button>`).join("");
+    $("content").innerHTML=(VIEWS[cur]||overview)();bind();}
+  function bind(){document.querySelectorAll("#content [data-go],#tabs [data-go]").forEach(el=>el.onclick=e=>{e.stopPropagation();go(el.dataset.go);});
+    document.querySelectorAll("#content [data-ev]").forEach(el=>el.onclick=e=>{e.stopPropagation();const m=EV[el.dataset.ev],p=$("pop");
+      p.innerHTML=`<b>${esc(m.kind_ar||"دليل")}</b>${m.nature_ar?` · ${esc(m.nature_ar)}`:""}<div class="muted">المصدر: ${esc(m.source_ar||"ملاحظة داخلية")}</div><div class="muted">تاريخ الرصد: ${esc(m.observed_on||"—")}${m.published_on?" · النشر: "+esc(m.published_on):""}</div><div class="muted">الثقة: ${esc(m.confidence_ar||"—")}${m.verified?" · متحقق":""}${m.by?" · أدخلها: "+esc(m.by):""}</div>${m.source_url?`<a href="${esc(m.source_url)}" target="_blank" rel="noopener" style="color:var(--mint,#10b981)">افتح المصدر ↗</a>`:""}`;
+      p.style.display="block";p.style.top=Math.min(window.innerHeight-200,e.clientY+10)+"px";p.style.left=Math.max(8,Math.min(window.innerWidth-350,e.clientX-170))+"px";});
+    document.querySelectorAll("#content [data-prof]").forEach(c=>c.onclick=e=>{if(e.target.closest("button"))return;go("profiles",c.dataset.prof);});
+    document.querySelectorAll("#content [data-q]").forEach(c=>c.onclick=()=>runAI(c.dataset.q));
+    const ag=$("aiGo");if(ag)ag.onclick=()=>{const q=$("aiQ").value.trim();if(q)runAI(q);};
+    const sgo=$("sGo");if(sgo)sgo.onclick=saveSettings;
+    const wg=$("wGo");if(wg)wg.onclick=runSim;
+    document.querySelectorAll("#content [data-newcomp]").forEach(b=>b.onclick=()=>compModal({}));
+    document.querySelectorAll("#content [data-legacy]").forEach(b=>b.onclick=()=>{if((D.scope||{}).can_edit)compModal({name:b.dataset.legacy,source:"إدخال سابق"});});
+    document.querySelectorAll("#content [data-editc]").forEach(b=>b.onclick=e=>{e.stopPropagation();compModal(((D.landscape||{}).rows||[]).find(r=>String(r.id)===b.dataset.editc)||{});});
+    document.querySelectorAll("#content [data-additem]").forEach(b=>b.onclick=()=>itemModal({competitor_id:b.dataset.additem}));
+    document.querySelectorAll("#content [data-archive]").forEach(b=>b.onclick=()=>simpleModal("أرشفة المنافس (تبقى معلوماته في السجل)",[["reason","السبب"]],v=>api("/company/competitors/archive",{id:Number(b.dataset.archive),reason:v.reason}).then(r=>{go("profiles");return r;})));
+    document.querySelectorAll("#content [data-retract]").forEach(b=>b.onclick=()=>simpleModal("سحب معلومة (لا تُحذف — تُستبعد من التحليل)",[["reason","سبب السحب"]],v=>api("/company/competitors/item/retract",{id:Number(b.dataset.retract),reason:v.reason})));
+    document.querySelectorAll("#content [data-todec]").forEach(b=>b.onclick=()=>simpleModal("إنشاء قرار في متابعة القرارات (3.9)",[["title","عنوان القرار","text",b.dataset.t||""],["owner","المسؤول"],["due","الموعد","date"],["expected_impact","الأثر المتوقع ر.س (اختياري)","number"]],
+      v=>api("/company/competitors/to-decision",{ref:b.dataset.todec,title:v.title,owner:v.owner,due:v.due,expected_impact:v.expected_impact||null,category:b.dataset.cat||"growth",reason:b.dataset.t||""})));}
+  document.addEventListener("click",()=>{$("pop").style.display="none";});
+  $("btnComp").onclick=()=>compModal({});$("btnItem").onclick=()=>{if(!(D.competitors_list||[]).length&&!["full","cfo","manager"].includes((D.scope||{}).kind)){alert("أضف منافساً أولاً");return;}itemModal({});};$("btnXls").onclick=exportExcel;
+  $("ov").onclick=e=>{if(e.target===$("ov"))close();};
+  load();
+})();
+</script>
+<script src="nabbah-sidebar.js"></script>
+</body>
+</html>
