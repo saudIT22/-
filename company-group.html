@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>نبّاه · إدارة الشركات المتعددة</title>
+<link href="nabbah-design.css" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{background:var(--bg,#070b09);color:var(--txt,#e8f1ec);font-family:Tajawal,Tahoma,Arial,sans-serif;margin:0}
+  .wrap{max-width:1180px;margin:0 auto;padding:70px 16px 60px}
+  h1{margin:0 0 4px;font-size:24px}.sub{color:var(--txt-soft,#8ba396);margin:0 0 14px;font-size:14px}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+  select{background:var(--panel,#101a15);color:var(--txt,#e8f1ec);border:1px solid var(--line,#1d2c24);border-radius:10px;padding:8px 10px;font:inherit;font-size:13px;max-width:100%}
+  .tabs{display:flex;gap:2px;flex-wrap:wrap;border-bottom:1px solid var(--line,#1d2c24);margin:6px 0 16px}
+  .tab{background:none;border:0;color:var(--txt-soft,#8ba396);padding:9px 11px;font:inherit;font-size:13px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+  .tab.on{color:var(--txt,#e8f1ec);border-color:#14b8a6;font-weight:800}
+  .tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:14px}
+  .tile,.panel{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:14px;padding:14px;min-width:0}
+  .tile{cursor:pointer}.tile:hover{border-color:var(--mint,#10b981)}
+  .tile .l{font-size:12px;color:var(--txt-soft,#8ba396)}.tile .v{font-size:22px;font-weight:800;margin-top:4px;overflow-wrap:anywhere}.tile .c{font-size:12px;margin-top:4px;line-height:1.7}
+  .panel{margin-bottom:14px}.panel h2{margin:0 0 10px;font-size:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .panel h3{margin:12px 0 6px;font-size:13px;color:var(--txt-soft,#8ba396)}
+  .grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+  table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px;border-bottom:1px solid var(--line,#1d2c24);text-align:start;white-space:nowrap}
+  th{color:var(--txt-soft,#8ba396);font-weight:600}.tbl{overflow-x:auto}td.w{white-space:normal;min-width:200px}
+  tr.drill{cursor:pointer}tr.drill:hover td{background:rgba(16,185,129,.06)}
+  .pos{color:#10b981}.neg{color:#ef4444}.warn{color:#f5b301}.muted{color:var(--txt-soft,#8ba396);font-size:12px}
+  .b{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700;display:inline-block;white-space:nowrap}
+  .critical,.intervene{background:rgba(239,68,68,.16);color:#ef4444}.high{background:rgba(234,88,12,.16);color:#f97316}
+  .medium,.watch{background:rgba(245,179,1,.15);color:#f5b301}.low,.good{background:rgba(16,185,129,.15);color:#10b981}.grey,.na,.monitor{background:rgba(148,163,184,.15);color:#94a3b8}
+  .btn{background:var(--mint,#10b981);color:#062b1c;border:0;border-radius:10px;padding:7px 13px;font-weight:800;cursor:pointer;font:inherit;font-size:12px;text-decoration:none;display:inline-block}
+  .btn.ghost{background:transparent;color:var(--txt-soft,#8ba396);border:1px solid var(--line,#1d2c24);font-weight:600}.btn.red{background:#ef4444;color:#fff}
+  .btn:disabled{opacity:.5;cursor:default}
+  .state{padding:36px 16px;text-align:center;color:var(--txt-soft,#8ba396);border:1px dashed var(--line,#1d2c24);border-radius:14px}
+  .na-box{color:var(--txt-soft,#8ba396);font-size:13px;padding:10px;border:1px dashed var(--line,#1d2c24);border-radius:10px;margin:6px 0}
+  .itm{border:1px solid var(--line,#1d2c24);border-inline-start:4px solid #f5b301;border-radius:12px;padding:12px;margin-bottom:10px}
+  .itm.critical,.itm.intervene{border-inline-start-color:#ef4444;background:none;color:inherit}.itm.high{border-inline-start-color:#f97316;background:none;color:inherit}
+  .itm.medium,.itm.watch{background:none;color:inherit}.itm.good,.itm.low{border-inline-start-color:#10b981;background:none;color:inherit}.itm.na,.itm.monitor{border-inline-start-color:#94a3b8;background:none;color:inherit}
+  .itm h4{margin:0 0 6px;font-size:15px}.kv{display:grid;grid-template-columns:120px 1fr;gap:4px 10px;font-size:13px;margin-top:6px}.kv b{color:var(--txt-soft,#8ba396);font-weight:600}
+  .sum p{font-size:15px;line-height:2;margin:4px 0}.sum b{color:var(--mint,#10b981)}.sum a{color:var(--mint,#10b981);font-size:11px;text-decoration:none}
+  .hgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+  .barrow{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:13px}.barrow .t{flex:0 0 140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .barrow .g{flex:1;height:10px;background:var(--line,#1d2c24);border-radius:6px;overflow:hidden;min-width:40px}.barrow .g i{display:block;height:100%;background:var(--mint,#10b981)}.barrow .x{flex:0 0 120px;text-align:end}
+  .pop{position:fixed;display:none;z-index:70;background:var(--panel,#101a15);border:1px solid var(--mint,#10b981);border-radius:12px;padding:12px;font-size:12px;max-width:340px;line-height:1.8}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}.chip{background:rgba(16,185,129,.12);color:var(--mint,#10b981);border:1px solid rgba(16,185,129,.35);border-radius:20px;padding:4px 11px;font-size:12px;cursor:pointer}
+  input.search,.fg input,.fg select,.fg textarea{background:var(--bg,#070b09);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:9px;padding:8px;font:inherit}
+  input.search{flex:1;min-width:160px;background:var(--panel,#101a15);border-radius:10px;padding:9px 12px}
+  .ai-sec{margin:8px 0}.ai-sec b{display:block;font-size:13px;margin-bottom:4px}.ai-sec li{font-size:13px;margin:3px 0}
+  .ov{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:50;padding:14px}
+  .ov.on{display:flex}.modal{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:16px;padding:18px;width:min(580px,100%);max-height:90vh;overflow:auto}
+  .fg{display:grid;grid-template-columns:1fr 1fr;gap:10px}.fg label{font-size:12px;color:var(--txt-soft,#8ba396);display:flex;flex-direction:column;gap:4px}.fg .full{grid-column:1/-1}
+  .cta{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .back{background:none;border:0;color:var(--mint,#10b981);cursor:pointer;font:inherit;padding:0;margin-bottom:10px}
+  .stbadge{font-size:12px;font-weight:800;padding:4px 10px;border-radius:10px;border:1px solid var(--line,#1d2c24)}
+  .flag{padding:10px 12px;border-radius:10px;margin:6px 0 10px;font-size:13px}
+  /* بطاقة القرار */
+  .dc-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;background:linear-gradient(90deg,#0f2a3d,#123047);border-radius:14px;padding:16px 18px;margin-bottom:12px}
+  .dc-head h2{margin:0;font-size:20px}.dc-no{border:1px solid rgba(255,255,255,.3);border-radius:10px;padding:6px 12px;font-weight:800;font-size:13px}
+  .dc-meta{display:grid;grid-template-columns:2fr repeat(4,minmax(0,1fr));gap:10px;align-items:center}.dc-meta>div{border-inline-start:1px solid var(--line,#1d2c24);padding:4px 10px}
+  .dc-meta .l{font-size:12px;color:var(--txt-soft,#8ba396)}.dc-meta .v{font-size:15px;font-weight:800;margin-top:4px}
+  .dc-box{background:rgba(255,255,255,.025);border-radius:10px;padding:12px;font-size:14px;line-height:1.9}
+  .fin3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.fin3 div{background:rgba(255,255,255,.025);border-radius:10px;padding:12px;text-align:center}
+  .fin3 b{display:block;font-size:20px;margin:6px 0}
+  .flow{display:flex;align-items:flex-start;justify-content:space-between;gap:4px;margin:10px 0}.flow .st{text-align:center;flex:1;font-size:12px;position:relative}
+  .flow .dot{width:28px;height:28px;border-radius:50%;margin:0 auto 6px;display:grid;place-items:center;font-weight:900;background:var(--line,#1d2c24);color:#94a3b8}
+  .flow .dot.on{background:#10b981;color:#062b1c}.flow .dot.cur{background:#f5b301;color:#2b1d00}
+  #printv{display:none}
+  @media print{#printv{display:block!important;color:#000;background:#fff}
+    #printv .pg{page-break-after:always;padding:22px}#printv .panel,#printv .tile,#printv .itm{background:#fff;border:1px solid #ccc;color:#000;break-inside:avoid}
+    #printv table{width:100%;border-collapse:collapse}#printv tr{break-inside:avoid}#printv td,#printv th{border:1px solid #ccc;padding:4px;font-size:10.5px;white-space:normal;color:#000}
+    #printv .muted{color:#555}#printv .cover{display:flex;flex-direction:column;justify-content:center;min-height:90vh;text-align:center}}
+  @media(max-width:900px){.hgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.dc-meta{grid-template-columns:1fr 1fr}.dc-meta>div:first-child{grid-column:1/-1}}
+  @media(max-width:760px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.grid2,.grid3,.fin3{grid-template-columns:minmax(0,1fr)}.fg{grid-template-columns:1fr}h1{font-size:20px}
+    .tile{padding:10px}.tile .v{font-size:17px}.kv{grid-template-columns:1fr}.tab{padding:7px 8px;font-size:12px}.barrow .t{flex-basis:90px}.barrow .x{flex-basis:90px}}
+  @media(max-width:1000px){.grid3{grid-template-columns:minmax(0,1fr)}}
+  @media(max-width:760px){.barrow{flex-wrap:wrap}.barrow .x{flex:1 1 100%;text-align:start}.barrow .x .b{white-space:normal}}
+  html,body{overflow-x:hidden}
+  @media(min-width:761px){#content .barrow .x{flex-basis:220px}}
+  .btn.ghost.red{color:#ef4444;border-color:rgba(239,68,68,.4)}
+  @media print{body>*:not(.wrap){display:none!important}.tabs,.bar,.cta,.back,#disc{display:none!important}body{background:#fff;color:#000}.panel{border:1px solid #ccc;background:#fff;color:#000}}
+
+  .chip input{vertical-align:middle;margin:0 0 0 4px}.chip.on{background:var(--mint,#10b981);color:#062b1c;font-weight:800}.fg textarea{resize:vertical}
+  .code{background:var(--bg,#070b09);border:1px solid var(--line,#1d2c24);border-radius:10px;padding:10px;font-size:12px;white-space:pre-wrap;word-break:break-word;overflow-x:auto;text-align:left;font-family:ui-monospace,Consolas,monospace;margin:6px 0}
+  code{font-family:ui-monospace,Consolas,monospace;font-size:12px;background:rgba(255,255,255,.05);padding:1px 5px;border-radius:5px}
+  .spark{display:flex;align-items:flex-end;gap:3px;height:110px;padding:6px 0}.spark i{flex:1;background:var(--mint,#10b981);border-radius:3px 3px 0 0;min-width:3px;opacity:.85}
+  .btn.ghost.red{background:transparent}.fg label{min-width:0}.fg input,.fg select,.fg textarea{width:100%;min-width:0;box-sizing:border-box}
+  details summary{list-style:none}.itm h4{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  @media(max-width:760px){.tiles[style]{grid-template-columns:repeat(2,minmax(0,1fr))!important}[data-mr]{grid-template-columns:1fr 1fr!important}[data-mr] .btn{grid-column:1/-1}[data-tm],[data-bm]{grid-template-columns:1fr!important}}
+  .bar select{background:var(--card,#0d1512);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:10px;padding:6px 10px}
+  @media(max-width:760px){.bar{flex-wrap:wrap}.tiles[style]{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🏢 إدارة الشركات المتعددة</h1>
+  <p class="sub">اجمع شركاتك التابعة والشقيقة في مجموعة واحدة: لوحة موحدة، وتقارير مجمعة بعملة واحدة واستبعاد المعاملات بين الشركات، ومقارنة معيارية، وأدوار تحدد من يرى ماذا. بيانات كل شركة تبقى في شركتها — ولا يُجمع رقم إلا إذا كان قابلاً للتجميع.</p>
+  <div class="bar"><select id="grpSel" style="display:none"></select><span class="stbadge" id="roleB">…</span><span class="muted" id="grpInfo"></span>
+    <span style="flex:1"></span><button class="btn ghost" id="joinBtn">🔑 انضمام برمز</button><button class="btn ghost" id="newBtn" style="display:none">+ مجموعة جديدة</button></div>
+  <div id="banner"></div>
+  <nav class="tabs" id="tabs"></nav>
+  <div id="content"><div class="state">جارٍ التحميل…</div></div>
+</div>
+<div class="ov" id="ov"><div class="modal" id="modal"></div></div>
+<script src="i18n.js"></script>
+<script>
+(function(){
+  const TOKEN=localStorage.getItem("nabbah_token")||"";if(!TOKEN){location.href="login.html";return;}
+  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const n=(v,d=0)=>{if(v==null||v===""||isNaN(Number(v)))return"—";return Number(v).toLocaleString("ar-SA",{maximumFractionDigits:d});};
+  const dt=v=>v?esc(String(v).replace("T"," ").slice(0,16)):"—";
+  const $=id=>document.getElementById(id);
+  const H={Authorization:"Bearer "+TOKEN,"Content-Type":"application/json"};
+  const api=(path,body)=>fetch(path,{method:body===undefined?"GET":"POST",headers:H,body:body===undefined?undefined:JSON.stringify(body)}).then(async r=>{
+    if(r.status===401){location.href="login.html";throw new Error("401");}const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(typeof j.detail==="string"?j.detail:"HTTP "+r.status);return j;});
+  const panel=(t,b,x="")=>`<div class="panel"><h2>${t}${x}</h2>${b}</div>`;
+  const na=m=>`<div class="na-box">${esc(m)}</div>`;
+  const tbl=(head,rows,empty)=>rows.length?`<div class="tbl"><table><thead><tr>${head.map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>${rows.join("")}</tbody></table></div>`:na(empty||"لا بيانات بعد");
+  const msgEl=id=>`<div class="muted" id="${id}" style="margin-top:8px"></div>`;
+  const ok=(id,t)=>{const e=$(id);if(e){e.className="pos";e.textContent=t;}};
+  const bad=(id,t)=>{const e=$(id);if(e){e.className="neg";e.textContent=t;}};
+  const tile=(l,v,x,cls)=>`<div class="tile"><div class="l">${l}</div><div class="v ${cls||""}">${v}${x?`<span class="muted" style="font-size:12px"> ${x}</span>`:""}</div></div>`;
+  const pct=v=>v==null?"—":(v>0?"+":"")+n(v,1)+"%";
+  const sgn=v=>v==null?"":v<0?"neg":v>0?"pos":"";
+  const TABS=[["overview","🧭 لوحة المجموعة","overview"],["companies","🏬 الشركات","overview"],["consolidated","📑 التقارير المجمعة","reports"],["benchmark","📊 المقارنة المعيارية","benchmark"],
+              ["members","👥 الأعضاء والصلاحيات","overview"],["settings","⚙️ إعدادات التوحيد","overview"],["activity","🗂️ سجل النشاط","overview"]];
+  const ACT={group_create:"إنشاء المجموعة",group_update:"تعديل المجموعة",group_archive:"أرشفة",company_link:"ربط شركة",company_unlink:"إلغاء ربط شركة",company_update:"تعديل شركة",link_skipped:"تعذّر الربط",
+    invite_member:"دعوة عضو",invite_company:"رمز ربط شركة",invite_revoke:"إلغاء دعوة",join_member:"انضمام عضو",join_company:"ربط شركة بالرمز",member_update:"تعديل دور",member_remove:"إزالة عضو",member_leave:"مغادرة",
+    fx_update:"أسعار التحويل",elimination_add:"إضافة استبعاد",elimination_delete:"حذف استبعاد",report_save:"حفظ تقرير"};
+  let GL=null,GID=null,OV=null,CONS={grain:"month",year:0};
+  const route=()=>decodeURIComponent(location.hash.slice(1)||"overview");
+  window.addEventListener("hashchange",()=>{if(OV){render();window.scrollTo(0,0);}});
+  const close=()=>{$("ov").classList.remove("on");$("modal").innerHTML="";};
+  const open=h=>{$("modal").innerHTML=h;$("ov").classList.add("on");};
+  const can=p=>OV&&OV.perms.includes(p);
+  const G=()=>GL.groups.find(x=>x.id===GID);
+  const cur=()=>OV?OV.group.base_currency:"SAR";
+
+  function load(){return api("/groups").then(j=>{GL=j;$("newBtn").style.display=j.can_create?"":"none";
+      if(!j.groups.length){GID=null;OV=null;$("grpSel").style.display="none";$("roleB").textContent="لا مجموعة بعد";$("grpInfo").textContent="";$("tabs").innerHTML="";$("content").innerHTML=vEmpty();wireEmpty();return;}
+      let saved=null;try{saved=Number(localStorage.getItem("nabbah_group"))||null;}catch(e){}
+      GID=j.groups.some(x=>x.id===GID)?GID:j.groups.some(x=>x.id===saved)?saved:j.groups[0].id;
+      const sel=$("grpSel");sel.innerHTML=j.groups.map(x=>`<option value="${x.id}"${x.id===GID?" selected":""}>${esc(x.name)}</option>`).join("");sel.style.display=j.groups.length>1?"":"none";
+      return loadGroup();}).catch(e=>{$("tabs").innerHTML="";$("content").innerHTML=`<div class="state">${esc(e.message)}</div>`;});}
+  function loadGroup(){try{localStorage.setItem("nabbah_group",String(GID));}catch(e){}
+    return api(`/groups/${GID}/overview`).then(o=>{OV=o;$("roleB").textContent="دورك: "+o.role_ar;
+      $("grpInfo").textContent=`${o.group.name} · العملة الأساسية ${o.group.base_currency}${o.scoped?" · نطاقك: شركات محددة":""}`;
+      $("banner").innerHTML=GL.context==="group"?`<div class="flag" style="background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.35)">ℹ️ أنت الآن داخل شركة عبر المجموعة — صلاحياتك فيها حسب دورك في المجموعة، لا صلاحيات مالكها.</div>`:"";
+      render();});}
+  function render(){let k=route();const vis=TABS.filter(t=>can(t[2]));if(!vis.some(t=>t[0]===k))k="overview";
+    $("tabs").innerHTML=vis.map(t=>`<button class="tab${t[0]===k?" on":""}" data-tab="${t[0]}">${t[1]}</button>`).join("");
+    document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{location.hash=b.dataset.tab;});
+    $("content").innerHTML=`<div class="state">جارٍ التحميل…</div>`;
+    Promise.resolve(VIEW[k]()).then(h=>{$("content").innerHTML=h;wire(k);}).catch(e=>{$("content").innerHTML=`<div class="state">${esc(e.message)}</div>`;});}
+
+  // ── لا مجموعة بعد
+  function createForm(){const own=GL.owned_companies.filter(c=>!c.group_id);
+    return `<div class="fg"><label>اسم المجموعة<input id="cgName" placeholder="مثلاً: مجموعة نبّاه القابضة"></label><label>العملة الأساسية للتقارير المجمعة<input id="cgCur" value="SAR" maxlength="3" dir="ltr"></label>
+      <label class="full">الشركات التي تملكها وتريد ضمها الآن${own.length?`<div class="chips">${own.map(c=>`<label class="chip"><input type="checkbox" data-cg="${c.id}" checked> ${esc(c.name)}</label>`).join("")}</div>`:`<span class="muted">كل شركاتك مرتبطة بمجموعات — يمكن إنشاء المجموعة وربط شركات لاحقاً.</span>`}</label></div>
+      <div class="cta"><button class="btn" id="cgGo">إنشاء المجموعة</button></div>${msgEl("cgMsg")}`;}
+  function wireCreate(){const b=$("cgGo");if(!b)return;b.onclick=()=>{b.disabled=true;api("/groups",{name:$("cgName").value,base_currency:$("cgCur").value,company_ids:[...document.querySelectorAll("[data-cg]:checked")].map(x=>Number(x.dataset.cg))})
+      .then(r=>{GID=r.id;close();location.hash="overview";load();}).catch(e=>{b.disabled=false;bad("cgMsg",e.message);});};}
+  function vEmpty(){return (GL.can_create?panel("إنشاء مجموعة شركات",`<p class="muted">أنت مالك المجموعة. تضم مباشرة الشركات التي تملكها، وتضم شركات يملكها آخرون برمز ربط يدخله مالكها (موافقته). الشركة الواحدة تنتمي لمجموعة واحدة فقط.</p>`+createForm()):"")+
+      panel("انضمام برمز",joinForm())+panel("كيف تعمل؟",`<ol style="line-height:2;font-size:14px"><li><b>مالك المجموعة</b> ينشئها ويضم شركاته.</li><li>لضم شركة يملكها شخص آخر: يُنشئ «رمز ربط شركة» ويرسله لمالكها، فيدخله من هنا وهو داخل شركته.</li><li>لإضافة فريق المجموعة (رئيس تنفيذي، مدير مالي، مدير شركة…): «رمز دعوة عضو» بدور محدد — يدخله الشخص من حسابه.</li><li>الأعضاء ينتقلون بين الشركات من مبدّل الشركات بصلاحيات دورهم فقط.</li></ol>`);}
+  function joinForm(){return `<div class="fg"><label class="full">الرمز (GRPM-… لعضوية، GRPC-… لربط شركتك)<input id="jCode" dir="ltr" autocomplete="off" placeholder="GRPM-XXXXX-XXXXX"></label></div><div class="cta"><button class="btn" id="jGo">انضمام</button></div>${msgEl("jMsg")}
+    <p class="muted">رمز ربط الشركة يربط الشركة النشطة حالياً في حسابك (يجب أن تملكها). تستطيع إلغاء الربط لاحقاً من تبويب الشركات.</p>`;}
+  function wireJoin(){const b=$("jGo");if(!b)return;b.onclick=()=>{b.disabled=true;api("/groups/join",{code:$("jCode").value}).then(r=>{ok("jMsg","✔ "+r.message);GID=r.group_id;setTimeout(()=>{close();load();},900);}).catch(e=>{b.disabled=false;bad("jMsg",e.message);});};}
+  function wireEmpty(){wireCreate();wireJoin();}
+
+  // ── اللوحة
+  function vOverview(){const o=OV.overview,k=o.kpis,fin=can("financials"),c=cur();
+    const tiles=`<div class="tiles" style="grid-template-columns:repeat(4,minmax(0,1fr))">`+tile("إيرادات المجموعة",n(k.revenue),k.revenue==null?"":c)+(fin?tile("صافي ربح المجموعة",k.net_profit==null?"—":n(k.net_profit),k.net_profit==null?"":c,sgn(k.net_profit))+tile("هامش صافي الربح",k.net_margin==null?"—":n(k.net_margin,1)+"%"):"")+
+      tile("النمو الشهري",pct(k.growth_pct),"",sgn(k.growth_pct))+tile("الشركات",n(o.counts.companies))+tile("الفروع",n(o.counts.branches))+(fin?tile("المصروفات التشغيلية",n(k.opex),k.opex==null?"":c):"")+`</div>`;
+    const per=o.period?`<p class="muted">آخر فترة قابلة للتجميع: <b>${esc(o.period)}</b>${o.latest_any&&o.latest_any!==o.period?` · أحدث فترة فيها بيانات ${esc(o.latest_any)} لكنها غير مكتملة لكل الشركات`:""}${fin&&k.profit_aggregatable===false&&k.profit_reason_ar?` · الربح: ${esc(k.profit_reason_ar)}`:""}</p>`:na("لا توجد فترة قابلة للتجميع بعد — راجع «تحتاج تدخلاً» وأسعار التحويل في الإعدادات.");
+    const mx=Math.max(1,...o.trend.map(t=>Math.abs(t.revenue||0)));
+    const trend=o.trend.length?`<div class="spark">${o.trend.map(t=>`<i title="${esc(t.period)}: ${t.revenue==null?"غير قابل للتجميع":n(t.revenue)}" style="height:${t.revenue==null?3:Math.max(4,Math.round(Math.abs(t.revenue)/mx*100))}%;${t.revenue==null?"background:#64748b;opacity:.4":""}"></i>`).join("")}</div><div class="muted">${esc(o.trend[0].period)} ← ${esc(o.trend[o.trend.length-1].period)} · الأعمدة الرمادية: فترات غير قابلة للتجميع</div>`:na("لا بيانات");
+    const top=o.top.length?o.top.map((t,i)=>`<div class="itm good" style="margin-bottom:8px"><h4>${["🥇","🥈","🥉"][i]} ${esc(t.company)}</h4><div class="muted">${fin?`هامش صافي ${n(t.net_margin,1)}%`:`نمو ${pct(t.growth_pct)}`}</div></div>`).join(""):na("لا يكفي لترتيب");
+    const iv=o.intervene.length?o.intervene.map(x=>`<div class="itm" style="margin-bottom:8px;border-color:rgba(245,179,1,.45)"><h4>⚠️ ${esc(x.company)}</h4><ul style="margin:4px 0;padding-inline-start:18px">${x.reasons.map(r=>`<li>${esc(r)}</li>`).join("")}</ul></div>`).join(""):na("لا شركات تحتاج تدخلاً");
+    const cards=o.companies.map(x=>`<div class="itm" style="margin-bottom:10px"><h4>${esc(x.company)} <span class="b low">${esc(x.currency)}</span>${x.issues.length?'<span class="b medium">يحتاج متابعة</span>':""}</h4>
+      <div class="kv"><b>آخر فترة</b><span>${esc(x.last_period||"—")}</span><b>الإيرادات (${esc(c)})</b><span>${n(x.revenue)}</span><b>النمو</b><span class="${sgn(x.growth_pct)}">${pct(x.growth_pct)}</span>${fin?`<b>هامش صافي</b><span class="${sgn(x.net_margin)}">${x.net_margin==null?"—":n(x.net_margin,1)+"%"}</span>`:""}<b>الفروع</b><span>${n(x.branches)}</span></div>
+      ${can("switch")?`<div class="cta" style="margin:8px 0 0"><button class="btn ghost" data-sw="${x.company_id}">الدخول إلى الشركة ←</button></div>`:""}</div>`).join("");
+    return tiles+per+`<div class="grid2"><div>`+panel("اتجاه الإيرادات الموحدة",trend)+panel("🏆 الأفضل أداءً",top)+`</div><div>`+panel("🚨 شركات تحتاج تدخلاً",iv)+panel("المخاطر على مستوى المجموعة",o.risks.length?`<ul style="line-height:1.9">${o.risks.map(r=>`<li>${esc(r)}</li>`).join("")}</ul>`:na("لا مخاطر ظاهرة"))+`</div></div>`+
+      panel("الشركات",cards||na("لا شركات مرتبطة بعد — اربط شركة من تبويب «الشركات»"))+msgEl("swMsg")+`<p class="muted">${esc(o.rule_ar)}</p>`;}
+
+  // ── الشركات
+  function vCompanies(){return api(`/groups/${GID}/companies`).then(j=>{const m=j.can_manage;const rels=Object.entries(j.relationships);
+    const rows=j.companies.map(c=>`<tr><td><b>${esc(c.name)}</b>${c.you_own?' <span class="b low">تملكها</span>':""}<div class="muted">${esc(c.sector)} · ${esc(c.country)}</div></td>
+      <td>${m?`<select data-rel="${c.id}">${rels.map(([k,v])=>`<option value="${k}"${k===c.relationship?" selected":""}>${esc(v)}</option>`).join("")}</select>`:esc(c.relationship_ar)}</td>
+      <td>${m?`<input data-pct="${c.id}" type="number" min="0" max="100" step="0.01" value="${c.ownership_pct??""}" style="width:80px" placeholder="—">`:c.ownership_pct==null?"—":n(c.ownership_pct,2)+"%"}</td>
+      <td dir="ltr">${esc(c.currency)}</td><td>${n(c.branches)}</td><td>${n(c.employees)}</td><td>${esc(c.admin)}</td><td><span class="b ${c.subscription==="نشط"?"low":"medium"}">${esc(c.subscription)}</span></td><td>${dt(c.linked_at)}</td>
+      <td><div class="cta" style="margin:0">${c.can_switch?`<button class="btn ghost" data-sw="${c.id}">دخول</button>`:""}${m?`<button class="btn ghost" data-save="${c.id}">حفظ</button>`:""}${m||c.you_own?`<button class="btn ghost red" data-unl="${c.id}">إلغاء الربط</button>`:""}</div></td></tr>`);
+    const own=GL.owned_companies.filter(c=>!c.group_id);
+    const relSel=id=>`<select id="${id}">${rels.map(([k,v])=>`<option value="${k}">${esc(v)}</option>`).join("")}</select>`;
+    const forms=m?`<div class="grid2"><div>`+panel("ربط شركة تملكها",own.length?`<div class="fg"><label>الشركة<select id="loC">${own.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join("")}</select></label><label>العلاقة${relSel("loR")}</label><label>نسبة الملكية % (اختياري)<input id="loP" type="number" min="0" max="100"></label></div><div class="cta"><button class="btn" id="loGo">ربط</button></div>${msgEl("loMsg")}`:na("لا شركات مملوكة غير مرتبطة"))+
+      panel("شركة يملكها شخص آخر",`<p class="muted">أنشئ رمز ربط وأرسله لمالكها بنفسك — يدخله من «انضمام برمز» وهو داخل شركته. صالح 7 أيام لمرة واحدة.</p><div class="fg"><label>العلاقة${relSel("ciR")}</label><label>ملاحظة (لمن؟)<input id="ciL"></label></div><div class="cta"><button class="btn" id="ciGo">إنشاء رمز ربط</button></div>${msgEl("ciMsg")}`)+`</div><div>`+
+      panel("إنشاء شركة جديدة داخل المجموعة",`<p class="muted">تُنشأ باسمك (ضمن حد 3 شركات مملوكة) وتُربط فوراً.</p><div class="fg"><label>اسم الشركة<input id="ncN"></label><label>القطاع<select id="ncS"><option value="retail">تجزئة</option><option value="restaurant">مطاعم</option><option value="services">خدمات</option><option value="wholesale">جملة</option><option value="other">أخرى</option></select></label>
+        <label>الفرع الرئيسي<input id="ncB" placeholder="اسم الفرع"></label><label>المدينة<input id="ncCity"></label><label>العلاقة${relSel("ncR")}</label></div><div class="cta"><button class="btn" id="ncGo">إنشاء وربط</button></div>${msgEl("ncMsg")}`)+`</div></div>`:"";
+    return panel("الشركات المرتبطة",tbl(["الشركة","العلاقة","الملكية","العملة","الفروع","الموظفون","المسؤول","الاشتراك","تاريخ الربط",""],rows,"لا شركات مرتبطة")+msgEl("coMsg")+
+      `<p class="muted">عملة الشركة وقطاعها وسنتها المالية يعدّلها مالكها من إعدادات شركته. إلغاء الربط لا يحذف أي بيانات — يوقف ظهورها في المجموعة ويسحب وصول أعضاء المجموعة إليها فوراً.</p>`)+forms;});}
+
+  // ── التقارير المجمعة
+  function vConsolidated(){const q=CONS.grain==="year"?`?grain=year${CONS.year?"&year="+CONS.year:""}`:"";
+    return Promise.all([api(`/groups/${GID}/consolidated${q}`),api(`/groups/${GID}/reports`)]).then(([r,rp])=>{const c=r.base_currency||cur(),fin=can("financials");
+      const ctl=`<div class="cta" style="margin:0 0 10px"><button class="btn${CONS.grain==="month"?"":" ghost"}" data-gr="month">شهري</button><button class="btn${CONS.grain==="year"?"":" ghost"}" data-gr="year">سنوي</button>
+        ${CONS.grain==="year"&&r.years&&r.years.length?`<select id="yrSel">${r.years.map(y=>`<option${y===r.year?" selected":""}>${y}</option>`).join("")}</select>`:""}</div>`;
+      const cell=t=>!t?"—":t.aggregatable?`<b class="${sgn(t.value)}">${n(t.value)}</b>${t.eliminated?`<div class="muted" style="font-size:11px">بعد استبعاد ${n(t.eliminated)}</div>`:""}`:`<span class="b medium" title="${esc(t.reason_ar||"")}">غير قابل للتجميع</span><div class="muted" style="font-size:11px">${esc((t.missing||[]).join("، "))}${t.available_sum!=null?` · المتاح ${n(t.available_sum)}`:""}</div>`;
+      const ML=[["revenue","الإيرادات"]].concat(fin?[["gross_profit","مجمل الربح"],["opex","المصروفات"],["net_profit","صافي الربح"]]:[]);
+      let body;
+      if(r.grain==="year"){body=panel(`التقرير السنوي ${r.year} (${esc(c)})`,tbl(["البند","المجموعة"].concat(r.companies.map(x=>esc(x.company)+(x.complete?"":` <span class="b medium">${x.months}/12</span>`))),
+          ML.map(([k,l])=>`<tr><td>${l}</td><td>${cell(r.totals[k])}</td>${r.companies.map(x=>`<td>${x.values[k]==null?"—":n(x.values[k])}</td>`).join("")}</tr>`))+(r.fiscal_note_ar?`<p class="muted">${esc(r.fiscal_note_ar)}</p>`:""));}
+      else{body=panel(`التقرير الشهري الموحد (${esc(c)})`,tbl(["الفترة"].concat(ML.map(x=>x[1])).concat(fin?["هامش صافي"]:[]).concat(["النمو"]),
+          r.rows.slice().reverse().map(x=>`<tr><td><a href="#" data-per="${esc(x.period)}" style="color:var(--mint,#10b981)">${esc(x.period)}</a></td>${ML.map(([k])=>`<td>${cell(x.totals[k])}</td>`).join("")}${fin?`<td>${x.net_margin==null?"—":n(x.net_margin,1)+"%"}</td>`:""}<td class="${sgn(x.revenue_growth_pct)}">${pct(x.revenue_growth_pct)}</td></tr>`),"لا بيانات")+`<div id="perBox"></div>`);}
+      const save=OV.scoped?"":`<div class="fg"><label>نوع التقرير<select id="rpK"><option value="monthly">شهري</option><option value="annual">سنوي</option></select></label><label>الفترة (YYYY-MM) أو السنة<input id="rpP" dir="ltr" value="${esc(r.grain==="year"?r.year:(r.rows.length?r.rows[r.rows.length-1].period:""))}"></label></div><div class="cta"><button class="btn" id="rpGo">حفظ لقطة موقّعة</button></div>${msgEl("rpMsg")}`;
+      const list=tbl(["التقرير","الفترة","البصمة","أنشأه",""],rp.items.map(x=>`<tr><td>${x.kind==="annual"?"سنوي":"شهري"}</td><td>${esc(x.period)}</td><td dir="ltr" style="font-family:monospace;font-size:11px">${esc(x.checksum.slice(0,16))}…</td><td>${esc(x.by)} · ${dt(x.at)}</td><td><button class="btn ghost" data-rp="${x.id}">عرض</button></td></tr>`),"لا تقارير محفوظة");
+      window._CONS=r;
+      const fxMiss=(r.rows||r.months||[]).some(x=>x.companies.some(y=>y.notes.some(t=>t.includes("سعر تحويل"))));
+      return ctl+(r.scoped_note_ar?na(r.scoped_note_ar):"")+(fxMiss?na("بعض الشركات بعملة بلا سعر تحويل معلن — أضفه من «إعدادات التوحيد» لتظهر المجاميع."):"")+body+panel("لقطات التقارير المحفوظة",save+list+`<p class="muted">اللقطة تحفظ الأرقام وأسعار التحويل وقت إنشائها ببصمة SHA-256 — أي تعديل لاحق يظهر «تغيّر بعد الحفظ».</p>`)+`<p class="muted">${esc(r.rule_ar||"")}</p>`;});}
+  function perDetail(p){const r=window._CONS,row=r.rows.find(x=>x.period===p);if(!row)return;const fin=can("financials");
+    $("perBox").innerHTML=panel(`تفصيل ${esc(p)} حسب الشركة`,tbl(["الشركة","العملة","الإيرادات"].concat(fin?["مجمل الربح","المصروفات","صافي الربح"]:[]).concat(["ملاحظات"]),row.companies.map(x=>`<tr><td>${esc(x.company)}</td><td dir="ltr">${esc(x.currency)}</td><td>${n(x.values.revenue)}</td>${fin?`<td>${n(x.values.gross_profit)}</td><td>${n(x.values.opex)}</td><td class="${sgn(x.values.net_profit)}">${n(x.values.net_profit)}</td>`:""}<td class="w">${esc(x.notes.join(" · "))}</td></tr>`))+`<p class="muted">القيم بالعملة الأساسية بعد التحويل بالسعر المعلن.</p>`);}
+
+  // ── المقارنة المعيارية
+  function vBenchmark(p){return api(`/groups/${GID}/benchmark${p?"?period="+encodeURIComponent(p):""}`).then(b=>{const c=b.base_currency;
+    const sel=`<div class="cta" style="margin:0 0 10px"><label class="muted">الفترة <select id="bmP">${b.periods.slice().reverse().map(x=>`<option${x===b.period?" selected":""}>${esc(x)}</option>`).join("")}</select></label></div>`;
+    const mets=b.metrics.map(m=>{if(!m.available)return panel(esc(m.label),na(m.needs_ar));const unit=m.unit==="%"?"%":" "+c;const mx=Math.max(...m.ranking.map(x=>Math.abs(x.value)),1e-9);
+      return panel(esc(m.label)+(m.inverse?' <span class="muted" style="font-size:12px">(الأقل أفضل)</span>':""),m.ranking.map((x,i)=>`<div style="display:flex;align-items:center;gap:8px;margin:5px 0"><span style="min-width:140px">${i===0?"🏆 ":""}${esc(x.company)}</span><div style="flex:1;background:rgba(255,255,255,.05);border-radius:6px;height:14px"><div style="width:${Math.max(3,Math.round(Math.abs(x.value)/mx*100))}%;height:100%;border-radius:6px;background:${i===0?"var(--mint,#10b981)":"#38bdf8"}"></div></div><b style="min-width:90px;text-align:left" dir="ltr">${n(x.value,1)}${unit}</b></div>`).join("")+
+        `<p class="muted">الوسيط: ${n(m.median,1)}${unit}${m.gaps.filter(g=>g.below_median).length?` · دون الوسيط: ${m.gaps.filter(g=>g.below_median).map(g=>esc(g.company)+" ("+(g.gap_to_best>0?"+":"")+n(g.gap_to_best,1)+unit+" عن الأفضل)").join("، ")}`:""}</p>`);}).join("");
+    const pr=b.practices.length?`<ul style="line-height:2">${b.practices.map(x=>`<li>${esc(x.text_ar)}</li>`).join("")}</ul>`:na("لا فجوات واضحة لهذه الفترة");
+    return sel+panel("💡 أفضل الممارسات والفجوات",pr)+mets+`<p class="muted">${esc(b.note_ar)}</p>`;});}
+
+  // ── الأعضاء
+  function vMembers(){return api(`/groups/${GID}/members`).then(j=>{const m=j.can_manage,isOwner=j.role==="group_owner";
+    const roleOpts=(sel)=>j.roles.filter(r=>r.key!=="group_owner"&&(isOwner||!["group_ceo","group_cfo"].includes(r.key))).map(r=>`<option value="${r.key}"${r.key===sel?" selected":""}>${esc(r.ar)}</option>`).join("");
+    const coChips=(attr,sel)=>`<div class="chips">${j.companies.map(c=>`<label class="chip"><input type="checkbox" ${attr}="${c.id}"${(sel||[]).includes(c.id)?" checked":""}> ${esc(c.name)}</label>`).join("")}</div>`;
+    const rows=j.members.map(x=>`<tr><td><b>${esc(x.name)}</b>${x.is_you?' <span class="b low">أنت</span>':""}</td>
+      <td>${m&&!x.fixed&&!x.is_you&&(isOwner||!["group_ceo","group_cfo"].includes(x.role))?`<select data-mrole="${x.id}">${roleOpts(x.role)}</select>`:esc(x.role_ar)}</td>
+      <td class="w">${x.fixed?"كل الشركات":x.companies.length?esc(x.companies.join("، ")):"كل الشركات"}${m&&!x.fixed&&!x.is_you?`<details><summary class="muted" style="cursor:pointer">تعديل النطاق</summary>${coChips("data-msc-"+x.id,x.company_ids)}</details>`:""}</td>
+      <td>${esc(x.invited_by||"—")}${x.since?" · "+dt(x.since):""}</td>
+      <td><div class="cta" style="margin:0">${m&&!x.fixed&&!x.is_you?`<button class="btn ghost" data-msave="${x.id}">حفظ</button><button class="btn ghost red" data-mrm="${x.id}">إزالة</button>`:""}${x.is_you?`<button class="btn ghost red" data-mrm="${x.id}" data-self="1">مغادرة المجموعة</button>`:""}</div></td></tr>`);
+    const matrix=tbl(["الدور","المستوى","داخل الشركة يصبح","الصلاحيات"],j.roles.map(r=>`<tr><td><b>${esc(r.ar)}</b></td><td>${r.level==="group"?"المجموعة":"شركة محددة"}</td><td>${esc({executive:"تنفيذي — اطلاع كامل",accountant:"مالي",manager:"مدير",viewer:"اطلاع فقط"}[r.company_role]||r.company_role)}</td><td class="w" style="font-size:12px">${esc(r.perms.join(" · "))}</td></tr>`));
+    const inv=m?panel("دعوة عضو",`<div class="fg"><label>الدور<select id="ivR">${roleOpts("group_analyst")}</select></label><label>ملاحظة (لمن؟)<input id="ivL"></label><label class="full">الشركات (فارغ = كل الشركات؛ إلزامي للأدوار على مستوى شركة)${coChips("data-ivc",[])}</label></div>
+      <div class="cta"><button class="btn" id="ivGo">إنشاء رمز دعوة</button></div>${msgEl("ivMsg")}<p class="muted">يُنشئ الشخص حساباً في نبّاه (إن لم يكن لديه) ثم يُدخل الرمز من «انضمام برمز». لا نرسل بريداً — أنت ترسل الرمز بنفسك.</p>`)+`<div id="invList"></div>`:"";
+    return panel("أعضاء المجموعة",tbl(["العضو","الدور","النطاق","دُعي بواسطة",""],rows)+msgEl("memMsg"))+inv+panel("مصفوفة الأدوار والصلاحيات",matrix+`<p class="muted">لا يصبح أحد «مالكاً» لشركة لا يملكها. مالك كل شركة يبقى صاحب القرار فيها ويستطيع سحبها من المجموعة.</p>`);});}
+  function loadInvites(){if(!$("invList"))return;api(`/groups/${GID}/invites`).then(j=>{const ST={pending:["بانتظار الاستخدام","medium"],used:["مستخدم","low"],revoked:["ملغى","grey"],expired:["منتهٍ","grey"]};
+    $("invList").innerHTML=panel("الدعوات والرموز",tbl(["النوع","الدور/العلاقة","ملاحظة","الحالة","استخدمه","أنشأه","ينتهي",""],j.items.map(i=>`<tr><td>${i.kind==="company"?"ربط شركة":"عضوية"}</td><td>${esc(i.role_ar||({subsidiary:"تابعة",affiliate:"شقيقة",associate:"زميلة",jv:"مشروع مشترك"}[i.relationship]||""))}</td><td>${esc(i.label)}</td>
+      <td><span class="b ${ST[i.status][1]}">${ST[i.status][0]}</span></td><td>${esc(i.used_by||"—")}</td><td>${esc(i.created_by)} · ${dt(i.created_at)}</td><td>${dt(i.expires_at)}</td><td>${i.status==="pending"?`<button class="btn ghost red" data-irv="${i.id}">إلغاء</button>`:""}</td></tr>`),"لا دعوات")+msgEl("irvMsg"));
+    document.querySelectorAll("[data-irv]").forEach(b=>b.onclick=()=>{b.disabled=true;api(`/groups/${GID}/invites/revoke`,{id:Number(b.dataset.irv)}).then(loadInvites).catch(e=>{b.disabled=false;bad("irvMsg",e.message);});});}).catch(()=>{});}
+  const codeBox=(code,note)=>`<h2 style="margin-top:0">🔑 الرمز — يُعرض مرة واحدة</h2><div dir="ltr" class="code" style="font-size:18px;font-weight:800;text-align:center" id="newCode">${esc(code)}</div>
+    <div class="cta"><button class="btn" id="cpCode">نسخ</button><button class="btn ghost" id="clCode">تم، أغلق</button></div><p class="muted">${esc(note)}</p>`;
+  function showCode(r){open(codeBox(r.code,r.note_ar));$("cpCode").onclick=()=>{(navigator.clipboard?navigator.clipboard.writeText(r.code):Promise.reject()).then(()=>{$("cpCode").textContent="✔ نُسخ";}).catch(()=>{$("cpCode").textContent="انسخه يدوياً";});};$("clCode").onclick=()=>{close();render();};}
+
+  // ── الإعدادات
+  function vSettings(){return api(`/groups/${GID}/settings`).then(s=>{const cf=s.can_configure,fin=can("financials"),c=s.base_currency;window._SET=s;
+    const gen=cf?panel("المجموعة",`<div class="fg"><label>الاسم<input id="sgN" value="${esc(s.name)}"></label><label>العملة الأساسية<input id="sgC" value="${esc(c)}" maxlength="3" dir="ltr"></label></div><div class="cta"><button class="btn" id="sgGo">حفظ</button></div>${msgEl("sgMsg")}`):"";
+    const fxr=s.currencies_needed.map(k=>{const v=s.fx[k]||{};return `<tr><td dir="ltr"><b>${esc(k)}</b> → ${esc(c)}</td><td>${cf?`<input data-fxr="${esc(k)}" type="number" step="0.000001" min="0" value="${v.rate??""}" style="width:120px" dir="ltr">`:n(v.rate,6)}</td><td>${cf?`<input data-fxd="${esc(k)}" type="date" value="${esc(v.as_of||"")}">`:esc(v.as_of||"—")}</td><td>${v.rate?'<span class="b low">معلن</span>':'<span class="b critical">مفقود</span>'}</td></tr>`;});
+    const fx=panel("أسعار التحويل المعلنة",s.currencies_needed.length?tbl(["العملة","السعر (1 وحدة = ? "+esc(c)+")","تاريخ السعر","الحالة"],fxr)+(cf?`<div class="cta"><button class="btn" id="fxGo">حفظ الأسعار</button></div>${msgEl("fxMsg")}`:""):na("كل الشركات بالعملة الأساسية — لا حاجة لأسعار تحويل"),
+      `<span class="muted" style="font-size:12px"> · لا نجلب أسعاراً تلقائياً: السعر المعلن يظهر في كل تقرير</span>`);
+    const el=fin?panel("استبعاد المعاملات بين الشركات",(cf?`<div class="fg"><label>الفترة<input id="elP" dir="ltr" placeholder="2026-10"></label><label>البائع<select id="elS">${s.companies.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join("")}</select></label><label>المشتري<select id="elB">${s.companies.map((x,i)=>`<option value="${x.id}"${i===1?" selected":""}>${esc(x.name)}</option>`).join("")}</select></label>
+        <label>المبلغ (${esc(c)})<input id="elA" type="number" min="0" step="0.01"></label><label class="full">ملاحظة<input id="elN" placeholder="مثلاً: توريد بضاعة من المستودع المركزي"></label></div><div class="cta"><button class="btn" id="elGo">إضافة استبعاد</button></div>${msgEl("elMsg")}`:"")+
+      tbl(["الفترة","البائع","المشتري","المبلغ","ملاحظة","أضافه",""],s.eliminations.map(e=>{const nm=id=>(s.companies.find(x=>x.id===id)||{}).name||"#"+id;return `<tr><td>${esc(e.period)}</td><td>${esc(nm(e.seller_id))}</td><td>${esc(nm(e.buyer_id))}</td><td>${n(e.amount,2)}</td><td class="w">${esc(e.note)}</td><td>${esc(e.by)} · ${dt(e.at)}</td><td>${cf?`<button class="btn ghost red" data-eld="${e.id}">حذف</button>`:""}</td></tr>`;}),"لا استبعادات")+
+      `<p class="muted">الاستبعاد يخفض الإيرادات الموحدة لتلك الفترة (والتكلفة بنفس المبلغ) فلا يتغير الربح — حتى لا تُعدّ مبيعات شركة لشركة شقيقة مرتين.</p>`):"";
+    const arch=OV.role==="group_owner"?panel("أرشفة المجموعة",`<p class="muted">تُلغي ربط كل الشركات وتسحب وصول الأعضاء فوراً. لا تُحذف أي بيانات من الشركات.</p><div class="cta"><button class="btn ghost red" id="arGo">أرشفة المجموعة</button></div>${msgEl("arMsg")}`):"";
+    return gen+fx+el+arch;});}
+
+  function vActivity(){return api(`/groups/${GID}/activity`).then(j=>panel("سجل نشاط المجموعة",tbl(["الوقت","المستخدم","الإجراء","التفاصيل"],j.items.map(a=>`<tr><td>${dt(a.at)}</td><td>${esc(a.user)}</td><td>${esc(ACT[a.action]||a.action)}</td><td class="w">${esc(a.detail)}</td></tr>`),"لا نشاط")));}
+
+  const VIEW={overview:vOverview,companies:vCompanies,consolidated:vConsolidated,benchmark:()=>vBenchmark(),members:vMembers,settings:vSettings,activity:vActivity};
+  function doSwitch(id,msg){api("/groups/switch",{company_id:id}).then(r=>{ok(msg,`✔ دخلت «${r.name}» بدور ${r.role_ar} — جارٍ الانتقال…`);setTimeout(()=>{location.href="company-dashboard.html";},700);}).catch(e=>bad(msg,e.message));}
+  function wire(k){
+    document.querySelectorAll("[data-sw]").forEach(b=>b.onclick=()=>{b.disabled=true;doSwitch(Number(b.dataset.sw),k==="companies"?"coMsg":"swMsg");});
+    if(k==="companies"){
+      document.querySelectorAll("[data-save]").forEach(b=>b.onclick=()=>{const id=b.dataset.save;b.disabled=true;const p=document.querySelector(`[data-pct="${id}"]`).value;
+        api(`/groups/${GID}/companies/update`,{company_id:Number(id),relationship:document.querySelector(`[data-rel="${id}"]`).value,ownership_pct:p===""?null:Number(p)}).then(()=>{b.disabled=false;ok("coMsg","✔ حُفظ");}).catch(e=>{b.disabled=false;bad("coMsg",e.message);});});
+      document.querySelectorAll("[data-unl]").forEach(b=>b.onclick=()=>{if(!confirm("إلغاء ربط الشركة بالمجموعة؟ يسحب وصول أعضاء المجموعة إليها فوراً، ولا يحذف بياناتها."))return;b.disabled=true;
+        api(`/groups/${GID}/companies/unlink`,{company_id:Number(b.dataset.unl)}).then(()=>load()).catch(e=>{b.disabled=false;bad("coMsg",e.message);});});
+      const lo=$("loGo");if(lo)lo.onclick=()=>{lo.disabled=true;api(`/groups/${GID}/companies/link-own`,{company_id:Number($("loC").value),relationship:$("loR").value,ownership_pct:$("loP").value===""?null:Number($("loP").value)}).then(()=>load()).catch(e=>{lo.disabled=false;bad("loMsg",e.message);});};
+      const ci=$("ciGo");if(ci)ci.onclick=()=>{ci.disabled=true;api(`/groups/${GID}/invites`,{kind:"company",relationship:$("ciR").value,label:$("ciL").value}).then(r=>{ci.disabled=false;showCode(r);}).catch(e=>{ci.disabled=false;bad("ciMsg",e.message);});};
+      const nc=$("ncGo");if(nc)nc.onclick=()=>{nc.disabled=true;api(`/groups/${GID}/companies/create`,{name:$("ncN").value,sector:$("ncS").value,relationship:$("ncR").value,branches:$("ncB").value.trim()?[{name:$("ncB").value.trim(),city:$("ncCity").value.trim()}]:[]})
+        .then(()=>load()).catch(e=>{nc.disabled=false;bad("ncMsg",e.message);});};}
+    if(k==="consolidated"){
+      document.querySelectorAll("[data-gr]").forEach(b=>b.onclick=()=>{CONS.grain=b.dataset.gr;CONS.year=0;render();});
+      const ys=$("yrSel");if(ys)ys.onchange=()=>{CONS.year=Number(ys.value);render();};
+      document.querySelectorAll("[data-per]").forEach(a=>a.onclick=e=>{e.preventDefault();perDetail(a.dataset.per);});
+      const rg=$("rpGo");if(rg)rg.onclick=()=>{rg.disabled=true;const kind=$("rpK").value,v=$("rpP").value.trim();api(`/groups/${GID}/reports`,kind==="annual"?{kind,year:Number(v)}:{kind,period:v}).then(r=>{ok("rpMsg","✔ حُفظ — البصمة "+r.checksum.slice(0,12)+"…");setTimeout(render,900);}).catch(e=>{rg.disabled=false;bad("rpMsg",e.message);});};
+      document.querySelectorAll("[data-rp]").forEach(b=>b.onclick=()=>{api(`/groups/${GID}/reports/${b.dataset.rp}`).then(r=>{const p=r.payload,d=p.data||{};const t=d.totals||(d.rows&&d.rows[0]?d.rows[0].totals:{});
+        open(`<h2 style="margin-top:0">${r.kind==="annual"?"تقرير سنوي":"تقرير شهري"} ${esc(r.period)} — ${esc(p.group)}</h2><div class="flag" style="background:${r.intact?"rgba(16,185,129,.12)":"rgba(239,68,68,.15)"}" id="rpIntact">${r.intact?"✔ سليم — يطابق البصمة المحفوظة":"✖ تغيّر بعد الحفظ — لا يطابق البصمة"}</div>
+          <div class="kv"><b>العملة</b><span>${esc(p.base_currency)}</span><b>الإيرادات</b><span>${t.revenue&&t.revenue.aggregatable?n(t.revenue.value):"غير قابل للتجميع"}</span>${t.net_profit?`<b>صافي الربح</b><span>${t.net_profit.aggregatable?n(t.net_profit.value):"غير قابل للتجميع"}</span>`:""}
+          <b>أسعار التحويل</b><span dir="ltr">${esc(Object.entries(p.fx||{}).map(([k,v])=>`${k}=${v.rate} (${v.as_of})`).join(", ")||"—")}</span><b>أُنشئ</b><span>${esc(p.generated_at)} · ${esc(p.by)}</span><b>البصمة</b><span dir="ltr" style="font-family:monospace;font-size:11px;word-break:break-all">${esc(r.checksum)}</span></div>
+          <div class="cta"><button class="btn ghost" id="rpDl">تنزيل JSON</button><button class="btn ghost" id="rpCl">إغلاق</button></div>`);
+        $("rpCl").onclick=close;$("rpDl").onclick=()=>{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify({checksum:r.checksum,payload:p},null,2)],{type:"application/json"}));a.download=`group-report-${r.period}.json`;a.click();};}).catch(e=>alert(e.message));});}
+    if(k==="benchmark"){const s=$("bmP");if(s)s.onchange=()=>{vBenchmark(s.value).then(h=>{$("content").innerHTML=h;wire("benchmark");});};}
+    if(k==="members"){loadInvites();
+      const iv=$("ivGo");if(iv)iv.onclick=()=>{iv.disabled=true;api(`/groups/${GID}/invites`,{kind:"member",role:$("ivR").value,label:$("ivL").value,company_ids:[...document.querySelectorAll("[data-ivc]:checked")].map(x=>Number(x.dataset.ivc))})
+        .then(r=>{iv.disabled=false;showCode(r);}).catch(e=>{iv.disabled=false;bad("ivMsg",e.message);});};
+      document.querySelectorAll("[data-msave]").forEach(b=>b.onclick=()=>{const id=b.dataset.msave;b.disabled=true;api(`/groups/${GID}/members/update`,{id:Number(id),role:document.querySelector(`[data-mrole="${id}"]`)?.value,
+          company_ids:[...document.querySelectorAll(`[data-msc-${id}]:checked`)].map(x=>Number(x.getAttribute("data-msc-"+id)))}).then(()=>{b.disabled=false;ok("memMsg","✔ حُفظ — يسري فوراً");}).catch(e=>{b.disabled=false;bad("memMsg",e.message);});});
+      document.querySelectorAll("[data-mrm]").forEach(b=>b.onclick=()=>{if(!confirm(b.dataset.self?"مغادرة المجموعة؟ تفقد الوصول لشركاتها فوراً.":"إزالة العضو؟ يفقد الوصول فوراً."))return;b.disabled=true;
+        api(`/groups/${GID}/members/remove`,{id:Number(b.dataset.mrm)}).then(()=>b.dataset.self?load():render()).catch(e=>{b.disabled=false;bad("memMsg",e.message);});});}
+    if(k==="settings"){
+      const sg=$("sgGo");if(sg)sg.onclick=()=>{sg.disabled=true;api("/groups/update",{group_id:GID,name:$("sgN").value,base_currency:$("sgC").value}).then(()=>{ok("sgMsg","✔ حُفظ");setTimeout(load,600);}).catch(e=>{sg.disabled=false;bad("sgMsg",e.message);});};
+      const fg=$("fxGo");if(fg)fg.onclick=()=>{const fx={};document.querySelectorAll("[data-fxr]").forEach(i=>{const k=i.dataset.fxr;if(i.value!=="")fx[k]={rate:Number(i.value),as_of:document.querySelector(`[data-fxd="${k}"]`).value};});
+        fg.disabled=true;api(`/groups/${GID}/settings`,{fx}).then(()=>{fg.disabled=false;ok("fxMsg","✔ حُفظت الأسعار — تُطبَّق على كل التقارير فوراً");}).catch(e=>{fg.disabled=false;bad("fxMsg",e.message);});};
+      const eg=$("elGo");if(eg)eg.onclick=()=>{eg.disabled=true;api(`/groups/${GID}/eliminations`,{period:$("elP").value.trim(),seller_id:Number($("elS").value),buyer_id:Number($("elB").value),amount:$("elA").value===""?null:Number($("elA").value),note:$("elN").value})
+        .then(()=>render()).catch(e=>{eg.disabled=false;bad("elMsg",e.message);});};
+      document.querySelectorAll("[data-eld]").forEach(b=>b.onclick=()=>{b.disabled=true;api(`/groups/${GID}/eliminations/delete`,{id:Number(b.dataset.eld)}).then(()=>render()).catch(e=>{b.disabled=false;alert(e.message);});});
+      const ar=$("arGo");if(ar)ar.onclick=()=>{if(!confirm("أرشفة المجموعة نهائياً؟ يُلغى ربط كل الشركات ويفقد الأعضاء الوصول."))return;ar.disabled=true;api("/groups/archive",{group_id:GID}).then(()=>{GID=null;location.hash="overview";load();}).catch(e=>{ar.disabled=false;bad("arMsg",e.message);});};}
+  }
+  $("grpSel").onchange=()=>{GID=Number($("grpSel").value);loadGroup();};
+  $("joinBtn").onclick=()=>{open(`<h2 style="margin-top:0">🔑 انضمام برمز</h2>`+joinForm()+`<div class="cta"><button class="btn ghost" id="jCl">إغلاق</button></div>`);wireJoin();$("jCl").onclick=close;};
+  $("newBtn").onclick=()=>{open(`<h2 style="margin-top:0">مجموعة جديدة</h2>`+createForm()+`<div class="cta"><button class="btn ghost" id="cgCl">إغلاق</button></div>`);wireCreate();$("cgCl").onclick=close;};
+  $("ov").onclick=e=>{if(e.target===$("ov"))close();};
+  load();
+})();
+</script>
+<script src="nabbah-sidebar.js"></script>
+</body>

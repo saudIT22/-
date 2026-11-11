@@ -1909,6 +1909,99 @@ class WebhookDelivery(SQLModel, table=True):
     delivered_at: Optional[_DTCOL] = None
 
 
+# ═══ Phase 6.3 — إدارة الشركات المتعددة: جداول جديدة فقط (لا Company ثانية ولا تسجيل دخول بديل) ═══
+class OrganizationGroup(SQLModel, table=True):
+    """مجموعة شركات (Organization Group) + إعدادات التوحيد (العملة الأساسية وأسعار التحويل المعلنة)."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    name: str = ""
+    owner_user_id: int = Field(index=True)
+    base_currency: str = "SAR"
+    settings_json: str = "{}"                # {"fx": {"USD": {"rate": 3.75, "as_of": "YYYY-MM-DD"}}}
+    status: str = "active"                   # active | archived
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+    updated_at: Optional[_DTCOL] = None
+
+
+class GroupCompanyLink(SQLModel, table=True):
+    """علاقة شركة بمجموعة (Company Relationship). الشركة الواحدة نشطة في مجموعة واحدة فقط — منعاً للعد المزدوج."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    group_id: int = Field(index=True)
+    company_id: int = Field(index=True)
+    relationship: str = "subsidiary"
+    ownership_pct: Optional[float] = None
+    status: str = "active"                   # active | unlinked
+    linked_by: str = ""
+    linked_at: _DTCOL = Field(default_factory=_now_naive)
+    unlinked_by: str = ""
+    unlinked_at: Optional[_DTCOL] = None
+
+
+class GroupMember(SQLModel, table=True):
+    """عضوية المجموعة ودورها (Group Membership + Group Role) — تُربط بحساب المستخدم عند قبول رمز الدعوة."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    group_id: int = Field(index=True)
+    user_id: int = Field(index=True)
+    role: str = "viewer"
+    company_ids_json: str = "[]"             # فارغ = كل شركات المجموعة (للأدوار على مستوى الشركة يجب التحديد)
+    status: str = "active"                   # active | removed
+    invited_by: str = ""
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+    updated_at: Optional[_DTCOL] = None
+
+
+class GroupInvite(SQLModel, table=True):
+    """رمز دعوة لمرة واحدة (مُجزّأ): ضم عضو أو ربط شركة يملكها شخص آخر — بموافقته عند إدخال الرمز."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    group_id: int = Field(index=True)
+    kind: str = "member"                     # member | company
+    code_hash: str = Field(default="", index=True)
+    role: str = ""
+    company_ids_json: str = "[]"
+    relationship: str = "subsidiary"
+    label: str = ""
+    expires_at: Optional[_DTCOL] = None
+    used_at: Optional[_DTCOL] = None
+    used_by: str = ""
+    revoked: int = 0
+    created_by: str = ""
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+class GroupElimination(SQLModel, table=True):
+    """استبعاد معاملة بين شركتين في المجموعة (بالعملة الأساسية) — يخفض الإيرادات الموحدة دون تغيير الربح."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    group_id: int = Field(index=True)
+    period: str = ""
+    seller_company_id: int = 0
+    buyer_company_id: int = 0
+    amount: float = 0
+    note: str = ""
+    created_by: str = ""
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+class GroupReport(SQLModel, table=True):
+    """لقطة تقرير مجمع محفوظة ببصمة SHA-256 (Consolidated Report)."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    group_id: int = Field(index=True)
+    kind: str = "monthly"                    # monthly | annual
+    period: str = ""
+    payload_json: str = "{}"
+    checksum: str = ""
+    created_by: str = ""
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+class GroupActivity(SQLModel, table=True):
+    """سجل نشاط المجموعة: الربط والإلغاء والأعضاء والإعدادات والتقارير."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    group_id: int = Field(index=True)
+    user_name: str = ""
+    action: str = ""
+    detail: str = ""
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+
+
 class BenchmarkDataset(SQLModel, table=True):
     """طبقة المعايير القطاعية (3.5): company_id فارغ = معيار المنصّة (من الإدارة)، وإلا معيار خاص بالشركة.
     كل معيار بمصدره ومنهجيته وفترته وعيّنته وثقته — لا معيار بلا مصدر."""
@@ -2509,6 +2602,8 @@ def get_current_user(authorization: str = Header(default="")) -> User:
             raise HTTPException(status_code=401, detail="المستخدم غير موجود")
         if tv != int(getattr(user, "token_version", 0) or 0):
             raise HTTPException(status_code=401, detail="تم تسجيل خروجك — تغيّرت كلمة المرور أو أُنهيت الجلسات. سجّل الدخول من جديد")
+        if str(user.company_role or "").startswith("group:"):
+            _grp_validate_context(s, user)      # Phase 6.3: سُحبت صلاحية المجموعة؟ يعود لشركته فوراً
         company_id = user.company_id
     if sid:
         # جلسة منفصلة حتى لا يُنتهى كائن المستخدم بعد commit. الرموز القديمة بلا sid تبقى مقبولة (توافق).
@@ -2852,6 +2947,11 @@ def page_company_integrations():
 @app.get("/company-developers.html")
 def page_company_developers():
     return FileResponse("company-developers.html")
+
+
+@app.get("/company-group.html")
+def page_company_group():
+    return FileResponse("company-group.html")
 
 
 @app.get("/company-security.html")
@@ -4654,6 +4754,16 @@ def company_info(user: User = Depends(get_current_user)):
         companies = s.exec(
             select(Company).where(Company.owner_id == user.id, Company.is_active == 1)
         ).all()
+        n_owned = len(companies)
+        owned_ids = {c.id for c in companies}
+        try:      # Phase 6.3: شركات متاحة عبر مجموعة (للتبديل) — مالك الشركة يبقى المالك الوحيد
+            if _load_p24("group_engine") is not None:
+                for cid_ in sorted(_grp_grants(s, user.id)):
+                    c_ = s.get(Company, cid_)
+                    if c_ and c_.is_active == 1 and c_.id not in owned_ids and _grp_can_switch(s, user, c_.id):
+                        companies.append(c_)
+        except Exception as _e:
+            _logger.error(f"company_info groups: {type(_e).__name__}")
         if not companies:
             return {"has_company": False, "companies": [], "active": None,
                     "branches": [], "max_reached": False}
@@ -4663,7 +4773,10 @@ def company_info(user: User = Depends(get_current_user)):
             active_id = companies[0].id
             udb = s.get(User, user.id)
             udb.company_id = active_id
-            udb.company_role = "owner"
+            if active_id in owned_ids:
+                udb.company_role = "owner"
+            else:       # لا شركة مملوكة — يدخل أول شركة متاحة عبر مجموعة بالدور الممنوح
+                udb.company_role = f"group:{_grp_grants(s, user.id, active_id)[active_id][0][0]}"
             s.add(udb)
             s.commit()
 
@@ -4673,7 +4786,7 @@ def company_info(user: User = Depends(get_current_user)):
                 select(CompanyBranch).where(CompanyBranch.company_id == c.id, CompanyBranch.is_active == 1)
             ).all())
             comp_list.append({"id": c.id, "name": c.name, "sector": c.sector,
-                              "branch_count": bc, "active": c.id == active_id})
+                              "branch_count": bc, "active": c.id == active_id, "via_group": c.id not in owned_ids})
 
         active = next((c for c in companies if c.id == active_id), companies[0])
         branches = s.exec(
@@ -4685,7 +4798,8 @@ def company_info(user: User = Depends(get_current_user)):
 
         return {
             "has_company": True,
-            "max_reached": len(companies) >= 3,
+            "max_reached": n_owned >= 3,
+            "active_via_group": active.id not in owned_ids,
             "companies": comp_list,
             "active": {"id": active.id, "name": active.name, "sector": active.sector, "is_active": active.is_active},
             "subscribed": active.is_active == 1,
@@ -4750,11 +4864,17 @@ def company_create(data: dict, user: User = Depends(get_current_user)):
 def company_switch(data: dict, user: User = Depends(get_current_user)):
     cid = data.get("company_id")
     with Session(engine) as s:
-        company = s.get(Company, int(cid)) if cid else None
+        try:
+            company = s.get(Company, int(cid)) if cid else None
+        except (TypeError, ValueError):
+            company = None
+        if company and company.owner_id != user.id and _load_p24("group_engine") is not None:
+            return groups_switch({"company_id": company.id}, user=user)      # Phase 6.3: شركة عبر مجموعة
         if not company or company.owner_id != user.id:
             raise HTTPException(404, "الشركة غير موجودة")
         udb = s.get(User, user.id)
         udb.company_id = company.id
+        udb.company_role = "owner"
         s.add(udb)
         s.commit()
         return {"ok": True, "active": company.id, "name": company.name}
@@ -4779,11 +4899,17 @@ def company_delete(data: dict = None, user: User = Depends(get_current_user)):
         s.delete(company)
         s.commit()
 
+        for l_ in s.exec(select(GroupCompanyLink).where(GroupCompanyLink.company_id == cid, GroupCompanyLink.status == "active")).all():
+            l_.status, l_.unlinked_at, l_.unlinked_by = "unlinked", datetime.now(), "حذف الشركة"
+            s.add(l_)
+        s.commit()
+
         udb = s.get(User, user.id)
         rest = s.exec(
             select(Company).where(Company.owner_id == user.id, Company.is_active == 1)
         ).all()
         udb.company_id = rest[0].id if rest else None
+        udb.company_role = "owner" if rest else ""
         s.add(udb)
         s.commit()
 
@@ -5920,7 +6046,7 @@ def engines_check(user: User = Depends(get_current_user)):
 #  Phase 2.4 — Data Foundation: datasets, ingestion, periods, master data
 #  يعيد استخدام: parse_csv/parse_excel · طبقة الموثوقية · RBAC · سجل التدقيق
 # ═══════════════════════════════════════════════════════════
-DATA_ROLES_VIEW = ("owner", "manager", "accountant")
+DATA_ROLES_VIEW = ("owner", "manager", "accountant", "executive", "viewer")
 DATA_ROLES_EDIT = ("owner", "accountant")
 MAX_STAGING_ROWS = 50000     # كان 5000. الأكبر من ذلك يُقسَّم لعدة ملفات (الرسالة توضّح العدد)
 
@@ -5929,7 +6055,7 @@ def _load_p24(name):
     """يحمّل محركات 2.4 من المجلد أو من حزمة nabbah_engines."""
     try:
         import sys as _sys, os as _os, importlib
-        for _d in ("phase21", "phase22", "phase23", "phase24", "phase25", "phase26", "phase27", "phase28", "phase29", "phase210", "phase211", "phase30", "phase31", "phase32", "phase33", "phase34", "phase35", "phase37", "phase38", "phase39", "phase310", "phase311", "phase312", "phase41", "phase42", "phase43", "phase44", "phase45", "phase67", "phase61"):
+        for _d in ("phase21", "phase22", "phase23", "phase24", "phase25", "phase26", "phase27", "phase28", "phase29", "phase210", "phase211", "phase30", "phase31", "phase32", "phase33", "phase34", "phase35", "phase37", "phase38", "phase39", "phase310", "phase311", "phase312", "phase41", "phase42", "phase43", "phase44", "phase45", "phase67", "phase61", "phase63"):
             _p = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), _d)
             if _p not in _sys.path:
                 _sys.path.insert(0, _p)
@@ -16005,6 +16131,820 @@ def api_v1_job(connection_id: int, job_id: int, request: Request):
     return _api_run(request, "/api/v1/integrations/{id}/jobs/{job_id}", "integrations.read", fn)
 
 
+# ═══════════════════════════════════════════════════════════
+#  Phase 6.3 — Multi-Company Management — إدارة الشركات المتعددة
+#  مجموعة ← شركات مرتبطة (بموافقة مالك كل شركة) ← أعضاء بأدوار. البيانات تبقى في شركتها؛
+#  التوحيد يقرأ نتيجة المحرك المالي لكل شركة ولا يجمع إلا ما هو قابل للتجميع.
+# ═══════════════════════════════════════════════════════════
+_GRP_SERIES_CACHE = {}
+_GRP_MAX_OWNED = 3
+
+
+def _grp_engine():
+    ge = _load_p24("group_engine")
+    if ge is None:
+        raise HTTPException(503, "محرّك المجموعات غير متاح — " + _p23_diagnostic())
+    return ge
+
+
+def _grp_log(s, gid, user, action, detail=""):
+    s.add(GroupActivity(group_id=gid, user_name=str(getattr(user, "name", "") or "")[:100], action=action[:60], detail=str(detail)[:400], created_at=datetime.now()))
+
+
+def _grp_grants(s, user_id, company_id=None):
+    """منح المستخدم عبر المجموعات: {company_id: [(group_id, role)]} — مالك المجموعة + الأعضاء النشطون، للشركات المرتبطة فعلاً."""
+    pairs = [(g.id, "group_owner", None) for g in s.exec(select(OrganizationGroup).where(OrganizationGroup.owner_user_id == user_id,
+                                                                                         OrganizationGroup.status == "active")).all()]
+    for m in s.exec(select(GroupMember).where(GroupMember.user_id == user_id, GroupMember.status == "active")).all():
+        g = s.get(OrganizationGroup, m.group_id)
+        if g and g.status == "active":
+            sc = [int(x) for x in json.loads(m.company_ids_json or "[]") if str(x).isdigit()]
+            pairs.append((m.group_id, m.role, set(sc) if sc else None))
+    out = {}
+    for gid, role, scope in pairs:
+        q = select(GroupCompanyLink).where(GroupCompanyLink.group_id == gid, GroupCompanyLink.status == "active")
+        if company_id is not None:
+            q = q.where(GroupCompanyLink.company_id == company_id)
+        for l in s.exec(q).all():
+            if scope is None or l.company_id in scope:
+                out.setdefault(l.company_id, []).append((gid, role))
+    return out
+
+
+def _grp_company_role(s, user):
+    """الدور الفعلي داخل شركة دخلها المستخدم عبر مجموعة (للاستخدام من get_user_role)."""
+    if not str(getattr(user, "company_role", "") or "").startswith("group:") or not user.company_id:
+        return None
+    ge = _load_p24("group_engine")
+    if ge is None:
+        return None
+    roles = [r for _g, r in _grp_grants(s, user.id, user.company_id).get(user.company_id, [])]
+    return ge.best_company_role(roles)
+
+
+def _grp_can_switch(s, user, company_id):
+    ge = _load_p24("group_engine")
+    return bool(ge and ge.best_company_role([r for _g, r in _grp_grants(s, user.id, company_id).get(company_id, [])]))
+
+
+def _grp_validate_context(s, user):
+    """يُستدعى من get_current_user عندما يكون المستخدم داخل شركة عبر مجموعة: إن سُحبت الصلاحية يُعاد لشركته فوراً."""
+    try:
+        c = s.get(Company, user.company_id) if user.company_id else None
+        if c and c.owner_id == user.id:
+            user.company_role = "owner"
+        elif c and _grp_company_role(s, user):
+            return
+        else:
+            own = s.exec(select(Company).where(Company.owner_id == user.id, Company.is_active == 1)).first()
+            user.company_id, user.company_role = (own.id, "owner") if own else (None, "")
+        s.add(user)
+        s.commit()
+        s.refresh(user)
+    except Exception as _e:
+        _logger.error(f"group context check failed: {type(_e).__name__}")
+        s.rollback()
+        own = s.exec(select(Company).where(Company.owner_id == user.id, Company.is_active == 1)).first()
+        user.company_id, user.company_role = (own.id, "owner") if own else (None, "")
+        s.add(user)
+        s.commit()
+        s.refresh(user)
+
+
+def _grp_access(s, user, gid, perm=None):
+    """يُرجع (المجموعة، الدور، نطاق الشركات أو None=الكل). يرفض غير الأعضاء بـ 404 (لا كشف لوجود المجموعة)."""
+    ge = _grp_engine()
+    try:
+        g = s.get(OrganizationGroup, int(gid))
+    except (TypeError, ValueError):
+        g = None
+    if not g or g.status != "active":
+        raise HTTPException(404, "المجموعة غير موجودة")
+    if g.owner_user_id == user.id:
+        role, scope = "group_owner", None
+    else:
+        m = s.exec(select(GroupMember).where(GroupMember.group_id == g.id, GroupMember.user_id == user.id, GroupMember.status == "active")).first()
+        if not m:
+            raise HTTPException(404, "المجموعة غير موجودة")
+        role = m.role
+        sc = [int(x) for x in json.loads(m.company_ids_json or "[]") if str(x).isdigit()]
+        scope = set(sc) if sc else None
+    if perm and not ge.can(role, perm):
+        raise HTTPException(403, f"دورك ({ge.GROUP_ROLES.get(role, {}).get('ar', role)}) لا يملك صلاحية: {ge.PERM_AR.get(perm, perm)}")
+    return g, role, scope
+
+
+def _grp_links(s, gid, scope=None):
+    ls = s.exec(select(GroupCompanyLink).where(GroupCompanyLink.group_id == gid, GroupCompanyLink.status == "active")).all()
+    return [l for l in ls if scope is None or l.company_id in scope]
+
+
+def _grp_series(s, company):
+    """سلسلة شهرية من المحرك المالي للشركة نفسها (نفس أرقام صفحتها المالية) — تخزين مؤقت دقيقتين."""
+    hit = _GRP_SERIES_CACHE.get(company.id)
+    if hit and time.time() - hit[0] < 120:
+        return hit[1], hit[2]
+    status = "ok"
+    try:
+        res = _fin_result(s, company, grain="month")
+        series = [{"period": t["period"], "revenue": t.get("revenue"), "opex": t.get("opex"), "gross_profit": t.get("gross_profit"),
+                   "net_profit": t.get("net_profit")} for t in (res.get("trends") or [])] if res.get("has_data") else []
+        if not series:
+            status = "no_data"
+    except HTTPException:
+        series, status = [], "unavailable"
+    except Exception as _e:
+        _logger.error(f"group series {company.id}: {type(_e).__name__}: {str(_e)[:120]}")
+        series, status = [], "error"
+    _GRP_SERIES_CACHE[company.id] = (time.time(), series, status)
+    return series, status
+
+
+def _grp_companies(s, g, scope=None, with_series=True):
+    out = []
+    for l in _grp_links(s, g.id, scope):
+        c = s.get(Company, l.company_id)
+        if not c:
+            continue
+        nb = len(s.exec(select(CompanyBranch).where(CompanyBranch.company_id == c.id, CompanyBranch.is_active == 1)).all())
+        d = {"id": c.id, "name": c.name, "sector": c.sector, "currency": (c.currency or "SAR").upper(), "country": c.country, "branches": nb,
+             "employees": c.employees or 0, "fiscal_year_start": c.fiscal_year_start or 1, "link": l}
+        if with_series:
+            d["series"], d["data_status"] = _grp_series(s, c)
+        out.append(d)
+    return out
+
+
+def _grp_settings(g):
+    try:
+        st = json.loads(g.settings_json or "{}")
+        return st if isinstance(st, dict) else {}
+    except (TypeError, ValueError):
+        return {}
+
+
+def _grp_elims(s, gid):
+    return [{"id": e.id, "period": e.period, "seller_id": e.seller_company_id, "buyer_id": e.buyer_company_id, "amount": e.amount, "note": e.note,
+             "by": e.created_by, "at": e.created_at} for e in s.exec(select(GroupElimination).where(GroupElimination.group_id == gid)
+                                                                     .order_by(GroupElimination.created_at.desc()).limit(500)).all()]
+
+
+def _grp_public(cs):
+    return [{k: v for k, v in c.items() if k not in ("link",)} for c in cs]
+
+
+@app.get("/groups")
+def groups_list(user: User = Depends(get_current_user)):
+    ge = _grp_engine()
+    with Session(engine) as s:
+        rows = {g.id: (g, "group_owner") for g in s.exec(select(OrganizationGroup).where(OrganizationGroup.owner_user_id == user.id,
+                                                                                        OrganizationGroup.status == "active")).all()}
+        for m in s.exec(select(GroupMember).where(GroupMember.user_id == user.id, GroupMember.status == "active")).all():
+            g = s.get(OrganizationGroup, m.group_id)
+            if g and g.status == "active" and g.id not in rows:
+                rows[g.id] = (g, m.role)
+        owned = s.exec(select(Company).where(Company.owner_id == user.id, Company.is_active == 1)).all()
+        items = []
+        for g, role in rows.values():
+            n = len(_grp_links(s, g.id))
+            items.append({"id": g.id, "name": g.name, "base_currency": g.base_currency, "role": role, "role_ar": ge.GROUP_ROLES[role]["ar"],
+                          "perms": sorted(ge.role_perms(role)), "companies": n, "is_owner": g.owner_user_id == user.id})
+        linked = {l.company_id: l.group_id for l in s.exec(select(GroupCompanyLink).where(GroupCompanyLink.status == "active")).all()
+                  if l.company_id in {c.id for c in owned}}
+        return {"groups": sorted(items, key=lambda x: x["id"]), "owned_companies": [{"id": c.id, "name": c.name, "group_id": linked.get(c.id)} for c in owned],
+                "can_create": bool(owned), "roles": [{"key": k, "ar": v["ar"], "level": v["level"], "perms": sorted(v["perms"])} for k, v in ge.GROUP_ROLES.items()],
+                "perm_ar": ge.PERM_AR, "relationships": ge.RELATIONSHIPS, "active_company_id": user.company_id,
+                "context": "group" if str(user.company_role or "").startswith("group:") else "owner"}
+
+
+@app.post("/groups")
+def groups_create(body: dict, user: User = Depends(get_current_user)):
+    body = body or {}
+    with Session(engine) as s:
+        owned = s.exec(select(Company).where(Company.owner_id == user.id, Company.is_active == 1)).all()
+        if not owned:
+            raise HTTPException(403, "إنشاء مجموعة يتطلب أن تملك شركة نشطة")
+        if len(s.exec(select(OrganizationGroup).where(OrganizationGroup.owner_user_id == user.id, OrganizationGroup.status == "active")).all()) >= 3:
+            raise HTTPException(409, "الحد 3 مجموعات لكل مالك")
+        name = str(body.get("name") or "").strip()[:120]
+        if not name:
+            raise HTTPException(422, "اكتب اسم المجموعة")
+        base = str(body.get("base_currency") or "SAR").upper().strip()
+        if len(base) != 3 or not base.isalpha():
+            raise HTTPException(422, "العملة الأساسية رمز من 3 أحرف (مثل SAR)")
+        g = OrganizationGroup(name=name, owner_user_id=user.id, base_currency=base, created_at=datetime.now(), updated_at=datetime.now())
+        s.add(g)
+        s.commit()
+        s.refresh(g)
+        _grp_log(s, g.id, user, "group_create", name)
+        linked = []
+        for cid in body.get("company_ids") or []:
+            try:
+                linked.append(_grp_link_own(s, g, user, int(cid), "subsidiary", None))
+            except HTTPException as e:
+                _grp_log(s, g.id, user, "link_skipped", f"{cid}: {e.detail}")
+        s.commit()
+        return {"ok": True, "id": g.id, "linked": linked}
+
+
+def _grp_link_own(s, g, user, company_id, relationship, pct):
+    c = s.get(Company, company_id)
+    if not c or c.owner_id != user.id:
+        raise HTTPException(403, "تربط مباشرة الشركات التي تملكها فقط — للشركات الأخرى استخدم رمز ربط يدخله مالكها")
+    return _grp_do_link(s, g, user, c, relationship, pct)
+
+
+def _grp_do_link(s, g, user, c, relationship, pct):
+    ge = _grp_engine()
+    if relationship not in ge.RELATIONSHIPS:
+        raise HTTPException(422, "نوع العلاقة غير صالح")
+    if pct is not None:
+        try:
+            pct = float(pct)
+        except (TypeError, ValueError):
+            raise HTTPException(422, "نسبة الملكية رقم")
+        if not 0 < pct <= 100:
+            raise HTTPException(422, "نسبة الملكية بين 0 و100")
+    cur = s.exec(select(GroupCompanyLink).where(GroupCompanyLink.company_id == c.id, GroupCompanyLink.status == "active")).first()
+    if cur:
+        raise HTTPException(409, "الشركة مرتبطة بمجموعة أخرى" if cur.group_id != g.id else "الشركة مرتبطة بهذه المجموعة مسبقاً")
+    s.add(GroupCompanyLink(group_id=g.id, company_id=c.id, relationship=relationship, ownership_pct=pct, status="active",
+                           linked_by=(user.name or "")[:100], linked_at=datetime.now()))
+    _grp_log(s, g.id, user, "company_link", f"{c.name} ({ge.RELATIONSHIPS[relationship]})")
+    log_audit(c.id, user.id, user.name, "group_link", f"group:{g.id}", g.name[:100])
+    return c.id
+
+
+@app.post("/groups/update")
+def groups_update(body: dict, user: User = Depends(get_current_user)):
+    body = body or {}
+    with Session(engine) as s:
+        g, role, _ = _grp_access(s, user, body.get("group_id"), "configure")
+        if str(body.get("name") or "").strip():
+            g.name = str(body["name"]).strip()[:120]
+        if body.get("base_currency"):
+            base = str(body["base_currency"]).upper().strip()
+            if len(base) != 3 or not base.isalpha():
+                raise HTTPException(422, "العملة الأساسية رمز من 3 أحرف")
+            g.base_currency = base
+        g.updated_at = datetime.now()
+        s.add(g)
+        _grp_log(s, g.id, user, "group_update", f"{g.name} · {g.base_currency}")
+        s.commit()
+        return {"ok": True}
+
+
+@app.post("/groups/archive")
+def groups_archive(body: dict, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        g, role, _ = _grp_access(s, user, (body or {}).get("group_id"))
+        if role != "group_owner":
+            raise HTTPException(403, "أرشفة المجموعة لمالكها فقط")
+        g.status, g.updated_at = "archived", datetime.now()
+        for l in _grp_links(s, g.id):
+            l.status, l.unlinked_at, l.unlinked_by = "unlinked", datetime.now(), (user.name or "")[:100]
+            s.add(l)
+        s.add(g)
+        _grp_log(s, g.id, user, "group_archive", g.name)
+        s.commit()
+        return {"ok": True}
+
+
+@app.get("/groups/{gid}/overview")
+def groups_overview(gid: int, user: User = Depends(get_current_user)):
+    ge = _grp_engine()
+    with Session(engine) as s:
+        g, role, scope = _grp_access(s, user, gid, "overview")
+        cs = _grp_companies(s, g, scope)
+        fin = ge.can(role, "financials")
+        st = _grp_settings(g)
+        ov = ge.overview(cs, base=g.base_currency, fx=st.get("fx"), eliminations=_grp_elims(s, g.id) if scope is None else [], now=datetime.now(), show_financials=fin)
+        ov["data_status"] = {c["id"]: c["data_status"] for c in cs}
+        return {"group": {"id": g.id, "name": g.name, "base_currency": g.base_currency}, "role": role, "role_ar": ge.GROUP_ROLES[role]["ar"],
+                "perms": sorted(ge.role_perms(role)), "scoped": scope is not None, "overview": ov}
+
+
+@app.get("/groups/{gid}/companies")
+def groups_companies(gid: int, user: User = Depends(get_current_user)):
+    ge = _grp_engine()
+    with Session(engine) as s:
+        g, role, scope = _grp_access(s, user, gid, "overview")
+        out = []
+        for c in _grp_companies(s, g, scope, with_series=False):
+            co = s.get(Company, c["id"])
+            owner = s.get(User, co.owner_id)
+            l = c["link"]
+            out.append({**{k: v for k, v in c.items() if k != "link"}, "relationship": l.relationship, "relationship_ar": ge.RELATIONSHIPS.get(l.relationship, l.relationship),
+                        "ownership_pct": l.ownership_pct, "linked_at": l.linked_at, "linked_by": l.linked_by, "subscription": "نشط" if co.is_active == 1 else "قيد التفعيل",
+                        "plan": co.plan, "admin": owner.name if owner else "—", "you_own": co.owner_id == user.id,
+                        "can_switch": ge.can(role, "switch") or co.owner_id == user.id})
+        return {"companies": out, "can_manage": ge.can(role, "manage_companies"), "relationships": ge.RELATIONSHIPS, "role": role}
+
+
+@app.post("/groups/{gid}/companies/link-own")
+def groups_link_own(gid: int, body: dict, user: User = Depends(get_current_user)):
+    body = body or {}
+    with Session(engine) as s:
+        g, role, _ = _grp_access(s, user, gid, "manage_companies")
+        try:
+            cid = int(body.get("company_id"))
+        except (TypeError, ValueError):
+            raise HTTPException(422, "اختر شركة")
+        _grp_link_own(s, g, user, cid, str(body.get("relationship") or "subsidiary"), body.get("ownership_pct"))
+        s.commit()
+        _GRP_SERIES_CACHE.pop(cid, None)
+        return {"ok": True}
+
+
+@app.post("/groups/{gid}/companies/create")
+def groups_company_create(gid: int, body: dict, user: User = Depends(get_current_user)):
+    body = body or {}
+    with Session(engine) as s:
+        g, role, _ = _grp_access(s, user, gid, "manage_companies")
+    r = company_create({"name": body.get("name"), "sector": body.get("sector") or "retail", "branches": body.get("branches") or []}, user=user)
+    with Session(engine) as s:
+        g = s.get(OrganizationGroup, gid)
+        _grp_link_own(s, g, user, r["company_id"], str(body.get("relationship") or "subsidiary"), body.get("ownership_pct"))
+        s.commit()
+    return {"ok": True, "company_id": r["company_id"]}
+
+
+@app.post("/groups/{gid}/companies/update")
+def groups_company_update(gid: int, body: dict, user: User = Depends(get_current_user)):
+    ge = _grp_engine()
+    body = body or {}
+    with Session(engine) as s:
+        g, role, scope = _grp_access(s, user, gid)
+        try:
+            cid = int(body.get("company_id"))
+        except (TypeError, ValueError):
+            raise HTTPException(422, "معرّف غير صالح")
+        l = s.exec(select(GroupCompanyLink).where(GroupCompanyLink.group_id == g.id, GroupCompanyLink.company_id == cid, GroupCompanyLink.status == "active")).first()
+        if not l or (scope is not None and cid not in scope):
+            raise HTTPException(404, "الشركة غير مرتبطة بالمجموعة")
+        c = s.get(Company, cid)
+        ch = []
+        if ge.can(role, "manage_companies"):
+            if "relationship" in body:
+                if body["relationship"] not in ge.RELATIONSHIPS:
+                    raise HTTPException(422, "نوع العلاقة غير صالح")
+                l.relationship = body["relationship"]; ch.append("العلاقة")
+            if "ownership_pct" in body:
+                v = body.get("ownership_pct")
+                if v in (None, ""):
+                    l.ownership_pct = None
+                else:
+                    try:
+                        v = float(v)
+                    except (TypeError, ValueError):
+                        raise HTTPException(422, "نسبة الملكية رقم")
+                    if not 0 < v <= 100:
+                        raise HTTPException(422, "نسبة الملكية بين 0 و100")
+                    l.ownership_pct = v
+                ch.append("نسبة الملكية")
+            s.add(l)
+        owner_fields = [k for k in ("sector", "currency", "country", "fiscal_year_start") if k in body]
+        if owner_fields:
+            if c.owner_id != user.id:
+                raise HTTPException(403, "بيانات الشركة (القطاع/العملة/الدولة) يعدّلها مالكها فقط")
+            if "sector" in body and str(body["sector"]).strip():
+                c.sector = str(body["sector"]).strip()[:40]; ch.append("القطاع")
+            if "currency" in body:
+                cur = str(body["currency"] or "").upper().strip()
+                if len(cur) != 3 or not cur.isalpha():
+                    raise HTTPException(422, "العملة رمز من 3 أحرف")
+                c.currency = cur; ch.append("العملة")
+            if "country" in body:
+                ctry = str(body["country"] or "").upper().strip()
+                if len(ctry) != 2 or not ctry.isalpha():
+                    raise HTTPException(422, "الدولة رمز من حرفين (مثل SA)")
+                c.country = ctry; ch.append("الدولة")
+            if "fiscal_year_start" in body:
+                try:
+                    fy = int(body["fiscal_year_start"])
+                except (TypeError, ValueError):
+                    raise HTTPException(422, "شهر بداية السنة المالية 1–12")
+                if not 1 <= fy <= 12:
+                    raise HTTPException(422, "شهر بداية السنة المالية 1–12")
+                c.fiscal_year_start = fy; ch.append("السنة المالية")
+            s.add(c)
+        if not ch:
+            raise HTTPException(403 if not ge.can(role, "manage_companies") else 422, "لا تعديل مسموح أو مطلوب")
+        _grp_log(s, g.id, user, "company_update", f"{c.name}: {'، '.join(ch)}")
+        s.commit()
+        _GRP_SERIES_CACHE.pop(cid, None)
+        return {"ok": True, "changed": ch}
+
+
+@app.post("/groups/{gid}/companies/unlink")
+def groups_company_unlink(gid: int, body: dict, user: User = Depends(get_current_user)):
+    """إلغاء الربط: لمن يدير شركات المجموعة، أو لمالك الشركة نفسها (حقه أن يسحب شركته)."""
+    ge = _grp_engine()
+    with Session(engine) as s:
+        try:
+            g = s.get(OrganizationGroup, int(gid))
+            cid = int((body or {}).get("company_id"))
+        except (TypeError, ValueError):
+            raise HTTPException(422, "معرّف غير صالح")
+        c = s.get(Company, cid)
+        l = s.exec(select(GroupCompanyLink).where(GroupCompanyLink.group_id == gid, GroupCompanyLink.company_id == cid, GroupCompanyLink.status == "active")).first()
+        if not g or not l or not c:
+            raise HTTPException(404, "الربط غير موجود")
+        if c.owner_id != user.id:
+            g, role, _ = _grp_access(s, user, gid, "manage_companies")
+        l.status, l.unlinked_at, l.unlinked_by = "unlinked", datetime.now(), (user.name or "")[:100]
+        s.add(l)
+        _grp_log(s, g.id, user, "company_unlink", c.name)
+        log_audit(c.id, user.id, user.name, "group_unlink", f"group:{g.id}", g.name[:100])
+        s.commit()
+        _GRP_SERIES_CACHE.pop(cid, None)
+        return {"ok": True}
+
+
+@app.post("/groups/{gid}/invites")
+def groups_invite_create(gid: int, body: dict, user: User = Depends(get_current_user)):
+    ge = _grp_engine()
+    body = body or {}
+    kind = str(body.get("kind") or "member")
+    with Session(engine) as s:
+        g, role, scope = _grp_access(s, user, gid, "manage_companies" if kind == "company" else "manage_members")
+        inv = GroupInvite(group_id=g.id, kind=kind, label=str(body.get("label") or "")[:120], created_by=(user.name or "")[:100],
+                          expires_at=datetime.now() + timedelta(days=7), created_at=datetime.now())
+        if kind == "member":
+            r = str(body.get("role") or "")
+            if r not in ge.GROUP_ROLES or r == "group_owner":
+                raise HTTPException(422, "اختر دوراً صالحاً (لا يُمنح دور مالك المجموعة)")
+            if role != "group_owner" and r in ("group_ceo", "group_cfo"):
+                raise HTTPException(403, "أدوار القيادة يمنحها مالك المجموعة فقط")
+            sc = [int(x) for x in (body.get("company_ids") or []) if str(x).isdigit()]
+            linked = {l.company_id for l in _grp_links(s, g.id)}
+            if any(x not in linked for x in sc):
+                raise HTTPException(422, "شركة غير مرتبطة بالمجموعة")
+            if ge.GROUP_ROLES[r]["level"] == "company" and not sc:
+                raise HTTPException(422, "هذا الدور على مستوى الشركة — حدّد الشركات")
+            if scope is not None and (not sc or any(x not in scope for x in sc)):
+                raise HTTPException(403, "تدعو فقط ضمن شركاتك")
+            inv.role, inv.company_ids_json = r, json.dumps(sorted(set(sc)))
+        elif kind == "company":
+            rel = str(body.get("relationship") or "subsidiary")
+            if rel not in ge.RELATIONSHIPS:
+                raise HTTPException(422, "نوع العلاقة غير صالح")
+            inv.relationship = rel
+        else:
+            raise HTTPException(422, "نوع الدعوة غير صالح")
+        code = ge.new_code(kind)
+        inv.code_hash = ge.hash_code(code, SECRET_KEY)
+        s.add(inv)
+        _grp_log(s, g.id, user, f"invite_{kind}", f"{inv.label or ''} {inv.role or inv.relationship}")
+        s.commit()
+        return {"ok": True, "code": code, "expires_at": inv.expires_at,
+                "note_ar": "الرمز يُعرض مرة واحدة وصالح 7 أيام لاستخدام واحد. أرسله للشخص بنفسك — يُدخله من صفحة إدارة الشركات المتعددة › «انضمام برمز»."}
+
+
+@app.get("/groups/{gid}/invites")
+def groups_invites(gid: int, user: User = Depends(get_current_user)):
+    ge = _grp_engine()
+    with Session(engine) as s:
+        g, role, _ = _grp_access(s, user, gid)
+        if not (ge.can(role, "manage_members") or ge.can(role, "manage_companies")):
+            raise HTTPException(403, "غير مصرّح")
+        now = datetime.now()
+        return {"items": [{"id": i.id, "kind": i.kind, "label": i.label, "role": i.role, "role_ar": ge.GROUP_ROLES.get(i.role, {}).get("ar", ""),
+                           "relationship": i.relationship, "status": "used" if i.used_at else "revoked" if i.revoked else "expired" if i.expires_at and i.expires_at < now else "pending",
+                           "used_by": i.used_by, "created_by": i.created_by, "created_at": i.created_at, "expires_at": i.expires_at}
+                          for i in s.exec(select(GroupInvite).where(GroupInvite.group_id == g.id).order_by(GroupInvite.created_at.desc()).limit(200)).all()]}
+
+
+@app.post("/groups/{gid}/invites/revoke")
+def groups_invite_revoke(gid: int, body: dict, user: User = Depends(get_current_user)):
+    ge = _grp_engine()
+    with Session(engine) as s:
+        g, role, _ = _grp_access(s, user, gid)
+        try:
+            i = s.get(GroupInvite, int((body or {}).get("id")))
+        except (TypeError, ValueError):
+            i = None
+        if not i or i.group_id != g.id:
+            raise HTTPException(404, "الدعوة غير موجودة")
+        if not ge.can(role, "manage_companies" if i.kind == "company" else "manage_members"):
+            raise HTTPException(403, "غير مصرّح")
+        i.revoked = 1
+        s.add(i)
+        _grp_log(s, g.id, user, "invite_revoke", i.label)
+        s.commit()
+        return {"ok": True}
+
+
+@app.post("/groups/join")
+def groups_join(body: dict, user: User = Depends(get_current_user)):
+    """قبول رمز: عضوية (تُربط بحسابك) أو ربط شركتك النشطة التي تملكها بالمجموعة (موافقتك = إدخال الرمز)."""
+    ge = _grp_engine()
+    code = str((body or {}).get("code") or "").strip()
+    kind = ge.code_kind(code)
+    if not kind:
+        raise HTTPException(422, "رمز غير صالح")
+    now = datetime.now()
+    with Session(engine) as s:
+        inv = s.exec(select(GroupInvite).where(GroupInvite.code_hash == ge.hash_code(code, SECRET_KEY))).first()
+        if not inv or inv.revoked or inv.used_at or (inv.expires_at and inv.expires_at < now) or inv.kind != kind:
+            raise HTTPException(404, "الرمز غير صالح أو مستخدم أو منتهٍ")
+        g = s.get(OrganizationGroup, inv.group_id)
+        if not g or g.status != "active":
+            raise HTTPException(404, "المجموعة غير متاحة")
+        if kind == "member":
+            if g.owner_user_id == user.id:
+                raise HTTPException(409, "أنت مالك هذه المجموعة")
+            if s.exec(select(GroupMember).where(GroupMember.group_id == g.id, GroupMember.user_id == user.id, GroupMember.status == "active")).first():
+                raise HTTPException(409, "أنت عضو في هذه المجموعة مسبقاً")
+            s.add(GroupMember(group_id=g.id, user_id=user.id, role=inv.role, company_ids_json=inv.company_ids_json, status="active",
+                              invited_by=inv.created_by, created_at=now, updated_at=now))
+            msg = f"انضممت إلى «{g.name}» بدور {ge.GROUP_ROLES[inv.role]['ar']}"
+        else:
+            c = s.get(Company, user.company_id) if user.company_id else None
+            if not c or c.owner_id != user.id:
+                raise HTTPException(403, "بدّل إلى الشركة التي تملكها ثم أدخل الرمز — يربطها مالكها فقط")
+            _grp_do_link(s, g, user, c, inv.relationship, None)
+            msg = f"رُبطت «{c.name}» بالمجموعة «{g.name}»"
+        inv.used_at, inv.used_by = now, (user.name or "")[:100]
+        s.add(inv)
+        _grp_log(s, g.id, user, f"join_{kind}", msg)
+        s.commit()
+        return {"ok": True, "group_id": g.id, "message": msg}
+
+
+@app.get("/groups/{gid}/members")
+def groups_members(gid: int, user: User = Depends(get_current_user)):
+    ge = _grp_engine()
+    with Session(engine) as s:
+        g, role, scope = _grp_access(s, user, gid)
+        names = {c["id"]: c["name"] for c in _grp_companies(s, g, None, with_series=False)}
+        owner = s.get(User, g.owner_user_id)
+        items = [{"id": 0, "name": owner.name if owner else "—", "role": "group_owner", "role_ar": ge.GROUP_ROLES["group_owner"]["ar"], "companies": [], "fixed": True}]
+        for m in s.exec(select(GroupMember).where(GroupMember.group_id == g.id, GroupMember.status == "active")).all():
+            u = s.get(User, m.user_id)
+            sc = json.loads(m.company_ids_json or "[]")
+            items.append({"id": m.id, "name": u.name if u else "—", "role": m.role, "role_ar": ge.GROUP_ROLES.get(m.role, {}).get("ar", m.role),
+                          "company_ids": sc, "companies": [names.get(x, f"#{x}") for x in sc], "since": m.created_at, "invited_by": m.invited_by,
+                          "is_you": m.user_id == user.id})
+        return {"members": items, "can_manage": ge.can(role, "manage_members"), "role": role, "companies": [{"id": k, "name": v} for k, v in names.items()],
+                "roles": [{"key": k, "ar": v["ar"], "level": v["level"], "perms": [ge.PERM_AR[p] for p in sorted(v["perms"])], "company_role": v["company_role"]}
+                          for k, v in ge.GROUP_ROLES.items()]}
+
+
+@app.post("/groups/{gid}/members/update")
+def groups_member_update(gid: int, body: dict, user: User = Depends(get_current_user)):
+    ge = _grp_engine()
+    body = body or {}
+    with Session(engine) as s:
+        g, role, scope = _grp_access(s, user, gid, "manage_members")
+        try:
+            m = s.get(GroupMember, int(body.get("id")))
+        except (TypeError, ValueError):
+            m = None
+        if not m or m.group_id != g.id or m.status != "active":
+            raise HTTPException(404, "العضو غير موجود")
+        if m.user_id == user.id:
+            raise HTTPException(403, "لا تعدّل دورك بنفسك")
+        r = str(body.get("role") or m.role)
+        if r not in ge.GROUP_ROLES or r == "group_owner":
+            raise HTTPException(422, "دور غير صالح")
+        if role != "group_owner" and (r in ("group_ceo", "group_cfo") or m.role in ("group_ceo", "group_cfo")):
+            raise HTTPException(403, "أدوار القيادة يديرها مالك المجموعة فقط")
+        sc = [int(x) for x in (body.get("company_ids", json.loads(m.company_ids_json or "[]")) or []) if str(x).isdigit()]
+        linked = {l.company_id for l in _grp_links(s, g.id)}
+        if any(x not in linked for x in sc):
+            raise HTTPException(422, "شركة غير مرتبطة بالمجموعة")
+        if ge.GROUP_ROLES[r]["level"] == "company" and not sc:
+            raise HTTPException(422, "هذا الدور على مستوى الشركة — حدّد الشركات")
+        old = m.role
+        m.role, m.company_ids_json, m.updated_at = r, json.dumps(sorted(set(sc))), datetime.now()
+        s.add(m)
+        _grp_log(s, g.id, user, "member_update", f"#{m.id}: {old} → {r}")
+        s.commit()
+        return {"ok": True}
+
+
+@app.post("/groups/{gid}/members/remove")
+def groups_member_remove(gid: int, body: dict, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        try:
+            m = s.get(GroupMember, int((body or {}).get("id")))
+        except (TypeError, ValueError):
+            m = None
+        if not m or m.group_id != gid or m.status != "active":
+            raise HTTPException(404, "العضو غير موجود")
+        if m.user_id != user.id:          # المغادرة الذاتية مسموحة دائماً
+            g, role, _ = _grp_access(s, user, gid, "manage_members")
+            if role != "group_owner" and m.role in ("group_ceo", "group_cfo"):
+                raise HTTPException(403, "أدوار القيادة يديرها مالك المجموعة فقط")
+        m.status, m.updated_at = "removed", datetime.now()
+        s.add(m)
+        _grp_log(s, gid, user, "member_remove" if m.user_id != user.id else "member_leave", f"#{m.id}")
+        s.commit()
+        return {"ok": True}
+
+
+@app.get("/groups/{gid}/consolidated")
+def groups_consolidated(gid: int, grain: str = "month", year: int = 0, user: User = Depends(get_current_user)):
+    ge = _grp_engine()
+    with Session(engine) as s:
+        g, role, scope = _grp_access(s, user, gid, "reports")
+        cs = _grp_companies(s, g, scope)
+        st = _grp_settings(g)
+        el = _grp_elims(s, g.id) if scope is None else []
+        if grain == "year":
+            yrs = sorted({int(p["period"][:4]) for c in cs for p in c["series"]})
+            y = year or (yrs[-1] if yrs else datetime.now().year)
+            res = ge.annual(cs, year=y, base=g.base_currency, fx=st.get("fx"), eliminations=el)
+            res["years"] = yrs
+        else:
+            res = ge.consolidate(cs, base=g.base_currency, fx=st.get("fx"), eliminations=el)
+        res["grain"] = "year" if grain == "year" else "month"
+        res["data_status"] = {c["name"]: c["data_status"] for c in cs}
+        res["scoped_note_ar"] = "نطاقك يشمل بعض الشركات فقط — المجاميع لشركاتك ولا تشمل الاستبعادات" if scope is not None else None
+        return res
+
+
+@app.get("/groups/{gid}/benchmark")
+def groups_benchmark(gid: int, period: str = "", user: User = Depends(get_current_user)):
+    ge = _grp_engine()
+    with Session(engine) as s:
+        g, role, scope = _grp_access(s, user, gid, "benchmark")
+        cs = _grp_companies(s, g, scope)
+        if period and not re.match(r"^\d{4}-\d{2}$", period):
+            raise HTTPException(422, "الفترة YYYY-MM")
+        return ge.benchmark(cs, base=g.base_currency, fx=_grp_settings(g).get("fx"), period=period or None, show_financials=ge.can(role, "financials"))
+
+
+@app.get("/groups/{gid}/settings")
+def groups_settings(gid: int, user: User = Depends(get_current_user)):
+    ge = _grp_engine()
+    with Session(engine) as s:
+        g, role, scope = _grp_access(s, user, gid, "overview")
+        cs = _grp_companies(s, g, None, with_series=False)
+        st = _grp_settings(g)
+        curs = sorted({c["currency"] for c in cs} - {g.base_currency})
+        return {"base_currency": g.base_currency, "name": g.name, "fx": st.get("fx", {}), "currencies_needed": curs,
+                "missing_rates": [c for c in curs if c not in (st.get("fx") or {})], "eliminations": _grp_elims(s, g.id) if ge.can(role, "financials") else [],
+                "companies": [{"id": c["id"], "name": c["name"], "currency": c["currency"]} for c in cs], "can_configure": ge.can(role, "configure")}
+
+
+@app.post("/groups/{gid}/settings")
+def groups_settings_save(gid: int, body: dict, user: User = Depends(get_current_user)):
+    ge = _grp_engine()
+    body = body or {}
+    with Session(engine) as s:
+        g, role, _ = _grp_access(s, user, gid, "configure")
+        st = _grp_settings(g)
+        if "fx" in body:
+            clean, errs = ge.validate_fx(body.get("fx") or {}, g.base_currency)
+            if errs:
+                raise HTTPException(422, " · ".join(errs))
+            st["fx"] = clean
+        g.settings_json, g.updated_at = json.dumps(st, ensure_ascii=False), datetime.now()
+        s.add(g)
+        _grp_log(s, g.id, user, "fx_update", json.dumps(st.get("fx", {}), ensure_ascii=False)[:300])
+        s.commit()
+        return {"ok": True, "fx": st.get("fx", {})}
+
+
+@app.post("/groups/{gid}/eliminations")
+def groups_elim_add(gid: int, body: dict, user: User = Depends(get_current_user)):
+    body = body or {}
+    with Session(engine) as s:
+        g, role, _ = _grp_access(s, user, gid, "configure")
+        p = str(body.get("period") or "")
+        if not re.match(r"^\d{4}-\d{2}$", p):
+            raise HTTPException(422, "الفترة YYYY-MM")
+        linked = {l.company_id for l in _grp_links(s, g.id)}
+        try:
+            a, b, amt = int(body.get("seller_id")), int(body.get("buyer_id")), float(body.get("amount"))
+        except (TypeError, ValueError):
+            raise HTTPException(422, "البائع والمشتري والمبلغ مطلوبة")
+        if a == b or a not in linked or b not in linked:
+            raise HTTPException(422, "اختر شركتين مختلفتين من المجموعة")
+        if amt <= 0:
+            raise HTTPException(422, "المبلغ موجب")
+        e = GroupElimination(group_id=g.id, period=p, seller_company_id=a, buyer_company_id=b, amount=round(amt, 2), note=str(body.get("note") or "")[:300],
+                             created_by=(user.name or "")[:100], created_at=datetime.now())
+        s.add(e)
+        _grp_log(s, g.id, user, "elimination_add", f"{p}: {a}→{b} {amt} {g.base_currency}")
+        s.commit()
+        return {"ok": True}
+
+
+@app.post("/groups/{gid}/eliminations/delete")
+def groups_elim_delete(gid: int, body: dict, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        g, role, _ = _grp_access(s, user, gid, "configure")
+        try:
+            e = s.get(GroupElimination, int((body or {}).get("id")))
+        except (TypeError, ValueError):
+            e = None
+        if not e or e.group_id != g.id:
+            raise HTTPException(404, "غير موجود")
+        _grp_log(s, g.id, user, "elimination_delete", f"{e.period}: {e.amount}")
+        s.delete(e)
+        s.commit()
+        return {"ok": True}
+
+
+@app.post("/groups/{gid}/reports")
+def groups_report_save(gid: int, body: dict, user: User = Depends(get_current_user)):
+    ge = _grp_engine()
+    body = body or {}
+    with Session(engine) as s:
+        g, role, scope = _grp_access(s, user, gid, "reports")
+        if scope is not None:
+            raise HTTPException(403, "التقرير المجمع المحفوظ يشمل المجموعة كاملة — نطاقك جزئي")
+        cs = _grp_companies(s, g, None)
+        st = _grp_settings(g)
+        kind = "annual" if body.get("kind") == "annual" else "monthly"
+        if kind == "annual":
+            try:
+                y = int(body.get("year"))
+            except (TypeError, ValueError):
+                raise HTTPException(422, "السنة مطلوبة")
+            data = ge.annual(cs, year=y, base=g.base_currency, fx=st.get("fx"), eliminations=_grp_elims(s, g.id))
+            period = str(y)
+        else:
+            p = str(body.get("period") or "")
+            if not re.match(r"^\d{4}-\d{2}$", p):
+                raise HTTPException(422, "الفترة YYYY-MM")
+            data = ge.consolidate(cs, base=g.base_currency, fx=st.get("fx"), eliminations=_grp_elims(s, g.id), periods=[p])
+            period = p
+        payload = {"group": g.name, "kind": kind, "period": period, "base_currency": g.base_currency, "fx": st.get("fx", {}), "data": data,
+                   "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"), "by": user.name, "engine": ge.GROUP_VERSION}
+        r = GroupReport(group_id=g.id, kind=kind, period=period, payload_json=json.dumps(payload, ensure_ascii=False, default=str),
+                        checksum=ge.report_checksum(payload), created_by=(user.name or "")[:100], created_at=datetime.now())
+        s.add(r)
+        _grp_log(s, g.id, user, "report_save", f"{kind} {period}")
+        s.commit()
+        s.refresh(r)
+        return {"ok": True, "id": r.id, "checksum": r.checksum}
+
+
+@app.get("/groups/{gid}/reports")
+def groups_reports(gid: int, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        g, role, _ = _grp_access(s, user, gid, "reports")
+        return {"items": [{"id": r.id, "kind": r.kind, "period": r.period, "checksum": r.checksum, "by": r.created_by, "at": r.created_at}
+                          for r in s.exec(select(GroupReport).where(GroupReport.group_id == g.id).order_by(GroupReport.created_at.desc()).limit(200)).all()]}
+
+
+@app.get("/groups/{gid}/reports/{rid}")
+def groups_report(gid: int, rid: int, user: User = Depends(get_current_user)):
+    ge = _grp_engine()
+    with Session(engine) as s:
+        g, role, _ = _grp_access(s, user, gid, "reports")
+        r = s.get(GroupReport, rid)
+        if not r or r.group_id != g.id:
+            raise HTTPException(404, "التقرير غير موجود")
+        payload = json.loads(r.payload_json or "{}")
+        return {"id": r.id, "kind": r.kind, "period": r.period, "checksum": r.checksum, "intact": ge.report_checksum(payload) == r.checksum,
+                "payload": payload, "by": r.created_by, "at": r.created_at}
+
+
+@app.get("/groups/{gid}/activity")
+def groups_activity(gid: int, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        g, role, _ = _grp_access(s, user, gid)
+        return {"items": [{"at": a.created_at, "user": a.user_name, "action": a.action, "detail": a.detail}
+                          for a in s.exec(select(GroupActivity).where(GroupActivity.group_id == g.id).order_by(GroupActivity.created_at.desc()).limit(300)).all()]}
+
+
+@app.post("/groups/switch")
+def groups_switch(body: dict, user: User = Depends(get_current_user)):
+    """تبديل سياق العمل إلى شركة: تملكها، أو لك عليها صلاحية عبر مجموعة. تتغير البيانات والفروع والصلاحيات الفعلية."""
+    ge = _grp_engine()
+    try:
+        cid = int((body or {}).get("company_id"))
+    except (TypeError, ValueError):
+        raise HTTPException(422, "اختر شركة")
+    with Session(engine) as s:
+        c = s.get(Company, cid)
+        if not c:
+            raise HTTPException(404, "الشركة غير موجودة")
+        u = s.get(User, user.id)
+        if c.owner_id == user.id:
+            u.company_id, u.company_role = c.id, "owner"
+            eff = "owner"
+        else:
+            grants = _grp_grants(s, user.id, cid).get(cid, [])
+            eff = ge.best_company_role([r for _g, r in grants])
+            if not eff:
+                raise HTTPException(404, "الشركة غير موجودة")
+            gid = next(g_ for g_, r in grants if ge.GROUP_ROLES[r]["company_role"] == eff)
+            u.company_id, u.company_role = c.id, f"group:{gid}"
+        s.add(u)
+        s.commit()
+        log_audit(c.id, user.id, user.name, "company_switch", f"company:{c.id}", eff)
+        return {"ok": True, "active": c.id, "name": c.name, "role": eff, "role_ar": GROUP_COMPANY_ROLE_AR.get(eff, eff)}
+
+
+GROUP_COMPANY_ROLE_AR = {"owner": "مالك", "executive": "تنفيذي (اطلاع كامل)", "accountant": "مالي", "manager": "مدير", "viewer": "اطلاع فقط"}
+
+
 @app.get("/company/executive-intelligence")
 def company_executive_intelligence(request: Request, user: User = Depends(get_current_user),
                                    period: Optional[str] = None, ai: int = 0):
@@ -17496,6 +18436,9 @@ ROLE_PERMISSIONS = {
         "reports":     {"view"},
         "health":      {"view"},
     },
+    # Phase 6.3 — أدوار تُمنح عبر مجموعة الشركات فقط (لا تظهر في فريق الشركة): اطلاع على كل الأقسام بلا تعديل
+    "executive": {"_all": {"view"}},       # تنفيذي المجموعة: اطلاع كامل بما فيه المالي الحساس
+    "viewer":    {"_all": {"view"}},       # اطلاع فقط: بلا الحقول المالية الحساسة
     "staff": {
         # الموظف: إدخال تشغيلي فقط
         "input":       {"view", "edit"},
@@ -17508,7 +18451,7 @@ ROLE_PERMISSIONS = {
 SENSITIVE_FINANCIAL_FIELDS = {"salary", "salaries", "رواتب", "أجور", "payroll",
                                "margin", "هامش", "profit_margin", "net_profit", "صافي الربح"}
 # الأدوار المصرّح لها برؤية الحقول المالية الحساسة
-ROLES_SEE_SENSITIVE = {"owner", "accountant"}
+ROLES_SEE_SENSITIVE = {"owner", "accountant", "executive"}
 
 
 def check_permission(user_role: str, resource: str, action: str = "view") -> bool:
@@ -17537,6 +18480,10 @@ def get_user_role(s, user: User) -> str:
     company = s.get(Company, user.company_id)
     if company and company.owner_id == user.id:
         return "owner"
+    if str(getattr(user, "company_role", "") or "").startswith("group:"):
+        gr = _grp_company_role(s, user)       # Phase 6.3: دخل الشركة عبر مجموعة
+        if gr:
+            return gr
     m = s.exec(
         select(CompanyMember).where(
             CompanyMember.company_id == user.company_id,
@@ -17587,7 +18534,7 @@ def scope_by_role(s, user: User, branches):
     """يقيّد الفروع حسب الدور: مدير الفرع يرى فرعه فقط، الباقي يرى الكل.
     (يطبّق مبدأ Row-Level ضمن الشركة الواحدة)."""
     role = get_user_role(s, user)
-    if role in ("owner", "accountant"):
+    if role in ("owner", "accountant", "executive", "viewer"):
         return branches  # يرون كل فروع الشركة
     # مدير الفرع / الموظف: نقيّد بفرعه إن كان محدّداً في CompanyMember
     m = s.exec(
@@ -21487,7 +22434,7 @@ ENGINE_MODULES = ("nabbah_finance", "nabbah_trust", "semantic_layer", "kpi_engin
                   "ai_gateway", "period_aggregation", "legacy_adapters", "platform_bridge",
                   "intelligence_engine", "forecast_engine", "scenario_engine", "decision_memory",
                   "rule_catalog", "canonical_model", "period_model", "metric_registry", "ingestion",
-                  "sales_engine", "inventory_engine", "purchases_engine", "cashflow_engine", "hr_engine", "ops_engine", "finance_engine", "sector_intelligence", "leakage_engine", "tax_engine", "risk_engine", "drivers_engine", "benchmark_engine", "prediction_engine", "goals_engine", "decisions_engine", "board_engine", "monthly_engine", "executive_engine", "customer_engine", "branch_engine", "competitor_engine", "events_engine", "assistant_engine", "security_engine", "integration_engine")
+                  "sales_engine", "inventory_engine", "purchases_engine", "cashflow_engine", "hr_engine", "ops_engine", "finance_engine", "sector_intelligence", "leakage_engine", "tax_engine", "risk_engine", "drivers_engine", "benchmark_engine", "prediction_engine", "goals_engine", "decisions_engine", "board_engine", "monthly_engine", "executive_engine", "customer_engine", "branch_engine", "competitor_engine", "events_engine", "assistant_engine", "security_engine", "integration_engine", "group_engine")
 
 
 def _runtime_health():
@@ -21837,7 +22784,7 @@ def files_check(_: bool = Depends(verify_admin)):
         "company-data-quality.html", "company-predictions.html", "company-risks.html",
         "company-board.html", "company-root-cause.html", "company-benchmarks.html",
         "company-upload.html", "company-memory.html", "company-decisions.html",
-        "company-monthly-report.html", "company-monthly-intelligence.html", "company-board-intelligence.html", "company-executive-report-intelligence.html", "company-customer-intelligence.html", "company-branch-intelligence.html", "company-competitor-intelligence.html", "company-events-intelligence.html", "company-assistant.html", "company-security.html", "company-integrations.html", "company-developers.html",
+        "company-monthly-report.html", "company-monthly-intelligence.html", "company-board-intelligence.html", "company-executive-report-intelligence.html", "company-customer-intelligence.html", "company-branch-intelligence.html", "company-competitor-intelligence.html", "company-events-intelligence.html", "company-assistant.html", "company-security.html", "company-integrations.html", "company-developers.html", "company-group.html",
         "nabbah-data-template.xlsx",
     ]
     missing, present = [], []

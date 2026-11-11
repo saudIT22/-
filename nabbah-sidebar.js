@@ -89,6 +89,7 @@
     { icon: "🏢", label: "المنظومة المؤسسية", items: [
       { label: "مركز التكاملات", href: "company-integrations.html" },
       { label: "منصة المطورين", href: "company-developers.html" },
+      { label: "إدارة الشركات المتعددة", href: "company-group.html" },
       { label: "الأمان والموثوقية", href: "company-security.html" },
     ]},
     { icon: "📊", label: "التقارير", items: [
