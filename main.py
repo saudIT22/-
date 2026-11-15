@@ -2002,6 +2002,398 @@ class GroupActivity(SQLModel, table=True):
     created_at: _DTCOL = Field(default_factory=_now_naive)
 
 
+# ═══ Phase 6.4 — الحوكمة المؤسسية: جداول جديدة فقط (الأدوار والفريق والتدقيق الحالية كما هي) ═══
+class GovMemberLink(SQLModel, table=True):
+    """ربط عضو الفريق (CompanyMember) بحساب مستخدم فعلي عبر رمز يدخله بنفسه — يتيح له الدخول للشركة بدوره."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    member_id: int = Field(index=True)
+    user_id: int = Field(index=True)
+    status: str = "active"                   # active | revoked
+    linked_at: _DTCOL = Field(default_factory=_now_naive)
+    revoked_at: Optional[_DTCOL] = None
+
+
+class GovMemberInvite(SQLModel, table=True):
+    """رمز تفعيل لعضو فريق (مُجزّأ، 7 أيام، لاستخدام واحد)."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    member_id: int = Field(index=True)
+    code_hash: str = Field(default="", index=True)
+    expires_at: Optional[_DTCOL] = None
+    used_at: Optional[_DTCOL] = None
+    used_by: str = ""
+    revoked: int = 0
+    created_by: str = ""
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+class GovSettings(SQLModel, table=True):
+    """قواعد فصل المهام والتصعيد للشركة."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    settings_json: str = "{}"
+    updated_by: str = ""
+    updated_at: Optional[_DTCOL] = None
+
+
+class GovWorkflow(SQLModel, table=True):
+    """مسار موافقات: نوع الطلب + نطاق المبلغ + مستويات الاعتماد (دور/شخص/المالك، بديل، مهلة)."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    name: str = ""
+    subject: str = "purchase"
+    min_amount: float = 0
+    max_amount: Optional[float] = None
+    steps_json: str = "[]"
+    active: int = 1
+    version: int = 1
+    created_by: str = ""
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+    updated_at: Optional[_DTCOL] = None
+
+
+class GovRequest(SQLModel, table=True):
+    """طلب يمر بمسار موافقات. المستويات تُنسخ وقت الإنشاء؛ سجل كل قرار في history_json (من، متى، كيف، السبب)."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    workflow_id: Optional[int] = None
+    subject: str = "purchase"
+    title: str = ""
+    detail: str = ""
+    amount: Optional[float] = None
+    currency: str = "SAR"
+    branch_id: Optional[int] = None
+    requester_user_id: int = Field(index=True)
+    requester_name: str = ""
+    status: str = Field(default="pending", index=True)
+    step_index: int = 0
+    steps_json: str = "[]"
+    history_json: str = "[]"
+    due_at: str = ""
+    escalated: int = 0
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+    updated_at: Optional[_DTCOL] = None
+
+
+class GovDelegation(SQLModel, table=True):
+    """تفويض مؤقت أثناء الغياب: يعتمد المفوَّض بدل صاحب المستوى في الفترة المحددة."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    user_id: int = Field(index=True)
+    delegate_user_id: int = 0
+    starts: Optional[_DTCOL] = None
+    ends: Optional[_DTCOL] = None
+    reason: str = ""
+    revoked: int = 0
+    created_by: str = ""
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+class GovPolicy(SQLModel, table=True):
+    """سياسة داخلية بإصدار: كل تعديل لسياسة معتمدة = إصدار جديد يستبدل السابق عند اعتماده."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    kind: str = ""
+    title: str = ""
+    body: str = ""
+    version: str = "1.0"
+    owner: str = ""
+    stakeholders: str = ""
+    status: str = "draft"                    # draft | pending | approved | rejected | retired
+    effective_from: str = ""
+    review_by: str = ""
+    approved_by: str = ""
+    approved_at: Optional[_DTCOL] = None
+    reject_reason: str = ""
+    supersedes_id: Optional[int] = None
+    created_by: str = ""
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+    updated_at: Optional[_DTCOL] = None
+
+
+class GovChange(SQLModel, table=True):
+    """سجل التغييرات: من، ماذا، متى، القيمة السابقة والجديدة، من اعتمد، السبب، هل هو حساس."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    actor_id: Optional[int] = None
+    actor: str = ""
+    entity: str = Field(default="", index=True)
+    entity_id: str = ""
+    action: str = ""
+    changes_json: str = "[]"
+    reason: str = ""
+    approved_by: str = ""
+    sensitive: int = 0
+    created_at: _DTCOL = Field(default_factory=_now_naive, index=True)
+
+
+# ═══ Phase 6.5 — التعاون المؤسسي: نقاشات ومشاركات وإشعارات (القرارات والأدلة تبقى في جداول 3.9) ═══
+class CollabThread(SQLModel, table=True):
+    """نقاش في مساحة إدارة، مرتبط بمؤشر أو قرار أو تقرير أو خطر."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    workspace: str = Field(default="executive", index=True)
+    subject_kind: str = "general"            # kpi | decision | report | risk | general
+    subject_ref: str = ""                    # decision:12 · metric:gross_margin · report:monthly:5 · risk:key
+    subject_label: str = ""
+    branch: str = ""
+    title: str = ""
+    status: str = "open"                     # open | resolved | converted
+    assigned_dept: str = ""                  # طلب تحليل من إدارة أخرى
+    decision_id: Optional[int] = None        # القرار الناتج أو المرتبط (3.9)
+    participants_json: str = "[]"
+    created_by_id: Optional[int] = None
+    created_by: str = ""
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+    updated_at: Optional[_DTCOL] = None
+
+
+class CollabPost(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    thread_id: int = Field(index=True)
+    kind: str = "comment"
+    body: str = ""
+    evidence_url: str = ""
+    evidence_source: str = ""
+    author_id: Optional[int] = None
+    author: str = ""
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+class CollabShare(SQLModel, table=True):
+    """مشاركة تقرير معتمد/منشور مع موظف أو إدارة أو المجموعة — بمدة وصلاحية (مشاهدة/تعليق) وقابلة للإلغاء."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    report_kind: str = ""                    # monthly | exec | board
+    report_id: int = 0
+    title: str = ""
+    target_kind: str = "user"                # user | department | group
+    target_value: str = ""
+    permission: str = "view"                 # view | comment
+    expires_at: Optional[_DTCOL] = None
+    revoked: int = 0
+    note: str = ""
+    shared_by_id: Optional[int] = None
+    shared_by: str = ""
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+    last_viewed_at: Optional[_DTCOL] = None
+    views: int = 0
+
+
+class CollabShareComment(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    share_id: int = Field(index=True)
+    author_id: Optional[int] = None
+    author: str = ""
+    body: str = ""
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+class CollabNotification(SQLModel, table=True):
+    """إشعار لمستخدم — يُنشأ بعد التحقق من صلاحيته على المصدر؛ النص لا يحمل أرقاماً حساسة."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(index=True)
+    company_id: Optional[int] = Field(default=None, index=True)
+    kind: str = ""
+    title: str = ""
+    link: str = ""
+    ref: str = Field(default="", index=True)
+    read_at: Optional[_DTCOL] = None
+    created_at: _DTCOL = Field(default_factory=_now_naive, index=True)
+
+
+class CollabNotifPref(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(index=True)
+    prefs_json: str = "{}"
+    updated_at: Optional[_DTCOL] = None
+
+
+# ═══ Phase 6.6 — العلامة البيضاء والشركاء (نفس المنصة بهوية مخصصة — لا نسخة برمجية لكل عميل) ═══
+class BrandProfile(SQLModel, table=True):
+    """إصدار هوية لشركة أو مجموعة: مسودة → معتمدة → مطبّقة؛ الرجوع = تطبيق إصدار سابق معتمد."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    scope: str = Field(default="company", index=True)     # company | group
+    scope_id: int = Field(index=True)
+    version: int = 1
+    status: str = "draft"                    # draft | approved | active | archived
+    config_json: str = "{}"
+    fingerprint: str = ""
+    domain_verified: int = 0
+    created_by: str = ""
+    approved_by: str = ""
+    approved_at: Optional[_DTCOL] = None
+    activated_at: Optional[_DTCOL] = None
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+class Partner(SQLModel, table=True):
+    """شريك نبّاه: طلب → مراجعة إدارة المنصة → اعتماد بشروط عمولة."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    name: str = ""
+    kind: str = "accounting"
+    contact_name: str = ""
+    contact_email: str = ""
+    phone: str = ""
+    city: str = ""
+    cr_number: str = ""
+    website: str = ""
+    about: str = ""
+    owner_user_id: int = Field(index=True)
+    status: str = Field(default="applied", index=True)
+    commission_rate: float = 0
+    commission_months: int = 12
+    referral_code: str = Field(default="", index=True)
+    review_note: str = ""
+    reviewed_by: str = ""
+    reviewed_at: Optional[_DTCOL] = None
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+class PartnerUser(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    partner_id: int = Field(index=True)
+    user_id: int = Field(index=True)
+    role: str = "member"                     # admin | member
+    status: str = "active"
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+class PartnerInvite(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    partner_id: int = Field(index=True)
+    code_hash: str = Field(default="", index=True)
+    role: str = "member"
+    expires_at: Optional[_DTCOL] = None
+    used_at: Optional[_DTCOL] = None
+    used_by: str = ""
+    revoked: int = 0
+    created_by: str = ""
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+class PartnerReferral(SQLModel, table=True):
+    """ربط شركة بشريك بموافقة مالكها (يُدخل رمز الشريك). شركة واحدة ← شريك واحد نشط."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    partner_id: int = Field(index=True)
+    company_id: int = Field(index=True)
+    status: str = "active"                   # active | ended
+    linked_by: str = ""
+    linked_at: _DTCOL = Field(default_factory=_now_naive)
+    ended_at: Optional[_DTCOL] = None
+
+
+class SubscriptionPayment(SQLModel, table=True):
+    """سجل تحصيل اشتراكات الشركات (تسجله إدارة المنصة بعد التحصيل الفعلي) — أساس العمولات."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    kind: str = "payment"                    # payment | refund | cancellation
+    amount: float = 0
+    currency: str = "SAR"
+    paid_at: str = ""
+    ref: str = ""
+    note: str = ""
+    recorded_by: str = ""
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+class PartnerSettlement(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    partner_id: int = Field(index=True)
+    amount: float = 0
+    paid_at: str = ""
+    ref: str = ""
+    note: str = ""
+    recorded_by: str = ""
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+# ═══ Phase 7 — الذكاء المستقل: جداول جديدة فقط (القرارات والإجراءات والتقارير تبقى في جداولها) ═══
+class AiSettings(SQLModel, table=True):
+    """إعدادات الذكاء المستقل للشركة: سياسة كل وكيل (التفعيل، الإجراءات التلقائية، حد الثقة) + المراقبة والتعلّم."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    settings_json: str = "{}"
+    policies_json: str = "{}"
+    updated_by: str = ""
+    updated_at: Optional[_DTCOL] = None
+
+
+class AiRun(SQLModel, table=True):
+    """تشغيل مراقبة: يدوي أو مجدول — ملخص ما اكتُشف وما نُفّذ وما حُجب ولماذا."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    trigger: str = "manual"                  # manual | schedule | lazy
+    started_at: _DTCOL = Field(default_factory=_now_naive)
+    finished_at: Optional[_DTCOL] = None
+    status: str = "running"                  # running | ok | partial | error
+    summary_json: str = "{}"
+    error: str = ""
+    by: str = ""
+
+
+class AiFinding(SQLModel, table=True):
+    """مشكلة أو فرصة اكتشفها وكيل: الأدلة والأثر والفترة — تُحدّث عند تكرار ظهورها ولا تتكرر."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    fid: str = Field(default="", index=True)
+    agent: str = Field(default="", index=True)
+    module: str = ""
+    code: str = ""
+    kind: str = "risk"
+    title: str = ""
+    severity: str = "medium"
+    period: str = ""
+    evidence_json: str = "[]"
+    impact: Optional[float] = None
+    impact_type: str = ""
+    metric: str = ""
+    status: str = Field(default="new", index=True)    # new | acknowledged | resolved | dismissed | cleared
+    occurrences: int = 1
+    first_seen: _DTCOL = Field(default_factory=_now_naive)
+    last_seen: Optional[_DTCOL] = None
+    run_id: Optional[int] = None
+    note: str = ""
+
+
+class AiRecommendation(SQLModel, table=True):
+    """توصية مهيكلة (7.5) لنتيجة: المشكلة، الأدلة، الأثر، الثقة، الحل، المسؤول، الموعد، مؤشر القياس + مسار القرار ونتيجته."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    fid: str = Field(default="", index=True)
+    agent: str = ""
+    payload_json: str = "{}"
+    confidence: int = 0
+    status: str = Field(default="proposed", index=True)   # proposed | accepted | rejected | converted | measured
+    decision_id: Optional[int] = None
+    decided_by: str = ""
+    decided_at: Optional[_DTCOL] = None
+    reason: str = ""
+    outcome: str = ""                        # success | partial | failed (من قياس القرار في 3.9)
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+class AiAction(SQLModel, table=True):
+    """سجل كل إجراء للوكلاء: نُفّذ تلقائياً / بانتظار موافقة / حُجب (والسبب) / تراجع."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    agent: str = ""
+    kind: str = ""                           # alert | thread | draft_decision | schedule_report | submit_decision
+    status: str = Field(default="executed", index=True)   # executed | pending_approval | approved | rejected | blocked | undone | failed
+    fid: str = ""
+    rec_id: Optional[int] = None
+    run_id: Optional[int] = None
+    ref: str = ""                            # notif:… · thread:12 · decision:40 · schedule:3
+    detail: str = ""
+    reason: str = ""
+    by: str = ""
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+    decided_at: Optional[_DTCOL] = None
+    undone_at: Optional[_DTCOL] = None
+
+
 class BenchmarkDataset(SQLModel, table=True):
     """طبقة المعايير القطاعية (3.5): company_id فارغ = معيار المنصّة (من الإدارة)، وإلا معيار خاص بالشركة.
     كل معيار بمصدره ومنهجيته وفترته وعيّنته وثقته — لا معيار بلا مصدر."""
@@ -2602,8 +2994,8 @@ def get_current_user(authorization: str = Header(default="")) -> User:
             raise HTTPException(status_code=401, detail="المستخدم غير موجود")
         if tv != int(getattr(user, "token_version", 0) or 0):
             raise HTTPException(status_code=401, detail="تم تسجيل خروجك — تغيّرت كلمة المرور أو أُنهيت الجلسات. سجّل الدخول من جديد")
-        if str(user.company_role or "").startswith("group:"):
-            _grp_validate_context(s, user)      # Phase 6.3: سُحبت صلاحية المجموعة؟ يعود لشركته فوراً
+        if str(user.company_role or "").startswith(("group:", "member:")):
+            _ctx_validate(s, user)      # 6.3/6.4: سُحبت صلاحية المجموعة أو العضوية؟ يعود لشركته فوراً
         company_id = user.company_id
     if sid:
         # جلسة منفصلة حتى لا يُنتهى كائن المستخدم بعد commit. الرموز القديمة بلا sid تبقى مقبولة (توافق).
@@ -4764,6 +5156,14 @@ def company_info(user: User = Depends(get_current_user)):
                         companies.append(c_)
         except Exception as _e:
             _logger.error(f"company_info groups: {type(_e).__name__}")
+        member_ids = set()
+        try:      # Phase 6.4: شركات انضم إليها المستخدم كعضو فريق برمز التفعيل
+            for cid_, _m in _member_links(s, user.id).items():
+                if cid_ not in owned_ids and cid_ not in {c.id for c in companies}:
+                    companies.append(s.get(Company, cid_))
+                    member_ids.add(cid_)
+        except Exception as _e:
+            _logger.error(f"company_info members: {type(_e).__name__}")
         if not companies:
             return {"has_company": False, "companies": [], "active": None,
                     "branches": [], "max_reached": False}
@@ -4775,6 +5175,8 @@ def company_info(user: User = Depends(get_current_user)):
             udb.company_id = active_id
             if active_id in owned_ids:
                 udb.company_role = "owner"
+            elif active_id in member_ids:
+                udb.company_role = f"member:{active_id}"
             else:       # لا شركة مملوكة — يدخل أول شركة متاحة عبر مجموعة بالدور الممنوح
                 udb.company_role = f"group:{_grp_grants(s, user.id, active_id)[active_id][0][0]}"
             s.add(udb)
@@ -4786,7 +5188,8 @@ def company_info(user: User = Depends(get_current_user)):
                 select(CompanyBranch).where(CompanyBranch.company_id == c.id, CompanyBranch.is_active == 1)
             ).all())
             comp_list.append({"id": c.id, "name": c.name, "sector": c.sector,
-                              "branch_count": bc, "active": c.id == active_id, "via_group": c.id not in owned_ids})
+                              "branch_count": bc, "active": c.id == active_id, "via_group": c.id not in owned_ids and c.id not in member_ids,
+                              "via_member": c.id in member_ids})
 
         active = next((c for c in companies if c.id == active_id), companies[0])
         branches = s.exec(
@@ -4868,6 +5271,13 @@ def company_switch(data: dict, user: User = Depends(get_current_user)):
             company = s.get(Company, int(cid)) if cid else None
         except (TypeError, ValueError):
             company = None
+        if company and company.owner_id != user.id and company.id in _member_links(s, user.id):
+            udb = s.get(User, user.id)                      # Phase 6.4: عضو فريق مفعّل
+            udb.company_id, udb.company_role = company.id, f"member:{company.id}"
+            s.add(udb)
+            s.commit()
+            log_audit(company.id, user.id, user.name, "company_switch", f"company:{company.id}", "member")
+            return {"ok": True, "active": company.id, "name": company.name, "role": "member"}
         if company and company.owner_id != user.id and _load_p24("group_engine") is not None:
             return groups_switch({"company_id": company.id}, user=user)      # Phase 6.3: شركة عبر مجموعة
         if not company or company.owner_id != user.id:
@@ -6055,7 +6465,7 @@ def _load_p24(name):
     """يحمّل محركات 2.4 من المجلد أو من حزمة nabbah_engines."""
     try:
         import sys as _sys, os as _os, importlib
-        for _d in ("phase21", "phase22", "phase23", "phase24", "phase25", "phase26", "phase27", "phase28", "phase29", "phase210", "phase211", "phase30", "phase31", "phase32", "phase33", "phase34", "phase35", "phase37", "phase38", "phase39", "phase310", "phase311", "phase312", "phase41", "phase42", "phase43", "phase44", "phase45", "phase67", "phase61", "phase63"):
+        for _d in ("phase21", "phase22", "phase23", "phase24", "phase25", "phase26", "phase27", "phase28", "phase29", "phase210", "phase211", "phase30", "phase31", "phase32", "phase33", "phase34", "phase35", "phase37", "phase38", "phase39", "phase310", "phase311", "phase312", "phase41", "phase42", "phase43", "phase44", "phase45", "phase67", "phase61", "phase63", "phase64", "phase7"):
             _p = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), _d)
             if _p not in _sys.path:
                 _sys.path.insert(0, _p)
@@ -9360,7 +9770,7 @@ def _goals_scope(s, user):
     sc = s.exec(select(CompanyUserScope).where(CompanyUserScope.company_id == company.id, CompanyUserScope.user_id == user.id)).first()
     title, branch, dept = (sc.title, sc.branch, sc.department) if sc else ("", "", "")
     if not sc and role == "manager":
-        m = s.exec(select(CompanyMember).where(CompanyMember.company_id == company.id, CompanyMember.email == user.email)).first()
+        m = _member_row(s, user)
         if m and m.branch_id:
             b = s.get(CompanyBranch, m.branch_id)
             if b and b.company_id == company.id:
@@ -13759,6 +14169,13 @@ async def _reliability_mw(request: Request, call_next):
     try:
         resp = await call_next(request)
         status = resp.status_code
+        if status == 403 and (request.headers.get("authorization") or "").startswith("Bearer "):
+            try:      # 6.4: محاولة وصول غير مصرّح بها لمستخدم مسجّل → حدث أمني (يُغذّي استثناءات الحوكمة)
+                _rt = request.scope.get("route")
+                _threading.Thread(target=_gov_record_denied, args=(request.headers.get("authorization"),
+                                 f"{request.method} {getattr(_rt, 'path', None) or request.url.path}"), daemon=True).start()
+            except Exception:
+                pass
         return resp
     finally:
         try:
@@ -16640,6 +17057,10 @@ def groups_join(body: dict, user: User = Depends(get_current_user)):
     """قبول رمز: عضوية (تُربط بحسابك) أو ربط شركتك النشطة التي تملكها بالمجموعة (موافقتك = إدخال الرمز)."""
     ge = _grp_engine()
     code = str((body or {}).get("code") or "").strip()
+    if code.upper().startswith("NBM-"):
+        return gov_member_join(body, user)      # Phase 6.4: رمز تفعيل عضو فريق — نفس مربع «انضمام برمز»
+    if code.upper().startswith("NBQ-"):
+        return partner_user_join(body, user=user)
     kind = ge.code_kind(code)
     if not kind:
         raise HTTPException(422, "رمز غير صالح")
@@ -16943,6 +17364,2917 @@ def groups_switch(body: dict, user: User = Depends(get_current_user)):
 
 
 GROUP_COMPANY_ROLE_AR = {"owner": "مالك", "executive": "تنفيذي (اطلاع كامل)", "accountant": "مالي", "manager": "مدير", "viewer": "اطلاع فقط"}
+
+
+# ═══════════════════════════════════════════════════════════
+#  Phase 6.4 — Enterprise Governance — الحوكمة المؤسسية
+#  مصفوفة الصلاحيات الحالية تبقى المصدر (لا نظام صلاحيات بديل)؛ نضيف: تفعيل حسابات الفريق برمز،
+#  مسارات موافقات بفصل مهام، سياسات بإصدارات، سجل تغييرات قبل/بعد، واستثناءات بأدلة.
+# ═══════════════════════════════════════════════════════════
+_GOV_DENY_SEEN = {}
+
+
+def _gov_engine():
+    gv = _load_p24("governance_engine")
+    if gv is None:
+        raise HTTPException(503, "محرّك الحوكمة غير متاح — " + _p23_diagnostic())
+    return gv
+
+
+def _gov_change(company_id, user, entity, entity_id, action, changes=None, reason="", approved_by="", sensitive=False):
+    """يسجّل تغييراً بقيمه السابقة والجديدة — لا يفشل أبداً حتى لا يكسر المسار الرئيسي."""
+    try:
+        with Session(engine) as ms:
+            ms.add(GovChange(company_id=company_id, actor_id=getattr(user, "id", None), actor=str(getattr(user, "name", "") or "النظام")[:100],
+                             entity=str(entity)[:40], entity_id=str(entity_id)[:60], action=str(action)[:40],
+                             changes_json=json.dumps(changes or [], ensure_ascii=False, default=str)[:4000], reason=str(reason or "")[:500],
+                             approved_by=str(approved_by or "")[:100], sensitive=1 if sensitive else 0, created_at=datetime.now()))
+            ms.commit()
+    except Exception as _e:
+        _logger.error(f"gov change log failed: {type(_e).__name__}: {str(_e)[:120]}")
+
+
+def _member_row(s, user):
+    """عضو الفريق المطابق للمستخدم في شركته الحالية: عبر ربط الحساب (6.4) إن دخل كعضو، وإلا بالبريد (السلوك السابق)."""
+    if not getattr(user, "company_id", None):
+        return None
+    if str(getattr(user, "company_role", "") or "").startswith("member:"):
+        ln = s.exec(select(GovMemberLink).where(GovMemberLink.user_id == user.id, GovMemberLink.company_id == user.company_id,
+                                               GovMemberLink.status == "active")).first()
+        m = s.get(CompanyMember, ln.member_id) if ln else None
+        return m if m and m.company_id == user.company_id else None
+    if not getattr(user, "email", None):
+        return None
+    return s.exec(select(CompanyMember).where(CompanyMember.company_id == user.company_id, CompanyMember.email == user.email)).first()
+
+
+def _member_links(s, user_id):
+    out = {}
+    for ln in s.exec(select(GovMemberLink).where(GovMemberLink.user_id == user_id, GovMemberLink.status == "active")).all():
+        m = s.get(CompanyMember, ln.member_id)
+        c = s.get(Company, ln.company_id)
+        if m and c and m.company_id == c.id and c.is_active == 1:
+            out[c.id] = m
+    return out
+
+
+def _ctx_validate(s, user):
+    """سياق دخول عبر مجموعة (6.3) أو كعضو فريق (6.4): إن سُحبت الصلاحية يعود المستخدم لشركته فوراً."""
+    cr = str(user.company_role or "")
+    if cr.startswith("group:"):
+        return _grp_validate_context(s, user)
+    try:
+        if user.company_id and cr == f"member:{user.company_id}" and _member_row(s, user):
+            return
+        own = s.exec(select(Company).where(Company.owner_id == user.id, Company.is_active == 1)).first()
+        user.company_id, user.company_role = (own.id, "owner") if own else (None, "")
+        s.add(user)
+        s.commit()
+        s.refresh(user)
+    except Exception as _e:
+        _logger.error(f"member context check failed: {type(_e).__name__}")
+        s.rollback()
+
+
+def _gov_ctx(s, user, need=None):
+    """need: None (أي عضو في الشركة) | view (لوحة الحوكمة) | manage (التعديل)."""
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    company = s.get(Company, user.company_id)
+    if not company:
+        raise HTTPException(403, "غير مصرّح")
+    if company.is_active != 1:
+        raise HTTPException(402, "شركتك قيد التفعيل — فعّلها من لوحة الإدارة")
+    role = get_user_role(s, user) or "staff"
+    title = _user_title(s, user)
+    is_owner = company.owner_id == user.id
+    can_manage = is_owner or title == "ceo"
+    can_view = can_manage or role == "executive" or title in ("auditor", "cfo", "board")
+    if need == "manage" and not can_manage:
+        raise HTTPException(403, "إدارة الحوكمة للمالك أو الرئيس التنفيذي")
+    if need == "view" and not can_view:
+        raise HTTPException(403, "لوحة الحوكمة للمالك والرئيس التنفيذي والمدقق والمدير المالي")
+    return company, {"id": user.id, "name": user.name or "", "role": role, "title": title, "is_owner": is_owner, "can_manage": can_manage, "can_view": can_view}
+
+
+def _gov_settings(s, cid):
+    gv = _gov_engine()
+    row = s.exec(select(GovSettings).where(GovSettings.company_id == cid)).first()
+    st = dict(gv.DEFAULT_SETTINGS)
+    if row:
+        try:
+            st.update({k: v for k, v in json.loads(row.settings_json or "{}").items() if k in gv.DEFAULT_SETTINGS})
+        except (TypeError, ValueError):
+            pass
+    return st
+
+
+def _gov_people(s, company):
+    """من يمكن اختياره معتمداً/مفوّضاً: المالك + أعضاء الفريق المفعّلون."""
+    out = {}
+    o = s.get(User, company.owner_id)
+    if o:
+        out[o.id] = {"id": o.id, "name": o.name or o.email, "role": "owner"}
+    for ln in s.exec(select(GovMemberLink).where(GovMemberLink.company_id == company.id, GovMemberLink.status == "active")).all():
+        m, u = s.get(CompanyMember, ln.member_id), s.get(User, ln.user_id)
+        if m and u and m.company_id == company.id:
+            out[u.id] = {"id": u.id, "name": u.name or m.name, "role": m.role}
+    return out
+
+
+def _gov_wf_dict(w):
+    return {"id": w.id, "name": w.name, "subject": w.subject, "min_amount": w.min_amount, "max_amount": w.max_amount,
+            "steps": json.loads(w.steps_json or "[]"), "active": bool(w.active), "version": w.version}
+
+
+def _gov_req_dict(r):
+    return {"id": r.id, "title": r.title, "subject": r.subject, "amount": r.amount, "currency": r.currency, "branch_id": r.branch_id, "detail": r.detail,
+            "requester_id": r.requester_user_id, "requester": r.requester_name, "status": r.status, "step_index": r.step_index,
+            "steps": json.loads(r.steps_json or "[]"), "history": json.loads(r.history_json or "[]"), "due_at": r.due_at or None,
+            "escalated": bool(r.escalated), "workflow_id": r.workflow_id, "created_at": r.created_at}
+
+
+def _gov_delegations(s, cid):
+    return [{"id": d.id, "user_id": d.user_id, "delegate_user_id": d.delegate_user_id, "starts": d.starts, "ends": d.ends, "reason": d.reason}
+            for d in s.exec(select(GovDelegation).where(GovDelegation.company_id == cid, GovDelegation.revoked == 0)).all()]
+
+
+def _gov_escalate_due(s, company, settings):
+    """يصعّد الطلبات المتأخرة تجاوزاً لمهلة التصعيد (مرة واحدة لكل طلب) ويُشعر المالك عبر لوحة الحوكمة."""
+    gv = _gov_engine()
+    lim = int(settings.get("escalate_after_hours") or 48)
+    n = 0
+    for r in s.exec(select(GovRequest).where(GovRequest.company_id == company.id, GovRequest.status == "pending", GovRequest.escalated == 0)).all():
+        d = _gov_req_dict(r)
+        if gv.overdue_hours(d) >= 1 and gv.overdue_hours(d) + int(d["steps"][d["step_index"]]["sla_hours"]) >= lim:
+            nd, _ev = gv.apply_action(d, "escalate", {"id": 0, "name": "النظام (تصعيد تلقائي)"})
+            r.escalated, r.history_json, r.updated_at = 1, json.dumps(nd["history"], ensure_ascii=False), datetime.now()
+            s.add(r)
+            n += 1
+    if n:
+        s.commit()
+    return n
+
+
+def _gov_inputs(s, company, settings):
+    """مدخلات الاستثناءات ودرجة الاكتمال — من الجداول الفعلية."""
+    gv = _gov_engine()
+    since = datetime.now() - timedelta(days=30)
+    denied = [{"user_name": e.user_name, "at": e.created_at, "detail": e.detail} for e in s.exec(
+        select(SecurityEvent).where(SecurityEvent.company_id == company.id, SecurityEvent.kind == "access_denied", SecurityEvent.created_at >= since)
+        .order_by(SecurityEvent.created_at.desc()).limit(500)).all()]
+    reqs = [_gov_req_dict(r) for r in s.exec(select(GovRequest).where(GovRequest.company_id == company.id).order_by(GovRequest.created_at.desc()).limit(500)).all()]
+    decs = []
+    for m in s.exec(select(CompanyDecisionMeta).where(CompanyDecisionMeta.company_id == company.id)).all():
+        d = s.get(CompanyDecision, m.decision_id)
+        cu = s.get(User, m.created_by_id) if m.created_by_id else None
+        decs.append({"id": m.decision_id, "title": d.title if d else "", "created_by": (cu.name if cu else ""), "approved_by": m.approved_by or "", "workflow": m.workflow})
+    pols = [_gov_pol_dict(p) for p in s.exec(select(GovPolicy).where(GovPolicy.company_id == company.id, GovPolicy.status == "approved")).all()]
+    chg = [{"id": c.id, "entity": c.entity, "sensitive": c.sensitive, "actor": c.actor, "at": c.created_at, "reason": c.reason}
+           for c in s.exec(select(GovChange).where(GovChange.company_id == company.id, GovChange.sensitive == 1, GovChange.created_at >= since)
+                           .order_by(GovChange.created_at.desc()).limit(200)).all()]
+    links = {ln.member_id: ln for ln in s.exec(select(GovMemberLink).where(GovMemberLink.company_id == company.id, GovMemberLink.status == "active")).all()}
+    branches = {b.id: b.name for b in s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company.id)).all()}
+    mems = []
+    for m in s.exec(select(CompanyMember).where(CompanyMember.company_id == company.id)).all():
+        ln = links.get(m.id)
+        idle = None
+        if ln:
+            last = s.exec(select(UserSession).where(UserSession.user_id == ln.user_id).order_by(UserSession.last_seen.desc())).first()
+            ref = (last.last_seen if last and last.last_seen else ln.linked_at)
+            idle = (datetime.now() - ref).days if ref else None
+        mems.append({"id": m.id, "name": m.name, "role": m.role, "branch": branches.get(m.branch_id, "") if m.branch_id else "",
+                     "sensitive": m.role in ROLES_SEE_SENSITIVE, "linked": bool(ln), "idle_days": idle,
+                     "days_since_added": (datetime.now() - m.created_at).days if m.created_at else 0})
+    return {"denied_events": denied, "requests": reqs, "decisions": decs, "policies": pols, "changes": chg, "members": mems}
+
+
+def _gov_pol_dict(p):
+    return {"id": p.id, "kind": p.kind, "title": p.title, "body": p.body, "version": p.version, "owner": p.owner, "stakeholders": p.stakeholders,
+            "status": p.status, "effective_from": p.effective_from, "review_by": p.review_by, "approved_by": p.approved_by, "approved_at": p.approved_at,
+            "reject_reason": p.reject_reason, "supersedes_id": p.supersedes_id, "created_by": p.created_by, "created_at": p.created_at}
+
+
+@app.get("/governance/overview")
+def gov_overview(user: User = Depends(get_current_user)):
+    gv = _gov_engine()
+    with Session(engine) as s:
+        company, me = _gov_ctx(s, user, "view")
+        st = _gov_settings(s, company.id)
+        _gov_escalate_due(s, company, st)
+        inp = _gov_inputs(s, company, st)
+        ex = gv.exceptions(inp)
+        pols = inp["policies"]
+        active_kinds = {p["kind"] for p in pols if gv.policy_status(p) == "active"}
+        wfs = [_gov_wf_dict(w) for w in s.exec(select(GovWorkflow).where(GovWorkflow.company_id == company.id, GovWorkflow.active == 1)).all()]
+        pending = [r for r in inp["requests"] if r["status"] == "pending"]
+        overdue = [r for r in pending if gv.overdue_hours(r)]
+        pol = _sec_policy(company.id) or {}
+        mat = gv.maturity({"active_policy_kinds": active_kinds, "workflow_subjects": sorted({w["subject"] for w in wfs}), "settings": st,
+                           "mfa_required": bool(set(pol.get("mfa_required_roles") or []) & {"owner", "accountant", "manager"}),
+                           "members_total": len(inp["members"]), "members_linked": sum(1 for m in inp["members"] if m["linked"]),
+                           "overdue": len(overdue), "expired_policies": sum(1 for p in pols if gv.policy_status(p) == "expired"),
+                           "high_exceptions": sum(1 for x in ex if x["severity"] == "high")})
+        unapproved = [d for d in inp["decisions"] if d["workflow"] in ("pending_approval", "under_review")]
+        return {"maturity": mat, "me": me,
+                "kpis": {"active_policies": len(active_kinds), "policies_total": len(pols), "pending_approvals": len(pending), "overdue": len(overdue),
+                         "escalated": sum(1 for r in pending if r["escalated"]), "sensitive_changes": len(inp["changes"]),
+                         "unauthorized": len(inp["denied_events"]), "unapproved_decisions": len(unapproved),
+                         "open_exceptions": len(ex), "high_exceptions": sum(1 for x in ex if x["severity"] == "high")},
+                "pending": [dict(r, overdue_h=gv.overdue_hours(r), waiting_for=gv.step_label(r["steps"][r["step_index"]], {k: v["name"] for k, v in _gov_people(s, company).items()}))
+                            for r in pending[:10]],
+                "unapproved_decisions": unapproved[:10], "exceptions": ex[:8], "kind_ar": gv.KIND_AR,
+                "recent_changes": [{"at": c.created_at, "actor": c.actor, "entity": _GOV_ENTITY_AR.get(c.entity, c.entity), "action": c.action, "sensitive": bool(c.sensitive)}
+                                   for c in s.exec(select(GovChange).where(GovChange.company_id == company.id).order_by(GovChange.created_at.desc()).limit(8)).all()]}
+
+
+@app.get("/governance/meta")
+def gov_meta(user: User = Depends(get_current_user)):
+    gv = _gov_engine()
+    with Session(engine) as s:
+        company, me = _gov_ctx(s, user)
+        return {"me": me, "company": {"id": company.id, "name": company.name, "currency": company.currency or "SAR"}, "subjects": gv.SUBJECTS,
+                "status_ar": gv.STATUS_AR, "policy_kinds": gv.POLICY_KINDS, "policy_status_ar": gv.POLICY_STATUS_AR, "approver_kinds": gv.APPROVER_KINDS,
+                "role_ar": gv.ROLE_AR, "settings_ar": gv.SETTINGS_AR, "perm_ar": gv.PERM_AR, "levels": gv.LEVELS,
+                "people": list(_gov_people(s, company).values()),
+                "branches": [{"id": b.id, "name": b.name} for b in s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company.id, CompanyBranch.is_active == 1)).all()]}
+
+
+# ── الصلاحيات وأعضاء الفريق
+@app.get("/governance/permissions")
+def gov_permissions(user: User = Depends(get_current_user)):
+    gv = _gov_engine()
+    with Session(engine) as s:
+        company, me = _gov_ctx(s, user, "view")
+        branches = {b.id: b.name for b in s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company.id)).all()}
+        links = {ln.member_id: ln for ln in s.exec(select(GovMemberLink).where(GovMemberLink.company_id == company.id, GovMemberLink.status == "active")).all()}
+        now = datetime.now()
+        pend = {i.member_id: i for i in s.exec(select(GovMemberInvite).where(GovMemberInvite.company_id == company.id, GovMemberInvite.used_at == None,  # noqa: E711
+                                                                              GovMemberInvite.revoked == 0)).all() if i.expires_at and i.expires_at > now}
+        members = []
+        for m in s.exec(select(CompanyMember).where(CompanyMember.company_id == company.id)).all():
+            ln = links.get(m.id)
+            u = s.get(User, ln.user_id) if ln else None
+            members.append({"id": m.id, "name": m.name, "email": m.email, "role": m.role, "role_ar": gv.ROLE_AR.get(m.role, m.role),
+                            "branch_id": m.branch_id, "branch": branches.get(m.branch_id, "") if m.branch_id else "",
+                            "account": "active" if ln else "invited" if m.id in pend else "not_linked", "account_name": u.name if u else "",
+                            "linked_at": ln.linked_at if ln else None, "sensitive": m.role in ROLES_SEE_SENSITIVE})
+        roles = ["owner", "manager", "accountant", "staff", "executive", "viewer"]
+        return {"matrix": gv.role_matrix(roles, ROLE_PERMISSIONS, ROLES_SEE_SENSITIVE), "perms": gv.PERMS, "resources_ar": gv.RESOURCES_AR,
+                "members": members, "levels": gv.LEVELS, "settings": _gov_settings(s, company.id), "can_manage": me["can_manage"],
+                "branches": [{"id": k, "name": v} for k, v in branches.items()],
+                "levels_note_ar": "المستويات المطبّقة فعلياً اليوم: المجموعة (6.3)، الشركة، الفرع (لمدير الفرع)، والإدارة/الوحدة لنطاق الأهداف. الصلاحية لكل نوع بيانات وعملية تتبع الدور."}
+
+
+@app.post("/governance/members/invite")
+def gov_member_invite(body: dict, user: User = Depends(get_current_user)):
+    """رمز تفعيل لعضو فريق موجود — يدخله العضو من حسابه فيصبح دخوله للشركة بدوره المحدد."""
+    gv = _gov_engine()
+    with Session(engine) as s:
+        company, me = _gov_ctx(s, user, "manage")
+        try:
+            m = s.get(CompanyMember, int((body or {}).get("member_id")))
+        except (TypeError, ValueError):
+            m = None
+        if not m or m.company_id != company.id:
+            raise HTTPException(404, "العضو غير موجود")
+        for old in s.exec(select(GovMemberInvite).where(GovMemberInvite.member_id == m.id, GovMemberInvite.used_at == None, GovMemberInvite.revoked == 0)).all():  # noqa: E711
+            old.revoked = 1
+            s.add(old)
+        code = gv.new_member_code()
+        s.add(GovMemberInvite(company_id=company.id, member_id=m.id, code_hash=gv.hash_code(code, SECRET_KEY), expires_at=datetime.now() + timedelta(days=7),
+                              created_by=(user.name or "")[:100], created_at=datetime.now()))
+        s.commit()
+        _gov_change(company.id, user, "member", m.id, "invite", [{"field": "account", "old": None, "new": "رمز تفعيل"}])
+        return {"ok": True, "code": code, "note_ar": f"أرسل الرمز لـ{m.name} بنفسك. يسجّل في نبّاه (إن لم يكن لديه حساب) ثم يُدخله من «انضمام برمز». صالح 7 أيام لمرة واحدة."}
+
+
+def gov_member_join(body, user):
+    gv = _gov_engine()
+    code = str((body or {}).get("code") or "").strip().upper()
+    with Session(engine) as s:
+        inv = s.exec(select(GovMemberInvite).where(GovMemberInvite.code_hash == gv.hash_code(code, SECRET_KEY))).first()
+        now = datetime.now()
+        if not inv or inv.revoked or inv.used_at or (inv.expires_at and inv.expires_at < now):
+            raise HTTPException(404, "الرمز غير صالح أو مستخدم أو منتهٍ")
+        m, c = s.get(CompanyMember, inv.member_id), s.get(Company, inv.company_id)
+        if not m or not c or m.company_id != c.id:
+            raise HTTPException(404, "العضو لم يعد موجوداً")
+        if c.owner_id == user.id:
+            raise HTTPException(409, "أنت مالك هذه الشركة")
+        if s.exec(select(GovMemberLink).where(GovMemberLink.member_id == m.id, GovMemberLink.status == "active")).first():
+            raise HTTPException(409, "هذا العضو مفعّل بحساب آخر — اطلب من المالك إلغاءه أولاً")
+        for ln in s.exec(select(GovMemberLink).where(GovMemberLink.user_id == user.id, GovMemberLink.company_id == c.id, GovMemberLink.status == "active")).all():
+            ln.status, ln.revoked_at = "revoked", now
+            s.add(ln)
+        s.add(GovMemberLink(company_id=c.id, member_id=m.id, user_id=user.id, status="active", linked_at=now))
+        inv.used_at, inv.used_by = now, (user.name or "")[:100]
+        s.add(inv)
+        u = s.get(User, user.id)
+        u.company_id, u.company_role = c.id, f"member:{c.id}"
+        s.add(u)
+        s.commit()
+        log_audit(c.id, user.id, user.name, "member_join", f"member:{m.id}", m.role)
+        _gov_change(c.id, user, "member", m.id, "account_linked", [{"field": "account", "old": None, "new": user.name}])
+        return {"ok": True, "company_id": c.id, "message": f"انضممت إلى «{c.name}» بدور {gv.ROLE_AR.get(m.role, m.role)}", "kind": "member"}
+
+
+@app.post("/governance/members/update")
+def gov_member_update(body: dict, user: User = Depends(get_current_user)):
+    gv = _gov_engine()
+    body = body or {}
+    with Session(engine) as s:
+        company, me = _gov_ctx(s, user, "manage")
+        try:
+            m = s.get(CompanyMember, int(body.get("member_id")))
+        except (TypeError, ValueError):
+            m = None
+        if not m or m.company_id != company.id:
+            raise HTTPException(404, "العضو غير موجود")
+        old = {"role": m.role, "branch_id": m.branch_id}
+        role = str(body.get("role") or m.role)
+        if role not in ("manager", "accountant", "staff"):
+            raise HTTPException(422, "دور غير صالح")
+        bid = body.get("branch_id", m.branch_id)
+        bid = int(bid) if str(bid or "").isdigit() else None
+        if bid and (not s.get(CompanyBranch, bid) or s.get(CompanyBranch, bid).company_id != company.id):
+            raise HTTPException(422, "الفرع ليس من شركتك")
+        reason = str(body.get("reason") or "").strip()
+        sens = (role in ROLES_SEE_SENSITIVE) != (old["role"] in ROLES_SEE_SENSITIVE)
+        if sens and _gov_settings(s, company.id).get("reason_required_sensitive") and not reason:
+            raise HTTPException(422, "تغيير يمس الوصول المالي الحساس — اذكر السبب")
+        m.role, m.branch_id = role, bid
+        s.add(m)
+        s.commit()
+        _gov_change(company.id, user, "member", m.id, "permission_change", gv.diff(old, {"role": role, "branch_id": bid}), reason, sensitive=sens)
+        return {"ok": True}
+
+
+@app.post("/governance/members/unlink")
+def gov_member_unlink(body: dict, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, me = _gov_ctx(s, user, "manage")
+        try:
+            mid = int((body or {}).get("member_id"))
+        except (TypeError, ValueError):
+            raise HTTPException(422, "معرّف غير صالح")
+        n = 0
+        for ln in s.exec(select(GovMemberLink).where(GovMemberLink.company_id == company.id, GovMemberLink.member_id == mid, GovMemberLink.status == "active")).all():
+            ln.status, ln.revoked_at = "revoked", datetime.now()
+            s.add(ln)
+            n += 1
+        s.commit()
+        if not n:
+            raise HTTPException(404, "لا حساب مفعّل لهذا العضو")
+        _gov_change(company.id, user, "member", mid, "account_unlinked", [{"field": "account", "old": "مفعّل", "new": "ملغى"}], sensitive=True,
+                    reason=str((body or {}).get("reason") or ""))
+        return {"ok": True}
+
+
+@app.post("/governance/settings")
+def gov_settings_save(body: dict, user: User = Depends(get_current_user)):
+    gv = _gov_engine()
+    body = body or {}
+    with Session(engine) as s:
+        company, me = _gov_ctx(s, user, "manage")
+        old = _gov_settings(s, company.id)
+        new = dict(old)
+        for k in gv.DEFAULT_SETTINGS:
+            if k in body:
+                if k == "escalate_after_hours":
+                    try:
+                        v = int(body[k])
+                    except (TypeError, ValueError):
+                        raise HTTPException(422, "مهلة التصعيد بالساعات")
+                    if not 1 <= v <= 720:
+                        raise HTTPException(422, "مهلة التصعيد بين 1 و720 ساعة")
+                    new[k] = v
+                else:
+                    new[k] = bool(body[k])
+        weakened = (old["requester_cannot_approve"] and not new["requester_cannot_approve"]) or (old["distinct_approvers"] and not new["distinct_approvers"])
+        reason = str(body.get("reason") or "").strip()
+        if weakened and not reason:
+            raise HTTPException(422, "تعطيل قاعدة فصل مهام — اذكر السبب")
+        row = s.exec(select(GovSettings).where(GovSettings.company_id == company.id)).first() or GovSettings(company_id=company.id)
+        row.settings_json, row.updated_by, row.updated_at = json.dumps(new), (user.name or "")[:100], datetime.now()
+        s.add(row)
+        s.commit()
+        _gov_change(company.id, user, "sod_settings", company.id, "update", gv.diff(old, new), reason, sensitive=weakened)
+        return {"ok": True, "settings": new}
+
+
+# ── مسارات الموافقات
+@app.get("/governance/workflows")
+def gov_workflows(user: User = Depends(get_current_user)):
+    gv = _gov_engine()
+    with Session(engine) as s:
+        company, me = _gov_ctx(s, user)
+        ppl = {k: v["name"] for k, v in _gov_people(s, company).items()}
+        wfs = []
+        for w in s.exec(select(GovWorkflow).where(GovWorkflow.company_id == company.id).order_by(GovWorkflow.subject, GovWorkflow.min_amount)).all():
+            d = _gov_wf_dict(w)
+            d["steps_ar"] = [dict(st, label=gv.step_label(st, ppl), backup=ppl.get(st.get("backup_user_id"), "") if st.get("backup_user_id") else "") for st in d["steps"]]
+            wfs.append(d)
+        dl = [dict(d, user=ppl.get(d["user_id"], f"#{d['user_id']}"), delegate=ppl.get(d["delegate_user_id"], f"#{d['delegate_user_id']}"),
+                   active=(not d["starts"] or d["starts"] <= datetime.now()) and (not d["ends"] or d["ends"] >= datetime.now())) for d in _gov_delegations(s, company.id)]
+        return {"workflows": wfs, "delegations": dl, "can_manage": me["can_manage"]}
+
+
+@app.post("/governance/workflows")
+def gov_workflow_save(body: dict, user: User = Depends(get_current_user)):
+    gv = _gov_engine()
+    body = body or {}
+    with Session(engine) as s:
+        company, me = _gov_ctx(s, user, "manage")
+        clean, errs = gv.validate_workflow(body)
+        ppl = _gov_people(s, company)
+        for st in clean["steps"]:
+            for uid in ([int(st["value"])] if st["kind"] == "user" else []) + ([st["backup_user_id"]] if st.get("backup_user_id") else []):
+                if uid not in ppl:
+                    errs.append("المعتمد أو البديل يجب أن يكون المالك أو عضواً مفعّلاً في الشركة")
+        if errs:
+            raise HTTPException(422, " · ".join(dict.fromkeys(errs)))
+        wid = body.get("id")
+        if wid:
+            w = s.get(GovWorkflow, int(wid)) if str(wid).isdigit() else None
+            if not w or w.company_id != company.id:
+                raise HTTPException(404, "المسار غير موجود")
+            old = _gov_wf_dict(w)
+            w.version += 1
+        else:
+            w, old = GovWorkflow(company_id=company.id, created_by=(user.name or "")[:100], created_at=datetime.now()), {}
+        w.name, w.subject, w.min_amount, w.max_amount = clean["name"], clean["subject"], clean["min_amount"], clean["max_amount"]
+        w.steps_json, w.active, w.updated_at = json.dumps(clean["steps"], ensure_ascii=False), 1 if clean["active"] else 0, datetime.now()
+        s.add(w)
+        s.commit()
+        s.refresh(w)
+        new = _gov_wf_dict(w)
+        _gov_change(company.id, user, "workflow", w.id, "update" if old else "create", gv.diff({k: old.get(k) for k in ("name", "subject", "min_amount", "max_amount", "steps", "active")},
+                                                                                              {k: new[k] for k in ("name", "subject", "min_amount", "max_amount", "steps", "active")}),
+                    str(body.get("reason") or ""), sensitive=bool(old))
+        return {"ok": True, "id": w.id, "note_ar": "التعديل يسري على الطلبات الجديدة فقط؛ الطلبات القائمة تكمل بمستوياتها الأصلية."}
+
+
+@app.post("/governance/delegations")
+def gov_delegation_add(body: dict, user: User = Depends(get_current_user)):
+    body = body or {}
+    with Session(engine) as s:
+        company, me = _gov_ctx(s, user)
+        ppl = _gov_people(s, company)
+        try:
+            uid, did = int(body.get("user_id") or user.id), int(body.get("delegate_user_id"))
+            st = datetime.strptime(str(body.get("starts"))[:10], "%Y-%m-%d")
+            en = datetime.strptime(str(body.get("ends"))[:10], "%Y-%m-%d") + timedelta(hours=23, minutes=59)
+        except (TypeError, ValueError):
+            raise HTTPException(422, "المفوّض وتاريخا البداية والنهاية مطلوبة")
+        if uid != user.id and not me["can_manage"]:
+            raise HTTPException(403, "تفوّض عن نفسك فقط")
+        if uid == did or uid not in ppl or did not in ppl:
+            raise HTTPException(422, "اختر شخصين مختلفين من الشركة")
+        if en < st or (en - st).days > 90:
+            raise HTTPException(422, "مدة التفويض حتى 90 يوماً")
+        s.add(GovDelegation(company_id=company.id, user_id=uid, delegate_user_id=did, starts=st, ends=en, reason=str(body.get("reason") or "")[:200],
+                            created_by=(user.name or "")[:100], created_at=datetime.now()))
+        s.commit()
+        _gov_change(company.id, user, "delegation", uid, "create", [{"field": "delegate", "old": None, "new": f"{ppl[uid]['name']} → {ppl[did]['name']} ({st:%Y-%m-%d} – {en:%Y-%m-%d})"}],
+                    str(body.get("reason") or ""))
+        return {"ok": True}
+
+
+@app.post("/governance/delegations/revoke")
+def gov_delegation_revoke(body: dict, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, me = _gov_ctx(s, user)
+        try:
+            d = s.get(GovDelegation, int((body or {}).get("id")))
+        except (TypeError, ValueError):
+            d = None
+        if not d or d.company_id != company.id:
+            raise HTTPException(404, "غير موجود")
+        if d.user_id != user.id and not me["can_manage"]:
+            raise HTTPException(403, "غير مصرّح")
+        d.revoked = 1
+        s.add(d)
+        s.commit()
+        _gov_change(company.id, user, "delegation", d.user_id, "revoke")
+        return {"ok": True}
+
+
+# ── الطلبات
+@app.post("/governance/requests")
+def gov_request_create(body: dict, user: User = Depends(get_current_user)):
+    gv = _gov_engine()
+    body = body or {}
+    with Session(engine) as s:
+        company, me = _gov_ctx(s, user)
+        subj = str(body.get("subject") or "purchase")
+        if subj not in gv.SUBJECTS:
+            raise HTTPException(422, "نوع الطلب غير صالح")
+        title = str(body.get("title") or "").strip()[:200]
+        if not title:
+            raise HTTPException(422, "عنوان الطلب مطلوب")
+        amt = body.get("amount")
+        if amt not in (None, ""):
+            try:
+                amt = float(amt)
+            except (TypeError, ValueError):
+                raise HTTPException(422, "المبلغ رقم")
+            if amt < 0 or amt != amt:
+                raise HTTPException(422, "المبلغ غير صالح")
+        else:
+            amt = None
+        bid = body.get("branch_id")
+        bid = int(bid) if str(bid or "").isdigit() else None
+        if bid:
+            b = s.get(CompanyBranch, bid)
+            if not b or b.company_id != company.id:
+                raise HTTPException(422, "الفرع ليس من شركتك")
+        wfs = [_gov_wf_dict(w) for w in s.exec(select(GovWorkflow).where(GovWorkflow.company_id == company.id, GovWorkflow.active == 1)).all()]
+        wf = gv.pick_workflow(wfs, subj, amt)
+        st = gv.start_request(wf, subj, amt, {"id": user.id, "name": user.name or ""})
+        r = GovRequest(company_id=company.id, workflow_id=st["workflow_id"], subject=subj, title=title, detail=str(body.get("detail") or "")[:2000], amount=amt,
+                       currency=(company.currency or "SAR"), branch_id=bid, requester_user_id=user.id, requester_name=(user.name or "")[:100], status=st["status"],
+                       step_index=0, steps_json=json.dumps(st["steps"], ensure_ascii=False), history_json=json.dumps(st["history"], ensure_ascii=False),
+                       due_at=st["due_at"] or "", created_at=datetime.now(), updated_at=datetime.now())
+        s.add(r)
+        s.commit()
+        s.refresh(r)
+        log_audit(company.id, user.id, user.name, "gov_request", f"req:{r.id}", f"{gv.SUBJECTS[subj]} · {title[:80]} · {amt if amt is not None else '—'}")
+        try:
+            _collab_notify_request(s, company, r)
+        except Exception as _e:
+            _logger.error(f"notify request: {type(_e).__name__}")
+        return {"ok": True, "id": r.id, "status": r.status, "status_ar": gv.STATUS_AR[r.status], "workflow": wf["name"] if wf else None}
+
+
+@app.get("/governance/requests")
+def gov_requests(box: str = "mine", user: User = Depends(get_current_user)):
+    gv = _gov_engine()
+    with Session(engine) as s:
+        company, me = _gov_ctx(s, user)
+        st = _gov_settings(s, company.id)
+        _gov_escalate_due(s, company, st)
+        ppl = {k: v["name"] for k, v in _gov_people(s, company).items()}
+        dl = _gov_delegations(s, company.id)
+        actor = {"id": user.id, "name": user.name or "", "role": me["role"], "is_owner": me["is_owner"]}
+        q = select(GovRequest).where(GovRequest.company_id == company.id).order_by(GovRequest.created_at.desc()).limit(500)
+        rows = [_gov_req_dict(r) for r in s.exec(q).all()]
+        if box == "all":
+            if not me["can_view"]:
+                raise HTTPException(403, "عرض كل الطلبات للمالك والرئيس التنفيذي والمدقق")
+        elif box == "inbox":
+            rows = [r for r in rows if r["status"] == "pending" and gv.can_act(r, actor, st, dl)[0] and
+                    (gv.can_act(r, actor, st, dl)[2] != "override" or r["escalated"])]
+        else:
+            rows = [r for r in rows if r["requester_id"] == user.id]
+        branches = {b.id: b.name for b in s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company.id)).all()}
+        out = []
+        for r in rows:
+            ok, why, how = gv.can_act(r, actor, st, dl)
+            out.append(dict(r, status_ar=gv.STATUS_AR.get(r["status"], r["status"]), subject_ar=gv.SUBJECTS.get(r["subject"], r["subject"]),
+                            branch=branches.get(r["branch_id"], ""), overdue_h=gv.overdue_hours(r), can_act=ok, act_how=how, why_not=why,
+                            waiting_for=gv.step_label(r["steps"][r["step_index"]], ppl) if r["status"] == "pending" else "",
+                            route=[{"label": gv.step_label(x, ppl), "name": x["name"], "done": i < r["step_index"] or r["status"] in ("approved", "executed")}
+                                   for i, x in enumerate(r["steps"])],
+                            can_execute=r["status"] in ("approved", "auto_approved") and (r["requester_id"] == user.id or me["is_owner"]),
+                            can_resubmit=r["status"] == "returned" and r["requester_id"] == user.id,
+                            can_cancel=r["status"] in ("pending", "returned") and (r["requester_id"] == user.id or me["is_owner"])))
+        return {"items": out, "box": box}
+
+
+@app.post("/governance/requests/act")
+def gov_request_act(body: dict, user: User = Depends(get_current_user)):
+    gv = _gov_engine()
+    body = body or {}
+    with Session(engine) as s:
+        company, me = _gov_ctx(s, user)
+        try:
+            r = s.get(GovRequest, int(body.get("id")))
+        except (TypeError, ValueError):
+            r = None
+        if not r or r.company_id != company.id:
+            raise HTTPException(404, "الطلب غير موجود")
+        action = str(body.get("action") or "")
+        d = _gov_req_dict(r)
+        actor = {"id": user.id, "name": user.name or "", "role": me["role"], "is_owner": me["is_owner"]}
+        try:
+            nd, ev = gv.apply_action(d, action, actor, body.get("note") or "", settings=_gov_settings(s, company.id), delegations=_gov_delegations(s, company.id))
+        except ValueError as e:
+            raise HTTPException(409 if action in ("approve", "reject", "return") else 422, str(e))
+        old_status = r.status
+        r.status, r.step_index, r.history_json = nd["status"], nd["step_index"], json.dumps(nd["history"], ensure_ascii=False, default=str)
+        r.due_at, r.escalated, r.updated_at = nd.get("due_at") or "", 1 if nd.get("escalated") else 0, datetime.now()
+        s.add(r)
+        s.commit()
+        log_audit(company.id, user.id, user.name, f"gov_{action}", f"req:{r.id}", (ev.get("note") or "")[:200])
+        if ev.get("how") == "override":
+            _gov_change(company.id, user, "request", r.id, "override_approval", [{"field": "status", "old": old_status, "new": r.status}], ev["note"], sensitive=True)
+        try:
+            _collab_notify_request(s, company, r, ev)
+        except Exception as _e:
+            _logger.error(f"notify request act: {type(_e).__name__}")
+        return {"ok": True, "status": r.status, "status_ar": gv.STATUS_AR.get(r.status, r.status), "how": ev.get("how")}
+
+
+# ── السياسات
+@app.get("/governance/policies")
+def gov_policies(user: User = Depends(get_current_user)):
+    gv = _gov_engine()
+    with Session(engine) as s:
+        company, me = _gov_ctx(s, user)
+        rows = [_gov_pol_dict(p) for p in s.exec(select(GovPolicy).where(GovPolicy.company_id == company.id).order_by(GovPolicy.kind, GovPolicy.created_at.desc())).all()]
+        if not me["can_view"]:
+            rows = [p for p in rows if p["status"] == "approved"]        # الموظف يرى السياسات المعتمدة فقط
+        for p in rows:
+            p["state"] = gv.policy_status(p)
+            p["state_ar"] = gv.POLICY_STATUS_AR.get(p["state"], p["state"])
+        return {"items": rows, "kinds": gv.POLICY_KINDS, "can_manage": me["can_manage"],
+                "missing": [k for k in gv.POLICY_KINDS if not any(p["kind"] == k and p["state"] in ("active", "scheduled") for p in rows)]}
+
+
+@app.post("/governance/policies")
+def gov_policy_save(body: dict, user: User = Depends(get_current_user)):
+    """مسودة جديدة أو إصدار جديد لسياسة معتمدة (السابقة تبقى سارية حتى يُعتمد الجديد)."""
+    gv = _gov_engine()
+    body = body or {}
+    with Session(engine) as s:
+        company, me = _gov_ctx(s, user, "manage")
+        kind = str(body.get("kind") or "")
+        if kind not in gv.POLICY_KINDS:
+            raise HTTPException(422, "نوع السياسة غير صالح")
+        title, txt = str(body.get("title") or gv.POLICY_KINDS[kind]).strip()[:200], str(body.get("body") or "").strip()[:20000]
+        if len(txt) < 20:
+            raise HTTPException(422, "اكتب نص السياسة (20 حرفاً على الأقل)")
+        for k in ("effective_from", "review_by"):
+            v = str(body.get(k) or "")
+            if v and not re.match(r"^\d{4}-\d{2}-\d{2}$", v):
+                raise HTTPException(422, "التواريخ بصيغة YYYY-MM-DD")
+        if body.get("effective_from") and body.get("review_by") and body["review_by"] <= body["effective_from"]:
+            raise HTTPException(422, "تاريخ المراجعة بعد تاريخ السريان")
+        pid = body.get("id")
+        if pid:
+            p = s.get(GovPolicy, int(pid)) if str(pid).isdigit() else None
+            if not p or p.company_id != company.id:
+                raise HTTPException(404, "السياسة غير موجودة")
+            if p.status in ("draft", "rejected"):
+                old = _gov_pol_dict(p)
+                p.title, p.body, p.status = title, txt, "draft"
+            else:      # معتمدة/بانتظار → إصدار جديد
+                old = {}
+                p = GovPolicy(company_id=company.id, kind=p.kind, title=title, body=txt, version=gv.next_version(p.version), supersedes_id=p.id,
+                              status="draft", created_by=(user.name or "")[:100], created_at=datetime.now())
+        else:
+            old = {}
+            p = GovPolicy(company_id=company.id, kind=kind, title=title, body=txt, version="1.0", status="draft", created_by=(user.name or "")[:100], created_at=datetime.now())
+        p.owner, p.stakeholders = str(body.get("owner") or "")[:100], str(body.get("stakeholders") or "")[:300]
+        p.effective_from, p.review_by, p.updated_at = str(body.get("effective_from") or ""), str(body.get("review_by") or ""), datetime.now()
+        s.add(p)
+        s.commit()
+        s.refresh(p)
+        new = _gov_pol_dict(p)
+        keys = ("title", "body", "owner", "stakeholders", "effective_from", "review_by")
+        _gov_change(company.id, user, "policy", p.id, "edit" if old else "new_version" if p.supersedes_id else "create",
+                    gv.diff({k: old.get(k) for k in keys}, {k: new[k] for k in keys}), str(body.get("reason") or ""))
+        return {"ok": True, "id": p.id, "version": p.version}
+
+
+@app.post("/governance/policies/transition")
+def gov_policy_transition(body: dict, user: User = Depends(get_current_user)):
+    """submit (المالك/الرئيس) → approve/reject (المالك فقط، ولا يعتمد من أرسلها إن كان فصل المهام مفعّلاً وليس هو المالك)."""
+    gv = _gov_engine()
+    body = body or {}
+    with Session(engine) as s:
+        company, me = _gov_ctx(s, user, "manage")
+        try:
+            p = s.get(GovPolicy, int(body.get("id")))
+        except (TypeError, ValueError):
+            p = None
+        if not p or p.company_id != company.id:
+            raise HTTPException(404, "السياسة غير موجودة")
+        act, old = str(body.get("action") or ""), p.status
+        if act == "submit":
+            if p.status not in ("draft", "rejected"):
+                raise HTTPException(409, "تُرسل المسودة فقط")
+            if not p.effective_from:
+                raise HTTPException(422, "حدّد تاريخ السريان قبل الإرسال")
+            p.status = "pending"
+        elif act in ("approve", "reject"):
+            if p.status != "pending":
+                raise HTTPException(409, "السياسة ليست بانتظار الاعتماد")
+            if not me["is_owner"]:
+                raise HTTPException(403, "اعتماد السياسات لمالك الشركة")
+            if act == "reject":
+                p.reject_reason = str(body.get("reason") or "").strip()[:300]
+                if not p.reject_reason:
+                    raise HTTPException(422, "اذكر سبب الرفض")
+                p.status = "rejected"
+            else:
+                p.status, p.approved_by, p.approved_at = "approved", (user.name or "")[:100], datetime.now()
+                if p.supersedes_id:
+                    prev = s.get(GovPolicy, p.supersedes_id)
+                    if prev and prev.company_id == company.id and prev.status == "approved":
+                        prev.status, prev.updated_at = "retired", datetime.now()
+                        s.add(prev)
+        else:
+            raise HTTPException(422, "إجراء غير معروف")
+        p.updated_at = datetime.now()
+        s.add(p)
+        s.commit()
+        _gov_change(company.id, user, "policy", p.id, act, [{"field": "status", "old": old, "new": p.status}], str(body.get("reason") or ""),
+                    approved_by=(user.name if act == "approve" else ""))
+        return {"ok": True, "status": p.status, "state": gv.policy_status(_gov_pol_dict(p))}
+
+
+@app.get("/governance/policies/{pid}/history")
+def gov_policy_history(pid: int, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, me = _gov_ctx(s, user)
+        p = s.get(GovPolicy, pid)
+        if not p or p.company_id != company.id:
+            raise HTTPException(404, "السياسة غير موجودة")
+        chain, cur = [], p
+        while cur and len(chain) < 50:
+            chain.append(cur.id)
+            cur = s.get(GovPolicy, cur.supersedes_id) if cur.supersedes_id else None
+        later = s.exec(select(GovPolicy).where(GovPolicy.company_id == company.id, GovPolicy.supersedes_id == p.id)).all()
+        ids = set(chain) | {x.id for x in later}
+        versions = [_gov_pol_dict(x) for x in s.exec(select(GovPolicy).where(GovPolicy.company_id == company.id)).all() if x.id in ids]
+        changes = [{"at": c.created_at, "actor": c.actor, "action": c.action, "changes": json.loads(c.changes_json or "[]"), "reason": c.reason,
+                    "approved_by": c.approved_by, "policy_id": int(c.entity_id) if str(c.entity_id).isdigit() else None}
+                   for c in s.exec(select(GovChange).where(GovChange.company_id == company.id, GovChange.entity == "policy").order_by(GovChange.created_at.desc())).all()
+                   if str(c.entity_id).isdigit() and int(c.entity_id) in ids]
+        return {"versions": sorted(versions, key=lambda x: x["id"]), "changes": changes}
+
+
+# ── التدقيق والاستثناءات
+_GOV_ENTITY_AR = {"member": "عضو فريق", "workflow": "مسار موافقات", "policy": "سياسة", "sod_settings": "قواعد فصل المهام", "delegation": "تفويض",
+                  "request": "طلب اعتماد", "brand": "الهوية", "share": "مشاركة", "partner": "شريك"}
+
+
+@app.get("/governance/changes")
+def gov_changes(entity: str = "", sensitive: int = 0, days: int = 90, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, me = _gov_ctx(s, user, "view")
+        q = select(GovChange).where(GovChange.company_id == company.id, GovChange.created_at >= datetime.now() - timedelta(days=max(1, min(days, 730))))
+        if entity:
+            q = q.where(GovChange.entity == entity)
+        if sensitive:
+            q = q.where(GovChange.sensitive == 1)
+        rows = s.exec(q.order_by(GovChange.created_at.desc()).limit(1000)).all()
+        audit = s.exec(select(AuditLog).where(AuditLog.company_id == company.id).order_by(AuditLog.created_at.desc()).limit(200)).all()
+        return {"items": [{"id": c.id, "at": c.created_at, "actor": c.actor, "entity": c.entity, "entity_ar": _GOV_ENTITY_AR.get(c.entity, c.entity), "entity_id": c.entity_id,
+                           "action": c.action, "changes": json.loads(c.changes_json or "[]"), "reason": c.reason, "approved_by": c.approved_by,
+                           "sensitive": bool(c.sensitive)} for c in rows],
+                "audit": [{"at": a.created_at, "user": a.user_name, "action": a.action, "target": a.target, "details": a.details} for a in audit],
+                "entities": _GOV_ENTITY_AR}
+
+
+@app.get("/governance/changes.csv")
+def gov_changes_csv(user: User = Depends(get_current_user)):
+    import csv as _csv, io as _io
+    with Session(engine) as s:
+        company, me = _gov_ctx(s, user, "view")
+        buf = _io.StringIO()
+        w = _csv.writer(buf)
+        w.writerow(["الوقت", "المنفذ", "الكيان", "المعرّف", "الإجراء", "الحقل", "القيمة السابقة", "القيمة الجديدة", "السبب", "المعتمد", "حساس"])
+        for c in s.exec(select(GovChange).where(GovChange.company_id == company.id).order_by(GovChange.created_at.desc()).limit(20000)).all():
+            chs = json.loads(c.changes_json or "[]") or [{"field": "", "old": "", "new": ""}]
+            for ch in chs:
+                vals = [c.created_at.strftime("%Y-%m-%d %H:%M") if c.created_at else "", c.actor, _GOV_ENTITY_AR.get(c.entity, c.entity), c.entity_id, c.action,
+                        ch.get("field"), json.dumps(ch.get("old"), ensure_ascii=False, default=str), json.dumps(ch.get("new"), ensure_ascii=False, default=str),
+                        c.reason, c.approved_by, "نعم" if c.sensitive else ""]
+                w.writerow([("'" + str(v)) if str(v)[:1] in ("=", "+", "-", "@") else v for v in vals])      # منع حقن الصيغ في Excel
+        log_audit(company.id, user.id, user.name, "export", "governance_changes", "CSV")
+        from fastapi.responses import Response as _Resp
+        return _Resp(content="\ufeff" + buf.getvalue(), media_type="text/csv; charset=utf-8",
+                        headers={"Content-Disposition": "attachment; filename=governance-changes.csv"})
+
+
+@app.get("/governance/exceptions")
+def gov_exceptions(user: User = Depends(get_current_user)):
+    gv = _gov_engine()
+    with Session(engine) as s:
+        company, me = _gov_ctx(s, user, "view")
+        ex = gv.exceptions(_gov_inputs(s, company, _gov_settings(s, company.id)))
+        counts = {}
+        for x in ex:
+            counts[x["kind"]] = counts.get(x["kind"], 0) + 1
+        return {"items": ex, "counts": counts, "kind_ar": gv.KIND_AR}
+
+
+def _gov_record_denied(authorization, route):
+    """يُستدعى من الوسيط عند استجابة 403 لطلب مصادَق: يسجّل access_denied (مرة كل 10 دقائق لكل مستخدم/مسار)."""
+    try:
+        payload = jwt.decode(authorization[7:], SECRET_KEY, algorithms=["HS256"])
+        uid = payload.get("user_id")
+        if not isinstance(uid, int) or payload.get("typ") == "mfa":
+            return
+        key = (uid, route)
+        now = time.time()
+        if now - _GOV_DENY_SEEN.get(key, 0) < 600:
+            return
+        _GOV_DENY_SEEN[key] = now
+        if len(_GOV_DENY_SEEN) > 5000:
+            _GOV_DENY_SEEN.clear()
+        with Session(engine) as ms:
+            u = ms.get(User, uid)
+        if u and u.company_id:
+            _sec_event("access_denied", u, detail=route[:200])
+    except Exception:
+        pass
+
+
+@app.get("/company-governance.html")
+def page_company_governance():
+    return FileResponse("company-governance.html")
+
+
+# ═══════════════════════════════════════════════════════════
+#  Phase 6.5 — Advanced Collaboration — التعاون المؤسسي
+#  المساحات تتبع صلاحيات الأدوار الحالية؛ القرار الناتج يُنشأ في متابعة القرارات (3.9) والأدلة في جدولها؛
+#  الإشعارات تُنشأ لكل مستلم بعد التحقق من وصوله للمصدر.
+# ═══════════════════════════════════════════════════════════
+def _collab_engine():
+    ce = _load_p24("collab_engine")
+    if ce is None:
+        raise HTTPException(503, "محرّك التعاون غير متاح — " + _p23_diagnostic())
+    return ce
+
+
+def _collab_viewer(s, user, company):
+    role = get_user_role(s, user) or "staff"
+    sc = s.exec(select(CompanyUserScope).where(CompanyUserScope.company_id == company.id, CompanyUserScope.user_id == user.id)).first()
+    return {"id": user.id, "name": user.name or "", "role": role, "title": (sc.title if sc else "") or "", "department": (sc.department if sc else "") or "",
+            "company_id": company.id}
+
+
+def _collab_ctx(s, user):
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    company = s.get(Company, user.company_id)
+    if not company:
+        raise HTTPException(403, "غير مصرّح")
+    if company.is_active != 1:
+        raise HTTPException(402, "شركتك قيد التفعيل")
+    ce = _collab_engine()
+    v = _collab_viewer(s, user, company)
+    v["workspaces"] = ce.workspace_access(v, lambda r: check_permission(v["role"], r, "view"))
+    return company, v
+
+
+def _collab_people(s, company):
+    """مستخدمو الشركة الفعليون: المالك + الأعضاء المفعّلون + من دخل عبر المجموعة الآن (للإشارات والمشاركة)."""
+    out = {}
+    o = s.get(User, company.owner_id)
+    if o:
+        out[o.id] = o
+    for ln in s.exec(select(GovMemberLink).where(GovMemberLink.company_id == company.id, GovMemberLink.status == "active")).all():
+        u = s.get(User, ln.user_id)
+        if u:
+            out[u.id] = u
+    for u in s.exec(select(User).where(User.company_id == company.id)).all():
+        out.setdefault(u.id, u)
+    return out
+
+
+def _collab_viewer_for(s, company, uid):
+    """منظور مستخدم آخر داخل الشركة (لتصفية الإشعارات بصلاحياته هو لا صلاحيات المرسل)."""
+    u = s.get(User, uid)
+    if not u:
+        return None
+    if company.owner_id == u.id:
+        role = "owner"
+    else:
+        ln = s.exec(select(GovMemberLink).where(GovMemberLink.user_id == u.id, GovMemberLink.company_id == company.id, GovMemberLink.status == "active")).first()
+        m = s.get(CompanyMember, ln.member_id) if ln else None
+        if m and m.company_id == company.id:
+            role = m.role
+        else:
+            gr = None
+            ge = _load_p24("group_engine")
+            if ge:
+                gr = ge.best_company_role([r for _g, r in _grp_grants(s, u.id, company.id).get(company.id, [])])
+            if not gr:
+                return None
+            role = gr
+    sc = s.exec(select(CompanyUserScope).where(CompanyUserScope.company_id == company.id, CompanyUserScope.user_id == u.id)).first()
+    v = {"id": u.id, "name": u.name or "", "role": role, "title": (sc.title if sc else "") or "", "department": (sc.department if sc else "") or "", "company_id": company.id}
+    v["workspaces"] = _collab_engine().workspace_access(v, lambda r: check_permission(role, r, "view"))
+    return v
+
+
+def _collab_notify(s, company_id, user_ids, kind, title, link, ref, exclude=None):
+    """إشعار لكل مستلم مرة واحدة لكل ref، حسب تفضيلاته. لا يفشل المسار الرئيسي."""
+    ce = _collab_engine()
+    n = 0
+    for uid in sorted(set(u for u in user_ids if u and u != exclude)):
+        try:
+            pr = s.exec(select(CollabNotifPref).where(CollabNotifPref.user_id == uid)).first()
+            prefs = json.loads(pr.prefs_json or "{}") if pr else {}
+            if not ce.notif_allowed(prefs, kind):
+                continue
+            if s.exec(select(CollabNotification).where(CollabNotification.user_id == uid, CollabNotification.ref == ref[:120])).first():
+                continue
+            s.add(CollabNotification(user_id=uid, company_id=company_id, kind=kind, title=title[:200], link=link[:200], ref=ref[:120], created_at=datetime.now()))
+            n += 1
+        except Exception as _e:
+            _logger.error(f"notify failed: {type(_e).__name__}")
+    if n:
+        s.commit()
+    return n
+
+
+def _collab_notify_request(s, company, r, ev=None):
+    """طلب حوكمة: يُشعر من يملك الاعتماد في المستوى الحالي، ويُشعر المنشئ عند تغير الحالة."""
+    gv = _gov_engine()
+    d = _gov_req_dict(r)
+    st = _gov_settings(s, company.id)
+    dl = _gov_delegations(s, company.id)
+    if d["status"] == "pending":
+        targets = []
+        for uid in _gov_people(s, company):
+            v = _collab_viewer_for(s, company, uid)
+            if v and gv.can_act(d, {"id": uid, "role": v["role"], "is_owner": company.owner_id == uid}, st, dl)[2] in ("direct", "backup", "delegate"):
+                targets.append(uid)
+        _collab_notify(s, company.id, targets, "approval_request", f"طلب اعتماد: {d['title'][:80]}", "company-governance.html#requests",
+                       f"req:{d['id']}:step:{d['step_index']}:{len(d['history'])}")
+    if ev and ev.get("action") in ("approve", "reject", "return", "execute") or d["status"] in ("approved", "rejected", "returned"):
+        _collab_notify(s, company.id, [d["requester_id"]], "approval_request", f"تحديث طلبك «{d['title'][:60]}»: {gv.STATUS_AR.get(d['status'], d['status'])}",
+                       "company-governance.html#requests", f"req:{d['id']}:status:{d['status']}:{len(d['history'])}", exclude=(ev or {}).get("actor_id"))
+
+
+def _collab_thread_dict(t):
+    return {"id": t.id, "workspace": t.workspace, "subject_kind": t.subject_kind, "subject_ref": t.subject_ref, "subject_label": t.subject_label,
+            "branch": t.branch, "title": t.title, "status": t.status, "assigned_dept": t.assigned_dept, "decision_id": t.decision_id,
+            "participants": json.loads(t.participants_json or "[]"), "created_by_id": t.created_by_id, "created_by": t.created_by,
+            "created_at": t.created_at, "updated_at": t.updated_at}
+
+
+def _collab_thread(s, company, v, tid):
+    ce = _collab_engine()
+    try:
+        t = s.get(CollabThread, int(tid))
+    except (TypeError, ValueError):
+        t = None
+    if not t or t.company_id != company.id or not ce.can_see_thread(_collab_thread_dict(t), v, v["workspaces"]):
+        raise HTTPException(404, "النقاش غير موجود")
+    if t.subject_kind == "decision" and not check_permission(v["role"], "decisions", "view") and t.created_by_id != v["id"] \
+            and v["id"] not in json.loads(t.participants_json or "[]"):
+        raise HTTPException(404, "النقاش غير موجود")
+    return t
+
+
+@app.get("/collab/meta")
+def collab_meta(user: User = Depends(get_current_user)):
+    ce = _collab_engine()
+    with Session(engine) as s:
+        company, v = _collab_ctx(s, user)
+        ppl = _collab_people(s, company)
+        decs = []
+        if check_permission(v["role"], "decisions", "view"):
+            for m in s.exec(select(CompanyDecisionMeta).where(CompanyDecisionMeta.company_id == company.id,
+                                                              CompanyDecisionMeta.workflow.in_(["draft", "pending_approval", "under_review", "approved", "in_progress"]))).all():
+                d = s.get(CompanyDecision, m.decision_id)
+                if d:
+                    decs.append({"id": d.id, "title": d.title, "workflow": m.workflow})
+        return {"me": v, "workspaces": ce.WORKSPACES, "visible": v["workspaces"], "subject_kinds": ce.SUBJECT_KINDS, "post_kinds": ce.POST_KINDS,
+                "decision_only": sorted(ce.DECISION_ONLY), "notif_kinds": ce.NOTIF_KINDS, "share_kinds": ce.SHARE_KINDS, "share_targets": ce.SHARE_TARGETS,
+                "share_perms": ce.SHARE_PERMS, "people": [{"id": u.id, "name": u.name or u.email} for u in ppl.values()],
+                "decisions": decs, "branches": [b.name for b in s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company.id, CompanyBranch.is_active == 1)).all()]}
+
+
+@app.get("/collab/overview")
+def collab_overview(user: User = Depends(get_current_user)):
+    ce = _collab_engine()
+    with Session(engine) as s:
+        company, v = _collab_ctx(s, user)
+        _collab_generate_due(s, company, v)
+        threads = [_collab_thread_dict(t) for t in s.exec(select(CollabThread).where(CollabThread.company_id == company.id).order_by(CollabThread.updated_at.desc()).limit(1000)).all()]
+        vis = [t for t in threads if ce.can_see_thread(t, v, v["workspaces"])]
+        ws = [{"key": k, "name": ce.WORKSPACES[k], "open": sum(1 for t in vis if t["workspace"] == k and t["status"] == "open"),
+               "total": sum(1 for t in vis if t["workspace"] == k)} for k in v["workspaces"]]
+        review = []
+        if check_permission(v["role"], "decisions", "view"):
+            for m in s.exec(select(CompanyDecisionMeta).where(CompanyDecisionMeta.company_id == company.id, CompanyDecisionMeta.workflow.in_(["pending_approval", "under_review"]))).all():
+                d = s.get(CompanyDecision, m.decision_id)
+                if d:
+                    review.append({"id": d.id, "title": d.title, "workflow": m.workflow, "threads": sum(1 for t in vis if t["decision_id"] == d.id)})
+        today = datetime.now().strftime("%Y-%m-%d")
+        mine = [{"id": a.id, "title": a.title, "due_date": a.due_date, "status": a.status, "overdue": bool(a.due_date and a.due_date < today)}
+                for a in s.exec(select(CompanyAction).where(CompanyAction.company_id == company.id, CompanyAction.owner == (user.name or ""),
+                                                           CompanyAction.status.in_(["not_started", "in_progress", "blocked"]))).all()] if user.name else []
+        asked = [t for t in vis if t["assigned_dept"] and t["assigned_dept"] == v["department"] and t["status"] == "open"]
+        unread = len(s.exec(select(CollabNotification).where(CollabNotification.user_id == user.id, CollabNotification.read_at == None)).all())  # noqa: E711
+        return {"me": v, "workspaces": ws, "open_threads": [t for t in vis if t["status"] == "open"][:12], "decisions_review": review,
+                "my_actions": mine, "analysis_requests": asked, "unread": unread, "activity": _collab_activity(s, company, v, 15)}
+
+
+@app.get("/collab/threads")
+def collab_threads(workspace: str = "", status: str = "", subject: str = "", decision_id: int = 0, user: User = Depends(get_current_user)):
+    ce = _collab_engine()
+    with Session(engine) as s:
+        company, v = _collab_ctx(s, user)
+        q = select(CollabThread).where(CollabThread.company_id == company.id)
+        if workspace:
+            q = q.where(CollabThread.workspace == workspace)
+        if status:
+            q = q.where(CollabThread.status == status)
+        if subject:
+            q = q.where(CollabThread.subject_kind == subject)
+        if decision_id:
+            q = q.where(CollabThread.decision_id == decision_id)
+        out = []
+        for t in s.exec(q.order_by(CollabThread.updated_at.desc()).limit(500)).all():
+            d = _collab_thread_dict(t)
+            if not ce.can_see_thread(d, v, v["workspaces"]):
+                continue
+            if d["subject_kind"] == "decision" and not check_permission(v["role"], "decisions", "view") and d["created_by_id"] != v["id"] and v["id"] not in d["participants"]:
+                continue
+            posts = [{"kind": p.kind} for p in s.exec(select(CollabPost).where(CollabPost.thread_id == t.id)).all()]
+            out.append(dict(d, workspace_ar=ce.WORKSPACES.get(d["workspace"], d["workspace"]), subject_ar=ce.SUBJECT_KINDS.get(d["subject_kind"], ""),
+                            summary=ce.thread_summary(posts)))
+        return {"items": out}
+
+
+@app.post("/collab/threads")
+def collab_thread_create(body: dict, user: User = Depends(get_current_user)):
+    ce = _collab_engine()
+    body = body or {}
+    with Session(engine) as s:
+        company, v = _collab_ctx(s, user)
+        ws = str(body.get("workspace") or "")
+        if ws not in v["workspaces"]:
+            raise HTTPException(403, "لا تملك الوصول لمساحة هذه الإدارة")
+        kind = str(body.get("subject_kind") or "general")
+        if kind not in ce.SUBJECT_KINDS:
+            raise HTTPException(422, "نوع الموضوع غير صالح")
+        title = str(body.get("title") or "").strip()[:200]
+        if len(title) < 3:
+            raise HTTPException(422, "عنوان النقاش مطلوب")
+        did = None
+        if kind == "decision":
+            if not check_permission(v["role"], "decisions", "view"):
+                raise HTTPException(403, "لا تملك الوصول للقرارات")
+            try:
+                d = s.get(CompanyDecision, int(body.get("decision_id")))
+            except (TypeError, ValueError):
+                d = None
+            if not d or d.company_id != company.id:
+                raise HTTPException(422, "اختر قراراً من شركتك")
+            did, label, ref = d.id, d.title, f"decision:{d.id}"
+        else:
+            label = str(body.get("subject_label") or "").strip()[:200]
+            ref = str(body.get("subject_ref") or "")[:120]
+        t = CollabThread(company_id=company.id, workspace=ws, subject_kind=kind, subject_ref=ref, subject_label=label, branch=str(body.get("branch") or "")[:100],
+                         title=title, decision_id=did, participants_json=json.dumps([user.id]), created_by_id=user.id, created_by=(user.name or "")[:100],
+                         created_at=datetime.now(), updated_at=datetime.now())
+        s.add(t)
+        s.commit()
+        s.refresh(t)
+        first = str(body.get("body") or "").strip()
+        if first:
+            collab_post_add(t.id, {"kind": body.get("first_kind") or "comment", "body": first, "evidence_url": body.get("evidence_url"),
+                                   "evidence_source": body.get("evidence_source")}, user=user)
+        log_audit(company.id, user.id, user.name, "collab_thread", f"thread:{t.id}", title[:100])
+        return {"ok": True, "id": t.id}
+
+
+@app.get("/collab/threads/{tid}")
+def collab_thread_get(tid: int, user: User = Depends(get_current_user)):
+    ce = _collab_engine()
+    with Session(engine) as s:
+        company, v = _collab_ctx(s, user)
+        t = _collab_thread(s, company, v, tid)
+        names = {u.id: (u.name or u.email) for u in _collab_people(s, company).values()}
+        posts = [{"id": p.id, "kind": p.kind, "kind_ar": ce.POST_KINDS.get(p.kind, p.kind), "body": ce.render_mentions(p.body, names), "evidence_url": p.evidence_url,
+                  "evidence_source": p.evidence_source, "author": p.author, "author_id": p.author_id, "at": p.created_at}
+                 for p in s.exec(select(CollabPost).where(CollabPost.thread_id == t.id).order_by(CollabPost.created_at)).all()]
+        d = _collab_thread_dict(t)
+        for n in s.exec(select(CollabNotification).where(CollabNotification.user_id == user.id, CollabNotification.read_at == None,  # noqa: E711
+                                                         CollabNotification.ref.like(f"thread:{t.id}:%"))).all():
+            n.read_at = datetime.now()
+            s.add(n)
+        s.commit()
+        return dict(d, workspace_ar=ce.WORKSPACES.get(d["workspace"]), subject_ar=ce.SUBJECT_KINDS.get(d["subject_kind"]), posts=posts,
+                    summary=ce.thread_summary(posts), can_convert=d["status"] == "open" and not d["decision_id"] and check_permission(v["role"], "decisions", "view")
+                    and (v["role"] in ("owner", "manager", "executive") or v["title"] in ("ceo", "dept_manager", "branch_manager")),
+                    can_close=d["created_by_id"] == user.id or v["role"] == "owner" or v["title"] == "ceo",
+                    decision_link=f"company-decisions-intelligence.html#d{d['decision_id']}" if d["decision_id"] else None)
+
+
+@app.post("/collab/threads/{tid}/posts")
+def collab_post_add(tid: int, body: dict, user: User = Depends(get_current_user)):
+    ce = _collab_engine()
+    body = body or {}
+    with Session(engine) as s:
+        company, v = _collab_ctx(s, user)
+        t = _collab_thread(s, company, v, tid)
+        if t.status != "open":
+            raise HTTPException(409, "النقاش مغلق — أعد فتحه أولاً")
+        kind = str(body.get("kind") or "comment")
+        if kind not in ce.POST_KINDS:
+            raise HTTPException(422, "نوع المشاركة غير صالح")
+        if kind in ce.DECISION_ONLY and not t.decision_id:
+            raise HTTPException(422, "هذا النوع لنقاشات القرارات فقط")
+        txt = str(body.get("body") or "").strip()[:4000]
+        if not txt:
+            raise HTTPException(422, "اكتب المشاركة")
+        url = str(body.get("evidence_url") or "").strip()[:500]
+        if url and not re.match(r"^https?://", url, re.I):
+            raise HTTPException(422, "رابط الدليل يبدأ بـ http(s)://")
+        if kind == "evidence" and not (url or str(body.get("evidence_source") or "").strip()):
+            raise HTTPException(422, "الدليل يحتاج رابطاً أو مصدراً (مثل: تقرير المبيعات أكتوبر)")
+        dept = ""
+        if kind == "analysis_request":
+            dept = str(body.get("dept") or "")
+            if dept not in ce.WORKSPACES:
+                raise HTTPException(422, "اختر الإدارة المطلوب منها التحليل")
+            t.assigned_dept = dept
+        ppl = _collab_people(s, company)
+        men = ce.mentions(txt, list(ppl))
+        part = set(json.loads(t.participants_json or "[]")) | {user.id} | set(men)
+        p = CollabPost(company_id=company.id, thread_id=t.id, kind=kind, body=txt, evidence_url=url, evidence_source=str(body.get("evidence_source") or "")[:200],
+                       author_id=user.id, author=(user.name or "")[:100], created_at=datetime.now())
+        s.add(p)
+        t.participants_json, t.updated_at = json.dumps(sorted(part)), datetime.now()
+        s.add(t)
+        s.commit()
+        s.refresh(p)
+        if t.decision_id and kind in ("evidence", "outcome", "change_request", "objection", "support", "note"):
+            if kind == "evidence":
+                s.add(CompanyDecisionEvidence(company_id=company.id, decision_id=t.decision_id, source=(p.evidence_source or "نقاش")[:100],
+                                              reference=f"collab:{t.id}:{p.id}", note=txt[:500], url=url, added_by=(user.name or "")[:100]))
+            _dec_hist(s, company.id, t.decision_id, f"collab_{kind}", user.name or "", "", ce.POST_KINDS[kind], txt[:300])
+            s.commit()
+        # إشعارات: المشاركون (بصلاحيتهم) + المشار إليهم + الإدارة المطلوب منها التحليل
+        td = _collab_thread_dict(t)
+        targets, assigned = set(), set()
+        for uid in part | set(ppl):
+            vv = _collab_viewer_for(s, company, uid)
+            if not vv or not ce.can_see_thread(td, vv, vv["workspaces"]):
+                continue
+            if uid in part:
+                targets.add(uid)
+            if kind == "analysis_request" and vv["department"] == dept:
+                assigned.add(uid)
+        _collab_notify(s, company.id, targets - set(men) - assigned, "comment", f"{ce.POST_KINDS[kind]} في «{t.title[:60]}»", f"company-collaboration.html#t{t.id}",
+                       f"thread:{t.id}:post:{p.id}", exclude=user.id)
+        _collab_notify(s, company.id, set(men) & targets, "comment", f"{user.name} أشار إليك في «{t.title[:60]}»", f"company-collaboration.html#t{t.id}",
+                       f"thread:{t.id}:mention:{p.id}", exclude=user.id)
+        if assigned:
+            _collab_notify(s, company.id, assigned, "action_assigned", f"طلب تحليل لإدارتك: {t.title[:60]}", f"company-collaboration.html#t{t.id}",
+                           f"thread:{t.id}:ask:{p.id}", exclude=user.id)
+        return {"ok": True, "id": p.id, "mentions": men}
+
+
+@app.post("/collab/threads/{tid}/status")
+def collab_thread_status(tid: int, body: dict, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, v = _collab_ctx(s, user)
+        t = _collab_thread(s, company, v, tid)
+        if not (t.created_by_id == user.id or v["role"] == "owner" or v["title"] == "ceo"):
+            raise HTTPException(403, "يغلقه منشئه أو المالك")
+        to = str((body or {}).get("status") or "")
+        if to not in ("open", "resolved"):
+            raise HTTPException(422, "حالة غير صالحة")
+        t.status, t.updated_at = to, datetime.now()
+        s.add(t)
+        s.commit()
+        return {"ok": True}
+
+
+@app.post("/collab/threads/{tid}/to-decision")
+def collab_thread_to_decision(tid: int, body: dict, user: User = Depends(get_current_user)):
+    """تحويل النقاش إلى قرار في متابعة القرارات (3.9) — نفس مسار الإنشاء والصلاحيات والتحقق، مسودة تُرسل للاعتماد هناك."""
+    with Session(engine) as s:
+        company, v = _collab_ctx(s, user)
+        t = _collab_thread(s, company, v, tid)
+        if t.decision_id:
+            raise HTTPException(409, "النقاش مرتبط بقرار مسبقاً")
+        posts = s.exec(select(CollabPost).where(CollabPost.thread_id == t.id).order_by(CollabPost.created_at)).all()
+        title, tt = str((body or {}).get("title") or t.title).strip()[:200], t.title
+    desc = "\n".join(f"• {p.author}: {p.body[:200]}" for p in posts if p.kind in ("explanation", "cause", "analysis_reply", "evidence"))[:950]
+    r = company_decision_center_save({"title": title, "description": f"من نقاش «{tt}»\n{desc}", "source": "manual", "source_ref": f"discussion:{tid}",
+                                      "priority": (body or {}).get("priority") or "medium", "due": (body or {}).get("due"),
+                                      "rationale": str((body or {}).get("rationale") or "")[:500]}, user=user)
+    with Session(engine) as s:
+        t = s.get(CollabThread, tid)
+        t.decision_id, t.status, t.updated_at = r["id"], "converted", datetime.now()
+        s.add(t)
+        for p in s.exec(select(CollabPost).where(CollabPost.thread_id == tid, CollabPost.kind == "evidence")).all():
+            s.add(CompanyDecisionEvidence(company_id=t.company_id, decision_id=r["id"], source=(p.evidence_source or "نقاش")[:100],
+                                          reference=f"collab:{tid}:{p.id}", note=p.body[:500], url=p.evidence_url, added_by=p.author))
+        s.commit()
+    return {"ok": True, "decision_id": r["id"], "link": "company-decisions-intelligence.html"}
+
+
+# ── مشاركة التقارير
+def _collab_report(s, company, kind, rid):
+    M = {"monthly": (CompanyMonthlyReport, CompanyMonthlyReportMetric, ("approved", "published")),
+         "exec": (CompanyExecReport, CompanyExecReportMetric, ("approved", "published")),
+         "board": (CompanyBoardReport, CompanyBoardReportMetric, ("final", "presented"))}
+    if kind not in M:
+        raise HTTPException(422, "نوع التقرير غير صالح")
+    R, Mt, ok = M[kind]
+    try:
+        r = s.get(R, int(rid))
+    except (TypeError, ValueError):
+        r = None
+    if not r or r.company_id != company.id:
+        raise HTTPException(404, "التقرير غير موجود")
+    return r, Mt, r.status in ok
+
+
+@app.get("/collab/reports")
+def collab_reports(user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, v = _collab_ctx(s, user)
+        if not check_permission(v["role"], "reports", "view"):
+            raise HTTPException(403, "مشاركة التقارير لمن يملك الاطلاع عليها")
+        out = []
+        for kind, R, ok, label in (("monthly", CompanyMonthlyReport, ("approved", "published"), "التقرير الشهري"),
+                                   ("exec", CompanyExecReport, ("approved", "published"), "التقرير التنفيذي"),
+                                   ("board", CompanyBoardReport, ("final", "presented"), "حزمة المجلس")):
+            for r in s.exec(select(R).where(R.company_id == company.id, R.status.in_(list(ok))).order_by(R.generated_at.desc()).limit(24)).all():
+                out.append({"kind": kind, "id": r.id, "title": r.title or f"{label} {r.period}", "period": r.period, "version": r.version, "status": r.status, "label": label})
+        return {"items": out, "note_ar": "تُشارك التقارير المعتمدة أو المنشورة فقط — المسودات لا تُشارك."}
+
+
+@app.post("/collab/shares")
+def collab_share_create(body: dict, user: User = Depends(get_current_user)):
+    ce = _collab_engine()
+    body = body or {}
+    with Session(engine) as s:
+        company, v = _collab_ctx(s, user)
+        if not check_permission(v["role"], "reports", "view"):
+            raise HTTPException(403, "غير مصرّح بمشاركة التقارير")
+        kind = str(body.get("report_kind") or "")
+        r, _Mt, shareable = _collab_report(s, company, kind, body.get("report_id"))
+        if not shareable:
+            raise HTTPException(409, "يُشارك التقرير بعد اعتماده أو نشره")
+        tk, tv = str(body.get("target_kind") or ""), str(body.get("target_value") or "")
+        if tk not in ce.SHARE_TARGETS:
+            raise HTTPException(422, "اختر جهة المشاركة")
+        if tk == "user" and (not tv.isdigit() or int(tv) not in _collab_people(s, company) or int(tv) == user.id):
+            raise HTTPException(422, "اختر موظفاً من شركتك")
+        if tk == "department" and tv not in ce.WORKSPACES:
+            raise HTTPException(422, "اختر إدارة")
+        if tk == "group":
+            ln = s.exec(select(GroupCompanyLink).where(GroupCompanyLink.company_id == company.id, GroupCompanyLink.status == "active")).first()
+            if not ln:
+                raise HTTPException(422, "الشركة ليست ضمن مجموعة")
+            if company.owner_id != user.id and v["role"] != "executive":
+                raise HTTPException(403, "المشاركة داخل المجموعة لمالك الشركة")
+            tv = str(ln.group_id)
+        perm = str(body.get("permission") or "view")
+        if perm not in ce.SHARE_PERMS:
+            raise HTTPException(422, "الصلاحية مشاهدة أو تعليق")
+        try:
+            days = int(body.get("days") or 30)
+        except (TypeError, ValueError):
+            raise HTTPException(422, "مدة الوصول بالأيام")
+        if not 1 <= days <= 365:
+            raise HTTPException(422, "مدة الوصول من 1 إلى 365 يوماً")
+        sh = CollabShare(company_id=company.id, report_kind=kind, report_id=r.id, title=(r.title or f"{ce.SHARE_KINDS[kind]} {r.period}")[:200], target_kind=tk,
+                         target_value=tv, permission=perm, expires_at=datetime.now() + timedelta(days=days), note=str(body.get("note") or "")[:300],
+                         shared_by_id=user.id, shared_by=(user.name or "")[:100], created_at=datetime.now())
+        s.add(sh)
+        s.commit()
+        s.refresh(sh)
+        log_audit(company.id, user.id, user.name, "report_share", f"{kind}:{r.id}", f"{tk}:{tv} {perm} {days}d")
+        _gov_change(company.id, user, "share", sh.id, "create", [{"field": "target", "old": None, "new": f"{ce.SHARE_TARGETS[tk]} · {perm} · {days} يوماً"}])
+        rec = []
+        if tk == "user":
+            rec = [int(tv)]
+        elif tk == "department":
+            rec = [x.user_id for x in s.exec(select(CompanyUserScope).where(CompanyUserScope.company_id == company.id, CompanyUserScope.department == tv)).all()]
+        else:
+            g = s.get(OrganizationGroup, int(tv))
+            rec = ([g.owner_user_id] if g else []) + [m.user_id for m in s.exec(select(GroupMember).where(GroupMember.group_id == int(tv), GroupMember.status == "active")).all()]
+        _collab_notify(s, company.id, rec, "report_update", f"شارك معك {user.name}: {sh.title[:80]}", f"company-collaboration.html#s{sh.id}", f"share:{sh.id}", exclude=user.id)
+        return {"ok": True, "id": sh.id}
+
+
+def _collab_share_recipient(s, user):
+    sc = s.exec(select(CompanyUserScope).where(CompanyUserScope.user_id == user.id)).all()
+    gids = {g.id for g in s.exec(select(OrganizationGroup).where(OrganizationGroup.owner_user_id == user.id, OrganizationGroup.status == "active")).all()}
+    gids |= {m.group_id for m in s.exec(select(GroupMember).where(GroupMember.user_id == user.id, GroupMember.status == "active")).all()}
+    return [{"id": user.id, "department": x.department, "company_id": x.company_id, "group_ids": sorted(gids)} for x in sc] or \
+        [{"id": user.id, "department": "", "company_id": None, "group_ids": sorted(gids)}]
+
+
+def _collab_share_access(s, user, sh):
+    ce = _collab_engine()
+    if sh.shared_by_id == user.id:
+        return "owner"
+    if ce.share_state({"revoked": sh.revoked, "expires_at": sh.expires_at}) != "active":
+        return None
+    d = {"company_id": sh.company_id, "target_kind": sh.target_kind, "target_value": sh.target_value}
+    return sh.permission if any(ce.share_matches(d, r) for r in _collab_share_recipient(s, user)) else None
+
+
+@app.get("/collab/shares")
+def collab_shares(user: User = Depends(get_current_user)):
+    ce = _collab_engine()
+    with Session(engine) as s:
+        now = datetime.now()
+        sent = s.exec(select(CollabShare).where(CollabShare.shared_by_id == user.id).order_by(CollabShare.created_at.desc()).limit(300)).all()
+        recv = []
+        for sh in s.exec(select(CollabShare).where(CollabShare.revoked == 0, CollabShare.expires_at > now).order_by(CollabShare.created_at.desc()).limit(2000)).all():
+            if sh.shared_by_id != user.id and _collab_share_access(s, user, sh):
+                recv.append(sh)
+        def fmt(x):
+            return {"id": x.id, "title": x.title, "kind_ar": ce.SHARE_KINDS.get(x.report_kind, x.report_kind), "target_ar": ce.SHARE_TARGETS.get(x.target_kind), "target_kind": x.target_kind,
+                    "target_value": x.target_value, "permission": x.permission, "expires_at": x.expires_at, "by": x.shared_by, "at": x.created_at,
+                    "state": ce.share_state({"revoked": x.revoked, "expires_at": x.expires_at}), "views": x.views}
+        return {"sent": [fmt(x) for x in sent], "received": [fmt(x) for x in recv[:200]]}
+
+
+@app.post("/collab/shares/revoke")
+def collab_share_revoke(body: dict, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        try:
+            sh = s.get(CollabShare, int((body or {}).get("id")))
+        except (TypeError, ValueError):
+            sh = None
+        if not sh:
+            raise HTTPException(404, "المشاركة غير موجودة")
+        c = s.get(Company, sh.company_id)
+        if sh.shared_by_id != user.id and not (c and c.owner_id == user.id):
+            raise HTTPException(404, "المشاركة غير موجودة")
+        sh.revoked = 1
+        s.add(sh)
+        s.commit()
+        _gov_change(sh.company_id, user, "share", sh.id, "revoke", [{"field": "state", "old": "active", "new": "revoked"}])
+        return {"ok": True}
+
+
+@app.get("/collab/shares/{sid}")
+def collab_share_view(sid: int, user: User = Depends(get_current_user)):
+    """عرض التقرير المشارك: مقاييس اللقطة المحفوظة (لا إعادة حساب)، وتُحذف الحقول الحساسة لمن لا يملك صلاحيتها في شركة التقرير."""
+    ce = _collab_engine()
+    with Session(engine) as s:
+        sh = s.get(CollabShare, sid)
+        acc = _collab_share_access(s, user, sh) if sh else None
+        if not acc:
+            raise HTTPException(404, "المشاركة غير متاحة أو انتهت")
+        company = s.get(Company, sh.company_id)
+        r, Mt, _ok = _collab_report(s, company, sh.report_kind, sh.report_id)
+        if company.owner_id == user.id:
+            role = "owner"
+        else:
+            vv = _collab_viewer_for(s, company, user.id)
+            role = vv["role"] if vv else "viewer"
+        sens = can_see_sensitive_financials(role)
+        mets = []
+        for m in s.exec(select(Mt).where(Mt.report_id == r.id, Mt.company_id == company.id)).all():
+            nm = f"{m.metric_name} {m.label}".lower()
+            if not sens and any(f in nm for f in SENSITIVE_FINANCIAL_FIELDS):
+                continue
+            mets.append({"label": m.label or m.metric_name, "value": m.value, "unit": getattr(m, "unit", "") or "", "period": getattr(m, "period", "") or "",
+                         "confidence": getattr(m, "confidence", "") or ""})
+        if sh.shared_by_id != user.id:
+            sh.views, sh.last_viewed_at = (sh.views or 0) + 1, datetime.now()
+            s.add(sh)
+            s.commit()
+        comments = [{"author": c.author, "body": c.body, "at": c.created_at} for c in s.exec(select(CollabShareComment).where(CollabShareComment.share_id == sh.id).order_by(CollabShareComment.created_at)).all()]
+        return {"id": sh.id, "title": sh.title, "company": company.name, "period": r.period, "version": r.version, "status": r.status,
+                "checksum": getattr(r, "checksum", ""), "kind_ar": ce.SHARE_KINDS.get(sh.report_kind), "metrics": mets, "hidden_sensitive": not sens,
+                "permission": acc, "can_comment": acc in ("comment", "owner"), "comments": comments, "by": sh.shared_by, "note": sh.note, "expires_at": sh.expires_at}
+
+
+@app.post("/collab/shares/{sid}/comment")
+def collab_share_comment(sid: int, body: dict, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        sh = s.get(CollabShare, sid)
+        acc = _collab_share_access(s, user, sh) if sh else None
+        if not acc:
+            raise HTTPException(404, "المشاركة غير متاحة")
+        if acc not in ("comment", "owner"):
+            raise HTTPException(403, "صلاحيتك مشاهدة فقط")
+        txt = str((body or {}).get("body") or "").strip()[:2000]
+        if not txt:
+            raise HTTPException(422, "اكتب التعليق")
+        c = CollabShareComment(share_id=sh.id, author_id=user.id, author=(user.name or "")[:100], body=txt, created_at=datetime.now())
+        s.add(c)
+        s.commit()
+        s.refresh(c)
+        _collab_notify(s, sh.company_id, [sh.shared_by_id], "comment", f"تعليق على «{sh.title[:60]}» من {user.name}", f"company-collaboration.html#s{sh.id}",
+                       f"sharec:{c.id}", exclude=user.id)
+        return {"ok": True}
+
+
+# ── النشاط والإشعارات
+_COLLAB_ACT = {"report_publish": "نشر تقرير", "monthly_publish": "نشر تقرير شهري", "exec_publish": "نشر تقرير تنفيذي", "decision_transition": "تحديث مسار قرار",
+               "decision_save": "حفظ قرار", "action_update": "تحديث إجراء", "collab_thread": "نقاش جديد", "report_share": "مشاركة تقرير",
+               "gov_approve": "اعتماد طلب", "gov_request": "طلب اعتماد", "kpi_review": "مراجعة مؤشر", "gov_execute": "تنفيذ طلب"}
+
+
+def _collab_activity(s, company, v, limit=60):
+    ce = _collab_engine()
+    full = v["role"] in ("owner", "executive") or v["title"] in ce.ADMIN_TITLES
+    aud = []
+    for a in s.exec(select(AuditLog).where(AuditLog.company_id == company.id).order_by(AuditLog.created_at.desc()).limit(400)).all():
+        if a.action not in _COLLAB_ACT and not a.action.endswith("publish") and "approve" not in a.action:
+            continue
+        if not full and a.user_id != v["id"] and a.action.startswith(("gov_", "report_share")):
+            continue
+        aud.append({"at": a.created_at, "who": a.user_name, "what": _COLLAB_ACT.get(a.action, a.action), "detail": (a.target or "")[:80], "kind": "audit"})
+    posts = []
+    vis_threads = {t.id: t for t in s.exec(select(CollabThread).where(CollabThread.company_id == company.id).order_by(CollabThread.updated_at.desc()).limit(300)).all()
+                   if ce.can_see_thread(_collab_thread_dict(t), v, v["workspaces"])}
+    if vis_threads:
+        for p in s.exec(select(CollabPost).where(CollabPost.company_id == company.id).order_by(CollabPost.created_at.desc()).limit(300)).all():
+            if p.thread_id in vis_threads:
+                posts.append({"at": p.created_at, "who": p.author, "what": ce.POST_KINDS.get(p.kind, p.kind), "detail": vis_threads[p.thread_id].title[:80],
+                              "kind": "post", "link": f"#t{p.thread_id}"})
+    acts = []
+    if check_permission(v["role"], "decisions", "view"):
+        for a in s.exec(select(CompanyAction).where(CompanyAction.company_id == company.id, CompanyAction.status == "completed")
+                        .order_by(CompanyAction.updated_at.desc()).limit(50)).all():
+            acts.append({"at": a.updated_at, "who": a.owner, "what": "إجراء مكتمل", "detail": a.title[:80], "kind": "action"})
+    return ce.merge_feed(aud, posts, acts, limit=limit)
+
+
+@app.get("/collab/activity")
+def collab_activity(user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, v = _collab_ctx(s, user)
+        return {"items": _collab_activity(s, company, v, 150)}
+
+
+def _collab_generate_due(s, company, v):
+    """إشعارات مشتقة عند الطلب (بلا مهام خلفية): الإجراءات والموافقات المتأخرة الموجهة لي، والمخاطر العالية لمن يملك رؤيتها."""
+    try:
+        today = datetime.now().strftime("%Y-%m-%d")
+        if v.get("name"):
+            for a in s.exec(select(CompanyAction).where(CompanyAction.company_id == company.id, CompanyAction.owner == v["name"],
+                                                       CompanyAction.status.in_(["not_started", "in_progress", "blocked"]))).all():
+                if a.due_date and a.due_date < today:
+                    _collab_notify(s, company.id, [v["id"]], "overdue", f"إجراء متأخر: {a.title[:80]} (موعده {a.due_date})", "company-decisions-intelligence.html",
+                                   f"action:{a.id}:overdue:{a.due_date}")
+        gv = _load_p24("governance_engine")
+        if gv:
+            st, dl = _gov_settings(s, company.id), _gov_delegations(s, company.id)
+            for r in s.exec(select(GovRequest).where(GovRequest.company_id == company.id, GovRequest.status == "pending")).all():
+                d = _gov_req_dict(r)
+                if gv.overdue_hours(d) and gv.can_act(d, {"id": v["id"], "role": v["role"], "is_owner": company.owner_id == v["id"]}, st, dl)[2] in ("direct", "backup", "delegate"):
+                    _collab_notify(s, company.id, [v["id"]], "overdue", f"موافقة متأخرة بانتظارك: {d['title'][:70]}", "company-governance.html#requests",
+                                   f"req:{d['id']}:overdue:{d['step_index']}")
+        if v["role"] in _RISK_CATS_BY_ROLE:
+            cats = _RISK_CATS_BY_ROLE.get(v["role"])
+            for rk in s.exec(select(CompanyRisk).where(CompanyRisk.company_id == company.id, CompanyRisk.level.in_(["critical", "high"]),
+                                                      CompanyRisk.status.notin_(["closed", "monitoring"]))).all():
+                if cats is None or rk.category in cats:
+                    _collab_notify(s, company.id, [v["id"]], "risk", f"خطر {'حرج' if rk.level == 'critical' else 'مرتفع'}: {rk.title[:80]}",
+                                   "company-risk-intelligence.html", f"risk:{rk.id}:{rk.level}")
+    except Exception as _e:
+        _logger.error(f"collab due notifications: {type(_e).__name__}: {str(_e)[:120]}")
+        s.rollback()
+
+
+@app.get("/collab/notifications")
+def collab_notifications(user: User = Depends(get_current_user)):
+    ce = _collab_engine()
+    with Session(engine) as s:
+        if user.company_id:
+            c = s.get(Company, user.company_id)
+            if c and c.is_active == 1:
+                _collab_generate_due(s, c, _collab_viewer(s, user, c))
+        rows = s.exec(select(CollabNotification).where(CollabNotification.user_id == user.id).order_by(CollabNotification.created_at.desc()).limit(200)).all()
+        pr = s.exec(select(CollabNotifPref).where(CollabNotifPref.user_id == user.id)).first()
+        prefs = dict(ce.default_prefs(), **(json.loads(pr.prefs_json or "{}") if pr else {}))
+        return {"items": [{"id": n.id, "kind": n.kind, "kind_ar": ce.NOTIF_KINDS.get(n.kind, n.kind), "title": n.title, "link": n.link, "read": bool(n.read_at),
+                           "at": n.created_at, "company_id": n.company_id} for n in rows],
+                "unread": sum(1 for n in rows if not n.read_at), "prefs": prefs, "kinds": ce.NOTIF_KINDS}
+
+
+@app.post("/collab/notifications/read")
+def collab_notifications_read(body: dict, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        ids = [int(x) for x in ((body or {}).get("ids") or []) if str(x).isdigit()]
+        q = select(CollabNotification).where(CollabNotification.user_id == user.id, CollabNotification.read_at == None)  # noqa: E711
+        if ids:
+            q = q.where(CollabNotification.id.in_(ids))
+        n = 0
+        for x in s.exec(q).all():
+            x.read_at = datetime.now()
+            s.add(x)
+            n += 1
+        s.commit()
+        return {"ok": True, "marked": n}
+
+
+@app.post("/collab/notifications/prefs")
+def collab_notifications_prefs(body: dict, user: User = Depends(get_current_user)):
+    ce = _collab_engine()
+    with Session(engine) as s:
+        pr = s.exec(select(CollabNotifPref).where(CollabNotifPref.user_id == user.id)).first() or CollabNotifPref(user_id=user.id)
+        cur = dict(ce.default_prefs(), **json.loads(pr.prefs_json or "{}"))
+        for k in ce.NOTIF_KINDS:
+            if k in (body or {}):
+                cur[k] = bool(body[k])
+        pr.prefs_json, pr.updated_at = json.dumps(cur), datetime.now()
+        s.add(pr)
+        s.commit()
+        return {"ok": True, "prefs": cur}
+
+
+@app.get("/company-collaboration.html")
+def page_company_collaboration():
+    return FileResponse("company-collaboration.html")
+
+
+# ═══════════════════════════════════════════════════════════
+#  Phase 6.6 — White Label & Partner Ecosystem — العلامة البيضاء ومنظومة الشركاء
+#  الهوية طبقة عرض فوق نفس المنصة (إصدارات + اعتماد + رجوع). العمولات من التحصيل الفعلي المسجّل فقط.
+# ═══════════════════════════════════════════════════════════
+_BRAND_CACHE = {}
+
+
+def _pe():
+    pe = _load_p24("partner_engine")
+    if pe is None:
+        raise HTTPException(503, "محرّك الشركاء غير متاح — " + _p23_diagnostic())
+    return pe
+
+
+def _brand_scope(s, user, scope, sid):
+    """company: مالك الشركة النشطة · group: مالك المجموعة."""
+    if scope == "group":
+        g, role, _ = _grp_access(s, user, sid)
+        if role != "group_owner":
+            raise HTTPException(403, "هوية المجموعة يديرها مالكها")
+        return "group", g.id, g.name
+    if not user.company_id:
+        raise HTTPException(403, "لا توجد شركة نشطة")
+    c = s.get(Company, user.company_id)
+    if not c or c.owner_id != user.id:
+        raise HTTPException(403, "هوية الشركة يديرها مالكها")
+    return "company", c.id, c.name
+
+
+def _brand_dict(b, with_logo=True):
+    cfg = json.loads(b.config_json or "{}")
+    if not with_logo:
+        cfg["logo"] = bool(cfg.get("logo"))
+    return {"id": b.id, "scope": b.scope, "scope_id": b.scope_id, "version": b.version, "status": b.status, "config": cfg, "fingerprint": b.fingerprint,
+            "domain_verified": bool(b.domain_verified), "created_by": b.created_by, "approved_by": b.approved_by, "approved_at": b.approved_at,
+            "activated_at": b.activated_at, "created_at": b.created_at}
+
+
+def _brand_effective(s, company_id):
+    """هوية الشركة المطبّقة، وإلا هوية مجموعتها، وإلا لا شيء (هوية نبّاه)."""
+    hit = _BRAND_CACHE.get(company_id)
+    if hit and time.time() - hit[0] < 60:
+        return hit[1]
+    b = s.exec(select(BrandProfile).where(BrandProfile.scope == "company", BrandProfile.scope_id == company_id, BrandProfile.status == "active")).first()
+    if not b:
+        ln = s.exec(select(GroupCompanyLink).where(GroupCompanyLink.company_id == company_id, GroupCompanyLink.status == "active")).first()
+        if ln:
+            b = s.exec(select(BrandProfile).where(BrandProfile.scope == "group", BrandProfile.scope_id == ln.group_id, BrandProfile.status == "active")).first()
+    out = None
+    if b:
+        cfg = json.loads(b.config_json or "{}")
+        out = {k: cfg.get(k) for k in ("platform_name", "logo", "primary", "accent", "report_footer", "report_template", "email_sender")}
+        out.update({"source": b.scope, "version": b.version})
+    _BRAND_CACHE[company_id] = (time.time(), out)
+    return out
+
+
+@app.get("/branding/current")
+def branding_current(user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        return {"brand": _brand_effective(s, user.company_id) if user.company_id else None}
+
+
+@app.get("/branding/public")
+def branding_public(host: str = ""):
+    """لصفحة الدخول على نطاق مخصص موثّق فقط — لا يكشف شيئاً لغير النطاقات الموثّقة."""
+    h = str(host or "").strip().lower().split(":")[0].rstrip(".")
+    if not h or len(h) > 253:
+        return {"brand": None}
+    with Session(engine) as s:
+        for b in s.exec(select(BrandProfile).where(BrandProfile.status == "active", BrandProfile.domain_verified == 1)).all():
+            cfg = json.loads(b.config_json or "{}")
+            if cfg.get("custom_domain") == h:
+                return {"brand": {k: cfg.get(k) for k in ("platform_name", "logo", "primary", "accent", "login_headline")}}
+    return {"brand": None}
+
+
+@app.get("/branding")
+def branding_list(scope: str = "company", scope_id: int = 0, user: User = Depends(get_current_user)):
+    pe = _pe()
+    with Session(engine) as s:
+        sc, sid, name = _brand_scope(s, user, scope, scope_id)
+        rows = s.exec(select(BrandProfile).where(BrandProfile.scope == sc, BrandProfile.scope_id == sid).order_by(BrandProfile.version.desc())).all()
+        groups = [{"id": g.id, "name": g.name} for g in s.exec(select(OrganizationGroup).where(OrganizationGroup.owner_user_id == user.id, OrganizationGroup.status == "active")).all()]
+        ref = None
+        if sc == "company":
+            rf = s.exec(select(PartnerReferral).where(PartnerReferral.company_id == sid, PartnerReferral.status == "active")).first()
+            p = s.get(Partner, rf.partner_id) if rf else None
+            ref = {"partner": p.name, "kind_ar": pe.PARTNER_KINDS.get(p.kind, p.kind), "linked_at": rf.linked_at} if p else None
+        return {"scope": sc, "scope_id": sid, "name": name, "versions": [_brand_dict(b) for b in rows], "status_ar": pe.BRAND_STATUS_AR,
+                "templates": pe.TEMPLATES, "groups": groups, "partner": ref, "effective": _brand_effective(s, user.company_id) if user.company_id else None}
+
+
+@app.post("/branding")
+def branding_save(body: dict, user: User = Depends(get_current_user)):
+    pe = _pe()
+    body = body or {}
+    with Session(engine) as s:
+        sc, sid, _n = _brand_scope(s, user, str(body.get("scope") or "company"), body.get("scope_id"))
+        cfg, errs, warns = pe.validate_brand(body.get("config") or {})
+        if errs:
+            raise HTTPException(422, " · ".join(dict.fromkeys(errs)))
+        last = s.exec(select(BrandProfile).where(BrandProfile.scope == sc, BrandProfile.scope_id == sid).order_by(BrandProfile.version.desc())).first()
+        fp = pe.brand_fingerprint(cfg)
+        if last and last.fingerprint == fp:
+            raise HTTPException(409, "لا تغيير عن آخر إصدار")
+        b = BrandProfile(scope=sc, scope_id=sid, version=(last.version + 1) if last else 1, status="draft", config_json=json.dumps(cfg, ensure_ascii=False),
+                         fingerprint=fp, created_by=(user.name or "")[:100], created_at=datetime.now())
+        s.add(b)
+        s.commit()
+        s.refresh(b)
+        if sc == "company":
+            _gov_change(sid, user, "brand", b.id, "draft", [{"field": k, "old": None, "new": (v if k != "logo" else bool(v))} for k, v in cfg.items() if v])
+        return {"ok": True, "id": b.id, "version": b.version, "warnings": warns}
+
+
+@app.post("/branding/transition")
+def branding_transition(body: dict, user: User = Depends(get_current_user)):
+    """approve (مسودة → معتمدة) · activate (معتمدة/مؤرشفة سبق اعتمادها → مطبّقة؛ السابقة تُؤرشف = الرجوع) · reset (العودة لهوية نبّاه)."""
+    body = body or {}
+    with Session(engine) as s:
+        try:
+            b = s.get(BrandProfile, int(body.get("id")))
+        except (TypeError, ValueError):
+            b = None
+        if not b:
+            raise HTTPException(404, "الإصدار غير موجود")
+        sc, sid, _n = _brand_scope(s, user, b.scope, b.scope_id)
+        if sid != b.scope_id:
+            raise HTTPException(404, "الإصدار غير موجود")
+        act = str(body.get("action") or "")
+        old = b.status
+        if act == "approve":
+            if b.status != "draft":
+                raise HTTPException(409, "يُعتمد إصدار المسودة فقط")
+            b.status, b.approved_by, b.approved_at = "approved", (user.name or "")[:100], datetime.now()
+        elif act == "activate":
+            if b.status not in ("approved", "archived") or not b.approved_at:
+                raise HTTPException(409, "اعتمد الإصدار قبل تطبيقه")
+            for x in s.exec(select(BrandProfile).where(BrandProfile.scope == b.scope, BrandProfile.scope_id == b.scope_id, BrandProfile.status == "active")).all():
+                x.status = "archived"
+                s.add(x)
+            b.status, b.activated_at = "active", datetime.now()
+        elif act == "reset":
+            if b.status != "active":
+                raise HTTPException(409, "الإصدار ليس مطبّقاً")
+            b.status = "archived"
+        else:
+            raise HTTPException(422, "إجراء غير معروف")
+        s.add(b)
+        s.commit()
+        _BRAND_CACHE.clear()
+        if b.scope == "company":
+            _gov_change(b.scope_id, user, "brand", b.id, act, [{"field": "status", "old": old, "new": b.status}], approved_by=user.name if act == "approve" else "")
+        return {"ok": True, "status": b.status}
+
+
+@app.post("/admin/branding/verify-domain")
+def admin_brand_verify(body: dict, _: bool = Depends(verify_admin)):
+    """يُوثّق النطاق بعد ضبط DNS وإضافته في Railway يدوياً (البنية) — بدونه لا تظهر الهوية على صفحة الدخول."""
+    with Session(engine) as s:
+        try:
+            b = s.get(BrandProfile, int((body or {}).get("id")))
+        except (TypeError, ValueError):
+            b = None
+        if not b:
+            raise HTTPException(404, "غير موجود")
+        b.domain_verified = 1 if (body or {}).get("verified") else 0
+        s.add(b)
+        s.commit()
+        return {"ok": True}
+
+
+@app.get("/admin/branding/domains")
+def admin_brand_domains(_: bool = Depends(verify_admin)):
+    with Session(engine) as s:
+        out = []
+        for b in s.exec(select(BrandProfile).where(BrandProfile.status.in_(["approved", "active"]))).all():
+            d = json.loads(b.config_json or "{}").get("custom_domain")
+            if d:
+                out.append({"id": b.id, "scope": b.scope, "scope_id": b.scope_id, "domain": d, "status": b.status, "verified": bool(b.domain_verified)})
+        return {"items": out}
+
+
+# ── الشركاء
+def _partner_of(s, user, need_admin=False):
+    pu = s.exec(select(PartnerUser).where(PartnerUser.user_id == user.id, PartnerUser.status == "active")).first()
+    p = s.get(Partner, pu.partner_id) if pu else None
+    if not p:
+        p = s.exec(select(Partner).where(Partner.owner_user_id == user.id)).first()
+        pu = None
+    if not p:
+        return None, None
+    role = "admin" if p.owner_user_id == user.id else (pu.role if pu else "member")
+    if need_admin and role != "admin":
+        raise HTTPException(403, "لمسؤول الشريك فقط")
+    return p, role
+
+
+def _partner_dict(p, pe):
+    return {"id": p.id, "name": p.name, "kind": p.kind, "kind_ar": pe.PARTNER_KINDS.get(p.kind, p.kind), "contact_name": p.contact_name, "contact_email": p.contact_email,
+            "phone": p.phone, "city": p.city, "cr_number": p.cr_number, "website": p.website, "about": p.about, "status": p.status,
+            "status_ar": pe.PARTNER_STATUS_AR.get(p.status, p.status), "commission_rate": p.commission_rate, "commission_months": p.commission_months,
+            "referral_code": p.referral_code if p.status == "approved" else "", "review_note": p.review_note, "reviewed_at": p.reviewed_at, "created_at": p.created_at}
+
+
+def _partner_book(s, p, pe):
+    refs, payments = [], []
+    for rf in s.exec(select(PartnerReferral).where(PartnerReferral.partner_id == p.id)).all():
+        c = s.get(Company, rf.company_id)
+        if not c:
+            continue
+        refs.append({"company_id": c.id, "company": c.name, "sector": c.sector, "plan": c.plan, "linked_at": rf.linked_at.strftime("%Y-%m-%d") if rf.linked_at else "",
+                     "ended_at": rf.ended_at.strftime("%Y-%m-%d") if rf.ended_at else None, "active": c.is_active == 1 and rf.status == "active", "status": rf.status})
+        payments += [{"company_id": x.company_id, "kind": x.kind, "amount": x.amount, "at": x.paid_at, "ref": x.ref}
+                     for x in s.exec(select(SubscriptionPayment).where(SubscriptionPayment.company_id == c.id)).all()]
+    sets = [{"amount": x.amount, "paid_at": x.paid_at, "ref": x.ref, "note": x.note} for x in s.exec(select(PartnerSettlement).where(PartnerSettlement.partner_id == p.id)).all()]
+    com = pe.commissions({"rate": p.commission_rate, "months": p.commission_months}, refs, payments, sets)
+    return refs, com, pe.performance(refs, payments, com), sets
+
+
+@app.post("/partners/apply")
+def partner_apply(body: dict, user: User = Depends(get_current_user)):
+    pe = _pe()
+    body = body or {}
+    with Session(engine) as s:
+        if s.exec(select(Partner).where(Partner.owner_user_id == user.id, Partner.status.in_(["applied", "approved", "suspended"]))).first():
+            raise HTTPException(409, "لديك طلب شراكة أو حساب شريك مسبقاً")
+        name = str(body.get("name") or "").strip()[:150]
+        kind = str(body.get("kind") or "")
+        if len(name) < 2 or kind not in pe.PARTNER_KINDS:
+            raise HTTPException(422, "اسم الجهة ونوع الشراكة مطلوبان")
+        email = str(body.get("contact_email") or "").strip()[:150]
+        if email and not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
+            raise HTTPException(422, "البريد غير صالح")
+        web = str(body.get("website") or "").strip()[:200]
+        if web and not re.match(r"^https?://", web, re.I):
+            raise HTTPException(422, "الموقع يبدأ بـ http(s)://")
+        p = Partner(name=name, kind=kind, contact_name=str(body.get("contact_name") or user.name or "")[:100], contact_email=email, phone=str(body.get("phone") or "")[:30],
+                    city=str(body.get("city") or "")[:60], cr_number=str(body.get("cr_number") or "")[:30], website=web, about=str(body.get("about") or "")[:1000],
+                    owner_user_id=user.id, status="applied", created_at=datetime.now())
+        s.add(p)
+        s.commit()
+        s.refresh(p)
+        log_activity(user.name, f"طلب شراكة: {name} ({kind})", user.email)
+        return {"ok": True, "id": p.id, "status_ar": pe.PARTNER_STATUS_AR["applied"]}
+
+
+@app.get("/partners/me")
+def partner_me(user: User = Depends(get_current_user)):
+    pe = _pe()
+    with Session(engine) as s:
+        p, role = _partner_of(s, user)
+        if not p:
+            return {"partner": None, "kinds": pe.PARTNER_KINDS}
+        out = {"partner": _partner_dict(p, pe), "role": role, "kinds": pe.PARTNER_KINDS}
+        if p.status == "approved":
+            refs, com, perf, sets = _partner_book(s, p, pe)
+            out.update({"clients": refs, "commissions": com, "performance": perf, "settlements": sets,
+                        "users": [{"id": x.id, "name": (s.get(User, x.user_id).name if s.get(User, x.user_id) else "—"), "role": x.role, "status": x.status, "since": x.created_at}
+                                  for x in s.exec(select(PartnerUser).where(PartnerUser.partner_id == p.id)).all()] if role == "admin" else []})
+        return out
+
+
+@app.post("/partners/users/invite")
+def partner_user_invite(body: dict, user: User = Depends(get_current_user)):
+    ge = _grp_engine()
+    with Session(engine) as s:
+        p, role = _partner_of(s, user, need_admin=True)
+        if not p or p.status != "approved":
+            raise HTTPException(403, "الشريك غير معتمد")
+        r = "admin" if (body or {}).get("role") == "admin" else "member"
+        code = "NBQ-" + ge.new_code("member")[5:]
+        s.add(PartnerInvite(partner_id=p.id, code_hash=ge.hash_code(code, SECRET_KEY), role=r, expires_at=datetime.now() + timedelta(days=7),
+                            created_by=(user.name or "")[:100], created_at=datetime.now()))
+        s.commit()
+        return {"ok": True, "code": code, "note_ar": "يُدخله الموظف من «انضمام برمز» في بوابة الشركاء. صالح 7 أيام لمرة واحدة."}
+
+
+@app.post("/partners/users/join")
+def partner_user_join(body: dict, user: User = Depends(get_current_user)):
+    ge = _grp_engine()
+    code = str((body or {}).get("code") or "").strip().upper()
+    if not re.match(r"^NBQ-[A-Z0-9]{5}-[A-Z0-9]{5}$", code):
+        raise HTTPException(422, "رمز غير صالح")
+    with Session(engine) as s:
+        inv = s.exec(select(PartnerInvite).where(PartnerInvite.code_hash == ge.hash_code(code, SECRET_KEY))).first()
+        if not inv or inv.revoked or inv.used_at or (inv.expires_at and inv.expires_at < datetime.now()):
+            raise HTTPException(404, "الرمز غير صالح أو مستخدم أو منتهٍ")
+        if _partner_of(s, user)[0]:
+            raise HTTPException(409, "حسابك مرتبط بشريك مسبقاً")
+        s.add(PartnerUser(partner_id=inv.partner_id, user_id=user.id, role=inv.role, created_at=datetime.now()))
+        inv.used_at, inv.used_by = datetime.now(), (user.name or "")[:100]
+        s.add(inv)
+        s.commit()
+        return {"ok": True}
+
+
+@app.post("/partners/users/remove")
+def partner_user_remove(body: dict, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        p, role = _partner_of(s, user, need_admin=True)
+        try:
+            x = s.get(PartnerUser, int((body or {}).get("id")))
+        except (TypeError, ValueError):
+            x = None
+        if not p or not x or x.partner_id != p.id:
+            raise HTTPException(404, "غير موجود")
+        x.status = "removed"
+        s.add(x)
+        s.commit()
+        return {"ok": True}
+
+
+@app.post("/partners/link")
+def partner_link(body: dict, user: User = Depends(get_current_user)):
+    """مالك الشركة يربط شركته بشريك برمز الإحالة (موافقته). الشريك يرى اسم الشركة وحالة اشتراكها فقط — لا بياناتها."""
+    pe = _pe()
+    code = str((body or {}).get("code") or "").strip().upper()
+    if not pe.is_referral_code(code):
+        raise HTTPException(422, "رمز الشريك بصيغة NBP-XXXXXX")
+    with Session(engine) as s:
+        c = s.get(Company, user.company_id) if user.company_id else None
+        if not c or c.owner_id != user.id:
+            raise HTTPException(403, "يربط الشركة مالكها")
+        p = s.exec(select(Partner).where(Partner.referral_code == code, Partner.status == "approved")).first()
+        if not p:
+            raise HTTPException(404, "رمز الشريك غير صالح")
+        if p.owner_user_id == user.id:
+            raise HTTPException(409, "لا تربط شركتك بشراكتك أنت")
+        if s.exec(select(PartnerReferral).where(PartnerReferral.company_id == c.id, PartnerReferral.status == "active")).first():
+            raise HTTPException(409, "الشركة مرتبطة بشريك — أنهِ الربط الحالي أولاً")
+        s.add(PartnerReferral(partner_id=p.id, company_id=c.id, status="active", linked_by=(user.name or "")[:100], linked_at=datetime.now()))
+        s.commit()
+        _gov_change(c.id, user, "partner", p.id, "link", [{"field": "partner", "old": None, "new": p.name}])
+        log_audit(c.id, user.id, user.name, "partner_link", f"partner:{p.id}", p.name)
+        return {"ok": True, "partner": p.name}
+
+
+@app.post("/partners/unlink")
+def partner_unlink(body: dict, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        c = s.get(Company, user.company_id) if user.company_id else None
+        if not c or c.owner_id != user.id:
+            raise HTTPException(403, "ينهي الربط مالك الشركة")
+        rf = s.exec(select(PartnerReferral).where(PartnerReferral.company_id == c.id, PartnerReferral.status == "active")).first()
+        if not rf:
+            raise HTTPException(404, "لا ربط نشط")
+        rf.status, rf.ended_at = "ended", datetime.now()
+        s.add(rf)
+        s.commit()
+        _gov_change(c.id, user, "partner", rf.partner_id, "unlink", [{"field": "partner", "old": "مرتبط", "new": "منتهٍ"}])
+        return {"ok": True}
+
+
+# ── إدارة المنصة (مفتاح المسؤول)
+@app.get("/admin/partners")
+def admin_partners(_: bool = Depends(verify_admin)):
+    pe = _pe()
+    with Session(engine) as s:
+        out = []
+        for p in s.exec(select(Partner).order_by(Partner.created_at.desc())).all():
+            d = _partner_dict(p, pe)
+            if p.status == "approved":
+                _r, com, perf, _s = _partner_book(s, p, pe)
+                d["performance"] = perf
+            out.append(d)
+        return {"items": out, "kinds": pe.PARTNER_KINDS, "status_ar": pe.PARTNER_STATUS_AR}
+
+
+@app.post("/admin/partners/review")
+def admin_partner_review(body: dict, _: bool = Depends(verify_admin)):
+    pe = _pe()
+    body = body or {}
+    with Session(engine) as s:
+        try:
+            p = s.get(Partner, int(body.get("id")))
+        except (TypeError, ValueError):
+            p = None
+        if not p:
+            raise HTTPException(404, "الشريك غير موجود")
+        act = str(body.get("action") or "")
+        if act == "approve":
+            try:
+                rate, months = float(body.get("commission_rate")), int(body.get("commission_months") or 12)
+            except (TypeError, ValueError):
+                raise HTTPException(422, "نسبة العمولة ومدتها مطلوبة")
+            if not 0 <= rate <= 50 or not 1 <= months <= 60:
+                raise HTTPException(422, "العمولة 0–50% والمدة 1–60 شهراً")
+            p.status, p.commission_rate, p.commission_months = "approved", rate, months
+            if not p.referral_code:
+                for _i in range(10):
+                    c = pe.referral_code()
+                    if not s.exec(select(Partner).where(Partner.referral_code == c)).first():
+                        p.referral_code = c
+                        break
+        elif act in ("reject", "suspend"):
+            if not str(body.get("note") or "").strip():
+                raise HTTPException(422, "اذكر السبب")
+            p.status = "rejected" if act == "reject" else "suspended"
+        elif act == "reactivate":
+            if p.status != "suspended":
+                raise HTTPException(409, "الشريك ليس موقوفاً")
+            p.status = "approved"
+        else:
+            raise HTTPException(422, "إجراء غير معروف")
+        p.review_note, p.reviewed_by, p.reviewed_at = str(body.get("note") or "")[:300], "admin", datetime.now()
+        s.add(p)
+        s.commit()
+        return {"ok": True, "status": p.status, "referral_code": p.referral_code}
+
+
+@app.get("/admin/partners/{pid}")
+def admin_partner_detail(pid: int, _: bool = Depends(verify_admin)):
+    pe = _pe()
+    with Session(engine) as s:
+        p = s.get(Partner, pid)
+        if not p:
+            raise HTTPException(404, "الشريك غير موجود")
+        refs, com, perf, sets = _partner_book(s, p, pe)
+        return {"partner": _partner_dict(p, pe), "clients": refs, "commissions": com, "performance": perf, "settlements": sets}
+
+
+@app.post("/admin/subscription-payments")
+def admin_sub_payment(body: dict, _: bool = Depends(verify_admin)):
+    """تسجيل تحصيل/استرداد/إلغاء اشتراك شركة (بعد التحصيل الفعلي) — يُبنى عليه استحقاق العمولات."""
+    pe = _pe()
+    body = body or {}
+    with Session(engine) as s:
+        try:
+            c = s.get(Company, int(body.get("company_id")))
+        except (TypeError, ValueError):
+            c = None
+        if not c:
+            raise HTTPException(404, "الشركة غير موجودة")
+        kind = str(body.get("kind") or "payment")
+        if kind not in pe.PAY_KINDS:
+            raise HTTPException(422, "النوع: تحصيل/استرداد/إلغاء")
+        try:
+            amt = float(body.get("amount") or 0)
+        except (TypeError, ValueError):
+            raise HTTPException(422, "المبلغ رقم")
+        if kind != "cancellation" and amt <= 0:
+            raise HTTPException(422, "المبلغ موجب")
+        at = str(body.get("paid_at") or "")
+        if not re.match(r"^\d{4}-\d{2}-\d{2}$", at):
+            raise HTTPException(422, "التاريخ YYYY-MM-DD")
+        ref = str(body.get("ref") or "").strip()[:80]
+        if kind == "payment" and not ref:
+            raise HTTPException(422, "مرجع التحصيل مطلوب (رقم الفاتورة/الحوالة)")
+        if kind == "payment" and s.exec(select(SubscriptionPayment).where(SubscriptionPayment.company_id == c.id, SubscriptionPayment.kind == "payment",
+                                                                          SubscriptionPayment.ref == ref)).first():
+            raise HTTPException(409, "مرجع التحصيل مسجّل مسبقاً")
+        s.add(SubscriptionPayment(company_id=c.id, kind=kind, amount=round(amt, 2), currency=str(body.get("currency") or "SAR")[:3], paid_at=at, ref=ref,
+                                  note=str(body.get("note") or "")[:200], recorded_by="admin", created_at=datetime.now()))
+        s.commit()
+        return {"ok": True}
+
+
+@app.get("/admin/subscription-payments")
+def admin_sub_payments(_: bool = Depends(verify_admin)):
+    with Session(engine) as s:
+        names = {c.id: c.name for c in s.exec(select(Company)).all()}
+        return {"items": [{"id": x.id, "company_id": x.company_id, "company": names.get(x.company_id, "—"), "kind": x.kind, "amount": x.amount, "currency": x.currency,
+                           "paid_at": x.paid_at, "ref": x.ref, "note": x.note} for x in s.exec(select(SubscriptionPayment).order_by(SubscriptionPayment.created_at.desc()).limit(1000)).all()],
+                "companies": [{"id": k, "name": v} for k, v in names.items()]}
+
+
+@app.post("/admin/partners/settle")
+def admin_partner_settle(body: dict, _: bool = Depends(verify_admin)):
+    pe = _pe()
+    body = body or {}
+    with Session(engine) as s:
+        try:
+            p = s.get(Partner, int(body.get("partner_id")))
+            amt = float(body.get("amount"))
+        except (TypeError, ValueError):
+            raise HTTPException(422, "الشريك والمبلغ مطلوبان")
+        if not p:
+            raise HTTPException(404, "الشريك غير موجود")
+        _r, com, _p, _s = _partner_book(s, p, pe)
+        if amt <= 0 or amt > com["due"] + 0.005:
+            raise HTTPException(422, f"المبلغ يجب أن يكون موجباً ولا يتجاوز المستحق ({com['due']})")
+        at = str(body.get("paid_at") or "")
+        if not re.match(r"^\d{4}-\d{2}-\d{2}$", at):
+            raise HTTPException(422, "التاريخ YYYY-MM-DD")
+        s.add(PartnerSettlement(partner_id=p.id, amount=round(amt, 2), paid_at=at, ref=str(body.get("ref") or "")[:80], note=str(body.get("note") or "")[:200],
+                                recorded_by="admin", created_at=datetime.now()))
+        s.commit()
+        return {"ok": True}
+
+
+@app.get("/company-brand.html")
+def page_company_brand():
+    return FileResponse("company-brand.html")
+
+
+@app.get("/partner-portal.html")
+def page_partner_portal():
+    return FileResponse("partner-portal.html")
+
+
+@app.get("/partner-admin.html")
+def page_partner_admin():
+    return FileResponse("partner-admin.html")
+
+
+# ═══════════════════════════════════════════════════════════
+#  Phase 7 — NABBAH AI Autonomous Intelligence — الذكاء المستقل
+#  مراقبة ← اكتشاف ← تحليل ← تنبؤ ← توصية ← تنفيذ (آمن/بموافقة) ← قياس ← تعلّم.
+#  الأرقام كلها من محركات نبّاه المعتمدة (الوحدات، المخاطر، التنبؤ، المحاكاة) — لا يحسب النموذج اللغوي شيئاً.
+# ═══════════════════════════════════════════════════════════
+_AI7_VIS = {"full": ["cfo", "sales", "risk", "operations", "inventory", "executive"], "board": ["cfo", "sales", "risk", "operations", "inventory", "executive"],
+            "cfo": ["cfo", "risk", "executive"], "manager": ["sales", "operations", "inventory"], "branch": ["sales", "operations", "inventory"],
+            "hr": ["operations"], "employee": []}
+_AI7_OUTCOME = {"excellent": "success", "strong": "success", "positive": "success", "partial": "partial", "mixed": "partial",
+                "weak": "failed", "negative": "failed", "no_change": "failed"}
+
+
+def _a7():
+    a = _load_p24("autonomy_engine")
+    if a is None:
+        raise HTTPException(503, "محرّك الذكاء المستقل غير متاح — " + _p23_diagnostic())
+    return a
+
+
+def _ai7_ctx(s, user, need=None):
+    """need: None (اطلاع) | act (قرار على توصية/إجراء ضمن وكلائه) | manage (السياسات والتشغيل)."""
+    company, role, viewer = _goals_scope(s, user)
+    ae = _load_p24("assistant_engine")
+    sc = ae.ai_scope(viewer) if ae else {"kind": "full" if role == "owner" else "none"}
+    vis = _AI7_VIS.get(sc["kind"], [])
+    if not vis:
+        raise HTTPException(403, "مركز الذكاء المستقل للمالك والإدارة والمدراء حسب صلاحياتهم")
+    manage = role == "owner" or viewer.get("title") == "ceo"
+    act = manage or sc["kind"] in ("cfo", "manager", "branch")
+    if need == "manage" and not manage:
+        raise HTTPException(403, "إدارة الوكلاء وتشغيلهم للمالك أو الرئيس التنفيذي")
+    if need == "act" and not act:
+        raise HTTPException(403, "صلاحيتك اطلاع فقط")
+    return company, {"id": user.id, "name": user.name or "", "role": role, "scope": sc["kind"], "scope_ar": sc.get("ar", ""), "agents": vis,
+                     "manage": manage, "act": act, "financial": bool(sc.get("financial")), "viewer": viewer}
+
+
+def _ai7_settings(s, cid):
+    a = _a7()
+    row = s.exec(select(AiSettings).where(AiSettings.company_id == cid)).first()
+    st, pol = dict(a.DEFAULT_SETTINGS), {k: dict(a.DEFAULT_POLICY) for k in a.AGENTS}
+    if row:
+        try:
+            st.update({k: v for k, v in json.loads(row.settings_json or "{}").items() if k in a.DEFAULT_SETTINGS})
+            for k, v in json.loads(row.policies_json or "{}").items():
+                if k in pol and isinstance(v, dict):
+                    pol[k].update({kk: vv for kk, vv in v.items() if kk in a.DEFAULT_POLICY})
+        except (TypeError, ValueError):
+            pass
+    return st, pol
+
+
+def _ai7_people_for(s, company, agent):
+    """مستلمو تنبيهات الوكيل: المالك + أصحاب الدور المسؤول (المالي الحساس لمن يملك صلاحيته فقط)."""
+    a = _a7()
+    ag = a.AGENTS[agent]
+    out = {company.owner_id}
+    for uid, p in _gov_people(s, company).items():
+        if p["role"] == ag["owner_role"] and (not ag["financial"] or p["role"] in ROLES_SEE_SENSITIVE):
+            out.add(uid)
+    return sorted(out)
+
+
+def _ai7_owner_name(s, company, agent):
+    a = _a7()
+    role = a.AGENTS[agent]["owner_role"]
+    if role == "owner":
+        o = s.get(User, company.owner_id)
+        return (o.name if o else "") or "المالك"
+    names = [p["name"] for p in _gov_people(s, company).values() if p["role"] == role]
+    return names[0] if names else {"accountant": "المدير المالي", "manager": "مدير التشغيل/الفرع"}.get(role, "المالك")
+
+
+def _ai7_sync_outcomes(s, company):
+    """يربط التوصيات المحوّلة لقرارات بنتيجة قياسها في 3.9 (أساس التعلّم)."""
+    for r in s.exec(select(AiRecommendation).where(AiRecommendation.company_id == company.id, AiRecommendation.decision_id != None,  # noqa: E711
+                                                   AiRecommendation.outcome == "")).all():
+        o = s.exec(select(CompanyDecisionOutcome).where(CompanyDecisionOutcome.company_id == company.id, CompanyDecisionOutcome.decision_id == r.decision_id)
+                   .order_by(CompanyDecisionOutcome.id.desc())).first()
+        if o and _AI7_OUTCOME.get(o.result):
+            r.outcome, r.status = _AI7_OUTCOME[o.result], "measured"
+            s.add(r)
+    s.commit()
+
+
+def _ai7_learning(s, company, enabled=True):
+    a = _a7()
+    recs = [{"agent": r.agent, "status": r.status, "confidence": r.confidence, "outcome": r.outcome or None}
+            for r in s.exec(select(AiRecommendation).where(AiRecommendation.company_id == company.id)).all()]
+    return a.learning(recs, enabled=enabled)
+
+
+def _ai7_series(s, company, cust):
+    """سلاسل شهرية للانحرافات من نفس مصادر الوحدات: المالية (الإيراد/المصروفات/الهامش/الربح) والمبيعات لكل فرع."""
+    pe = _load_p24("prediction_engine")
+    out = []
+    try:
+        fin = _fin_result(s, company, grain="month")
+        tr = fin.get("trends") or [] if fin.get("has_data") else []
+        for key, metric, label, d, unit, money in (("rev", "revenue", "الإيرادات", "higher_better", "", True), ("opex", "opex", "المصروفات التشغيلية", "lower_better", "", True),
+                                                   ("gm", "gross_margin", "هامش الربح الإجمالي", "higher_better", "%", False),
+                                                   ("np", "net_profit", "صافي الربح", "higher_better", "", True)):
+            out.append({"key": key, "metric": metric, "label": label, "direction": d, "unit": unit, "money": money,
+                        "points": [(t["period"], t.get(metric)) for t in tr if t.get(metric) is not None]})
+    except Exception as _e:
+        _logger.error(f"ai7 fin series: {type(_e).__name__}")
+    if pe and cust:
+        sm = pe.sales_monthly(cust)
+        ex = sm.get("partial_month")
+        for b, mm in (sm.get("branches") or {}).items():
+            out.append({"key": f"br:{b}", "metric": "branch_revenue", "scope": b, "label": f"إيراد فرع {b}", "direction": "higher_better", "unit": "", "money": True,
+                        "points": [(ym, v["revenue"]) for ym, v in sorted(mm.items()) if ym != ex]})
+    return out
+
+
+def _ai7_exec(s, company, a, kind, f, rec, run_id, agent, rec_id):
+    """تنفيذ إجراء آمن قابل للتراجع. يُرجع (ref, detail)."""
+    ag = a.AGENTS[agent]
+    if kind == "alert":
+        act = AiAction(company_id=company.id, agent=agent, kind=kind, status="executed", fid=f["fid"], rec_id=rec_id, run_id=run_id, by=f"🤖 {ag['ar']}", created_at=datetime.now())
+        s.add(act); s.commit(); s.refresh(act)
+        n = _collab_notify(s, company.id, _ai7_people_for(s, company, agent), "risk" if f["kind"] == "risk" else "action_assigned",
+                           f"{ag['icon']} {ag['ar']}: {f['title'][:90]}", f"company-autonomy.html#f{f['fid']}", f"ai:{act.id}")
+        act.ref, act.detail = f"ai:{act.id}", f"أُشعر {n} مستخدم"
+        s.add(act); s.commit()
+        return act
+    if kind == "thread":
+        t = CollabThread(company_id=company.id, workspace=ag["workspace"], subject_kind="risk" if f["kind"] == "risk" else "kpi", subject_ref=f"ai:{f['fid']}",
+                         subject_label=rec["kpi_ar"], branch=str(f.get("scope") or "")[:100], title=f"[{ag['ar']}] {f['title']}"[:200], participants_json="[]",
+                         created_by_id=None, created_by=f"🤖 {ag['ar']}", created_at=datetime.now(), updated_at=datetime.now())
+        s.add(t); s.commit(); s.refresh(t)
+        body = "الأدلة:\n" + "\n".join(f"• {e}" for e in rec["evidence"]) + f"\n\nالحل المقترح: {rec['solution']}\nالمسؤول المقترح: {rec['owner']} · الموعد: {rec['due']}\nالثقة: {rec['confidence']['score']}/100"
+        s.add(CollabPost(company_id=company.id, thread_id=t.id, kind="evidence", body=body[:4000], evidence_source=f"نبّاه — {f['module']} ({f['period']})",
+                         author_id=None, author=f"🤖 {ag['ar']}", created_at=datetime.now()))
+        act = AiAction(company_id=company.id, agent=agent, kind=kind, status="executed", fid=f["fid"], rec_id=rec_id, run_id=run_id, ref=f"thread:{t.id}",
+                       detail=t.title, by=f"🤖 {ag['ar']}", created_at=datetime.now())
+        s.add(act); s.commit(); s.refresh(act)
+        return act
+    if kind == "draft_decision":
+        d = CompanyDecision(company_id=company.id, title=f"معالجة: {f['title']}"[:200], detail=(rec["solution"] + "\n" + "\n".join(rec["evidence"]))[:1000],
+                            owner=rec["owner"][:100], due_date=rec["due"], status="open", created_by=f"وكيل: {ag['ar']}"[:100], kpi=rec["kpi"][:100],
+                            baseline_sales=_company_total_sales(s, company.id), decision_type="recommendation")
+        d.expected_impact_value = rec["impact"] if f["kind"] == "risk" and rec["impact"] else None
+        s.add(d); s.commit(); s.refresh(d)
+        s.add(CompanyDecisionMeta(company_id=company.id, decision_id=d.id, workflow="draft", priority="high" if f["severity"] in ("critical", "high") else "medium",
+                                  source="recommendation", source_ref=f"ai:{f['fid']}"[:200], created_by_id=None, updated_at=datetime.now()))
+        _dec_hist(s, company.id, d.id, "created", f"وكيل: {ag['ar']}", "", d.title, "مسودة من الذكاء المستقل — لا تُعتمد إلا من صاحب الصلاحية")
+        act = AiAction(company_id=company.id, agent=agent, kind=kind, status="executed", fid=f["fid"], rec_id=rec_id, run_id=run_id, ref=f"decision:{d.id}",
+                       detail=d.title, by=f"🤖 {ag['ar']}", created_at=datetime.now())
+        s.add(act); s.commit(); s.refresh(act)
+        return act
+    raise ValueError(kind)
+
+
+def _ai7_run(s, company, trigger="manual", by="النظام"):
+    """دورة المراقبة الكاملة لشركة واحدة. كل وحدة تفشل تُسجّل ولا تتحول صفراً."""
+    a = _a7()
+    run = AiRun(company_id=company.id, trigger=trigger, by=str(by)[:100], started_at=datetime.now(), status="running")
+    s.add(run); s.commit(); s.refresh(run)
+    settings, policies = _ai7_settings(s, company.id)
+    summ = {"modules": {}, "errors": {}, "findings": 0, "new": 0, "auto": 0, "approval": 0, "blocked": 0, "anomalies": 0, "skipped_series": [], "data_conf": None}
+    groups = {}
+    try:
+        mods, cust, errors = _risk_modules(s, company, "owner")
+        summ["errors"].update(errors)
+        for name, res in mods.items():
+            groups[name] = (res or {}).get("signals") or []
+            summ["modules"][name] = len(groups[name])
+        try:
+            sr = _sales_result(s, company, grain="month")
+            groups["sales"] = sr.get("signals") or []
+            summ["modules"]["sales"] = len(groups["sales"])
+        except HTTPException as e:
+            summ["errors"]["sales"] = str(e.detail)[:160]
+        try:
+            risk = _risk_result(s, company, "owner", save_snapshot=False)
+            summ["data_conf"] = (risk.get("confidence") or {}).get("pct")
+            groups["risk"] = [{"code": f"risk:{r['key']}", "name_ar": r["name_ar"], "severity": {"critical": "critical", "high": "high"}.get(r["level"], "medium"),
+                               "evidence": r.get("evidence") or [], "source_module": "risk", "type": "risk", "metric_id": r["key"],
+                               "suggested_action_ar": f"راجع «{r['name_ar']}» في مركز المخاطر ({r.get('source_ar') or ''})"}
+                              for r in (risk.get("top_risks") or []) if r.get("level") in ("critical", "high")]
+            summ["modules"]["risk"] = len(groups["risk"])
+        except HTTPException as e:
+            summ["errors"]["risk"] = str(e.detail)[:160]
+        try:
+            pr = _pred_result(s, company, "owner", save=True)
+            groups["prediction"] = pr.get("signals") or []
+            summ["modules"]["prediction"] = len(groups["prediction"])
+        except HTTPException as e:
+            summ["errors"]["prediction"] = str(e.detail)[:160]
+        an, skipped = a.anomalies(_ai7_series(s, company, cust))
+        groups["anomaly"] = an
+        summ["anomalies"], summ["skipped_series"] = len(an), [x["label"] for x in skipped][:10]
+        findings = a.build_findings(groups)
+        summ["findings"] = len(findings)
+        mult = {k: v["multiplier"] for k, v in _ai7_learning(s, company, settings["learning"])["agents"].items()}
+        used = {k: 0 for k in a.AGENTS}
+        seen = set()
+        for f in findings:
+            seen.add(f["fid"])
+            row = s.exec(select(AiFinding).where(AiFinding.company_id == company.id, AiFinding.fid == f["fid"])).first()
+            if row:
+                row.last_seen, row.occurrences, row.run_id = datetime.now(), (row.occurrences or 1) + 1, run.id
+                if row.status == "cleared":
+                    row.status = "new"
+                s.add(row)
+                continue
+            summ["new"] += 1
+            s.add(AiFinding(company_id=company.id, fid=f["fid"], agent=f["agent"], module=f["module"], code=f["code"][:120], kind=f["kind"], title=f["title"],
+                            severity=f["severity"], period=f["period"], evidence_json=json.dumps(f["evidence"], ensure_ascii=False), impact=f["impact"],
+                            impact_type=f["impact_type"][:80], metric=str(f["metric"])[:60], status="new", first_seen=datetime.now(), last_seen=datetime.now(), run_id=run.id))
+            conf = a.confidence(f, summ["data_conf"], mult.get(f["agent"], 1.0))
+            rec = a.recommendation(f, conf, _ai7_owner_name(s, company, f["agent"]))
+            rr = AiRecommendation(company_id=company.id, fid=f["fid"], agent=f["agent"], payload_json=json.dumps(rec, ensure_ascii=False, default=str),
+                                  confidence=conf["score"], status="proposed", created_at=datetime.now())
+            s.add(rr); s.commit(); s.refresh(rr)
+            for g in a.gate(rec, policies.get(f["agent"]), data_conf_pct=summ["data_conf"], min_data_conf=settings["min_data_conf"], used_auto=used[f["agent"]]):
+                if g["decision"] == "auto":
+                    try:
+                        _ai7_exec(s, company, a, g["action"], f, rec, run.id, f["agent"], rr.id)
+                        used[f["agent"]] += 1
+                        summ["auto"] += 1
+                    except Exception as e:
+                        s.rollback()
+                        s.add(AiAction(company_id=company.id, agent=f["agent"], kind=g["action"], status="failed", fid=f["fid"], rec_id=rr.id, run_id=run.id,
+                                       reason=f"{type(e).__name__}: {str(e)[:150]}", by="النظام", created_at=datetime.now()))
+                        s.commit()
+                else:
+                    s.add(AiAction(company_id=company.id, agent=f["agent"], kind=g["action"], status="pending_approval" if g["decision"] == "approval" else "blocked",
+                                   fid=f["fid"], rec_id=rr.id, run_id=run.id, reason=g["reason_ar"], by=f"🤖 {a.AGENTS[f['agent']]['ar']}", created_at=datetime.now()))
+                    summ["approval" if g["decision"] == "approval" else "blocked"] += 1
+            s.commit()
+        for old in s.exec(select(AiFinding).where(AiFinding.company_id == company.id, AiFinding.status == "new")).all():
+            if old.fid not in seen:
+                old.status = "cleared"
+                s.add(old)
+        run.status = "partial" if summ["errors"] else "ok"
+    except Exception as e:
+        _logger.error(f"ai7 run failed {company.id}: {type(e).__name__}: {str(e)[:200]}")
+        s.rollback()
+        run = s.get(AiRun, run.id)
+        run.status, run.error = "error", f"{type(e).__name__}: {str(e)[:200]}"
+    run.finished_at, run.summary_json = datetime.now(), json.dumps(summ, ensure_ascii=False, default=str)
+    s.add(run); s.commit()
+    if summ["new"] and settings.get("notify_owner_digest"):
+        try:
+            _collab_notify(s, company.id, [company.owner_id], "risk", f"🧭 الوكيل التنفيذي: {summ['new']} نتيجة جديدة · {summ['auto']} إجراء تلقائي · {summ['approval']} بانتظار موافقتك",
+                           "company-autonomy.html", f"airun:{run.id}")
+        except Exception:
+            pass
+    return run, summ
+
+
+def _ai7_lazy(s, company):
+    """مراقبة مستمرة بلا مهام خلفية: إن مضى على آخر تشغيل أكثر من «كل X ساعة» يُشغّل عند فتح المركز (أو من Railway Cron)."""
+    st, _p = _ai7_settings(s, company.id)
+    last = s.exec(select(AiRun).where(AiRun.company_id == company.id).order_by(AiRun.started_at.desc())).first()
+    if not last or (datetime.now() - last.started_at).total_seconds() > int(st["monitor_hours"]) * 3600:
+        return _ai7_run(s, company, "lazy", "المراقبة المجدولة")
+    return None
+
+
+def _ai7_rec_dict(r):
+    p = json.loads(r.payload_json or "{}")
+    return dict(p, id=r.id, status=r.status, decision_id=r.decision_id, decided_by=r.decided_by, decided_at=r.decided_at, reason=r.reason, outcome=r.outcome or None,
+                created_at=r.created_at)
+
+
+def _ai7_find_dict(f):
+    return {"id": f.id, "fid": f.fid, "agent": f.agent, "module": f.module, "code": f.code, "kind": f.kind, "title": f.title, "severity": f.severity,
+            "period": f.period, "evidence": json.loads(f.evidence_json or "[]"), "impact": f.impact, "impact_type": f.impact_type, "metric": f.metric,
+            "status": f.status, "occurrences": f.occurrences, "first_seen": f.first_seen, "last_seen": f.last_seen, "note": f.note}
+
+
+def _ai7_mask(d, me):
+    """غير المصرّح ماليًا لا يرى مبالغ الأثر."""
+    if not me["financial"] and d.get("impact") is not None:
+        d = dict(d, impact=None, impact_type="مخفي حسب صلاحيتك")
+    return d
+
+
+@app.get("/ai/overview")
+def ai_overview(user: User = Depends(get_current_user)):
+    a = _a7()
+    with Session(engine) as s:
+        company, me = _ai7_ctx(s, user)
+        ran = None
+        if me["manage"]:
+            r = _ai7_lazy(s, company)
+            ran = r[1] if r else None
+        _ai7_sync_outcomes(s, company)
+        st, pol = _ai7_settings(s, company.id)
+        finds = [f for f in s.exec(select(AiFinding).where(AiFinding.company_id == company.id, AiFinding.status.in_(["new", "acknowledged"]))).all() if f.agent in me["agents"]]
+        acts = [x for x in s.exec(select(AiAction).where(AiAction.company_id == company.id).order_by(AiAction.created_at.desc()).limit(500)).all() if x.agent in me["agents"]]
+        lr = _ai7_learning(s, company, st["learning"])
+        agents = []
+        for k in me["agents"]:
+            ag = a.AGENTS[k]
+            ff = [f for f in finds if f.agent == k]
+            agents.append({"key": k, "ar": ag["ar"], "en": ag["en"], "focus": ag["focus"], "icon": ag["icon"], "enabled": pol[k]["enabled"],
+                           "auto": pol[k]["auto"], "min_confidence": pol[k]["min_confidence"],
+                           "open": len(ff), "high": sum(1 for f in ff if f.severity in ("critical", "high")),
+                           "pending": sum(1 for x in acts if x.agent == k and x.status == "pending_approval"),
+                           "auto_7d": sum(1 for x in acts if x.agent == k and x.status == "executed" and x.created_at >= datetime.now() - timedelta(days=7)),
+                           "multiplier": (lr["agents"].get(k) or {}).get("multiplier", 1.0), "success_rate": (lr["agents"].get(k) or {}).get("success_rate")})
+        last = s.exec(select(AiRun).where(AiRun.company_id == company.id).order_by(AiRun.started_at.desc())).first()
+        top = sorted(finds, key=lambda f: (a.SEV_RANK.get(f.severity, 3), -(f.impact or 0)))[:8]
+        return {"me": {k: v for k, v in me.items() if k != "viewer"}, "agents": agents, "settings": st, "actions_ar": {k: v["ar"] for k, v in a.ACTIONS.items()},
+                "last_run": {"at": last.started_at, "status": last.status, "trigger": last.trigger, "summary": json.loads(last.summary_json or "{}")} if last else None,
+                "ran_now": ran, "top": [_ai7_mask(_ai7_find_dict(f), me) for f in top],
+                "counts": {"open": len(finds), "high": sum(1 for f in finds if f.severity in ("critical", "high")),
+                           "pending": sum(1 for x in acts if x.status == "pending_approval"), "auto_7d": sum(1 for x in acts if x.status == "executed" and x.created_at >= datetime.now() - timedelta(days=7)),
+                           "blocked_7d": sum(1 for x in acts if x.status == "blocked" and x.created_at >= datetime.now() - timedelta(days=7))},
+                "cycle_ar": ["مراقبة", "اكتشاف", "تحليل", "تنبؤ", "توصية", "تنفيذ/موافقة", "قياس", "تعلّم"], "sev_ar": a.SEV_AR,
+                "guardrails_ar": ["صلاحيات مستقلة لكل وكيل يحددها المالك", "القرارات المالية والحساسة بموافقة بشرية ثم اعتماد في متابعة القرارات",
+                                  "سجل كامل لكل إجراء مع إمكانية التراجع عن القابل للعكس", "لا تنفيذ عند ضعف البيانات أو انخفاض الثقة",
+                                  "لا تعديل للبيانات الأصلية — الوكلاء يقرؤون نتائج المحركات وينشئون تنبيهات ونقاشات ومسودات فقط"]}
+
+
+@app.post("/ai/run")
+def ai_run(user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, me = _ai7_ctx(s, user, "manage")
+        run, summ = _ai7_run(s, company, "manual", user.name or "")
+        log_audit(company.id, user.id, user.name, "ai_run", f"ai_run:{run.id}", f"new={summ['new']} auto={summ['auto']} approval={summ['approval']} blocked={summ['blocked']}")
+        return {"ok": run.status != "error", "run_id": run.id, "status": run.status, "summary": summ, "error": run.error or None}
+
+
+@app.post("/internal/ai/run-due")
+def internal_ai_run_due(_: bool = Depends(verify_admin)):
+    """لمهمة Railway Cron (X-Admin-Key): مراقبة الشركات النشطة التي حان موعد فحصها."""
+    out = []
+    with Session(engine) as s:
+        for c in s.exec(select(Company).where(Company.is_active == 1)).all()[:200]:
+            try:
+                r = _ai7_lazy(s, c)
+                if r:
+                    out.append({"company_id": c.id, "status": r[0].status, "new": r[1]["new"]})
+            except Exception as e:
+                out.append({"company_id": c.id, "error": type(e).__name__})
+    return {"ran": out}
+
+
+@app.get("/ai/findings")
+def ai_findings(agent: str = "", status: str = "open", user: User = Depends(get_current_user)):
+    a = _a7()
+    with Session(engine) as s:
+        company, me = _ai7_ctx(s, user)
+        q = select(AiFinding).where(AiFinding.company_id == company.id)
+        if status == "open":
+            q = q.where(AiFinding.status.in_(["new", "acknowledged"]))
+        elif status:
+            q = q.where(AiFinding.status == status)
+        rows = [f for f in s.exec(q.order_by(AiFinding.last_seen.desc()).limit(500)).all() if f.agent in me["agents"] and (not agent or f.agent == agent)]
+        recs = {r.fid: r for r in s.exec(select(AiRecommendation).where(AiRecommendation.company_id == company.id)).all()}
+        out = []
+        for f in sorted(rows, key=lambda f: (a.SEV_RANK.get(f.severity, 3), -(f.impact or 0))):
+            d = _ai7_mask(_ai7_find_dict(f), me)
+            r = recs.get(f.fid)
+            d["recommendation"] = _ai7_mask(_ai7_rec_dict(r), me) if r else None
+            out.append(d)
+        return {"items": out, "agents": {k: a.AGENTS[k]["ar"] for k in me["agents"]}}
+
+
+@app.post("/ai/findings/status")
+def ai_finding_status(body: dict, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, me = _ai7_ctx(s, user, "act")
+        f = s.exec(select(AiFinding).where(AiFinding.company_id == company.id, AiFinding.fid == str((body or {}).get("fid") or ""))).first()
+        if not f or f.agent not in me["agents"]:
+            raise HTTPException(404, "النتيجة غير موجودة")
+        to = str((body or {}).get("status") or "")
+        if to not in ("acknowledged", "resolved", "dismissed", "new"):
+            raise HTTPException(422, "حالة غير صالحة")
+        note = str((body or {}).get("note") or "").strip()[:300]
+        if to == "dismissed" and not note:
+            raise HTTPException(422, "اذكر سبب الاستبعاد — يُستخدم لتحسين دقة الوكيل")
+        f.status, f.note = to, note or f.note
+        s.add(f); s.commit()
+        log_audit(company.id, user.id, user.name, "ai_finding", f"ai_finding:{f.fid}", f"{to} {note[:80]}")
+        return {"ok": True}
+
+
+@app.post("/ai/recommendations/act")
+def ai_rec_act(body: dict, user: User = Depends(get_current_user)):
+    """accept → قرار في 3.9 (مسودة أو إرسال للاعتماد بيد المستخدم) · reject مع السبب (يدخل في التعلّم)."""
+    body = body or {}
+    with Session(engine) as s:
+        company, me = _ai7_ctx(s, user, "act")
+        try:
+            r = s.get(AiRecommendation, int(body.get("id")))
+        except (TypeError, ValueError):
+            r = None
+        if not r or r.company_id != company.id or r.agent not in me["agents"]:
+            raise HTTPException(404, "التوصية غير موجودة")
+        if r.status != "proposed":
+            raise HTTPException(409, "تم اتخاذ قرار في هذه التوصية مسبقاً")
+        act = str(body.get("action") or "")
+        rec = json.loads(r.payload_json or "{}")
+        if act == "reject":
+            reason = str(body.get("reason") or "").strip()[:300]
+            if not reason:
+                raise HTTPException(422, "اذكر سبب الرفض — يُستخدم لتعلّم الوكيل")
+            r.status, r.reason, r.decided_by, r.decided_at = "rejected", reason, (user.name or "")[:100], datetime.now()
+            s.add(r); s.commit()
+            log_audit(company.id, user.id, user.name, "ai_rec_reject", f"ai_rec:{r.id}", reason[:100])
+            return {"ok": True, "status": r.status}
+        if act != "accept":
+            raise HTTPException(422, "إجراء غير معروف")
+        rid, fid_ = r.id, r.fid
+    # إنشاء القرار بنفس مسار 3.9 وصلاحياته (المستخدم نفسه — لا الوكيل)
+    res = company_decision_center_save({"title": str(body.get("title") or f"معالجة: {rec.get('problem', '')}")[:200],
+                                        "description": (rec.get("solution", "") + "\n" + "\n".join(rec.get("evidence") or []))[:950], "source": "assistant",
+                                        "source_ref": f"ai:{fid_}", "priority": "high" if rec.get("severity") in ("critical", "high") else "medium",
+                                        "due": rec.get("due"), "expected_impact": rec.get("impact") if rec.get("kind") == "risk" else None,
+                                        "submit": bool(body.get("submit"))}, user=user)
+    did = res.get("id") or (res.get("decision") or {}).get("id") or body.get("_did")
+    with Session(engine) as s:
+        r = s.get(AiRecommendation, rid)
+        r.status, r.decision_id, r.decided_by, r.decided_at = "converted", did, (user.name or "")[:100], datetime.now()
+        s.add(r)
+        f = s.exec(select(AiFinding).where(AiFinding.company_id == r.company_id, AiFinding.fid == fid_)).first()
+        if f:
+            f.status = "acknowledged"
+            s.add(f)
+        s.commit()
+        log_audit(r.company_id, user.id, user.name, "ai_rec_accept", f"ai_rec:{rid}", f"decision:{did} submit={bool(body.get('submit'))}")
+    return {"ok": True, "status": "converted", "decision_id": did, "submitted": bool(body.get("submit"))}
+
+
+@app.get("/ai/actions")
+def ai_actions(status: str = "", user: User = Depends(get_current_user)):
+    a = _a7()
+    with Session(engine) as s:
+        company, me = _ai7_ctx(s, user)
+        q = select(AiAction).where(AiAction.company_id == company.id)
+        if status:
+            q = q.where(AiAction.status == status)
+        finds = {f.fid: f.title for f in s.exec(select(AiFinding).where(AiFinding.company_id == company.id)).all()}
+        rows = [x for x in s.exec(q.order_by(AiAction.created_at.desc()).limit(500)).all() if x.agent in me["agents"]]
+        return {"items": [{"id": x.id, "agent": x.agent, "agent_ar": a.AGENTS[x.agent]["ar"], "kind": x.kind, "kind_ar": a.ACTIONS.get(x.kind, {}).get("ar", x.kind),
+                           "status": x.status, "finding": finds.get(x.fid, ""), "fid": x.fid, "ref": x.ref, "detail": x.detail, "reason": x.reason, "by": x.by,
+                           "at": x.created_at, "decided_at": x.decided_at, "undone_at": x.undone_at,
+                           "can_undo": x.status in ("executed", "approved") and a.ACTIONS.get(x.kind, {}).get("reversible") and me["act"],
+                           "can_decide": x.status == "pending_approval" and me["act"]} for x in rows]}
+
+
+@app.post("/ai/actions/undo")
+def ai_action_undo(body: dict, user: User = Depends(get_current_user)):
+    a = _a7()
+    with Session(engine) as s:
+        company, me = _ai7_ctx(s, user, "act")
+        try:
+            x = s.get(AiAction, int((body or {}).get("id")))
+        except (TypeError, ValueError):
+            x = None
+        if not x or x.company_id != company.id or x.agent not in me["agents"]:
+            raise HTTPException(404, "الإجراء غير موجود")
+        if x.status not in ("executed", "approved") or not a.ACTIONS.get(x.kind, {}).get("reversible"):
+            raise HTTPException(409, "هذا الإجراء غير قابل للتراجع أو تم التراجع عنه")
+        kind, ref = x.kind, x.ref or ""
+        if kind == "alert":
+            for n in s.exec(select(CollabNotification).where(CollabNotification.ref == ref)).all():
+                s.delete(n)
+        elif kind == "thread" and ref.startswith("thread:"):
+            t = s.get(CollabThread, int(ref.split(":")[1]))
+            if t and t.company_id == company.id:
+                t.status, t.updated_at = "resolved", datetime.now()
+                s.add(t)
+                s.add(CollabPost(company_id=company.id, thread_id=t.id, kind="note", body=f"أُغلق هذا النقاش بالتراجع عن إجراء الوكيل بواسطة {user.name}",
+                                 author_id=user.id, author=(user.name or "")[:100], created_at=datetime.now()))
+        elif kind == "draft_decision" and ref.startswith("decision:"):
+            did = int(ref.split(":")[1])
+            m = s.exec(select(CompanyDecisionMeta).where(CompanyDecisionMeta.company_id == company.id, CompanyDecisionMeta.decision_id == did)).first()
+            if not m or m.workflow != "draft":
+                raise HTTPException(409, "القرار لم يعد مسودة (تحرك في مسار الاعتماد) — يُدار من متابعة القرارات")
+            m.workflow, m.cancelled_at, m.updated_at = "cancelled", datetime.now().strftime("%Y-%m-%d"), datetime.now()
+            s.add(m)
+            _dec_hist(s, company.id, did, "cancelled", user.name or "", "draft", "cancelled", "تراجع عن مسودة الذكاء المستقل")
+        elif kind == "schedule_report" and ref.startswith("schedule:"):
+            sch = s.get(CompanyAISchedule, int(ref.split(":")[1]))
+            if sch and sch.company_id == company.id:
+                sch.active = 0
+                s.add(sch)
+        x.status, x.undone_at, x.reason = "undone", datetime.now(), (x.reason + f" · تراجع: {user.name}")[:300]
+        s.add(x); s.commit()
+        log_audit(company.id, user.id, user.name, "ai_undo", f"ai_action:{x.id}", f"{kind} {ref}")
+        return {"ok": True}
+
+
+@app.post("/ai/actions/decide")
+def ai_action_decide(body: dict, user: User = Depends(get_current_user)):
+    """موافقة بشرية على إجراء معلّق: الآمن يُنفّذ الآن، و«إرسال قرار للاعتماد» يُنشئ القرار باسم الموافق ويرسله لمسار 3.9."""
+    a = _a7()
+    body = body or {}
+    with Session(engine) as s:
+        company, me = _ai7_ctx(s, user, "act")
+        try:
+            x = s.get(AiAction, int(body.get("id")))
+        except (TypeError, ValueError):
+            x = None
+        if not x or x.company_id != company.id or x.agent not in me["agents"]:
+            raise HTTPException(404, "الإجراء غير موجود")
+        if x.status != "pending_approval":
+            raise HTTPException(409, "الإجراء ليس بانتظار موافقة")
+        if x.kind == "submit_decision" and a.AGENTS[x.agent]["financial"] and not me["financial"]:
+            raise HTTPException(403, "قرار مالي — يوافق عليه من يملك الصلاحية المالية")
+        if body.get("decision") == "reject":
+            x.status, x.decided_at, x.reason = "rejected", datetime.now(), (str(body.get("reason") or "رفض بشري")[:200] + f" · {user.name}")
+            s.add(x); s.commit()
+            return {"ok": True, "status": x.status}
+        rec_row = s.get(AiRecommendation, x.rec_id) if x.rec_id else None
+        if not rec_row:
+            raise HTTPException(409, "لا توصية مرتبطة")
+        f = s.exec(select(AiFinding).where(AiFinding.company_id == company.id, AiFinding.fid == x.fid)).first()
+        rec = json.loads(rec_row.payload_json or "{}")
+        xid, kind = x.id, x.kind
+        if kind in ("alert", "thread", "draft_decision"):
+            fd = _ai7_find_dict(f) if f else {"fid": x.fid, "title": rec.get("problem", ""), "kind": rec.get("kind", "risk"), "module": rec.get("module", ""),
+                                               "period": rec.get("period", ""), "severity": rec.get("severity", "medium"), "scope": ""}
+            done = _ai7_exec(s, company, a, kind, fd, rec, x.run_id, x.agent, x.rec_id)
+            done.status, done.reason, done.decided_at = "approved", f"وافق: {user.name}", datetime.now()
+            s.add(done)
+            x = s.get(AiAction, xid)
+            x.status, x.decided_at, x.ref = "approved", datetime.now(), done.ref
+            s.add(x); s.commit()
+            return {"ok": True, "status": "approved", "ref": done.ref}
+    if kind != "submit_decision":
+        raise HTTPException(422, "نوع غير معروف")
+    r = ai_rec_act({"id": rec_row.id, "action": "accept", "submit": True}, user=user) if rec_row.status == "proposed" else None
+    with Session(engine) as s:
+        x = s.get(AiAction, xid)
+        x.status, x.decided_at = "approved", datetime.now()
+        x.ref = f"decision:{(r or {}).get('decision_id') or rec_row.decision_id}"
+        x.reason = f"وافق {user.name} — أُرسل القرار لمسار الاعتماد في متابعة القرارات"
+        s.add(x); s.commit()
+        return {"ok": True, "status": "approved", "ref": x.ref}
+
+
+@app.get("/ai/agents")
+def ai_agents(user: User = Depends(get_current_user)):
+    a = _a7()
+    with Session(engine) as s:
+        company, me = _ai7_ctx(s, user)
+        st, pol = _ai7_settings(s, company.id)
+        return {"agents": [{"key": k, **{kk: vv for kk, vv in a.AGENTS[k].items() if kk != "cats"}, "policy": pol[k]} for k in me["agents"]],
+                "actions": {k: v for k, v in a.ACTIONS.items()}, "settings": st, "can_manage": me["manage"]}
+
+
+@app.post("/ai/agents")
+def ai_agents_save(body: dict, user: User = Depends(get_current_user)):
+    a = _a7()
+    body = body or {}
+    with Session(engine) as s:
+        company, me = _ai7_ctx(s, user, "manage")
+        st, pol = _ai7_settings(s, company.id)
+        old = {"settings": dict(st), "policies": json.loads(json.dumps(pol))}
+        if body.get("agent"):
+            k = str(body["agent"])
+            if k not in a.AGENTS:
+                raise HTTPException(422, "وكيل غير معروف")
+            clean, errs = a.validate_policy({**pol[k], **(body.get("policy") or {})})
+            if errs:
+                raise HTTPException(422, " · ".join(errs))
+            pol[k] = clean
+        if isinstance(body.get("settings"), dict):
+            for k, v in body["settings"].items():
+                if k == "monitor_hours":
+                    try:
+                        v = int(v)
+                    except (TypeError, ValueError):
+                        raise HTTPException(422, "تكرار المراقبة بالساعات")
+                    if not 1 <= v <= 168:
+                        raise HTTPException(422, "تكرار المراقبة بين ساعة و168 ساعة")
+                    st[k] = v
+                elif k == "min_data_conf":
+                    try:
+                        v = int(v)
+                    except (TypeError, ValueError):
+                        raise HTTPException(422, "الحد الأدنى لكفاية البيانات رقم")
+                    if not 30 <= v <= 100:
+                        raise HTTPException(422, "الحد الأدنى لكفاية البيانات بين 30 و100")
+                    st[k] = v
+                elif k in ("learning", "notify_owner_digest"):
+                    st[k] = bool(v)
+        row = s.exec(select(AiSettings).where(AiSettings.company_id == company.id)).first() or AiSettings(company_id=company.id)
+        row.settings_json, row.policies_json, row.updated_by, row.updated_at = json.dumps(st), json.dumps(pol), (user.name or "")[:100], datetime.now()
+        s.add(row); s.commit()
+        gv = _load_p24("governance_engine")
+        if gv:
+            _gov_change(company.id, user, "ai_policy", body.get("agent") or "settings", "update", gv.diff(old, {"settings": st, "policies": pol}), str(body.get("reason") or ""),
+                        sensitive=any(set(pol[k]["auto"]) - set(old["policies"][k]["auto"]) for k in pol))
+        return {"ok": True, "settings": st, "policies": pol}
+
+
+@app.get("/ai/forecast")
+def ai_forecast(user: User = Depends(get_current_user)):
+    """7.2 — من محرك التنبؤ (3.7) بصلاحيات المستخدم: المبيعات والأرباح والسيولة والفروع والمخاطر المستقبلية والدقة."""
+    with Session(engine) as s:
+        company, me = _ai7_ctx(s, user)
+        role = me["role"] if me["role"] in _RISK_CATS_BY_ROLE else ("owner" if me["scope"] in ("full", "board") else "accountant" if me["scope"] == "cfo" else "manager")
+        try:
+            r = _pred_result(s, company, role, save=False)
+        except HTTPException as e:
+            return {"status": "unavailable", "reason": str(e.detail)}
+        if r.get("status") != "ok":
+            return {"status": r.get("status") or "insufficient", "reason": r.get("sufficiency_ar") or "بيانات غير كافية للتنبؤ", "months": r.get("months_available")}
+        prof = r.get("profit") or {}
+        cash = r.get("cash") or {}
+        return {"status": "ok", "outlook": r["outlook"], "currency": r.get("currency"), "sales": [{k: p.get(k) for k in ("period", "value", "lower", "upper")} for p in r["sales"]["points"]],
+                "profit": [{k: p.get(k) for k in ("period", "net_profit", "revenue")} for p in prof.get("points", [])] if prof.get("status") == "ok" else None,
+                "cash": [{k: p.get(k) for k in ("period", "balance", "net")} for p in cash.get("points", [])] if cash.get("status") == "ok" else None,
+                "cash_note": cash.get("reason_ar") if cash.get("status") != "ok" else None,
+                "branches": [{"branch": b.get("branch"), "status": b.get("status"), "growth_pct": b.get("growth_pct"), "next": (b.get("points") or [{}])[0].get("value") if b.get("points") else None}
+                             for b in r.get("branches") or []],
+                "risks": [{"ar": x["ar"], "level": x["level"], "horizon_ar": x.get("horizon_ar"), "evidence": x.get("evidence", [])[:2]} for x in r.get("risks") or []],
+                "drivers": [{"ar": d["ar"], "effect": d.get("effect")} for d in (r.get("drivers") or [])[:8]], "accuracy": r.get("accuracy"),
+                "brief": r.get("brief"), "methodology": r.get("methodology"), "disclaimer_ar": r.get("disclaimer_ar"), "scope": r.get("scope")}
+
+
+def _ai7_base(s, company, me):
+    role = me["role"] if me["role"] in _RISK_CATS_BY_ROLE else ("owner" if me["scope"] in ("full", "board") else "accountant" if me["scope"] == "cfo" else "manager")
+    r = _pred_result(s, company, role, save=False)
+    base = r.get("scenario_baseline")
+    if not base:
+        raise HTTPException(422, "المحاكاة تحتاج توقع الربح (تكلفة المنتجات والمصروفات) وصلاحية الاطلاع على الربح")
+    return r, base
+
+
+def _ai7_sim(s, company, me, spec, pe, a, r=None, base=None):
+    if base is None:
+        r, base = _ai7_base(s, company, me)
+    note = None
+    if spec.get("kind") == "new_branch":
+        brs = []
+        cust = _risk_modules(s, company, "owner")[1]
+        sm = pe.sales_monthly(cust)
+        ex = sm.get("partial_month")
+        for b, mm in (sm.get("branches") or {}).items():
+            last = [v["revenue"] for ym, v in sorted(mm.items()) if ym != ex][-1:]
+            brs += last
+        asm, note = a.new_branch_assumptions(base["revenue"][0] if base["revenue"] else None, brs, base["opex"][0] if base["opex"] else None, spec.get("ramp_pct") or 60)
+        if asm is None:
+            raise HTTPException(422, note)
+        label = spec.get("label") or "افتتاح فرع جديد"
+    else:
+        asm, errs = pe.validate_assumptions(spec.get("assumptions") or {})
+        if errs:
+            raise HTTPException(422, " · ".join(errs))
+        if not asm:
+            raise HTTPException(422, "حدد افتراضاً واحداً على الأقل")
+        label = spec.get("label") or "سيناريو"
+    b0 = pe.simulate(base, {}, "الأساس")
+    sim = pe.simulate(base, asm, label)
+    return b0, sim, note, asm
+
+
+@app.post("/ai/scenario")
+def ai_scenario(body: dict, user: User = Depends(get_current_user)):
+    """7.6 — سؤال «ماذا لو» أو افتراضات صريحة → محاكاة على خط الأساس المتوقع (لا تعديل لأي بيانات)."""
+    a, pe = _a7(), _load_p24("prediction_engine")
+    body = body or {}
+    with Session(engine) as s:
+        company, me = _ai7_ctx(s, user)
+        if body.get("question"):
+            spec = a.parse_scenario(body["question"])
+            if spec["kind"] == "need_number":
+                return {"status": "need_input", "ask_ar": spec["ask_ar"]}
+            if spec["kind"] == "unknown":
+                return {"status": "need_input", "ask_ar": "حدد ما يتغير: المصروفات، الأسعار، المبيعات، تكلفة المورد، أو فرع جديد — مع النسبة"}
+        else:
+            spec = {"kind": "new_branch" if body.get("new_branch") else "assumptions", "assumptions": body.get("assumptions") or {}, "label": body.get("label"),
+                    "ramp_pct": body.get("ramp_pct")}
+        b0, sim, note, asm = _ai7_sim(s, company, me, spec, pe, a)
+        log_audit(company.id, user.id, user.name, "ai_scenario", "scenario", json.dumps(asm, ensure_ascii=False)[:200])
+        return {"status": "ok", "label": sim["name"], "assumptions": asm, "assumption_note": note, "base": {k: b0[k] for k in ("revenue", "net_profit", "margin_pct", "cash_end", "cash_min")},
+                "result": {k: sim[k] for k in ("revenue", "net_profit", "margin_pct", "cash_end", "cash_min", "cash_negative", "capacity_warning", "months")},
+                "delta": {"revenue": round(sim["revenue"] - b0["revenue"], 2), "net_profit": round(sim["net_profit"] - b0["net_profit"], 2),
+                          "cash": round((sim["cash_end"] or 0) - (b0["cash_end"] or 0), 2) if sim.get("cash_end") is not None else None},
+                "horizon": len(sim["months"]), "disclaimer_ar": "محاكاة على خط الأساس المتوقع من محرك التنبؤ — لا تعدّل أي بيانات وليست نتيجة مؤكدة."}
+
+
+def _ai7_options(s, company, me, options, a, pe):
+    if not isinstance(options, list) or not 2 <= len(options) <= 4:
+        raise HTTPException(422, "قارن بين خيارين وأربعة خيارات")
+    r, base = _ai7_base(s, company, me)
+    b0 = pe.simulate(base, {}, "الأساس")
+    res = []
+    for o in options:
+        name = str(o.get("name") or "").strip()[:80]
+        if not name:
+            raise HTTPException(422, "لكل خيار اسم")
+        spec = a.parse_scenario(o["question"]) if o.get("question") else {"kind": "new_branch" if o.get("new_branch") else "assumptions", "assumptions": o.get("assumptions") or {}}
+        if spec["kind"] in ("need_number", "unknown"):
+            raise HTTPException(422, f"الخيار «{name}»: {spec.get('ask_ar') or 'حدد ما يتغير ونسبته'}")
+        spec["label"] = name
+        _b, sim, _n, _asm = _ai7_sim(s, company, me, spec, pe, a, r, base)
+        try:
+            cost = float(o.get("cost") or 0)
+        except (TypeError, ValueError):
+            raise HTTPException(422, f"تكلفة «{name}» رقم")
+        if cost < 0:
+            raise HTTPException(422, "التكلفة لا تكون سالبة")
+        res.append({"name": name, "sim": sim, "cost": cost, "risks_ar": [str(x)[:120] for x in (o.get("risks") or [])][:5]})
+    return a.compare_options(res, b0)
+
+
+@app.post("/ai/decision-support")
+def ai_decision_support(body: dict, user: User = Depends(get_current_user)):
+    a, pe = _a7(), _load_p24("prediction_engine")
+    with Session(engine) as s:
+        company, me = _ai7_ctx(s, user)
+        out = _ai7_options(s, company, me, (body or {}).get("options"), a, pe)
+        log_audit(company.id, user.id, user.name, "ai_decision_support", "compare", ", ".join(o["name"] for o in out["options"])[:200])
+        return out
+
+
+@app.post("/ai/decision-support/submit")
+def ai_decision_submit(body: dict, user: User = Depends(get_current_user)):
+    """يُعاد حساب الخيار في الخادم (لا تُقبل أرقام من الواجهة) ثم يُنشأ القرار ويُرسل للاعتماد في 3.9 باسم المستخدم."""
+    a, pe = _a7(), _load_p24("prediction_engine")
+    body = body or {}
+    with Session(engine) as s:
+        company, me = _ai7_ctx(s, user, "act")
+        out = _ai7_options(s, company, me, body.get("options"), a, pe)
+    pick = next((o for o in out["options"] if o["name"] == body.get("choose")), None)
+    if not pick:
+        raise HTTPException(422, "اختر أحد الخيارات المقارنة")
+    others = "؛ ".join(f"{o['name']}: أثر الربح {o['delta_profit']:,.0f} · التكلفة {o['cost']:,.0f}" for o in out["options"] if o is not pick)
+    res = company_decision_center_save({"title": str(body.get("title") or pick["name"])[:200], "source": "assistant", "source_ref": "ai:decision_support",
+                                        "description": f"اختير من مقارنة خيارات (دعم القرار): {others}\nالمخاطر: {'، '.join(pick['risk_flags']) or 'لا مخاطر معلنة'}"[:950],
+                                        "rationale": f"أثر ربح متوقع {pick['delta_profit']:,.0f} خلال الأفق · العائد على التكلفة {pick['roi_pct'] if pick['roi_pct'] is not None else '—'}%"[:500],
+                                        "expected_impact": pick["delta_profit"], "cost": pick["cost"] or None, "priority": "high", "submit": True}, user=user)
+    return {"ok": True, "decision_id": res.get("id"), "option": pick, "note_ar": "أُرسل القرار لمسار الاعتماد في متابعة القرارات — لا يُنفّذ قبل اعتماده"}
+
+
+@app.get("/ai/optimization")
+def ai_optimization(user: User = Depends(get_current_user)):
+    a, pe = _a7(), _load_p24("prediction_engine")
+    with Session(engine) as s:
+        company, me = _ai7_ctx(s, user)
+        finds = [_ai7_find_dict(f) for f in s.exec(select(AiFinding).where(AiFinding.company_id == company.id, AiFinding.status.in_(["new", "acknowledged"]))).all()
+                 if f.agent in me["agents"]]
+        for f in finds:
+            f["action_ar"] = (json.loads((s.exec(select(AiRecommendation).where(AiRecommendation.company_id == company.id, AiRecommendation.fid == f["fid"])).first()
+                                          or AiRecommendation(payload_json="{}")).payload_json or "{}").get("solution") or "")
+            f["impact_type"] = f["impact_type"] or ""
+        gaps = []
+        if pe and ("sales" in me["agents"] or "operations" in me["agents"]):
+            sm = pe.sales_monthly(_risk_modules(s, company, "owner")[1])
+            ex = sm.get("partial_month")
+            lastm = {}
+            for b, mm in (sm.get("branches") or {}).items():
+                ks = [ym for ym in sorted(mm) if ym != ex]
+                if ks:
+                    lastm[b] = mm[ks[-1]]["revenue"]
+            gaps = a.branch_gaps(lastm)
+        out = a.optimization(finds, gaps)
+        if not me["financial"]:
+            for ar in out["areas"]:
+                ar["by_type"] = {}
+                for it in ar["items"]:
+                    it["impact"] = None
+        return out
+
+
+@app.get("/ai/learning")
+def ai_learning(user: User = Depends(get_current_user)):
+    a = _a7()
+    with Session(engine) as s:
+        company, me = _ai7_ctx(s, user)
+        _ai7_sync_outcomes(s, company)
+        st, _p = _ai7_settings(s, company.id)
+        lr = _ai7_learning(s, company, st["learning"])
+        acc = None
+        try:
+            if me["scope"] in ("full", "cfo", "board"):
+                acc = (_pred_result(s, company, "owner" if me["scope"] != "cfo" else "accountant", save=False) or {}).get("accuracy")
+        except HTTPException:
+            acc = None
+        lr["prediction_accuracy"] = acc
+        lr["agents"] = {k: dict(v, ar=a.AGENTS[k]["ar"]) for k, v in lr["agents"].items() if k in me["agents"]}
+        dismissed = s.exec(select(AiFinding).where(AiFinding.company_id == company.id, AiFinding.status == "dismissed")).all()
+        lr["dismissed"] = [{"title": f.title, "agent": a.AGENTS.get(f.agent, {}).get("ar", f.agent), "note": f.note} for f in dismissed if f.agent in me["agents"]][:30]
+        return lr
+
+
+@app.get("/ai/runs")
+def ai_runs(user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, me = _ai7_ctx(s, user)
+        return {"items": [{"id": r.id, "at": r.started_at, "finished_at": r.finished_at, "status": r.status, "trigger": r.trigger, "by": r.by,
+                           "summary": json.loads(r.summary_json or "{}"), "error": r.error} for r in
+                          s.exec(select(AiRun).where(AiRun.company_id == company.id).order_by(AiRun.started_at.desc()).limit(50)).all()]}
+
+
+@app.get("/ai/reports")
+def ai_reports(user: User = Depends(get_current_user)):
+    """7.7 — التقارير الآلية: نفس محرك تقارير المساعد (4.5) وجداوله — لا نظام تقارير ثانٍ."""
+    with Session(engine) as s:
+        company, me = _ai7_ctx(s, user)
+        ae = _load_p24("assistant_engine")
+        sch = s.exec(select(CompanyAISchedule).where(CompanyAISchedule.company_id == company.id).order_by(CompanyAISchedule.created_at.desc())).all()
+        reps = s.exec(select(CompanyAIReport).where(CompanyAIReport.company_id == company.id).order_by(CompanyAIReport.created_at.desc()).limit(100)).all()
+        return {"kinds": {k: v[0] for k, v in ae.REPORT_KINDS.items() if k != "custom"}, "freqs": ae.FREQS,
+                "schedules": [{"id": x.id, "name": x.name, "kind": x.kind, "freq": x.freq, "active": bool(x.active), "next_run": x.next_run, "last_run": x.last_run,
+                               "last_status": x.last_status} for x in sch] if me["manage"] or me["scope"] == "cfo" else [],
+                "reports": [{"id": r.id, "kind": r.kind, "title": r.title, "at": r.created_at, "status": r.status, "by": r.created_by}
+                            for r in reps if r.created_by_id == user.id or r.recipient_user_id == user.id or me["manage"]][:60],
+                "can_schedule": me["manage"] or me["scope"] == "cfo"}
+
+
+@app.post("/ai/reports/generate")
+def ai_report_generate(body: dict, user: User = Depends(get_current_user)):
+    r = company_assistant_report({"kind": (body or {}).get("kind") or "executive"}, None, user=user)
+    return {"ok": True, "report": r}
+
+
+@app.post("/ai/reports/schedule")
+def ai_report_schedule(body: dict, user: User = Depends(get_current_user)):
+    a = _a7()
+    body = body or {}
+    with Session(engine) as s:
+        company, me = _ai7_ctx(s, user)
+        ae = _load_p24("assistant_engine")
+        kind = str(body.get("kind") or "executive")
+        if kind not in ae.REPORT_KINDS:
+            raise HTTPException(422, "نوع التقرير غير معروف")
+    r = company_assistant_schedule_save({"name": str(body.get("name") or f"{ae.REPORT_KINDS[kind][0]} — {ae.FREQS.get(body.get('freq'), '')}"), "kind": kind,
+                                         "freq": body.get("freq") or "weekly", "hour": body.get("hour") or 7, "recipients": body.get("recipients") or [user.id]}, user=user)
+    with Session(engine) as s:
+        x = AiAction(company_id=company.id, agent="executive", kind="schedule_report", status="executed", ref=f"schedule:{r['id']}",
+                     detail=f"{ae.REPORT_KINDS[kind][0]} · {ae.FREQS.get(body.get('freq') or 'weekly')}", by=(user.name or "")[:100], created_at=datetime.now())
+        s.add(x); s.commit()
+    return {"ok": True, "schedule_id": r["id"], "next_run": r.get("next_run")}
+
+
+@app.post("/ai/agent")
+def ai_agent_chat(body: dict, user: User = Depends(get_current_user)):
+    """7.1 — الوكيل التنفيذي: يفهم الطلب وينفّذ المسموح (تشغيل المراقبة، محاكاة، توصيات، تقرير) أو يجيب من المحركات عبر المساعد (4.5)."""
+    a = _a7()
+    msg = str((body or {}).get("message") or "").strip()[:500]
+    if not msg:
+        raise HTTPException(422, "اكتب طلبك")
+    cmd = a.parse_command(msg)
+    k = cmd["kind"]
+    if k == "run":
+        r = ai_run(user=user)
+        sm = r["summary"]
+        return {"kind": "run", "text": f"اكتملت المراقبة: {sm['findings']} نتيجة ({sm['new']} جديدة) · {sm['auto']} إجراء تلقائي · {sm['approval']} بانتظار موافقتك · {sm['blocked']} محجوب لضعف البيانات/الثقة",
+                "data": r}
+    if k == "scenario":
+        p = cmd["parsed"]
+        if p["kind"] in ("need_number", "unknown"):
+            return {"kind": "need_input", "text": p.get("ask_ar") or "حدد ما يتغير ونسبته (مثال: لو خفضنا المصروفات 10%)"}
+        r = ai_scenario({"question": msg}, user=user)
+        if r.get("status") != "ok":
+            return {"kind": "need_input", "text": r.get("ask_ar")}
+        d = r["delta"]
+        return {"kind": "scenario", "text": f"{r['label']}: الإيراد {d['revenue']:+,.0f} · صافي الربح {d['net_profit']:+,.0f}" + (f" · السيولة {d['cash']:+,.0f}" if d["cash"] is not None else "")
+                + f" خلال {r['horizon']} أشهر (محاكاة)." + (f" {r['assumption_note']}" if r.get("assumption_note") else ""), "data": r}
+    if k in ("recommendations", "anomalies"):
+        r = ai_findings(status="open", user=user)
+        items = [x for x in r["items"] if (k == "recommendations" or x["module"] == "anomaly")][:5]
+        if not items:
+            return {"kind": k, "text": "لا نتائج مفتوحة حالياً" + (" — شغّل المراقبة لتحديثها" if k == "recommendations" else " — لا انحرافات غير معتادة في آخر فحص"), "data": r}
+        return {"kind": k, "text": "\n".join(f"• [{a.SEV_AR.get(x['severity'])}] {x['title']}" + (f" ← {x['recommendation']['solution'][:120]}" if x.get("recommendation") else "") for x in items), "data": {"items": items}}
+    if k == "optimization":
+        r = ai_optimization(user=user)
+        top = [(ar["ar"], it) for ar in r["areas"] for it in ar["items"][:1]]
+        return {"kind": k, "text": "\n".join(f"• {n}: {it['title']}" for n, it in top) or "لا فرص بأثر محسوب حالياً", "data": r}
+    if k == "report":
+        r = ai_report_generate({"kind": cmd["report_kind"]}, user=user)
+        return {"kind": "report", "text": f"أُنشئ «{r['report']['title']}» — تجده في تبويب التقارير", "data": r}
+    r = company_assistant_ask({"question": msg, "service": "ask"}, None, user=user)
+    ans = r.get("answer") or {}
+    return {"kind": "ask", "text": "\n".join([ans.get("headline") or ""] + list(ans.get("lines") or [])[1:6]).strip() or "لا تتوفر إجابة من البيانات الحالية", "data": {"confidence": ans.get("confidence"),
+            "modules": [m.get("ar") for m in ans.get("modules_used") or []], "narrative": r.get("narrative"), "llm_ar": r.get("llm_ar")}}
+
+
+@app.get("/company-autonomy.html")
+def page_company_autonomy():
+    return FileResponse("company-autonomy.html")
 
 
 @app.get("/company/executive-intelligence")
@@ -18484,12 +21816,7 @@ def get_user_role(s, user: User) -> str:
         gr = _grp_company_role(s, user)       # Phase 6.3: دخل الشركة عبر مجموعة
         if gr:
             return gr
-    m = s.exec(
-        select(CompanyMember).where(
-            CompanyMember.company_id == user.company_id,
-            CompanyMember.email == user.email,
-        )
-    ).first()
+    m = _member_row(s, user)          # Phase 6.4: عضو مفعّل بحسابه، وإلا المطابقة بالبريد (السابق)
     return m.role if m else "staff"
 
 
@@ -18537,12 +21864,7 @@ def scope_by_role(s, user: User, branches):
     if role in ("owner", "accountant", "executive", "viewer"):
         return branches  # يرون كل فروع الشركة
     # مدير الفرع / الموظف: نقيّد بفرعه إن كان محدّداً في CompanyMember
-    m = s.exec(
-        select(CompanyMember).where(
-            CompanyMember.company_id == user.company_id,
-            CompanyMember.email == user.email,
-        )
-    ).first()
+    m = _member_row(s, user)
     if m and m.branch_id:
         return [b for b in branches if b.id == m.branch_id]
     return branches  # لا فرع محدّد → يرى الكل (سلوك افتراضي حالي)
@@ -18614,6 +21936,8 @@ def company_team_add(data: dict, user: User = Depends(get_current_user)):
         s.commit()
         s.refresh(mem)
         log_activity(user.name, f"أضاف عضو فريق: {name} ({role})", user.email)
+        _gov_change(company.id, user, "member", mem.id, "create", [{"field": "role", "old": None, "new": role}, {"field": "name", "old": None, "new": name}],
+                    sensitive=role in ROLES_SEE_SENSITIVE)
         return {"ok": True, "member_id": mem.id}
 
 
@@ -18629,8 +21953,14 @@ def company_team_remove(data: dict, user: User = Depends(get_current_user)):
             raise HTTPException(403, "غير مصرّح")
         if company.is_active != 1:
             raise HTTPException(402, "شركتك قيد التفعيل — فعّلها من لوحة الإدارة")
+        for ln in s.exec(select(GovMemberLink).where(GovMemberLink.member_id == mem.id, GovMemberLink.status == "active")).all():
+            ln.status, ln.revoked_at = "revoked", datetime.now()       # 6.4: يُسحب الدخول فوراً
+            s.add(ln)
+        old = {"name": mem.name, "role": mem.role}
         s.delete(mem)
         s.commit()
+        _gov_change(company.id, user, "member", mid, "remove", [{"field": "role", "old": old["role"], "new": None}, {"field": "name", "old": old["name"], "new": None}],
+                    sensitive=True)
         return {"ok": True}
 
 
@@ -22434,7 +25764,7 @@ ENGINE_MODULES = ("nabbah_finance", "nabbah_trust", "semantic_layer", "kpi_engin
                   "ai_gateway", "period_aggregation", "legacy_adapters", "platform_bridge",
                   "intelligence_engine", "forecast_engine", "scenario_engine", "decision_memory",
                   "rule_catalog", "canonical_model", "period_model", "metric_registry", "ingestion",
-                  "sales_engine", "inventory_engine", "purchases_engine", "cashflow_engine", "hr_engine", "ops_engine", "finance_engine", "sector_intelligence", "leakage_engine", "tax_engine", "risk_engine", "drivers_engine", "benchmark_engine", "prediction_engine", "goals_engine", "decisions_engine", "board_engine", "monthly_engine", "executive_engine", "customer_engine", "branch_engine", "competitor_engine", "events_engine", "assistant_engine", "security_engine", "integration_engine", "group_engine")
+                  "sales_engine", "inventory_engine", "purchases_engine", "cashflow_engine", "hr_engine", "ops_engine", "finance_engine", "sector_intelligence", "leakage_engine", "tax_engine", "risk_engine", "drivers_engine", "benchmark_engine", "prediction_engine", "goals_engine", "decisions_engine", "board_engine", "monthly_engine", "executive_engine", "customer_engine", "branch_engine", "competitor_engine", "events_engine", "assistant_engine", "security_engine", "integration_engine", "group_engine", "governance_engine", "collab_engine", "partner_engine", "autonomy_engine")
 
 
 def _runtime_health():
@@ -22784,7 +26114,7 @@ def files_check(_: bool = Depends(verify_admin)):
         "company-data-quality.html", "company-predictions.html", "company-risks.html",
         "company-board.html", "company-root-cause.html", "company-benchmarks.html",
         "company-upload.html", "company-memory.html", "company-decisions.html",
-        "company-monthly-report.html", "company-monthly-intelligence.html", "company-board-intelligence.html", "company-executive-report-intelligence.html", "company-customer-intelligence.html", "company-branch-intelligence.html", "company-competitor-intelligence.html", "company-events-intelligence.html", "company-assistant.html", "company-security.html", "company-integrations.html", "company-developers.html", "company-group.html",
+        "company-monthly-report.html", "company-monthly-intelligence.html", "company-board-intelligence.html", "company-executive-report-intelligence.html", "company-customer-intelligence.html", "company-branch-intelligence.html", "company-competitor-intelligence.html", "company-events-intelligence.html", "company-assistant.html", "company-security.html", "company-integrations.html", "company-developers.html", "company-group.html", "company-governance.html", "company-collaboration.html", "company-brand.html", "partner-portal.html", "partner-admin.html", "company-autonomy.html",
         "nabbah-data-template.xlsx",
     ]
     missing, present = [], []

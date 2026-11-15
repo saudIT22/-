@@ -78,6 +78,7 @@
       { label: "المقارنة القطاعية (السابقة)", href: "company-benchmark.html" },
     ]},
     { icon: "🤖", label: "ذكاء نبّاه", items: [
+      { label: "مركز الذكاء المستقل (الوكلاء)", href: "company-autonomy.html" },
       { label: "المساعد الذكي ومركز البحث", href: "company-assistant.html" },
       { label: "التنبؤ بالأداء", href: "company-performance-prediction.html" },
       { label: "التنبؤ (السابق)", href: "company-predictions.html" },
@@ -91,6 +92,10 @@
       { label: "منصة المطورين", href: "company-developers.html" },
       { label: "إدارة الشركات المتعددة", href: "company-group.html" },
       { label: "الأمان والموثوقية", href: "company-security.html" },
+      { label: "الحوكمة المؤسسية", href: "company-governance.html" },
+      { label: "التعاون والإشعارات", href: "company-collaboration.html" },
+      { label: "الهوية والعلامة البيضاء", href: "company-brand.html" },
+      { label: "بوابة الشركاء", href: "partner-portal.html" },
     ]},
     { icon: "📊", label: "التقارير", items: [
       { label: "مركز التقارير", href: "company-reports.html" },
@@ -208,4 +213,37 @@
   sb.querySelectorAll(".nbItem").forEach(a => {
     a.addEventListener("click", () => setTimeout(closeSb, 100));
   });
+
+  // 6.6 — الهوية المخصصة المعتمدة (طبقة عرض فقط): الاسم والشعار واللون وتذييل الطباعة. لا تُطبّق إن لم توجد.
+  try {
+    const tk = localStorage.getItem("nabbah_token");
+    if (tk) {
+      fetch("/branding/current", { headers: { Authorization: "Bearer " + tk } }).then(r => r.ok ? r.json() : null).then(j => {
+        const b = j && j.brand;
+        if (!b) return;
+        const head = document.getElementById("nbSbHead");
+        if (head && b.platform_name) head.querySelector(".nm").textContent = b.platform_name;
+        if (head && b.logo && /^data:image\/(png|jpeg|webp);base64,/.test(b.logo)) {
+          const img = document.createElement("img");
+          img.src = b.logo; img.alt = ""; img.style.cssText = "height:26px;max-width:90px;object-fit:contain;border-radius:6px";
+          const bell = head.querySelector(".bell"); if (bell) bell.replaceWith(img);
+        }
+        const hex = /^#[0-9a-fA-F]{6}$/;
+        if (hex.test(b.primary || "")) {
+          const st = document.createElement("style");
+          st.textContent = `#nbSidebar .nbItem.active{color:${b.primary}!important;border-color:${b.primary}!important}#nbToggle{border-color:${b.primary}!important;color:${b.primary}!important}`;
+          document.head.appendChild(st);
+          document.documentElement.style.setProperty("--brand-primary", b.primary);
+        }
+        if (b.report_footer) {
+          const f = document.createElement("div");
+          f.id = "nbPrintFooter"; f.textContent = b.report_footer + (b.platform_name ? " — " + b.platform_name : "");
+          const st2 = document.createElement("style");
+          st2.textContent = "#nbPrintFooter{display:none}@media print{#nbPrintFooter{display:block;position:fixed;bottom:0;left:0;right:0;text-align:center;font-size:10px;color:#555;padding:4px}}";
+          document.head.appendChild(st2); document.body.appendChild(f);
+        }
+        if (b.platform_name && document.title.indexOf("نبّاه") >= 0) document.title = document.title.replace("نبّاه", b.platform_name);
+      }).catch(() => {});
+    }
+  } catch (e) {}
 })();

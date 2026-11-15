@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>نبّاه · بوابة الشركاء</title>
+<link href="nabbah-design.css" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{background:var(--bg,#070b09);color:var(--txt,#e8f1ec);font-family:Tajawal,Tahoma,Arial,sans-serif;margin:0}
+  .wrap{max-width:1180px;margin:0 auto;padding:70px 16px 60px}
+  h1{margin:0 0 4px;font-size:24px}.sub{color:var(--txt-soft,#8ba396);margin:0 0 14px;font-size:14px}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+  select{background:var(--panel,#101a15);color:var(--txt,#e8f1ec);border:1px solid var(--line,#1d2c24);border-radius:10px;padding:8px 10px;font:inherit;font-size:13px;max-width:100%}
+  .tabs{display:flex;gap:2px;flex-wrap:wrap;border-bottom:1px solid var(--line,#1d2c24);margin:6px 0 16px}
+  .tab{background:none;border:0;color:var(--txt-soft,#8ba396);padding:9px 11px;font:inherit;font-size:13px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+  .tab.on{color:var(--txt,#e8f1ec);border-color:#14b8a6;font-weight:800}
+  .tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:14px}
+  .tile,.panel{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:14px;padding:14px;min-width:0}
+  .tile{cursor:pointer}.tile:hover{border-color:var(--mint,#10b981)}
+  .tile .l{font-size:12px;color:var(--txt-soft,#8ba396)}.tile .v{font-size:22px;font-weight:800;margin-top:4px;overflow-wrap:anywhere}.tile .c{font-size:12px;margin-top:4px;line-height:1.7}
+  .panel{margin-bottom:14px}.panel h2{margin:0 0 10px;font-size:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .panel h3{margin:12px 0 6px;font-size:13px;color:var(--txt-soft,#8ba396)}
+  .grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+  table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px;border-bottom:1px solid var(--line,#1d2c24);text-align:start;white-space:nowrap}
+  th{color:var(--txt-soft,#8ba396);font-weight:600}.tbl{overflow-x:auto}td.w{white-space:normal;min-width:200px}
+  tr.drill{cursor:pointer}tr.drill:hover td{background:rgba(16,185,129,.06)}
+  .pos{color:#10b981}.neg{color:#ef4444}.warn{color:#f5b301}.muted{color:var(--txt-soft,#8ba396);font-size:12px}
+  .b{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700;display:inline-block;white-space:nowrap}
+  .critical,.intervene{background:rgba(239,68,68,.16);color:#ef4444}.high{background:rgba(234,88,12,.16);color:#f97316}
+  .medium,.watch{background:rgba(245,179,1,.15);color:#f5b301}.low,.good{background:rgba(16,185,129,.15);color:#10b981}.grey,.na,.monitor{background:rgba(148,163,184,.15);color:#94a3b8}
+  .btn{background:var(--mint,#10b981);color:#062b1c;border:0;border-radius:10px;padding:7px 13px;font-weight:800;cursor:pointer;font:inherit;font-size:12px;text-decoration:none;display:inline-block}
+  .btn.ghost{background:transparent;color:var(--txt-soft,#8ba396);border:1px solid var(--line,#1d2c24);font-weight:600}.btn.red{background:#ef4444;color:#fff}
+  .btn:disabled{opacity:.5;cursor:default}
+  .state{padding:36px 16px;text-align:center;color:var(--txt-soft,#8ba396);border:1px dashed var(--line,#1d2c24);border-radius:14px}
+  .na-box{color:var(--txt-soft,#8ba396);font-size:13px;padding:10px;border:1px dashed var(--line,#1d2c24);border-radius:10px;margin:6px 0}
+  .itm{border:1px solid var(--line,#1d2c24);border-inline-start:4px solid #f5b301;border-radius:12px;padding:12px;margin-bottom:10px}
+  .itm.critical,.itm.intervene{border-inline-start-color:#ef4444;background:none;color:inherit}.itm.high{border-inline-start-color:#f97316;background:none;color:inherit}
+  .itm.medium,.itm.watch{background:none;color:inherit}.itm.good,.itm.low{border-inline-start-color:#10b981;background:none;color:inherit}.itm.na,.itm.monitor{border-inline-start-color:#94a3b8;background:none;color:inherit}
+  .itm h4{margin:0 0 6px;font-size:15px}.kv{display:grid;grid-template-columns:120px 1fr;gap:4px 10px;font-size:13px;margin-top:6px}.kv b{color:var(--txt-soft,#8ba396);font-weight:600}
+  .sum p{font-size:15px;line-height:2;margin:4px 0}.sum b{color:var(--mint,#10b981)}.sum a{color:var(--mint,#10b981);font-size:11px;text-decoration:none}
+  .hgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+  .barrow{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:13px}.barrow .t{flex:0 0 140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .barrow .g{flex:1;height:10px;background:var(--line,#1d2c24);border-radius:6px;overflow:hidden;min-width:40px}.barrow .g i{display:block;height:100%;background:var(--mint,#10b981)}.barrow .x{flex:0 0 120px;text-align:end}
+  .pop{position:fixed;display:none;z-index:70;background:var(--panel,#101a15);border:1px solid var(--mint,#10b981);border-radius:12px;padding:12px;font-size:12px;max-width:340px;line-height:1.8}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}.chip{background:rgba(16,185,129,.12);color:var(--mint,#10b981);border:1px solid rgba(16,185,129,.35);border-radius:20px;padding:4px 11px;font-size:12px;cursor:pointer}
+  input.search,.fg input,.fg select,.fg textarea{background:var(--bg,#070b09);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:9px;padding:8px;font:inherit}
+  input.search{flex:1;min-width:160px;background:var(--panel,#101a15);border-radius:10px;padding:9px 12px}
+  .ai-sec{margin:8px 0}.ai-sec b{display:block;font-size:13px;margin-bottom:4px}.ai-sec li{font-size:13px;margin:3px 0}
+  .ov{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:50;padding:14px}
+  .ov.on{display:flex}.modal{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:16px;padding:18px;width:min(580px,100%);max-height:90vh;overflow:auto}
+  .fg{display:grid;grid-template-columns:1fr 1fr;gap:10px}.fg label{font-size:12px;color:var(--txt-soft,#8ba396);display:flex;flex-direction:column;gap:4px}.fg .full{grid-column:1/-1}
+  .cta{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .back{background:none;border:0;color:var(--mint,#10b981);cursor:pointer;font:inherit;padding:0;margin-bottom:10px}
+  .stbadge{font-size:12px;font-weight:800;padding:4px 10px;border-radius:10px;border:1px solid var(--line,#1d2c24)}
+  .flag{padding:10px 12px;border-radius:10px;margin:6px 0 10px;font-size:13px}
+  /* بطاقة القرار */
+  .dc-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;background:linear-gradient(90deg,#0f2a3d,#123047);border-radius:14px;padding:16px 18px;margin-bottom:12px}
+  .dc-head h2{margin:0;font-size:20px}.dc-no{border:1px solid rgba(255,255,255,.3);border-radius:10px;padding:6px 12px;font-weight:800;font-size:13px}
+  .dc-meta{display:grid;grid-template-columns:2fr repeat(4,minmax(0,1fr));gap:10px;align-items:center}.dc-meta>div{border-inline-start:1px solid var(--line,#1d2c24);padding:4px 10px}
+  .dc-meta .l{font-size:12px;color:var(--txt-soft,#8ba396)}.dc-meta .v{font-size:15px;font-weight:800;margin-top:4px}
+  .dc-box{background:rgba(255,255,255,.025);border-radius:10px;padding:12px;font-size:14px;line-height:1.9}
+  .fin3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.fin3 div{background:rgba(255,255,255,.025);border-radius:10px;padding:12px;text-align:center}
+  .fin3 b{display:block;font-size:20px;margin:6px 0}
+  .flow{display:flex;align-items:flex-start;justify-content:space-between;gap:4px;margin:10px 0}.flow .st{text-align:center;flex:1;font-size:12px;position:relative}
+  .flow .dot{width:28px;height:28px;border-radius:50%;margin:0 auto 6px;display:grid;place-items:center;font-weight:900;background:var(--line,#1d2c24);color:#94a3b8}
+  .flow .dot.on{background:#10b981;color:#062b1c}.flow .dot.cur{background:#f5b301;color:#2b1d00}
+  #printv{display:none}
+  @media print{#printv{display:block!important;color:#000;background:#fff}
+    #printv .pg{page-break-after:always;padding:22px}#printv .panel,#printv .tile,#printv .itm{background:#fff;border:1px solid #ccc;color:#000;break-inside:avoid}
+    #printv table{width:100%;border-collapse:collapse}#printv tr{break-inside:avoid}#printv td,#printv th{border:1px solid #ccc;padding:4px;font-size:10.5px;white-space:normal;color:#000}
+    #printv .muted{color:#555}#printv .cover{display:flex;flex-direction:column;justify-content:center;min-height:90vh;text-align:center}}
+  @media(max-width:900px){.hgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.dc-meta{grid-template-columns:1fr 1fr}.dc-meta>div:first-child{grid-column:1/-1}}
+  @media(max-width:760px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.grid2,.grid3,.fin3{grid-template-columns:minmax(0,1fr)}.fg{grid-template-columns:1fr}h1{font-size:20px}
+    .tile{padding:10px}.tile .v{font-size:17px}.kv{grid-template-columns:1fr}.tab{padding:7px 8px;font-size:12px}.barrow .t{flex-basis:90px}.barrow .x{flex-basis:90px}}
+  @media(max-width:1000px){.grid3{grid-template-columns:minmax(0,1fr)}}
+  @media(max-width:760px){.barrow{flex-wrap:wrap}.barrow .x{flex:1 1 100%;text-align:start}.barrow .x .b{white-space:normal}}
+  html,body{overflow-x:hidden}
+  @media(min-width:761px){#content .barrow .x{flex-basis:220px}}
+  .btn.ghost.red{color:#ef4444;border-color:rgba(239,68,68,.4)}
+  @media print{body>*:not(.wrap){display:none!important}.tabs,.bar,.cta,.back,#disc{display:none!important}body{background:#fff;color:#000}.panel{border:1px solid #ccc;background:#fff;color:#000}}
+
+  .chip input{vertical-align:middle;margin:0 0 0 4px}.chip.on{background:var(--mint,#10b981);color:#062b1c;font-weight:800}.fg textarea{resize:vertical}
+  .code{background:var(--bg,#070b09);border:1px solid var(--line,#1d2c24);border-radius:10px;padding:10px;font-size:12px;white-space:pre-wrap;word-break:break-word;overflow-x:auto;text-align:left;font-family:ui-monospace,Consolas,monospace;margin:6px 0}
+  code{font-family:ui-monospace,Consolas,monospace;font-size:12px;background:rgba(255,255,255,.05);padding:1px 5px;border-radius:5px}
+  .spark{display:flex;align-items:flex-end;gap:3px;height:110px;padding:6px 0}.spark i{flex:1;background:var(--mint,#10b981);border-radius:3px 3px 0 0;min-width:3px;opacity:.85}
+  .btn.ghost.red{background:transparent}.fg label{min-width:0}.fg input,.fg select,.fg textarea{width:100%;min-width:0;box-sizing:border-box}
+  details summary{list-style:none}.itm h4{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  @media(max-width:760px){.tiles[style]{grid-template-columns:repeat(2,minmax(0,1fr))!important}[data-mr]{grid-template-columns:1fr 1fr!important}[data-mr] .btn{grid-column:1/-1}[data-tm],[data-bm]{grid-template-columns:1fr!important}}
+  .bar select{background:var(--card,#0d1512);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:10px;padding:6px 10px}
+  textarea{width:100%;background:var(--card,#0d1512);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:10px;padding:8px;font-family:inherit}
+  input[type=color]{height:40px;padding:3px;min-width:80px;cursor:pointer}
+  .b.grey{background:rgba(148,163,184,.15);color:#94a3b8}
+  @media(max-width:760px){.bar{flex-wrap:wrap}.tiles[style]{grid-template-columns:repeat(2,minmax(0,1fr))!important}.kv{grid-template-columns:1fr!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🤝 بوابة شركاء نبّاه</h1>
+  <p class="sub">للمحاسبين والمستشارين وشركات التقنية والموزعين وشركاء التكامل: أحِل عملاءك برمزك، وتابع اشتراكاتهم وعمولاتك وأداءك. العمولة تُستحق على التحصيل الفعلي فقط وفق شروط اعتمادك — لا على مجرد التسجيل.</p>
+  <div class="bar"><span class="stbadge" id="stB">…</span><span style="flex:1"></span><button class="btn ghost" id="joinBtn">🔑 انضمام لفريق شريك</button></div>
+  <nav class="tabs" id="tabs"></nav>
+  <div id="content"><div class="state">جارٍ التحميل…</div></div>
+</div>
+<div class="ov" id="ov"><div class="modal" id="modal"></div></div>
+<script src="i18n.js"></script>
+<script>
+(function(){
+  const TOKEN=localStorage.getItem("nabbah_token")||"";
+  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const n=(v,d=0)=>{if(v==null||v===""||isNaN(Number(v)))return"—";return Number(v).toLocaleString("ar-SA",{maximumFractionDigits:d});};
+  const dt=v=>v?esc(String(v).replace("T"," ").slice(0,16)):"—";
+  const dd=v=>v?esc(String(v).slice(0,10)):"—";
+  const $=id=>document.getElementById(id);
+  const H={Authorization:"Bearer "+TOKEN,"Content-Type":"application/json"};
+  const api=(path,body)=>fetch(path,{method:body===undefined?"GET":"POST",headers:H,body:body===undefined?undefined:JSON.stringify(body)}).then(async r=>{
+    if(r.status===401){location.href="login.html";throw new Error("401");}const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(typeof j.detail==="string"?j.detail:"HTTP "+r.status);return j;});
+  const panel=(t,b,x="")=>`<div class="panel"><h2>${t}${x}</h2>${b}</div>`;
+  const na=m=>`<div class="na-box">${esc(m)}</div>`;
+  const tbl=(head,rows,empty)=>rows.length?`<div class="tbl"><table><thead><tr>${head.map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>${rows.join("")}</tbody></table></div>`:na(empty||"لا بيانات بعد");
+  const msgEl=id=>`<div class="muted" id="${id}" style="margin-top:8px"></div>`;
+  const ok=(id,t)=>{const e=$(id);if(e){e.className="pos";e.textContent=t;}};
+  const bad=(id,t)=>{const e=$(id);if(e){e.className="neg";e.textContent=t;}};
+  const tile=(l,v,x,cls)=>`<div class="tile"><div class="l">${l}</div><div class="v ${cls||""}">${v}${x?`<span class="muted" style="font-size:12px"> ${x}</span>`:""}</div></div>`;
+  const badge=(t,c)=>`<span class="b ${c||"low"}">${esc(t)}</span>`;
+  const close=()=>{$("ov").classList.remove("on");$("modal").innerHTML="";};
+  const open=h=>{$("modal").innerHTML=h;$("ov").classList.add("on");};
+  const route=()=>decodeURIComponent(location.hash.slice(1)||"");
+  const opts=(o,sel)=>Object.entries(o).map(([k,v])=>`<option value="${esc(k)}"${k===sel?" selected":""}>${esc(v)}</option>`).join("");
+  const val=id=>{const e=$(id);return e?e.value:"";};
+  const btnRun=(b,p,onOk,msg)=>{b.disabled=true;p.then(r=>{b.disabled=false;onOk(r);}).catch(e=>{b.disabled=false;if(msg)bad(msg,e.message);else alert(e.message);});};
+  function codeModal(code,note,after){open(`<h2 style="margin-top:0">🔑 الرمز — يُعرض مرة واحدة</h2><div dir="ltr" class="code" style="font-size:18px;font-weight:800;text-align:center" id="newCode">${esc(code)}</div>
+    <div class="cta"><button class="btn" id="cpCode">نسخ</button><button class="btn ghost" id="clCode">تم، أغلق</button></div><p class="muted">${esc(note||"")}</p>`);
+    $("cpCode").onclick=()=>{(navigator.clipboard?navigator.clipboard.writeText(code):Promise.reject()).then(()=>{$("cpCode").textContent="✔ نُسخ";}).catch(()=>{$("cpCode").textContent="انسخه يدوياً";});};
+    $("clCode").onclick=()=>{close();if(after)after();};}
+  function tabsBar(list,cur){return list.map(t=>`<button class="tab${t[0]===cur?" on":""}" data-tab="${t[0]}">${t[1]}</button>`).join("");}
+
+  if(!TOKEN){location.href="login.html";return;}
+  let D=null;
+  const TABS=[["dash","📊 الأداء"],["clients","🏢 العملاء المحالون"],["commissions","💰 العمولات"],["team","👥 المستخدمون"]];
+  window.addEventListener("hashchange",()=>{if(D)render();});
+  function load(){return api("/partners/me").then(j=>{D=j;const p=j.partner;$("stB").textContent=p?`${p.name} · ${p.status_ar}`:"لست شريكاً بعد";render();}).catch(e=>{$("content").innerHTML=`<div class="state">${esc(e.message)}</div>`;});}
+  function render(){const p=D.partner;
+    if(!p){$("tabs").innerHTML="";$("content").innerHTML=vApply();wireApply();return;}
+    if(p.status!=="approved"){$("tabs").innerHTML="";$("content").innerHTML=panel("طلب الشراكة",`<div class="kv"><b>الجهة</b><span>${esc(p.name)}</span><b>النوع</b><span>${esc(p.kind_ar)}</span><b>الحالة</b><span>${esc(p.status_ar)}</span>${p.review_note?`<b>ملاحظة المراجعة</b><span>${esc(p.review_note)}</span>`:""}<b>تاريخ الطلب</b><span>${dt(p.created_at)}</span></div>
+      <p class="muted">${p.status==="applied"?"يراجع فريق نبّاه طلبك ويحدد شروط العمولة عند الاعتماد.":"تواصل مع فريق نبّاه للاستفسار."}</p>`);return;}
+    let k=route()||"dash";const tabs=TABS.filter(t=>t[0]!=="team"||D.role==="admin");if(!tabs.some(t=>t[0]===k))k="dash";
+    $("tabs").innerHTML=tabsBar(tabs,k);document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{location.hash=b.dataset.tab;});
+    $("content").innerHTML=VIEW[k]();wire(k);}
+  function vApply(){return panel("طلب الانضمام لبرنامج الشركاء",`<div class="fg"><label>اسم الجهة<input id="aN"></label><label>نوع الشراكة<select id="aK">${opts(D.kinds,"accounting")}</select></label>
+    <label>اسم المسؤول<input id="aC"></label><label>بريد التواصل<input id="aE" type="email" dir="ltr"></label><label>الجوال<input id="aP" dir="ltr"></label><label>المدينة<input id="aCi"></label>
+    <label>السجل التجاري<input id="aCr" dir="ltr"></label><label>الموقع<input id="aW" dir="ltr" placeholder="https://"></label><label class="full">نبذة وكيف ستخدم العملاء<textarea id="aA" rows="3"></textarea></label></div>
+    <div class="cta"><button class="btn" id="aGo">إرسال الطلب</button></div>${msgEl("aMsg")}`)+panel("أنواع الشركاء",`<ul style="line-height:2">${Object.values(D.kinds).map(v=>`<li>${esc(v)}</li>`).join("")}</ul>`);}
+  function wireApply(){$("aGo").onclick=()=>btnRun($("aGo"),api("/partners/apply",{name:val("aN"),kind:val("aK"),contact_name:val("aC"),contact_email:val("aE"),phone:val("aP"),city:val("aCi"),cr_number:val("aCr"),website:val("aW"),about:val("aA")}),()=>load(),"aMsg");}
+  function vDash(){const p=D.partner,f=D.performance,c=D.commissions;
+    return `<div class="tiles" style="grid-template-columns:repeat(4,minmax(0,1fr))">`+tile("العملاء المسجلون",n(f.registered))+tile("العملاء النشطون",n(f.active))+tile("العملاء الدافعون",n(f.paying))+tile("اشتراكات متجددة",n(f.renewed))+
+      tile("معدل الإلغاء",f.churn_pct==null?"—":n(f.churn_pct,1)+"%")+tile("الإيرادات الناتجة",n(f.revenue,2),"ريال")+tile("قيمة العميل المحققة",f.ltv_realized==null?"—":n(f.ltv_realized,2),"ريال")+tile("العمولة المستحقة",n(c.due,2),"ريال",c.due>0?"pos":"")+`</div>`+
+      panel("رمز الإحالة",`<div dir="ltr" class="code" style="font-size:20px;font-weight:800;text-align:center" id="refCode">${esc(p.referral_code)}</div><p class="muted">يعطيه مالك الشركة بنفسه من «الهوية والعلامة البيضاء › شريك نبّاه». شروطك: ${esc(c.rule_ar)}</p>`)+`<p class="muted">${esc(f.notes_ar)}</p>`;}
+  function vClients(){return panel("العملاء المحالون",tbl(["الشركة","القطاع","الخطة","منذ","أول تحصيل","نهاية الاستحقاق","المحصّل","الحالة"],D.clients.map(x=>{const cc=D.commissions.companies.find(c=>c.company_id===x.company_id)||{};
+      return `<tr><td><b>${esc(x.company)}</b></td><td>${esc(x.sector)}</td><td>${esc(x.plan)}</td><td>${esc(x.linked_at)}</td><td>${esc(cc.first_paid||"—")}</td><td>${esc(cc.window_end||"—")}</td><td>${n((cc.collected||0)-(cc.refunded||0),2)}</td><td>${x.status==="ended"?badge("انتهى الربط","grey"):x.active?badge("نشط"):badge("غير نشط","medium")}</td></tr>`;}),"لا عملاء بعد")+`<p class="muted">ترى اسم الشركة وحالة اشتراكها فقط — بيانات العملاء وتقاريرهم لا تظهر للشركاء.</p>`);}
+  function vCommissions(){const c=D.commissions;const K={payment:"تحصيل",refund:"استرداد",cancellation:"إلغاء"};
+    return `<div class="tiles" style="grid-template-columns:repeat(3,minmax(0,1fr))">`+tile("المكتسب",n(c.earned,2),"ريال")+tile("المسوّى",n(c.settled,2),"ريال")+tile("المستحق",n(c.due,2),"ريال",c.due>0?"pos":"")+`</div>`+
+      panel("حركات الاحتساب",tbl(["التاريخ","العميل","الحركة","المبلغ","العمولة","ملاحظة"],c.lines.map(l=>`<tr><td>${esc(l.at)}</td><td>${esc(l.company)}</td><td>${esc(K[l.kind]||l.kind)}</td><td>${n(l.amount,2)}</td><td class="${l.commission<0?"neg":l.commission>0?"pos":""}">${n(l.commission,2)}</td><td>${esc(l.note||"")}</td></tr>`),"لا تحصيلات بعد"))+
+      panel("التسويات المدفوعة",tbl(["التاريخ","المبلغ","المرجع","ملاحظة"],D.settlements.map(x=>`<tr><td>${esc(x.paid_at)}</td><td>${n(x.amount,2)}</td><td>${esc(x.ref)}</td><td>${esc(x.note)}</td></tr>`),"لا تسويات بعد")+`<p class="muted">${esc(c.rule_ar)}</p>`);}
+  function vTeam(){return panel("مستخدمو الشريك",tbl(["الاسم","الدور","الحالة",""],D.users.map(u=>`<tr><td>${esc(u.name)}</td><td>${u.role==="admin"?"مسؤول":"عضو"}</td><td>${esc(u.status)}</td><td>${u.status==="active"?`<button class="btn ghost red" data-urm="${u.id}">إزالة</button>`:""}</td></tr>`),"أنت فقط")+
+      `<div class="fg"><label>دور المستخدم الجديد<select id="uR"><option value="member">عضو (اطلاع)</option><option value="admin">مسؤول</option></select></label></div><div class="cta"><button class="btn" id="uGo">إنشاء رمز دعوة</button></div>${msgEl("uMsg")}`);}
+  const VIEW={dash:vDash,clients:vClients,commissions:vCommissions,team:vTeam};
+  function wire(k){if(k==="team"){$("uGo").onclick=()=>btnRun($("uGo"),api("/partners/users/invite",{role:val("uR")}),r=>codeModal(r.code,r.note_ar,load),"uMsg");
+      document.querySelectorAll("[data-urm]").forEach(b=>b.onclick=()=>btnRun(b,api("/partners/users/remove",{id:Number(b.dataset.urm)}),()=>load(),"uMsg"));}}
+  $("joinBtn").onclick=()=>{open(`<h2 style="margin-top:0">🔑 انضمام لفريق شريك</h2><div class="fg"><label class="full">الرمز (NBQ-…)<input id="jC" dir="ltr"></label></div><div class="cta"><button class="btn" id="jGo">انضمام</button><button class="btn ghost" id="jCl">إغلاق</button></div>${msgEl("jMsg")}`);
+    $("jCl").onclick=close;$("jGo").onclick=()=>btnRun($("jGo"),api("/partners/users/join",{code:val("jC")}),()=>{close();load();},"jMsg");};
+  $("ov").onclick=e=>{if(e.target===$("ov"))close();};
+  load();
+})();
+</script>
+<script src="nabbah-sidebar.js"></script>
+</body>

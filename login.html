@@ -245,5 +245,15 @@
   document.getElementById("password").addEventListener("keydown", e => { if (e.key === "Enter") login(); });
 </script>
   <script src="i18n.js"></script>
+<script>
+// 6.6 — هوية مخصصة على نطاق موثّق فقط (لا شيء على nabbah.com)
+(function(){try{var h=location.hostname;if(!h||/(^|\.)nabbah\.com$/.test(h)||h==="localhost"||/^[0-9.]+$/.test(h))return;
+fetch("/branding/public?host="+encodeURIComponent(h)).then(function(r){return r.ok?r.json():null}).then(function(j){var b=j&&j.brand;if(!b)return;
+var lg=document.querySelector(".logo");if(b.platform_name){lg.querySelector(".name").textContent=b.platform_name;document.title=b.platform_name+" — تسجيل الدخول";}
+if(b.logo&&/^data:image\/(png|jpeg|webp);base64,/.test(b.logo)){var im=document.createElement("img");im.src=b.logo;im.alt="";im.style.cssText="height:34px;max-width:120px;object-fit:contain";var bl=lg.querySelector(".bell");if(bl)bl.replaceWith(im);}
+if(b.login_headline){var sb=document.querySelector("#pwStep .sub");if(sb)sb.textContent=b.login_headline;}
+if(/^#[0-9a-fA-F]{6}$/.test(b.primary||"")){var st=document.createElement("style");st.textContent=".btn{background:"+b.primary+"!important}";document.head.appendChild(st);}
+}).catch(function(){});}catch(e){}})();
+</script>
 </body>
 </html>
