@@ -44,6 +44,9 @@
       { label: "إدخال بيانات HR", href: "company-hr.html" },
     ]},
     { icon: "⚙️", label: "العمليات", items: [
+      { label: "مركز التشغيل اليومي", href: "company-operations-center.html" },
+      { label: "التوقعات والعمالة والتقويم", href: "company-forecast-planner.html" },
+      { label: "سجل التشغيل", href: "company-logbook.html" },
       { label: "وحدة العمليات", href: "company-ops-analytics.html" },
       { label: "إدخال بيانات العمليات", href: "company-ops.html" },
       { label: "ذكاء المقارنة بين الفروع", href: "company-branch-intelligence.html" },

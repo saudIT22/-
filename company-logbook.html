@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>نبّاه · سجل التشغيل</title>
+<link href="nabbah-design.css" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{background:var(--bg,#070b09);color:var(--txt,#e8f1ec);font-family:Tajawal,Tahoma,Arial,sans-serif;margin:0}
+  .wrap{max-width:1180px;margin:0 auto;padding:70px 16px 60px}
+  h1{margin:0 0 4px;font-size:24px}.sub{color:var(--txt-soft,#8ba396);margin:0 0 14px;font-size:14px}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+  select{background:var(--panel,#101a15);color:var(--txt,#e8f1ec);border:1px solid var(--line,#1d2c24);border-radius:10px;padding:8px 10px;font:inherit;font-size:13px;max-width:100%}
+  .tabs{display:flex;gap:2px;flex-wrap:wrap;border-bottom:1px solid var(--line,#1d2c24);margin:6px 0 16px}
+  .tab{background:none;border:0;color:var(--txt-soft,#8ba396);padding:9px 11px;font:inherit;font-size:13px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+  .tab.on{color:var(--txt,#e8f1ec);border-color:#14b8a6;font-weight:800}
+  .tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:14px}
+  .tile,.panel{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:14px;padding:14px;min-width:0}
+  .tile{cursor:pointer}.tile:hover{border-color:var(--mint,#10b981)}
+  .tile .l{font-size:12px;color:var(--txt-soft,#8ba396)}.tile .v{font-size:22px;font-weight:800;margin-top:4px;overflow-wrap:anywhere}.tile .c{font-size:12px;margin-top:4px;line-height:1.7}
+  .panel{margin-bottom:14px}.panel h2{margin:0 0 10px;font-size:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .panel h3{margin:12px 0 6px;font-size:13px;color:var(--txt-soft,#8ba396)}
+  .grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+  table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px;border-bottom:1px solid var(--line,#1d2c24);text-align:start;white-space:nowrap}
+  th{color:var(--txt-soft,#8ba396);font-weight:600}.tbl{overflow-x:auto}td.w{white-space:normal;min-width:200px}
+  tr.drill{cursor:pointer}tr.drill:hover td{background:rgba(16,185,129,.06)}
+  .pos{color:#10b981}.neg{color:#ef4444}.warn{color:#f5b301}.muted{color:var(--txt-soft,#8ba396);font-size:12px}
+  .b{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700;display:inline-block;white-space:nowrap}
+  .critical,.intervene{background:rgba(239,68,68,.16);color:#ef4444}.high{background:rgba(234,88,12,.16);color:#f97316}
+  .medium,.watch{background:rgba(245,179,1,.15);color:#f5b301}.low,.good{background:rgba(16,185,129,.15);color:#10b981}.grey,.na,.monitor{background:rgba(148,163,184,.15);color:#94a3b8}
+  .btn{background:var(--mint,#10b981);color:#062b1c;border:0;border-radius:10px;padding:7px 13px;font-weight:800;cursor:pointer;font:inherit;font-size:12px;text-decoration:none;display:inline-block}
+  .btn.ghost{background:transparent;color:var(--txt-soft,#8ba396);border:1px solid var(--line,#1d2c24);font-weight:600}.btn.red{background:#ef4444;color:#fff}
+  .btn:disabled{opacity:.5;cursor:default}
+  .state{padding:36px 16px;text-align:center;color:var(--txt-soft,#8ba396);border:1px dashed var(--line,#1d2c24);border-radius:14px}
+  .na-box{color:var(--txt-soft,#8ba396);font-size:13px;padding:10px;border:1px dashed var(--line,#1d2c24);border-radius:10px;margin:6px 0}
+  .itm{border:1px solid var(--line,#1d2c24);border-inline-start:4px solid #f5b301;border-radius:12px;padding:12px;margin-bottom:10px}
+  .itm.critical,.itm.intervene{border-inline-start-color:#ef4444;background:none;color:inherit}.itm.high{border-inline-start-color:#f97316;background:none;color:inherit}
+  .itm.medium,.itm.watch{background:none;color:inherit}.itm.good,.itm.low{border-inline-start-color:#10b981;background:none;color:inherit}.itm.na,.itm.monitor{border-inline-start-color:#94a3b8;background:none;color:inherit}
+  .itm h4{margin:0 0 6px;font-size:15px}.kv{display:grid;grid-template-columns:120px 1fr;gap:4px 10px;font-size:13px;margin-top:6px}.kv b{color:var(--txt-soft,#8ba396);font-weight:600}
+  .sum p{font-size:15px;line-height:2;margin:4px 0}.sum b{color:var(--mint,#10b981)}.sum a{color:var(--mint,#10b981);font-size:11px;text-decoration:none}
+  .hgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+  .barrow{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:13px}.barrow .t{flex:0 0 140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .barrow .g{flex:1;height:10px;background:var(--line,#1d2c24);border-radius:6px;overflow:hidden;min-width:40px}.barrow .g i{display:block;height:100%;background:var(--mint,#10b981)}.barrow .x{flex:0 0 120px;text-align:end}
+  .pop{position:fixed;display:none;z-index:70;background:var(--panel,#101a15);border:1px solid var(--mint,#10b981);border-radius:12px;padding:12px;font-size:12px;max-width:340px;line-height:1.8}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}.chip{background:rgba(16,185,129,.12);color:var(--mint,#10b981);border:1px solid rgba(16,185,129,.35);border-radius:20px;padding:4px 11px;font-size:12px;cursor:pointer}
+  input.search,.fg input,.fg select,.fg textarea{background:var(--bg,#070b09);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:9px;padding:8px;font:inherit}
+  input.search{flex:1;min-width:160px;background:var(--panel,#101a15);border-radius:10px;padding:9px 12px}
+  .ai-sec{margin:8px 0}.ai-sec b{display:block;font-size:13px;margin-bottom:4px}.ai-sec li{font-size:13px;margin:3px 0}
+  .ov{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:50;padding:14px}
+  .ov.on{display:flex}.modal{background:var(--panel,#101a15);border:1px solid var(--line,#1d2c24);border-radius:16px;padding:18px;width:min(580px,100%);max-height:90vh;overflow:auto}
+  .fg{display:grid;grid-template-columns:1fr 1fr;gap:10px}.fg label{font-size:12px;color:var(--txt-soft,#8ba396);display:flex;flex-direction:column;gap:4px}.fg .full{grid-column:1/-1}
+  .cta{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .back{background:none;border:0;color:var(--mint,#10b981);cursor:pointer;font:inherit;padding:0;margin-bottom:10px}
+  .stbadge{font-size:12px;font-weight:800;padding:4px 10px;border-radius:10px;border:1px solid var(--line,#1d2c24)}
+  .flag{padding:10px 12px;border-radius:10px;margin:6px 0 10px;font-size:13px}
+  /* بطاقة القرار */
+  .dc-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;background:linear-gradient(90deg,#0f2a3d,#123047);border-radius:14px;padding:16px 18px;margin-bottom:12px}
+  .dc-head h2{margin:0;font-size:20px}.dc-no{border:1px solid rgba(255,255,255,.3);border-radius:10px;padding:6px 12px;font-weight:800;font-size:13px}
+  .dc-meta{display:grid;grid-template-columns:2fr repeat(4,minmax(0,1fr));gap:10px;align-items:center}.dc-meta>div{border-inline-start:1px solid var(--line,#1d2c24);padding:4px 10px}
+  .dc-meta .l{font-size:12px;color:var(--txt-soft,#8ba396)}.dc-meta .v{font-size:15px;font-weight:800;margin-top:4px}
+  .dc-box{background:rgba(255,255,255,.025);border-radius:10px;padding:12px;font-size:14px;line-height:1.9}
+  .fin3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.fin3 div{background:rgba(255,255,255,.025);border-radius:10px;padding:12px;text-align:center}
+  .fin3 b{display:block;font-size:20px;margin:6px 0}
+  .flow{display:flex;align-items:flex-start;justify-content:space-between;gap:4px;margin:10px 0}.flow .st{text-align:center;flex:1;font-size:12px;position:relative}
+  .flow .dot{width:28px;height:28px;border-radius:50%;margin:0 auto 6px;display:grid;place-items:center;font-weight:900;background:var(--line,#1d2c24);color:#94a3b8}
+  .flow .dot.on{background:#10b981;color:#062b1c}.flow .dot.cur{background:#f5b301;color:#2b1d00}
+  #printv{display:none}
+  @media print{#printv{display:block!important;color:#000;background:#fff}
+    #printv .pg{page-break-after:always;padding:22px}#printv .panel,#printv .tile,#printv .itm{background:#fff;border:1px solid #ccc;color:#000;break-inside:avoid}
+    #printv table{width:100%;border-collapse:collapse}#printv tr{break-inside:avoid}#printv td,#printv th{border:1px solid #ccc;padding:4px;font-size:10.5px;white-space:normal;color:#000}
+    #printv .muted{color:#555}#printv .cover{display:flex;flex-direction:column;justify-content:center;min-height:90vh;text-align:center}}
+  @media(max-width:900px){.hgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.dc-meta{grid-template-columns:1fr 1fr}.dc-meta>div:first-child{grid-column:1/-1}}
+  @media(max-width:760px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.grid2,.grid3,.fin3{grid-template-columns:minmax(0,1fr)}.fg{grid-template-columns:1fr}h1{font-size:20px}
+    .tile{padding:10px}.tile .v{font-size:17px}.kv{grid-template-columns:1fr}.tab{padding:7px 8px;font-size:12px}.barrow .t{flex-basis:90px}.barrow .x{flex-basis:90px}}
+  @media(max-width:1000px){.grid3{grid-template-columns:minmax(0,1fr)}}
+  @media(max-width:760px){.barrow{flex-wrap:wrap}.barrow .x{flex:1 1 100%;text-align:start}.barrow .x .b{white-space:normal}}
+  html,body{overflow-x:hidden}
+  @media(min-width:761px){#content .barrow .x{flex-basis:220px}}
+  .btn.ghost.red{color:#ef4444;border-color:rgba(239,68,68,.4)}
+  @media print{body>*:not(.wrap){display:none!important}.tabs,.bar,.cta,.back,#disc{display:none!important}body{background:#fff;color:#000}.panel{border:1px solid #ccc;background:#fff;color:#000}}
+
+  .chip input{vertical-align:middle;margin:0 0 0 4px}.chip.on{background:var(--mint,#10b981);color:#062b1c;font-weight:800}.fg textarea{resize:vertical}
+  .code{background:var(--bg,#070b09);border:1px solid var(--line,#1d2c24);border-radius:10px;padding:10px;font-size:12px;white-space:pre-wrap;word-break:break-word;overflow-x:auto;text-align:left;font-family:ui-monospace,Consolas,monospace;margin:6px 0}
+  code{font-family:ui-monospace,Consolas,monospace;font-size:12px;background:rgba(255,255,255,.05);padding:1px 5px;border-radius:5px}
+  .spark{display:flex;align-items:flex-end;gap:3px;height:110px;padding:6px 0}.spark i{flex:1;background:var(--mint,#10b981);border-radius:3px 3px 0 0;min-width:3px;opacity:.85}
+  .btn.ghost.red{background:transparent}.fg label{min-width:0}.fg input,.fg select,.fg textarea{width:100%;min-width:0;box-sizing:border-box}
+  details summary{list-style:none}.itm h4{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  @media(max-width:760px){.tiles[style]{grid-template-columns:repeat(2,minmax(0,1fr))!important}[data-mr]{grid-template-columns:1fr 1fr!important}[data-mr] .btn{grid-column:1/-1}[data-tm],[data-bm]{grid-template-columns:1fr!important}}
+  .bar select{background:var(--card,#0d1512);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:10px;padding:6px 10px}
+  textarea{width:100%;background:var(--card,#0d1512);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:10px;padding:8px;font-family:inherit}
+  .b.grey{background:rgba(148,163,184,.15);color:#94a3b8}
+  table.heat th{font-size:11px;padding:4px} table.heat td{border:1px solid var(--line,#1d2c24)}
+  input[type=date],input[type=month],input[type=time]{color-scheme:dark}
+  @media(max-width:760px){.bar{flex-wrap:wrap}.tiles[style]{grid-template-columns:repeat(2,minmax(0,1fr))!important}.kv{grid-template-columns:1fr!important}.grid2,.fg{grid-template-columns:1fr!important}.barrow .t{flex-basis:90px}.barrow .x{flex-basis:96px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>📓 سجل التشغيل</h1>
+  <p class="sub">ما حدث في الفرع اليوم — عطل، غياب، توريد، شكوى، ازدحام — مسجّلاً بوقته وفرعه، ومربوطاً بمبيعات ذلك اليوم مقارنة بمعتاده. هكذا لا يُقرأ الرقم بمعزل عن ظروفه. الأثر المعروض ارتباط يساعد على التفسير وليس دليلاً على السببية.</p>
+  <div class="bar"><label class="muted">من <input type="date" id="lS" class="search" style="min-width:140px"></label><label class="muted">إلى <input type="date" id="lE" class="search" style="min-width:140px"></label>
+    <select id="lB" aria-label="الفرع"></select><select id="lC" aria-label="الفئة"></select><select id="lSt" aria-label="الحالة"><option value="">كل الحالات</option><option value="open">مفتوح</option><option value="resolved">مغلق</option></select>
+    <button class="btn ghost" id="lGo">عرض</button><span style="flex:1"></span><button class="btn" id="lAdd" style="display:none">+ تسجيل حدث</button></div>
+  <nav class="tabs" id="tabs"></nav>
+  <div id="content"><div class="state">جارٍ التحميل…</div></div>
+</div>
+<div class="ov" id="ov"><div class="modal" id="modal"></div></div>
+<script src="i18n.js"></script>
+<script>
+(function(){
+  const TOKEN=localStorage.getItem("nabbah_token")||"";
+  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const n=(v,d=0)=>{if(v==null||v===""||isNaN(Number(v)))return"—";return Number(v).toLocaleString("ar-SA",{maximumFractionDigits:d});};
+  const dt=v=>v?esc(String(v).replace("T"," ").slice(0,16)):"—";
+  const dd=v=>v?esc(String(v).slice(0,10)):"—";
+  const $=id=>document.getElementById(id);
+  const H={Authorization:"Bearer "+TOKEN,"Content-Type":"application/json"};
+  const api=(path,body)=>fetch(path,{method:body===undefined?"GET":"POST",headers:H,body:body===undefined?undefined:JSON.stringify(body)}).then(async r=>{
+    if(r.status===401){location.href="login.html";throw new Error("401");}const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(typeof j.detail==="string"?j.detail:"HTTP "+r.status);return j;});
+  const panel=(t,b,x="")=>`<div class="panel"><h2>${t}${x}</h2>${b}</div>`;
+  const na=m=>`<div class="na-box">${esc(m)}</div>`;
+  const tbl=(head,rows,empty)=>rows.length?`<div class="tbl"><table><thead><tr>${head.map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>${rows.join("")}</tbody></table></div>`:na(empty||"لا بيانات بعد");
+  const msgEl=id=>`<div class="muted" id="${id}" style="margin-top:8px"></div>`;
+  const ok=(id,t)=>{const e=$(id);if(e){e.className="pos";e.textContent=t;}};
+  const bad=(id,t)=>{const e=$(id);if(e){e.className="neg";e.textContent=t;}};
+  const tile=(l,v,x,cls)=>`<div class="tile"><div class="l">${l}</div><div class="v ${cls||""}">${v}${x?`<span class="muted" style="font-size:12px"> ${x}</span>`:""}</div></div>`;
+  const badge=(t,c)=>`<span class="b ${c||"low"}">${esc(t)}</span>`;
+  const close=()=>{$("ov").classList.remove("on");$("modal").innerHTML="";};
+  const open=h=>{$("modal").innerHTML=h;$("ov").classList.add("on");};
+  const route=()=>decodeURIComponent(location.hash.slice(1)||"");
+  const opts=(o,sel)=>Object.entries(o).map(([k,v])=>`<option value="${esc(k)}"${k===sel?" selected":""}>${esc(v)}</option>`).join("");
+  const val=id=>{const e=$(id);return e?e.value:"";};
+  const btnRun=(b,p,onOk,msg)=>{b.disabled=true;p.then(r=>{b.disabled=false;onOk(r);}).catch(e=>{b.disabled=false;if(msg)bad(msg,e.message);else alert(e.message);});};
+  function codeModal(code,note,after){open(`<h2 style="margin-top:0">🔑 الرمز — يُعرض مرة واحدة</h2><div dir="ltr" class="code" style="font-size:18px;font-weight:800;text-align:center" id="newCode">${esc(code)}</div>
+    <div class="cta"><button class="btn" id="cpCode">نسخ</button><button class="btn ghost" id="clCode">تم، أغلق</button></div><p class="muted">${esc(note||"")}</p>`);
+    $("cpCode").onclick=()=>{(navigator.clipboard?navigator.clipboard.writeText(code):Promise.reject()).then(()=>{$("cpCode").textContent="✔ نُسخ";}).catch(()=>{$("cpCode").textContent="انسخه يدوياً";});};
+    $("clCode").onclick=()=>{close();if(after)after();};}
+  function tabsBar(list,cur){return list.map(t=>`<button class="tab${t[0]===cur?" on":""}" data-tab="${t[0]}">${t[1]}</button>`).join("");}
+
+  // ── Phase 8: أدوات العرض المشتركة (بلا مكتبات خارجية)
+  const U8={money:v=>n(v,0),count:v=>n(v,0),pct:v=>v==null?"—":n(v,1)+"%",hours:v=>v==null?"—":n(v,1)+" س",rating:v=>v==null?"—":n(v,2)+" ★"};
+  const fmt=(u,v)=>(U8[u]||U8.money)(v);
+  const chg=(p,down)=>{if(p==null)return`<span class="muted">—</span>`;const good=down?p<0:p>0;const c=Math.abs(p)<0.05?"muted":(good?"pos":"neg");return`<span class="${c}" style="font-size:12px">${p>0?"▲":(p<0?"▼":"■")} ${n(Math.abs(p),1)}%</span>`;};
+  const RAGC={green:["ضمن المستهدف","low"],amber:["قريب من الحد","medium"],red:["خارج المستهدف","critical"],na:["لا بيانات","grey"]};
+  const rag=s=>badge((RAGC[s]||RAGC.na)[0],(RAGC[s]||RAGC.na)[1]);
+  function bars(rows,u,opt){opt=opt||{};const vals=rows.map(r=>Math.abs(r.v||0));const mx=Math.max(...vals,1);
+    return rows.length?rows.map(r=>`<div class="barrow"><span class="t" title="${esc(r.k)}">${esc(r.k)}</span><span class="g"><i style="width:${Math.max(1,Math.abs(r.v||0)/mx*100)}%;${(r.v||0)<0?"background:#ef4444":""}${r.c?";background:"+r.c:""}"></i></span><span class="x">${fmt(u,r.v)} ${r.ch!==undefined?chg(r.ch,opt.down):""}</span></div>`).join(""):na("لا بيانات");}
+  function lineSvg(pts,opt){opt=opt||{};const W=opt.w||760,Hh=opt.h||190,P=28;const ys=[];pts.forEach(p=>{["y","lo","hi","y2","y3"].forEach(k=>{if(p[k]!=null)ys.push(p[k]);});});
+    if(!pts.length||!ys.length)return na("لا بيانات كافية للرسم");
+    if(pts.filter(p=>p.y!=null).length<2)return na("نقطة واحدة فقط ("+esc(String(pts.find(p=>p.y!=null)?.x||""))+": "+n((pts.find(p=>p.y!=null)||{}).y,1)+") — يلزم فترتان على الأقل لعرض الاتجاه");const mn=Math.min(0,...ys),mx=Math.max(...ys,1);const X=i=>P+(pts.length<2?0:i*(W-2*P)/(pts.length-1)),Y=v=>Hh-P-(v-mn)/(mx-mn||1)*(Hh-2*P);
+    const path=k=>{let d="",on=false;pts.forEach((p,i)=>{if(p[k]==null){on=false;return;}d+=(on?"L":"M")+X(i).toFixed(1)+" "+Y(p[k]).toFixed(1)+" ";on=true;});return d;};
+    let band="";const bp=pts.map((p,i)=>p.lo!=null&&p.hi!=null?[X(i),Y(p.hi),Y(p.lo)]:null).filter(Boolean);
+    if(bp.length>1)band=`<path d="M${bp.map(b=>b[0].toFixed(1)+" "+b[1].toFixed(1)).join(" L")} L${bp.slice().reverse().map(b=>b[0].toFixed(1)+" "+b[2].toFixed(1)).join(" L")} Z" fill="rgba(20,184,166,.15)" stroke="none"/>`;
+    const step=Math.max(1,Math.ceil(pts.length/8));const lab=pts.map((p,i)=>i%step===0||i===pts.length-1?`<text x="${X(i)}" y="${Hh-6}" font-size="10" fill="#8ba396" text-anchor="middle">${esc(String(p.x).slice(5))}</text>`:"").join("");
+    const dots=k=>pts.map((p,i)=>p[k]==null?"":`<circle cx="${X(i).toFixed(1)}" cy="${Y(p[k]).toFixed(1)}" r="2.6" fill="${k==="y"?"#14b8a6":(k==="y2"?"#f5b301":"#e8f1ec")}"><title>${esc(p.x)}: ${n(p[k],0)}</title></circle>`).join("");
+    return `<svg viewBox="0 0 ${W} ${Hh}" direction="ltr" style="width:100%;height:auto;max-height:240px;direction:ltr" role="img" aria-label="${esc(opt.label||"رسم")}">${band}
+      <line x1="${P}" x2="${W-P}" y1="${Y(mn)}" y2="${Y(mn)}" stroke="#1d2c24"/><text x="${W-4}" y="${Y(mx)+4}" font-size="10" fill="#8ba396" text-anchor="end">${n(mx,0)}</text>
+      <path d="${path("y")}" fill="none" stroke="#14b8a6" stroke-width="2"/>${pts.some(p=>p.y2!=null)?`<path d="${path("y2")}" fill="none" stroke="#f5b301" stroke-width="2" stroke-dasharray="5 4"/>`:""}
+      ${pts.some(p=>p.y3!=null)?`<path d="${path("y3")}" fill="none" stroke="#e8f1ec" stroke-width="1.6"/>`:""}${dots("y")}${dots("y2")}${dots("y3")}${lab}</svg>`
+      +(opt.legend?`<div class="muted" style="display:flex;gap:14px;flex-wrap:wrap">${opt.legend}</div>`:"");}
+  function heat(h){if(!h||!h.grid)return na("لا بيانات");const all=h.grid.flatMap(r=>r.cells).filter(v=>v!=null);const mx=Math.max(...all,1);
+    const hrs=h.hours.map((x,i)=>i).filter(i=>h.grid.some(r=>r.cells[i]!=null));if(!hrs.length)return na("لا توجد مبيعات موقّتة في الفترة — أضف عمود وقت الطلب");
+    return `<div class="tbl"><table class="heat"><thead><tr><th></th>${hrs.map(i=>`<th style="text-align:center">${h.hours[i]}</th>`).join("")}</tr></thead><tbody>${h.grid.map(r=>`<tr><th>${esc(r.weekday)}</th>${hrs.map(i=>{const v=r.cells[i];
+      return `<td title="${esc(r.weekday)} ${h.hours[i]}:00 — ${v==null?"لا مبيعات":n(v,0)}" style="text-align:center;padding:6px 4px;background:${v==null?"transparent":`rgba(20,184,166,${(0.08+0.85*v/mx).toFixed(2)})`};font-size:11px">${v==null?"":n(v,0)}</td>`;}).join("")}</tr>`).join("")}</tbody></table></div>
+      ${h.note_ar?`<p class="muted">${esc(h.note_ar)}</p>`:""}<p class="muted">القيمة = متوسط يومي لكل خلية (مقسوم على عدد مرات تكرار يوم الأسبوع في الفترة).</p>`;}
+  function cardView(c){if(!c)return na("—");const u=c.unit,down=c.direction==="down";
+    const head=`<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:baseline"><b>${esc(c.title||c.metric_ar)}</b><span class="muted">${esc(c.period.ar)} · ${esc(c.branch||"")}${c.period.compare!=="none"?" · مقابل "+esc(c.period.compare_ar):""}</span></div>
+      <div style="font-size:22px;font-weight:800;margin:4px 0">${fmt(u,c.total)} ${chg(c.change_pct,down)}</div>`;
+    if(c.viz==="kpi"||!c.dims.length)return head+(c.note_ar?`<p class="muted">${esc(c.note_ar)}</p>`:"");
+    const lab=r=>r.key.join(" · ");
+    let body;
+    if(c.viz==="bar")body=bars(c.rows.slice(0,25).map(r=>({k:lab(r),v:r.value,ch:r.change_pct})),u,{down});
+    else if(c.viz==="line")body=lineSvg(c.rows.map(r=>({x:lab(r),y:r.value,y2:r.prev})),{label:c.metric_ar,legend:`<span style="color:#14b8a6">━ الفترة الحالية</span><span style="color:#f5b301">┅ المقارنة (بنفس الترتيب)</span>`});
+    else body=tbl([...c.dims_ar,"القيمة","المقارنة","التغير"],c.rows.map(r=>`<tr>${r.key.map(k=>`<td>${esc(k)}</td>`).join("")}<td><b>${fmt(u,r.value)}</b></td><td class="muted">${fmt(u,r.prev)}</td><td>${chg(r.change_pct,down)}</td></tr>`),"لا بيانات في الفترة");
+    return head+body+(c.truncated?`<p class="muted">+${c.truncated} صفاً إضافياً لم يُعرض</p>`:"")+(c.note_ar?`<p class="muted">${esc(c.note_ar)}</p>`:"");}
+  function quad(items){const it=items.filter(i=>i.mix_pct!=null&&i.cm_unit!=null);if(!it.length)return na("لا أصناف مكتملة التكلفة لعرض المصفوفة");
+    const W=520,Hh=300,P=34;const xs=it.map(i=>i.mix_pct),ys=it.map(i=>i.cm_unit);const xm=Math.max(...xs)*1.1,ymn=Math.min(0,...ys),ymx=Math.max(...ys)*1.1||1;
+    const X=v=>P+v/xm*(W-2*P),Y=v=>Hh-P-(v-ymn)/(ymx-ymn||1)*(Hh-2*P);const C={star:"#10b981",plowhorse:"#f5b301",puzzle:"#38bdf8",dog:"#ef4444"};
+    return `<svg viewBox="0 0 ${W} ${Hh}" direction="ltr" style="width:100%;max-width:560px;height:auto;direction:ltr" role="img" aria-label="مصفوفة هندسة القائمة"><rect x="${P}" y="${P/2}" width="${W-2*P}" height="${Hh-1.5*P}" fill="none" stroke="#1d2c24"/>
+      ${it.map(i=>`<circle cx="${X(i.mix_pct).toFixed(1)}" cy="${Y(i.cm_unit).toFixed(1)}" r="6" fill="${C[i.class]||"#94a3b8"}" opacity=".85"><title>${esc(i.item)} — حصة ${n(i.mix_pct,1)}% · هامش ${n(i.cm_unit,2)}</title></circle><text x="${(X(i.mix_pct)+8).toFixed(1)}" y="${(Y(i.cm_unit)+4).toFixed(1)}" font-size="10" fill="#e8f1ec">${esc(String(i.item).slice(0,14))}</text>`).join("")}
+      <text x="${W/2}" y="${Hh-6}" font-size="11" fill="#8ba396" text-anchor="middle">الشعبية (حصة الكمية %)</text><text x="10" y="${Hh/2}" font-size="11" fill="#8ba396" transform="rotate(-90 10 ${Hh/2})" text-anchor="middle">هامش المساهمة للوحدة</text></svg>`;}
+
+  if(!TOKEN){location.href="login.html";return;}
+  let L=null,init=false;
+  const TABS=[["entries","📋 السجل"],["impact","📊 أثر الأحداث"]];
+  const SEV={low:"low",medium:"medium",high:"critical"};
+  window.addEventListener("hashchange",()=>{if(L)render();});
+  const tabNow=()=>{const k=route();return k==="impact"?"impact":"entries";};
+  function load(){const p=new URLSearchParams({start:val("lS"),end:val("lE"),branch_id:val("lB"),category:val("lC"),status:val("lSt")});
+    return api("/ops/logbook?"+p).then(r=>{L=r;if(!init){init=true;$("lS").value=r.range.start;$("lE").value=r.range.end;
+      $("lB").innerHTML=(r.branches.length>1?`<option value="">كل الفروع</option>`:"")+r.branches.map(b=>`<option value="${b.id}">${esc(b.name)}</option>`).join("");
+      $("lC").innerHTML=`<option value="">كل الفئات</option>`+opts(r.category_ar);$("lAdd").style.display=r.can_write?"":"none";}render();});}
+  function render(){const k=tabNow();$("tabs").innerHTML=tabsBar(TABS.map(t=>t[0]==="entries"?[t[0],`${t[1]} (${L.entries.length}${L.open?" · "+L.open+" مفتوح":""})`]:t),k);
+    document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{location.hash=b.dataset.tab;});
+    $("content").innerHTML=k==="impact"?vImpact():vEntries();if(k==="entries")wEntries();
+    const m=(location.hash||"").match(/^#e(\d+)$/);if(m){const e=$("E"+m[1]);if(e){e.scrollIntoView({block:"center"});e.style.outline="2px solid #10b981";}}}
+  const imp=i=>!i||i.impact_pct==null?`<span class="muted">${esc((i&&i.reason_ar)||"—")}</span>`:`<span class="${i.impact_pct<0?"neg":"pos"}"><b>${i.impact_pct>0?"+":""}${n(i.impact_pct,1)}%</b></span> <span class="muted">مبيعات اليوم ${n(i.actual)} مقابل معتاد ${n(i.baseline)}</span>`;
+  function vEntries(){if(!L.entries.length)return `<div class="state">لا أحداث في الفترة.${L.can_write?" سجّل أول حدث من «+ تسجيل حدث».":""}</div>`;
+    return L.entries.map(e=>`<div class="itm ${e.status==="resolved"?"low":SEV[e.severity]}" id="E${e.id}"><h4>${esc(e.title)} ${badge(L.category_ar[e.category]||e.category,"grey")} ${badge(L.severity_ar[e.severity]||e.severity,SEV[e.severity])} ${e.status==="resolved"?badge("مغلق","low"):badge("مفتوح","medium")}</h4>
+      <div class="muted">${esc(e.branch)} · ${dd(e.date)}${e.time?" "+esc(e.time):""}${e.duration_hours!=null?" · المدة "+n(e.duration_hours,1)+" س":""} · سجّله ${esc(e.author||"—")}</div>
+      ${e.note?`<p style="margin:6px 0;white-space:pre-wrap">${esc(e.note)}</p>`:""}<div style="margin:6px 0">الأثر في يومه: ${imp(e.impact)}</div>
+      ${e.status==="resolved"?`<div class="muted">✔ أُغلق بواسطة ${esc(e.resolved_by||"")} ${dt(e.resolved_at)}${e.resolved_note?" — "+esc(e.resolved_note):""}</div>`:""}
+      ${L.can_write?`<div class="cta">${e.status==="open"?`<button class="btn ghost" data-res="${e.id}">✔ إغلاق</button>`:""}<button class="btn ghost red" data-del="${e.id}">حذف</button></div>`:""}</div>`).join("");}
+  function wEntries(){document.querySelectorAll("[data-res]").forEach(b=>b.onclick=()=>{const t=prompt("ما الذي تم؟ (اختياري)","");if(t===null)return;btnRun(b,api("/ops/logbook/resolve",{id:Number(b.dataset.res),note:t}),()=>load());});
+    document.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{if(confirm("حذف الحدث نهائياً؟"))btnRun(b,api("/ops/logbook/delete",{id:Number(b.dataset.del)}),()=>load());});}
+  function vImpact(){const cs=L.categories;const cnt=Object.entries(L.counts).sort((a,b)=>b[1]-a[1]);
+    return panel("📊 متوسط الأثر حسب الفئة",cs.length?tbl(["الفئة","الحالات","متوسط الأثر","الوسيط","أيام سلبية"],cs.map(c=>`<tr><td><b>${esc(c.ar)}</b></td><td>${n(c.n)}</td><td class="${c.avg_pct<0?"neg":"pos"}">${c.avg_pct>0?"+":""}${n(c.avg_pct,1)}%</td>
+      <td class="${c.median_pct<0?"neg":"pos"}">${c.median_pct>0?"+":""}${n(c.median_pct,1)}%</td><td>${n(c.negative_share)}%</td></tr>`))+`<p class="muted">${esc(L.note_ar)} تظهر الفئة عند 3 حالات على الأقل لها مبيعات في يومها.</p>`:na("يلزم 3 حالات على الأقل من نفس الفئة لها مبيعات مسجلة في يومها"))+
+      panel("🔢 عدد الأحداث حسب الفئة",bars(cnt.map(([k,v])=>({k:L.category_ar[k]||k,v})),"count"));}
+  $("lAdd").onclick=()=>{const today=new Date(Date.now()+3*3600e3).toISOString().slice(0,10);
+    open(`<h2 style="margin-top:0">تسجيل حدث تشغيلي</h2><div class="fg"><label class="full">العنوان<input id="nT" maxlength="200" placeholder="مثال: تعطل جهاز الطلبات"></label>
+      <label>الفئة<select id="nC">${opts(L.category_ar,"equipment")}</select></label><label>الخطورة<select id="nS">${opts(L.severity_ar,"medium")}</select></label>
+      <label>التاريخ<input id="nD" type="date" value="${today}" max="${today}"></label><label>الوقت<input id="nH" type="time"></label>
+      <label>الفرع<select id="nB">${L.branches.length>1?`<option value="">الشركة (بلا فرع)</option>`:""}${L.branches.map(b=>`<option value="${b.id}">${esc(b.name)}</option>`).join("")}</select></label><label>المدة (ساعات)<input id="nU" type="number" min="0" max="72" step="0.5"></label>
+      <label class="full">التفاصيل<textarea id="nN" rows="3" maxlength="2000"></textarea></label></div><p class="muted">الخطورة العالية تُشعر المالك ومدير الفرع فوراً.</p>
+      <div class="cta"><button class="btn" id="nGo">حفظ</button><button class="btn ghost" id="nX">إلغاء</button></div>${msgEl("nMsg")}`);$("nX").onclick=close;
+    $("nGo").onclick=()=>btnRun($("nGo"),api("/ops/logbook",{title:val("nT"),category:val("nC"),severity:val("nS"),date:val("nD"),time:val("nH"),branch_id:val("nB")||null,duration_hours:val("nU"),note:val("nN")}),
+      r=>{close();location.hash="e"+r.entry.id;load();},"nMsg");};
+  $("ov").onclick=e=>{if(e.target===$("ov"))close();};
+  $("lGo").onclick=()=>load().catch(e=>{$("content").innerHTML=`<div class="state">${esc(e.message)}</div>`;});
+  load().catch(e=>{$("content").innerHTML=`<div class="state">${esc(e.message)}</div>`;});
+})();
+</script>
+<script src="nabbah-sidebar.js"></script>
+</body>

@@ -544,6 +544,8 @@ class CompanySale(SQLModel, table=True):
     payment_method: str = ""
     promotion: str = ""                        # الحملة الترويجية (اختياري) — Phase 2.5
     customer_name: str = ""
+    sale_time: str = ""                        # Phase 8 — وقت البيع (YYYY-MM-DDTHH:MM) لتحليل الساعات والذروة
+    employee: str = ""                         # Phase 8 — الموظف/الكاشير من نظام نقاط البيع
     extra_json: str = ""
     dataset_id: Optional[int] = Field(default=None, index=True)
     source_row: Optional[int] = None
@@ -1526,6 +1528,7 @@ class CompanyEvent(SQLModel, table=True):
     created_by_id: Optional[int] = None
     created_at: _DTCOL = Field(default_factory=_now_naive)
     updated_at: str = ""
+    expected_pct: Optional[float] = None    # Phase 8 — الأثر المتوقع على المبيعات % (للتوقع اليومي)
 
 
 class CompanyEventSetting(SQLModel, table=True):
@@ -2394,6 +2397,176 @@ class AiAction(SQLModel, table=True):
     undone_at: Optional[_DTCOL] = None
 
 
+# ═══ Phase 8 — مركز التشغيل اليومي: مصادر جديدة (ورديات/وصفات/حجوزات/تقييمات) + سجل التشغيل + التوقع اليومي + البطاقات والتنبيهات ═══
+class CompanyShift(SQLModel, table=True):
+    """وردية/سجل حضور: المخطط مقابل الفعلي. التكلفة حساسة وتخضع لصلاحيات الرواتب."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    branch_id: Optional[int] = Field(default=None, index=True)
+    date: str = Field(default="", index=True)
+    employee_code: str = Field(default="", index=True)
+    employee_name: str = ""
+    role: str = ""
+    planned_start: str = ""
+    planned_end: str = ""
+    actual_start: str = ""
+    actual_end: str = ""
+    break_minutes: Optional[float] = None
+    hourly_cost: Optional[float] = None        # حسّاس
+    cost: Optional[float] = None               # حسّاس
+    status: str = ""                           # worked | absent | leave
+    extra_json: str = ""
+    dataset_id: Optional[int] = Field(default=None, index=True)
+    source_row: Optional[int] = None
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+class CompanyRecipe(SQLModel, table=True):
+    """مكوّن في وصفة منتج: كمية المكوّن لكل وحدة مباعة (والعائد إن وُجد) — أساس الاستهلاك النظري وتكلفة الطبق."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    product_sku: str = Field(default="", index=True)
+    ingredient_sku: str = Field(default="", index=True)
+    qty_per_unit: Optional[float] = None
+    unit: str = ""
+    yield_pct: Optional[float] = None
+    extra_json: str = ""
+    dataset_id: Optional[int] = None
+    source_row: Optional[int] = None
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+class CompanyReservation(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    branch_id: Optional[int] = Field(default=None, index=True)
+    date: str = Field(default="", index=True)
+    time: str = ""
+    covers: Optional[float] = None
+    status: str = ""                           # booked | seated | no_show | cancelled
+    source: str = ""
+    area: str = ""
+    spend: Optional[float] = None
+    reference: str = ""
+    extra_json: str = ""
+    dataset_id: Optional[int] = Field(default=None, index=True)
+    source_row: Optional[int] = None
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+class CompanyReview(SQLModel, table=True):
+    """تقييم عميل من منصة (Google/TripAdvisor/…): لا نخزن اسم الكاتب — يكفي التقييم والنص والمصدر."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    branch_id: Optional[int] = Field(default=None, index=True)
+    date: str = Field(default="", index=True)
+    source: str = ""
+    rating: Optional[float] = None
+    max_rating: Optional[float] = None
+    text: str = ""
+    responded: str = ""
+    reference: str = ""
+    extra_json: str = ""
+    dataset_id: Optional[int] = Field(default=None, index=True)
+    source_row: Optional[int] = None
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+class CompanyLogEntry(SQLModel, table=True):
+    """سجل التشغيل اليومي: ما حدث في الفرع (عطل/غياب/توريد/شكوى/ازدحام…) ويُربط بأثره على المبيعات."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    branch_id: Optional[int] = Field(default=None, index=True)
+    date: str = Field(default="", index=True)
+    time: str = ""
+    category: str = "other"
+    severity: str = "medium"
+    title: str = ""
+    note: str = ""
+    duration_hours: Optional[float] = None
+    status: str = Field(default="open", index=True)    # open | resolved
+    resolved_note: str = ""
+    resolved_by: str = ""
+    resolved_at: Optional[_DTCOL] = None
+    author_id: Optional[int] = None
+    author: str = ""
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+class CompanyForecastDay(SQLModel, table=True):
+    """توقع يومي لفرع: قيمة النظام ونطاقها وعواملها + تعديل المدير وسببه + الاعتماد. لا يُحذف — الإصدار الأحدث يحل محل السابق."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    branch_id: Optional[int] = Field(default=None, index=True)
+    date: str = Field(default="", index=True)
+    base: Optional[float] = None
+    value: Optional[float] = None
+    lower: Optional[float] = None
+    upper: Optional[float] = None
+    adjusted: Optional[float] = None
+    reason: str = ""
+    status: str = Field(default="draft", index=True)  # draft | approved
+    confidence: str = ""
+    factors_json: str = "[]"
+    superseded: int = Field(default=0, index=True)
+    created_by: str = ""
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+    approved_by: str = ""
+    approved_at: Optional[_DTCOL] = None
+
+
+class CompanyOpsDashboard(SQLModel, table=True):
+    """لوحة مخصصة: بطاقات من «منشئ البطاقات». خاصة بصاحبها أو مشتركة مع الشركة."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    owner_id: int = Field(index=True)
+    name: str = ""
+    shared: int = 0
+    cards_json: str = "[]"
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+    updated_at: Optional[_DTCOL] = None
+
+
+class CompanyAlertRule(SQLModel, table=True):
+    """قاعدة تنبيه يضعها العميل: مؤشر + عامل + حد + فترة + نطاق (الشركة أو كل فرع) + المستلمون حسب الدور."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    name: str = ""
+    module: str = ""
+    metric: str = ""
+    op: str = "gt"
+    threshold: Optional[float] = None
+    period: str = "yesterday"
+    scope: str = "each_branch"                 # company | each_branch
+    notify_roles_json: str = '["owner"]'
+    active: int = 1
+    last_eval_at: Optional[_DTCOL] = None
+    created_by: str = ""
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+class CompanyAlertEvent(SQLModel, table=True):
+    """تنبيه أُطلق (مرة واحدة لكل قاعدة/فرع/فترة) — للمتابعة والتدقيق."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    rule_id: int = Field(index=True)
+    branch_id: Optional[int] = None
+    value: Optional[float] = None
+    threshold: Optional[float] = None
+    period_key: str = Field(default="", index=True)
+    notified: int = 0
+    created_at: _DTCOL = Field(default_factory=_now_naive)
+
+
+class CompanyOpsCenterSetting(SQLModel, table=True):
+    """مستهدفات مركز التشغيل (تكلفة العمالة %، المبيعات لكل ساعة عمل، فرق المخزون، التقييم) وإعدادات التوقع والعمولات."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(index=True)
+    settings_json: str = "{}"
+    updated_by: str = ""
+    updated_at: Optional[_DTCOL] = None
+
+
 class BenchmarkDataset(SQLModel, table=True):
     """طبقة المعايير القطاعية (3.5): company_id فارغ = معيار المنصّة (من الإدارة)، وإلا معيار خاص بالشركة.
     كل معيار بمصدره ومنهجيته وفترته وعيّنته وثقته — لا معيار بلا مصدر."""
@@ -2707,8 +2880,9 @@ def auto_sync_columns():
         ],
         "companysale": [
             ("promotion", "VARCHAR DEFAULT ''"), ("customer_name", "VARCHAR DEFAULT ''"),
-            ("extra_json", "TEXT DEFAULT ''"),
+            ("extra_json", "TEXT DEFAULT ''"), ("sale_time", "VARCHAR DEFAULT ''"), ("employee", "VARCHAR DEFAULT ''"),
         ],
+        "companyevent": [("expected_pct", "DOUBLE PRECISION")],
         "companysupplier": [
             ("supplier_code", "VARCHAR DEFAULT ''"), ("contact_person", "VARCHAR DEFAULT ''"),
             ("email", "VARCHAR DEFAULT ''"), ("phone", "VARCHAR DEFAULT ''"), ("city", "VARCHAR DEFAULT ''"),
@@ -6465,7 +6639,7 @@ def _load_p24(name):
     """يحمّل محركات 2.4 من المجلد أو من حزمة nabbah_engines."""
     try:
         import sys as _sys, os as _os, importlib
-        for _d in ("phase21", "phase22", "phase23", "phase24", "phase25", "phase26", "phase27", "phase28", "phase29", "phase210", "phase211", "phase30", "phase31", "phase32", "phase33", "phase34", "phase35", "phase37", "phase38", "phase39", "phase310", "phase311", "phase312", "phase41", "phase42", "phase43", "phase44", "phase45", "phase67", "phase61", "phase63", "phase64", "phase7"):
+        for _d in ("phase21", "phase22", "phase23", "phase24", "phase25", "phase26", "phase27", "phase28", "phase29", "phase210", "phase211", "phase30", "phase31", "phase32", "phase33", "phase34", "phase35", "phase37", "phase38", "phase39", "phase310", "phase311", "phase312", "phase41", "phase42", "phase43", "phase44", "phase45", "phase67", "phase61", "phase63", "phase64", "phase7", "phase8"):
             _p = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), _d)
             if _p not in _sys.path:
                 _sys.path.insert(0, _p)
@@ -6707,12 +6881,18 @@ def company_dataset_validate(dataset_id: int, data: dict, user: User = Depends(g
 
 # مفاتيح البيانات الأساسية: إعادة رفع نفس الموظف/المنتج/المورد/العميل/القسم تُحدّثه ولا تكرره
 _MASTER_KEYS = {"CompanyEmployee": ("employee_code",), "CompanyProduct": ("sku",), "CompanySupplier": ("name",),
-                "CompanyCustomer": ("name",), "CompanyDepartment": ("name",)}
+                "CompanyCustomer": ("name",), "CompanyDepartment": ("name",), "CompanyRecipe": ("product_sku", "ingredient_sku")}
 
 _IMPORT_TARGETS = {
     "sale": ("CompanySale", ("branch_id", "date", "reference", "channel", "product_sku", "category", "quantity",
                               "gross_sales", "discounts", "returns", "net_sales", "vat", "payment_method",
-                              "promotion", "customer_name")),
+                              "promotion", "customer_name", "sale_time", "employee")),
+    # Phase 8 — مركز التشغيل اليومي
+    "shift": ("CompanyShift", ("branch_id", "date", "employee_code", "employee_name", "role", "planned_start", "planned_end", "actual_start",
+                                "actual_end", "break_minutes", "hourly_cost", "cost", "status")),
+    "recipe": ("CompanyRecipe", ("product_sku", "ingredient_sku", "qty_per_unit", "unit", "yield_pct")),
+    "reservation": ("CompanyReservation", ("branch_id", "date", "time", "covers", "status", "source", "area", "spend", "reference")),
+    "review": ("CompanyReview", ("branch_id", "date", "source", "rating", "max_rating", "text", "responded", "reference")),
     "purchase": ("CompanyPurchase", ("branch_id", "date", "supplier_name", "reference", "product_sku", "category",
                                       "quantity", "unit_cost", "total_cost", "status", "vat", "expected_date",
                                       "received_date", "received_qty", "rejected_qty")),
@@ -20277,6 +20457,1462 @@ def page_company_autonomy():
     return FileResponse("company-autonomy.html")
 
 
+# ═══════════════════════════════════════════════════════════
+#  Phase 8 — مركز التشغيل اليومي (Operations Center)
+#  ماذا بعت · متى · من باع · العمالة · المخزون (فعلي/نظري) · هندسة القائمة · الضيوف · التوقع اليومي
+#  · سجل التشغيل والتقويم · البطاقات واللوحات · التنبيهات · موصل MCP للقراءة فقط.
+#  كل الأرقام من محرك opscenter_engine فوق بيانات الشركة المعتمدة — لا يحسب النموذج اللغوي شيئاً.
+# ═══════════════════════════════════════════════════════════
+_O8_COST_METRICS = {"labour_cost", "planned_cost", "cost_variance", "col_pct"}
+_O8_MOD_NEEDS = {"sales": {"sales"}, "labour": {"sales", "labour"}, "inventory": {"sales", "inventory"},
+                 "reservations": {"reservations"}, "reviews": {"reviews"}}
+_O8_EVENT_TYPES = {"holiday": "عطلة/إجازة رسمية", "sports": "مباراة/فعالية رياضية", "promo": "عرض/حملة تسويقية", "weather": "طقس",
+                   "local_event": "فعالية قريبة", "payday": "صرف الرواتب", "closure": "إغلاق/صيانة", "other": "أخرى"}
+_O8_SALE_F = ("branch_id", "date", "reference", "channel", "product_sku", "category", "quantity", "gross_sales", "discounts", "returns", "net_sales",
+              "payment_method", "sale_time", "employee", "extra_json")
+_O8_MAX_ROWS = 600000
+from datetime import date as _D8
+from collections import defaultdict as _dd8
+_O8_LAZY = {}
+
+
+def _o8():
+    o = _load_p24("opscenter_engine")
+    if o is None:
+        raise HTTPException(503, "محرّك مركز التشغيل غير متاح — " + _p23_diagnostic())
+    return o
+
+
+def _o8_int(v):
+    try:
+        return int(v)
+    except (TypeError, ValueError):
+        raise HTTPException(422, "معرّف رقمي غير صالح")
+
+
+def _o8_today():
+    """تاريخ الرياض (UTC+3) — أيام التشغيل تُحسب بتوقيت المملكة لا بتوقيت الخادم."""
+    return (datetime.utcnow() + timedelta(hours=3)).date()
+
+
+def _o8_d(r, fields):
+    return {f: getattr(r, f, None) for f in fields}
+
+
+def _o8_ctx(s, user, need=None):
+    """need: None (اطلاع) | write (تسجيل/تعديل/اعتماد ضمن فرعه) | manage (المستهدفات والتنبيهات للمالك/الرئيس التنفيذي/التنفيذي)."""
+    company, role, viewer = _goals_scope(s, user)
+    if role not in DATA_ROLES_VIEW:
+        raise HTTPException(403, "مركز التشغيل لأعضاء الشركة حسب صلاحياتهم")
+    brs = s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company.id, CompanyBranch.is_active == 1)).all()
+    allowed = list(scope_by_role(s, user, brs))
+    title = viewer.get("title") or ""
+    if title == "branch_manager" and viewer.get("branch"):
+        allowed = [b for b in allowed if b.name == viewer["branch"]]
+    restricted = len(allowed) < len(brs)
+    manage = role in ("owner", "executive") or title == "ceo"
+    write = role in ("owner", "manager", "accountant", "executive")
+    if need == "manage" and not manage:
+        raise HTTPException(403, "المستهدفات والتنبيهات للمالك أو الرئيس التنفيذي")
+    if need == "write" and not write:
+        raise HTTPException(403, "صلاحيتك اطلاع فقط")
+    return company, {"role": role, "title": title, "user_id": user.id, "name": user.name or "", "manage": manage, "write": write,
+                     "cost": can_see_sensitive_financials(role), "bmap": {b.id: b.name for b in brs},
+                     "allowed": {b.id for b in allowed} if restricted else None, "restricted": restricted,
+                     "branches": [{"id": b.id, "name": b.name} for b in allowed]}
+
+
+def _o8_branch(ctx, branch_id):
+    if branch_id in (None, "", 0, "0"):
+        return None
+    try:
+        bid = int(branch_id)
+    except (TypeError, ValueError):
+        raise HTTPException(422, "رقم الفرع غير صالح")
+    if bid not in ctx["bmap"]:
+        raise HTTPException(404, "الفرع غير موجود")
+    if ctx["allowed"] is not None and bid not in ctx["allowed"]:
+        raise HTTPException(403, "هذا الفرع خارج نطاق صلاحيتك")
+    return bid
+
+
+def _o8_settings(s, cid):
+    O = _o8()
+    st = json.loads(json.dumps(O.DEFAULT_SETTINGS))
+    row = s.exec(select(CompanyOpsCenterSetting).where(CompanyOpsCenterSetting.company_id == cid)).first()
+    if row:
+        try:
+            for k, v in json.loads(row.settings_json or "{}").items():
+                if k in st:
+                    st[k] = v
+        except (TypeError, ValueError):
+            pass
+    return st
+
+
+def _o8_rows(s, model, cid, fields, start=None, end=None, col="date", branches=None):
+    """branches: None (كل الفروع) أو قائمة معرفات — التصفية في قاعدة البيانات لا في الذاكرة."""
+    q = select(model).where(model.company_id == cid)
+    if branches is not None:
+        bl = sorted(branches)
+        q = q.where(model.branch_id == bl[0]) if len(bl) == 1 else q.where(model.branch_id.in_(bl))
+    if start:
+        q = q.where(getattr(model, col) >= start)
+    if end:
+        if col == "date":            # نفس عرف _api_range: أقل من اليوم التالي (يشمل أي قيمة بوقت في يوم النهاية)
+            q = q.where(getattr(model, col) < (_D8.fromisoformat(end[:10]) + timedelta(days=1)).isoformat())
+        else:
+            q = q.where(getattr(model, col) <= end)
+    rows = s.exec(q).all()
+    if len(rows) > _O8_MAX_ROWS:
+        raise HTTPException(413, f"الفترة تحتوي أكثر من {_O8_MAX_ROWS:,} سجل — اختر فترة أقصر أو فرعاً محدداً")
+    return [_o8_d(r, fields) for r in rows]
+
+
+def _o8_products(s, cid):
+    return {p.sku: {"name": p.name, "category": p.category, "unit": p.unit, "cost": p.cost, "selling_price": p.selling_price}
+            for p in s.exec(select(CompanyProduct).where(CompanyProduct.company_id == cid)).all() if p.sku}
+
+
+def _o8_data(s, company, ctx, start, end, mods, branch_id=None, settings=None, win=None):
+    """يحمّل ويطبّع مصادر الوحدات المطلوبة فقط داخل [start, end] (أو نافذة خاصة لكل وحدة في win) مع تطبيق نطاق الفروع في الاستعلام."""
+    O = _o8()
+    bm, cid = ctx["bmap"], company.id
+    allowed = ctx["allowed"]
+    win = win or {}
+    bq = [branch_id] if branch_id is not None else (sorted(allowed) if allowed is not None else None)
+    if bq == []:
+        bq = [-1]                                   # نطاق بلا فروع: لا بيانات
+
+    def keep(bid):
+        return (allowed is None or bid in allowed) and (branch_id is None or bid == branch_id)
+
+    def w(m):
+        return win.get(m, (start, end))
+    out = {"products": _o8_products(s, cid)}
+    if "sales" in mods:
+        a, b = w("sales")
+        out["sales"] = O.norm_sales([r for r in _o8_rows(s, CompanySale, cid, _O8_SALE_F, a, b, branches=bq) if keep(r["branch_id"])], branches=bm, products=out["products"])
+    if "labour" in mods:
+        emps = {e.employee_code: {"name": e.name, "role": e.role, "monthly_cost": e.monthly_cost, "branch_id": e.branch_id}
+                for e in s.exec(select(CompanyEmployee).where(CompanyEmployee.company_id == cid)).all() if e.employee_code}
+        a, b = w("labour")
+        rows = _o8_rows(s, CompanyShift, cid, ("branch_id", "date", "employee_code", "employee_name", "role", "planned_start", "planned_end", "actual_start",
+                                              "actual_end", "break_minutes", "hourly_cost", "cost", "status"), a, b)
+        sh = O.norm_shifts(rows, branches=bm, employees=emps, std_month_hours=(settings or {}).get("std_month_hours") or O.STD_MONTH_HOURS)
+        out["shifts"] = [r for r in sh if keep(r["branch_id"])]
+    if "inventory" in mods:
+        a, b = w("inventory")
+        out["inventory"] = [r for r in _o8_rows(s, CompanyInventory, cid, ("branch_id", "product_sku", "period", "opening_qty", "opening_value", "purchases_qty", "sold_qty",
+                                                                         "adjustments_qty", "closing_qty", "closing_value"), a[:7], b[:7], col="period", branches=bq) if keep(r["branch_id"])]
+        out["recipes"] = [_o8_d(r, ("product_sku", "ingredient_sku", "qty_per_unit", "unit", "yield_pct")) for r in s.exec(select(CompanyRecipe).where(CompanyRecipe.company_id == cid)).all()]
+        out["purchases"] = _o8_rows(s, CompanyPurchase, cid, ("product_sku", "quantity", "unit_cost", "total_cost"), a, b)
+    if "reservations" in mods:
+        a, b = w("reservations")
+        out["reservations"] = O.norm_reservations([r for r in _o8_rows(s, CompanyReservation, cid, ("branch_id", "date", "time", "covers", "status", "source", "area", "spend"),
+                                                                       a, b, branches=bq) if keep(r["branch_id"])], bm)
+    if "reviews" in mods:
+        a, b = w("reviews")
+        out["reviews"] = O.norm_reviews([r for r in _o8_rows(s, CompanyReview, cid, ("id", "branch_id", "date", "source", "rating", "max_rating", "text", "responded"),
+                                                             a, b, branches=bq) if keep(r["branch_id"])], bm)
+    return out
+
+
+def _o8_daily(s, company, ctx, dates, branch_id=None):
+    """صافي المبيعات اليومي لأيام محددة فقط (يوم الحدث + 8 أسابيع قبله) → ({فرع: {يوم: صافي}}, {يوم: صافي للشركة}).
+    يتجنب تحميل أشهر من المبيعات لحساب أثر بضعة أحداث."""
+    allowed = ctx["allowed"]
+    bq = [branch_id] if branch_id is not None else (sorted(allowed) if allowed is not None else None)
+    by_b, comp = _dd8(dict), _dd8(float)
+    ds = sorted({d.isoformat() if hasattr(d, "isoformat") else str(d)[:10] for d in dates})
+    for i in range(0, len(ds), 400):
+        q = select(CompanySale).where(CompanySale.company_id == company.id, CompanySale.date.in_(ds[i:i + 400]))
+        if bq is not None:
+            q = q.where(CompanySale.branch_id.in_(bq or [-1]))
+        for r in s.exec(q).all():
+            if allowed is not None and r.branch_id not in allowed:
+                continue
+            d0 = _D8.fromisoformat(str(r.date)[:10])
+            net = r.net_sales if r.net_sales is not None else ((r.gross_sales or 0) - (r.discounts or 0) - (r.returns or 0))
+            by_b[r.branch_id][d0] = by_b[r.branch_id].get(d0, 0) + (net or 0)
+            comp[d0] += net or 0
+    return dict(by_b), dict(comp)
+
+
+def _o8_need_dates(days):
+    """كل يوم + نفس يوم الأسبوع في 8 أسابيع سابقة (خط الأساس)."""
+    out = set()
+    for d in days:
+        d0 = _D8.fromisoformat(str(d)[:10])
+        out.update(d0 - timedelta(days=7 * w) for w in range(0, 9))
+    return out
+
+
+def _o8_compute(module, dims, data, start, end, ctx, settings):
+    O = _o8()
+    if module == "sales":
+        return O.sales_breakdown(data["sales"], dims, start, end)
+    if module == "labour":
+        return O.labour_breakdown(data["shifts"], data["sales"], dims, start, end, daily_limit=float(settings.get("ot_daily_hours") or 8), show_cost=ctx["cost"])
+    if module == "inventory":
+        av = O.avt(data["inventory"], data["sales"], data["recipes"], data["products"], purchases=data["purchases"], branches=ctx["bmap"],
+                   start_period=start[:7], end_period=end[:7])
+        return O.avt_breakdown(av["items"], dims)
+    if module == "reservations":
+        return O.reservations_breakdown(data["reservations"], dims, start, end)
+    if module == "reviews":
+        return O.reviews_breakdown(data["reviews"], dims, start, end, low=float(settings.get("low_rating") or 3))
+    raise HTTPException(422, "وحدة غير معروفة")
+
+
+def _o8_period(O, code, start=None, end=None, compare="prev"):
+    try:
+        return O.resolve_period(code, _o8_today(), start, end, compare)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
+def _o8_card(s, company, ctx, spec, settings=None):
+    O = _o8()
+    settings = settings or _o8_settings(s, company.id)
+    spec = dict(spec or {})
+    spec.setdefault("dims", [])
+    spec.setdefault("viz", "table")
+    spec.setdefault("period", "last_7")
+    try:
+        O.validate_card(spec)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    if spec["metric"] in _O8_COST_METRICS and not ctx["cost"]:
+        raise HTTPException(403, "هذا المؤشر يتطلب صلاحية الاطلاع على الرواتب والتكاليف")
+    p = _o8_period(O, spec["period"], spec.get("start"), spec.get("end"), spec.get("compare") or "prev")
+    bid = _o8_branch(ctx, spec.get("branch_id"))
+    lo = min(p["start"], p["prev_start"]) if p["prev_start"] else p["start"]
+    data = _o8_data(s, company, ctx, lo, p["end"], _O8_MOD_NEEDS[spec["module"]], bid, settings)
+    cur = _o8_compute(spec["module"], spec["dims"], data, p["start"], p["end"], ctx, settings)
+    prev = _o8_compute(spec["module"], spec["dims"], data, p["prev_start"], p["prev_end"], ctx, settings) if p["prev_start"] else None
+    card = O.shape_card(spec["module"], spec["metric"], cur, prev, spec["dims"])
+    card.update({"period": p, "viz": spec["viz"], "branch_id": bid, "branch": ctx["bmap"].get(bid) if bid else "كل الفروع المتاحة لك",
+                 "title": (spec.get("title") or "").strip()[:120] or f"{card['metric_ar']}" + (f" حسب {' و'.join(card['dims_ar'])}" if card["dims_ar"] else ""),
+                 "note_ar": cur.get("note_ar")})
+    return card
+
+
+# ── الصفحات
+@app.get("/company-operations-center.html")
+def page_ops_center():
+    return FileResponse("company-operations-center.html")
+
+
+@app.get("/company-forecast-planner.html")
+def page_forecast_planner():
+    return FileResponse("company-forecast-planner.html")
+
+
+@app.get("/company-logbook.html")
+def page_logbook():
+    return FileResponse("company-logbook.html")
+
+
+@app.get("/ops/meta")
+def ops_meta(user: User = Depends(get_current_user)):
+    O = _o8()
+    with Session(engine) as s:
+        company, ctx = _o8_ctx(s, user)
+        st = _o8_settings(s, company.id)
+        mods = {}
+        for k, m in O.MODULES.items():
+            mets = {mk: {"ar": v[0], "unit": v[1], "direction": v[2]} for mk, v in m["metrics"].items() if ctx["cost"] or mk not in _O8_COST_METRICS}
+            mods[k] = {"ar": m["ar"], "dims": [{"key": d, "ar": O.DIM_AR.get(d, d)} for d in m["dims"]], "metrics": mets}
+        return {"modules": mods, "periods": O.PERIODS_AR, "compare": O.COMPARE_AR, "settings": st, "log_categories": O.LOG_CATEGORIES,
+                "log_severity": O.LOG_SEVERITY, "event_types": _O8_EVENT_TYPES, "alert_ops": O.ALERT_OPS, "today": _o8_today().isoformat(),
+                "me": {"role": ctx["role"], "manage": ctx["manage"], "write": ctx["write"], "cost": ctx["cost"], "restricted": ctx["restricted"]},
+                "branches": ctx["branches"], "version": O.VERSION}
+
+
+def _o8_forecast_final(s, cid, branch_ids, start, end):
+    """آخر إصدار غير ملغى لكل (فرع، يوم): التوقع النهائي = تعديل المدير إن وُجد وإلا قيمة النظام."""
+    q = select(CompanyForecastDay).where(CompanyForecastDay.company_id == cid, CompanyForecastDay.superseded == 0,
+                                         CompanyForecastDay.date >= start, CompanyForecastDay.date <= end)
+    out = {}
+    for r in s.exec(q).all():
+        if branch_ids is not None and r.branch_id not in branch_ids:
+            continue
+        out[(r.branch_id, r.date)] = r
+    return out
+
+
+def _o8_branch_scores(s, company, ctx, data, p, settings):
+    """مؤشرات كل فرع لبطاقة الأداء: المبيعات والتغير، تكلفة العمالة %، المبيعات لكل ساعة عمل، فرق المخزون %، التقييم، المبيعات مقابل التوقع."""
+    O = _o8()
+    cur = {r["key"][0]: r for r in O.sales_breakdown(data["sales"], ["branch"], p["start"], p["end"])["rows"]}
+    prev = {r["key"][0]: r for r in O.sales_breakdown(data["sales"], ["branch"], p["prev_start"], p["prev_end"])["rows"]} if p["prev_start"] else {}
+    lab = {r["key"][0]: r for r in O.labour_breakdown(data["shifts"], data["sales"], ["branch"], p["start"], p["end"],
+                                                      daily_limit=float(settings.get("ot_daily_hours") or 8), show_cost=ctx["cost"])["rows"]}
+    inv, last_per = {}, max((r["period"] for r in data["inventory"] if r.get("period")), default=None)
+    if last_per:
+        # مبيعات شهر الجرد فقط (أعمدة الكمية) لحساب الاستهلاك النظري — لا تُحمّل إلا عند وجود كشوف مخزون
+        y, m = int(last_per[:4]), int(last_per[5:7])
+        m_end = (_D8(y + (m == 12), m % 12 + 1, 1) - timedelta(days=1)).isoformat()
+        bq = sorted(ctx["allowed"]) if ctx["allowed"] is not None else None
+        try:
+            ms = O.norm_sales(_o8_rows(s, CompanySale, company.id, ("branch_id", "date", "product_sku", "quantity", "net_sales"), last_per + "-01", m_end, branches=bq),
+                              branches=ctx["bmap"], products=data["products"])
+            inv_items = O.avt([r for r in data["inventory"] if r["period"] == last_per], ms, data["recipes"], data["products"], purchases=data["purchases"],
+                              branches=ctx["bmap"])["items"]
+            inv = {r["key"][0]: r for r in O.avt_breakdown(inv_items, ["branch"])["rows"]}
+        except HTTPException:
+            inv = {}
+    r_end = _D8.fromisoformat(p["end"])
+    rv = {r["key"][0]: r for r in O.reviews_breakdown(data["reviews"], ["branch"], (r_end - timedelta(days=29)).isoformat(), p["end"],
+                                                     low=float(settings.get("low_rating") or 3))["rows"]}
+    fin = _o8_forecast_final(s, company.id, ctx["allowed"], p["start"], p["end"])
+    fsum, asum = _dd8(float), _dd8(float)
+    ser = _dd8(float)
+    for r in data["sales"]:
+        if p["start"] <= r["date"].isoformat() <= p["end"]:
+            ser[(r["branch_id"], r["date"].isoformat())] += r["net"] or 0
+    for (bid, d), f in fin.items():
+        v = f.adjusted if f.adjusted is not None else f.value
+        if v and (bid, d) in ser:
+            fsum[bid] += v
+            asum[bid] += ser[(bid, d)]
+    rows = []
+    names = [b["name"] for b in ctx["branches"]]
+    for b in ctx["branches"]:
+        n = b["name"]
+        c, pv = cur.get(n), prev.get(n)
+        rows.append({"branch_id": b["id"], "branch": n, "net_sales": c["net_sales"] if c else None,
+                     "change_pct": O._chg(c["net_sales"] if c else None, pv["net_sales"] if pv else None),
+                     "col_pct": (lab.get(n) or {}).get("col_pct"), "splh": (lab.get(n) or {}).get("splh"),
+                     "variance_pct": (inv.get(n) or {}).get("variance_pct"), "avg_rating": (rv.get(n) or {}).get("avg_rating"),
+                     "sales_vs_forecast": round(asum[b["id"]] / fsum[b["id"]] * 100, 1) if fsum.get(b["id"]) else None})
+    sc = O.scorecards(rows, settings)
+    sc["inventory_period"] = last_per
+    sc["branches_total"] = len(names)
+    return sc
+
+
+@app.get("/ops/overview")
+def ops_overview(period: str = "yesterday", compare: str = "prev", branch_id: str = "", user: User = Depends(get_current_user)):
+    """الملخص اليومي (Daily Flash): أرقام اليوم/الأسبوع مقابل المقارنة + تفسير التغير + بطاقات أداء الفروع + التنبيهات والسجل المفتوح."""
+    O = _o8()
+    with Session(engine) as s:
+        company, ctx = _o8_ctx(s, user)
+        st = _o8_settings(s, company.id)
+        p = _o8_period(O, period if period in O.PERIODS_AR and period != "custom" else "yesterday", compare=compare)
+        bid = _o8_branch(ctx, branch_id)
+        lo = min(p["start"], p["prev_start"] or p["start"])
+        r60 = (_D8.fromisoformat(p["end"]) - timedelta(days=59)).isoformat()
+        inv_lo = (_D8.fromisoformat(p["end"]).replace(day=1) - timedelta(days=40)).isoformat()
+        data = _o8_data(s, company, ctx, lo, p["end"], {"sales", "labour", "inventory", "reservations", "reviews"}, bid, st,
+                        win={"reviews": (r60, p["end"]), "inventory": (inv_lo, p["end"])})
+        cur = O.sales_kpis(data["sales"], p["start"], p["end"])
+        prev = O.sales_kpis(data["sales"], p["prev_start"], p["prev_end"]) if p["prev_start"] else None
+        lab = O.labour_breakdown(data["shifts"], data["sales"], [], p["start"], p["end"], daily_limit=float(st.get("ot_daily_hours") or 8), show_cost=ctx["cost"])["total"]
+        labp = O.labour_breakdown(data["shifts"], data["sales"], [], p["prev_start"], p["prev_end"], show_cost=ctx["cost"])["total"] if p["prev_start"] else {}
+        rend = _D8.fromisoformat(p["end"])
+        rv = O.reviews_breakdown(data["reviews"], [], (rend - timedelta(days=29)).isoformat(), p["end"])["total"]
+        rvp = O.reviews_breakdown(data["reviews"], [], (rend - timedelta(days=59)).isoformat(), (rend - timedelta(days=30)).isoformat())["total"]
+        res = O.reservations_breakdown(data["reservations"], [], p["start"], p["end"])["total"]
+        kp = [{"key": "net_sales", "ar": "صافي المبيعات", "unit": "money", "value": cur["net_sales"], "prev": (prev or {}).get("net_sales")},
+              {"key": "orders", "ar": "الطلبات", "unit": "count", "value": cur["orders"], "prev": (prev or {}).get("orders")},
+              {"key": "aov", "ar": "متوسط قيمة الطلب", "unit": "money", "value": cur["aov"], "prev": (prev or {}).get("aov")},
+              {"key": "discount_ratio", "ar": "نسبة الخصومات", "unit": "pct", "value": cur["discount_ratio"], "prev": (prev or {}).get("discount_ratio"), "down": True},
+              {"key": "splh", "ar": "المبيعات لكل ساعة عمل", "unit": "money", "value": lab.get("splh"), "prev": labp.get("splh")},
+              {"key": "avg_rating", "ar": "متوسط التقييم (30 يوماً)", "unit": "rating", "value": rv.get("avg_rating"), "prev": rvp.get("avg_rating")}]
+        if ctx["cost"]:
+            kp.insert(4, {"key": "col_pct", "ar": "تكلفة العمالة من المبيعات", "unit": "pct", "value": lab.get("col_pct"), "prev": labp.get("col_pct"), "down": True})
+        for k in kp:
+            k["change_pct"] = O._chg(k["value"], k["prev"])
+        sc = _o8_branch_scores(s, company, ctx, data, p, st)
+        if ctx["manage"]:
+            try:
+                _o8_lazy_alerts(s, company)
+            except Exception as _e:
+                _logger.error(f"ops alerts lazy failed: {type(_e).__name__}: {str(_e)[:120]}")
+        since = datetime.now() - timedelta(days=7)
+        rules = {r.id: r for r in s.exec(select(CompanyAlertRule).where(CompanyAlertRule.company_id == company.id)).all()}
+        evs = []
+        for e in s.exec(select(CompanyAlertEvent).where(CompanyAlertEvent.company_id == company.id, CompanyAlertEvent.created_at >= since)
+                        .order_by(CompanyAlertEvent.created_at.desc()).limit(50)).all():
+            r = rules.get(e.rule_id)
+            if not r or (ctx["allowed"] is not None and e.branch_id not in ctx["allowed"]) or (r.metric in _O8_COST_METRICS and not ctx["cost"]):
+                continue
+            evs.append({"id": e.id, "rule": r.name, "metric": r.metric, "branch": ctx["bmap"].get(e.branch_id) if e.branch_id else "الشركة",
+                        "value": e.value, "threshold": e.threshold, "op": r.op, "period": e.period_key, "at": e.created_at})
+        logs = []
+        for l in s.exec(select(CompanyLogEntry).where(CompanyLogEntry.company_id == company.id, CompanyLogEntry.status == "open")
+                        .order_by(CompanyLogEntry.date.desc()).limit(30)).all():
+            if ctx["allowed"] is None or l.branch_id in ctx["allowed"]:
+                logs.append({"id": l.id, "date": l.date, "branch": ctx["bmap"].get(l.branch_id, "—"), "category": l.category, "title": l.title, "severity": l.severity})
+        n_prod = len(data["products"])
+        costed = sum(1 for v in data["products"].values() if v.get("cost"))
+        rec_skus = {r["product_sku"] for r in data["recipes"]}
+        dh = O.data_health(O.coverage_sales(data["sales"]), len(data["shifts"]), len(data["recipes"]), len(data["inventory"]), len(data["reservations"]),
+                           len(data["reviews"]), len({k for k, v in data["products"].items() if v.get("cost")} | rec_skus), n_prod)
+        last_sale = max((r["date"] for r in data["sales"]), default=None)
+        return {"period": p, "kpis": kp, "explain": O.explain_change(cur, prev), "peak": O.peak_insight(data["sales"], p["start"], p["end"]),
+                "reservations": res, "scorecards": sc, "alerts": evs[:10], "open_logs": logs[:6], "open_logs_count": len(logs), "data_health": dh,
+                "last_sale_date": last_sale.isoformat() if last_sale else None, "branch_id": bid, "costed_products": costed,
+                "data_lag_days": (_o8_today() - last_sale).days if last_sale else None}
+
+
+@app.post("/ops/card")
+def ops_card(data: dict, user: User = Depends(get_current_user)):
+    """منشئ البطاقات: وحدة ← مؤشر ← أبعاد (حتى 2) ← فترة ← مقارنة ← النتيجة."""
+    with Session(engine) as s:
+        company, ctx = _o8_ctx(s, user)
+        return _o8_card(s, company, ctx, data)
+
+
+@app.get("/ops/sales")
+def ops_sales(period: str = "last_7", compare: str = "prev", start: str = "", end: str = "", branch_id: str = "", user: User = Depends(get_current_user)):
+    """ماذا بعت؟ المنتجات والفئات والقنوات وطرق الدفع والفروع — مع المقارنة وتفكيك التغير."""
+    O = _o8()
+    with Session(engine) as s:
+        company, ctx = _o8_ctx(s, user)
+        p = _o8_period(O, period, start, end, compare)
+        bid = _o8_branch(ctx, branch_id)
+        data = _o8_data(s, company, ctx, min(p["start"], p["prev_start"] or p["start"]), p["end"], {"sales"}, bid)
+        out = {"period": p}
+        for dim in ("product", "category", "channel", "payment", "branch"):
+            c = O.sales_breakdown(data["sales"], [dim], p["start"], p["end"])
+            pv = O.sales_breakdown(data["sales"], [dim], p["prev_start"], p["prev_end"]) if p["prev_start"] else None
+            pm = {tuple(r["key"]): r for r in (pv or {}).get("rows", [])}
+            rows = sorted(c["rows"], key=lambda r: -(r["net_sales"] or 0))
+            for r in rows:
+                q = pm.get(tuple(r["key"]))
+                r["prev_net"] = q["net_sales"] if q else None
+                r["change_pct"] = O._chg(r["net_sales"], r["prev_net"])
+            out[dim] = rows[:100]
+        cur = O.sales_kpis(data["sales"], p["start"], p["end"])
+        prev = O.sales_kpis(data["sales"], p["prev_start"], p["prev_end"]) if p["prev_start"] else None
+        out.update({"kpis": cur, "prev": prev, "explain": O.explain_change(cur, prev), "coverage": O.coverage_sales(data["sales"])})
+        movers = [r for r in out["product"] if r["change_pct"] is not None and (r["prev_net"] or 0) >= 100]
+        out["decliners"] = sorted(movers, key=lambda r: r["change_pct"])[:5]
+        out["risers"] = sorted(movers, key=lambda r: -r["change_pct"])[:5]
+        return out
+
+
+@app.get("/ops/timing")
+def ops_timing(period: str = "last_28", start: str = "", end: str = "", branch_id: str = "", metric: str = "net_sales", user: User = Depends(get_current_user)):
+    """متى بعت؟ خريطة يوم الأسبوع × الساعة، فترات اليوم، أيام الأسبوع، الذروة."""
+    O = _o8()
+    with Session(engine) as s:
+        company, ctx = _o8_ctx(s, user)
+        p = _o8_period(O, period, start, end, "none")
+        bid = _o8_branch(ctx, branch_id)
+        data = _o8_data(s, company, ctx, p["start"], p["end"], {"sales"}, bid)
+        if metric not in ("net_sales", "orders", "aov", "units"):
+            metric = "net_sales"
+        wd = O.shape_card("sales", metric, O.sales_breakdown(data["sales"], ["weekday"], p["start"], p["end"]), None, ["weekday"])
+        dp = O.shape_card("sales", metric, O.sales_breakdown(data["sales"], ["daypart"], p["start"], p["end"]), None, ["daypart"])
+        hr = O.shape_card("sales", metric, O.sales_breakdown(data["sales"], ["hour"], p["start"], p["end"]), None, ["hour"])
+        dy = O.shape_card("sales", metric, O.sales_breakdown(data["sales"], ["date"], p["start"], p["end"]), None, ["date"], limit=400)
+        return {"period": p, "metric": metric, "heatmap": O.heatmap(data["sales"], p["start"], p["end"], metric), "weekday": wd, "daypart": dp,
+                "hour": hr, "daily": dy, "peak": O.peak_insight(data["sales"], p["start"], p["end"]), "coverage": O.coverage_sales(data["sales"])}
+
+
+@app.get("/ops/employees")
+def ops_employees(period: str = "last_28", compare: str = "prev", start: str = "", end: str = "", branch_id: str = "", user: User = Depends(get_current_user)):
+    """من باع؟ مبيعات الموظف وطلباته ومتوسط فاتورته ونسبة خصوماته ومرتجعاته — من حقل الموظف في نظام نقاط البيع."""
+    O = _o8()
+    with Session(engine) as s:
+        company, ctx = _o8_ctx(s, user)
+        p = _o8_period(O, period, start, end, compare)
+        bid = _o8_branch(ctx, branch_id)
+        data = _o8_data(s, company, ctx, min(p["start"], p["prev_start"] or p["start"]), p["end"], {"sales"}, bid)
+        c = O.sales_breakdown(data["sales"], ["employee"], p["start"], p["end"])
+        pv = O.sales_breakdown(data["sales"], ["employee"], p["prev_start"], p["prev_end"]) if p["prev_start"] else None
+        pm = {tuple(r["key"]): r for r in (pv or {}).get("rows", [])}
+        rows = sorted(c["rows"], key=lambda r: -(r["net_sales"] or 0))
+        avg_disc = c["total"]["discount_ratio"]
+        for r in rows:
+            q = pm.get(tuple(r["key"]))
+            r["prev_net"] = q["net_sales"] if q else None
+            r["change_pct"] = O._chg(r["net_sales"], r["prev_net"])
+            r["flag_discount"] = bool(avg_disc and r["discount_ratio"] and r["key"][0] != "غير متاح" and r["discount_ratio"] > max(avg_disc * 1.5, avg_disc + 3))
+        return {"period": p, "rows": rows[:200], "total": c["total"], "coverage": O.coverage_sales(data["sales"]),
+                "note_ar": "يُعرض «غير متاح» للمبيعات التي لا تحمل اسم موظف في المصدر. علامة الخصم = نسبة خصومات الموظف أعلى بوضوح من متوسط الفترة (مؤشر للمراجعة لا اتهام)."}
+
+
+@app.get("/ops/labour")
+def ops_labour(period: str = "last_7", compare: str = "prev", start: str = "", end: str = "", branch_id: str = "", user: User = Depends(get_current_user)):
+    """العمالة: الفعلي مقابل المخطط، تكلفة العمالة من المبيعات، المبيعات لكل ساعة عمل، الإضافي والغياب، والطاقم لكل ساعة."""
+    O = _o8()
+    with Session(engine) as s:
+        company, ctx = _o8_ctx(s, user)
+        st = _o8_settings(s, company.id)
+        p = _o8_period(O, period, start, end, compare)
+        bid = _o8_branch(ctx, branch_id)
+        data = _o8_data(s, company, ctx, min(p["start"], p["prev_start"] or p["start"]), p["end"], {"sales", "labour"}, bid, st)
+        lim = float(st.get("ot_daily_hours") or 8)
+        out = {"period": p, "show_cost": ctx["cost"], "targets": {"col_pct": st.get("target_col_pct"), "splh": st.get("target_splh")}}
+        for dims, k in (([], "summary"), (["branch"], "by_branch"), (["weekday"], "by_weekday"), (["role"], "by_role"), (["date"], "by_date")):
+            out[k] = O.labour_breakdown(data["shifts"], data["sales"], dims, p["start"], p["end"], daily_limit=lim, show_cost=ctx["cost"])
+        if p["prev_start"]:
+            out["prev"] = O.labour_breakdown(data["shifts"], data["sales"], [], p["prev_start"], p["prev_end"], daily_limit=lim, show_cost=ctx["cost"])["total"]
+        out["by_hour"] = O.staffing_by_hour(data["shifts"], data["sales"], p["start"], p["end"], float(st.get("target_splh") or 0) or None, branch_id=bid)
+        out["shifts"] = len([r for r in data["shifts"] if p["start"] <= r["date"].isoformat() <= p["end"]])
+        if not ctx["cost"]:
+            out["note_cost_ar"] = "تكلفة العمالة ونسبتها مخفية — تتطلب صلاحية الاطلاع على الرواتب (المالك/المالية/التنفيذي)."
+        return out
+
+
+@app.get("/ops/inventory")
+def ops_inventory(start_month: str = "", end_month: str = "", branch_id: str = "", user: User = Depends(get_current_user)):
+    """المخزون: الاستهلاك الفعلي مقابل النظري (حسب الصنف/الفئة/الفرع/الشهر) + هندسة القائمة."""
+    O = _o8()
+    with Session(engine) as s:
+        company, ctx = _o8_ctx(s, user)
+        st = _o8_settings(s, company.id)
+        bid = _o8_branch(ctx, branch_id)
+        today = _o8_today()
+        em = end_month if re.match(r"^\d{4}-\d{2}$", end_month or "") else today.strftime("%Y-%m")
+        sm = start_month if re.match(r"^\d{4}-\d{2}$", start_month or "") else (_D8(int(em[:4]), int(em[5:]), 1) - timedelta(days=150)).strftime("%Y-%m")
+        if sm > em:
+            sm, em = em, sm
+        y, m = int(em[:4]), int(em[5:])
+        last_day = (_D8(y + (m == 12), m % 12 + 1, 1) - timedelta(days=1)).isoformat()
+        data = _o8_data(s, company, ctx, sm + "-01", last_day, {"sales", "inventory"}, bid, st)
+        av = O.avt(data["inventory"], data["sales"], data["recipes"], data["products"], purchases=data["purchases"], branches=ctx["bmap"], start_period=sm, end_period=em)
+        items = av["items"]
+        periods = sorted({i["period"] for i in items})
+        last = periods[-1] if periods else None
+        cur_items = [i for i in items if i["period"] == last]
+        costs = O.unit_costs(data["inventory"], data["products"], data["purchases"])
+        me_end = last_day if not last else (_D8(int(last[:4]), int(last[5:]), 1).replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
+        me_end = me_end if isinstance(me_end, str) else me_end.isoformat()
+        me_start = (last or em) + "-01"
+        menu = O.menu_engineering(data["sales"], data["products"], data["recipes"], costs, me_start, me_end, commission=st.get("channel_commission") or {})
+        top = sorted([i for i in cur_items if i["unexplained_value"] is not None], key=lambda i: -(i["unexplained_value"] or 0))[:15]
+        return {"range": {"start_month": sm, "end_month": em}, "periods": periods, "last_period": last,
+                "summary": O.avt_breakdown(cur_items, [])["total"], "by_category": O.avt_breakdown(cur_items, ["category"])["rows"],
+                "by_branch": O.avt_breakdown(cur_items, ["branch"])["rows"], "trend": O.avt_breakdown(items, ["period"])["rows"],
+                "items": sorted(cur_items, key=lambda i: -(abs(i["variance_value"]) if i["variance_value"] is not None else -1))[:300], "top_unexplained": top,
+                "skipped_rows": av["skipped_rows"], "recipes_products": av["recipes_products"], "note_ar": av["note_ar"], "menu": menu,
+                "target_variance_pct": st.get("target_variance_pct")}
+
+
+@app.post("/ops/menu/price-impact")
+def ops_menu_price(data: dict, user: User = Depends(get_current_user)):
+    O = _o8()
+    try:
+        ch = float(data.get("change_pct"))
+    except (TypeError, ValueError):
+        raise HTTPException(422, "نسبة التغيير رقم")
+    if not -50 <= ch <= 50:
+        raise HTTPException(422, "نسبة التغيير بين −50% و+50%")
+    res = ops_inventory(start_month=data.get("month") or "", end_month=data.get("month") or "", branch_id=str(data.get("branch_id") or ""), user=user)
+    it = next((i for i in res["menu"]["items"] if i["sku"] == str(data.get("sku") or "")), None)
+    if not it:
+        raise HTTPException(404, "المنتج غير موجود في فترة التحليل")
+    r = O.price_impact(it, ch)
+    if not r:
+        raise HTTPException(422, "لا يمكن الحساب — المنتج بلا تكلفة")
+    return {"item": it, "impact": r, "change_pct": ch}
+
+
+@app.get("/ops/guests")
+def ops_guests(period: str = "last_28", compare: str = "prev", start: str = "", end: str = "", branch_id: str = "", user: User = Depends(get_current_user)):
+    """الضيوف: الحجوزات (الحضور/عدم الحضور/الإلغاء/الإنفاق) والتقييمات (المتوسط/المصادر/المنخفضة بلا رد/التراجع/المواضيع)."""
+    O = _o8()
+    with Session(engine) as s:
+        company, ctx = _o8_ctx(s, user)
+        st = _o8_settings(s, company.id)
+        p = _o8_period(O, period, start, end, compare)
+        bid = _o8_branch(ctx, branch_id)
+        lo = min(p["start"], p["prev_start"] or p["start"], (_o8_today() - timedelta(days=150)).isoformat())
+        data = _o8_data(s, company, ctx, lo, max(p["end"], _o8_today().isoformat()), {"reservations", "reviews"}, bid,
+                        win={"reservations": (min(p["start"], p["prev_start"] or p["start"]), p["end"])})
+        low = float(st.get("low_rating") or 3)
+        out = {"period": p, "low_rating": low}
+        out["reservations"] = {k: O.reservations_breakdown(data["reservations"], d, p["start"], p["end"]) for k, d in
+                               (("summary", []), ("by_branch", ["branch"]), ("by_source", ["source"]), ("by_weekday", ["weekday"]), ("by_area", ["area"]))}
+        if p["prev_start"]:
+            out["reservations"]["prev"] = O.reservations_breakdown(data["reservations"], [], p["prev_start"], p["prev_end"])["total"]
+        out["reviews"] = {k: O.reviews_breakdown(data["reviews"], d, p["start"], p["end"], low=low) for k, d in
+                          (("summary", []), ("by_branch", ["branch"]), ("by_source", ["source"]))}
+        out["reviews"]["trend"] = O.reviews_breakdown(data["reviews"], ["month"], lo, _o8_today().isoformat(), low=low)["rows"]
+        out["reviews"]["insights"] = O.reviews_insights(data["reviews"], _o8_today(), low=low, drop=float(st.get("rating_drop") or 0.3))
+        return out
+
+
+@app.post("/ops/reviews/respond")
+def ops_review_respond(data: dict, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, ctx = _o8_ctx(s, user, "write")
+        r = s.get(CompanyReview, _o8_int(data.get("id")))
+        if not r or r.company_id != company.id:
+            raise HTTPException(404, "التقييم غير موجود")
+        if ctx["allowed"] is not None and r.branch_id not in ctx["allowed"]:
+            raise HTTPException(403, "هذا الفرع خارج نطاق صلاحيتك")
+        r.responded = "1"
+        s.add(r)
+        s.commit()
+        log_audit(company.id, user.id, user.name, "ops_review_responded", f"review:{r.id}", "")
+        return {"ok": True}
+
+
+# ── الإعدادات والمستهدفات
+@app.get("/ops/settings")
+def ops_settings(user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, ctx = _o8_ctx(s, user)
+        return {"settings": _o8_settings(s, company.id), "can_edit": ctx["manage"]}
+
+
+@app.post("/ops/settings")
+def ops_settings_save(data: dict, user: User = Depends(get_current_user)):
+    O = _o8()
+    rng = {"target_col_pct": (1, 80), "target_splh": (1, 100000), "target_variance_pct": (0, 50), "target_rating": (1, 5), "low_rating": (1, 4),
+           "ot_daily_hours": (4, 16), "std_month_hours": (100, 320), "forecast_days": (7, 28), "rating_drop": (0.1, 2)}
+    with Session(engine) as s:
+        company, ctx = _o8_ctx(s, user, "manage")
+        st = _o8_settings(s, company.id)
+        for k, (a, b) in rng.items():
+            if k in data and data[k] not in (None, ""):
+                try:
+                    v = float(data[k])
+                except (TypeError, ValueError):
+                    raise HTTPException(422, f"قيمة غير صالحة: {k}")
+                if not a <= v <= b:
+                    raise HTTPException(422, f"{k} يجب أن يكون بين {a} و{b}")
+                st[k] = int(v) if k in ("forecast_days", "low_rating", "std_month_hours") else v
+        if isinstance(data.get("channel_commission"), dict):
+            cc = {}
+            for ch, v in data["channel_commission"].items():
+                try:
+                    fv = float(v)
+                except (TypeError, ValueError):
+                    raise HTTPException(422, "عمولة القناة رقم")
+                if not 0 <= fv <= 60:
+                    raise HTTPException(422, "عمولة القناة بين 0% و60%")
+                if ch in O.CHANNEL_AR and ch:
+                    cc[ch] = fv
+            st["channel_commission"] = cc
+        row = s.exec(select(CompanyOpsCenterSetting).where(CompanyOpsCenterSetting.company_id == company.id)).first() or CompanyOpsCenterSetting(company_id=company.id)
+        row.settings_json = json.dumps(st, ensure_ascii=False)
+        row.updated_by, row.updated_at = user.name or "", datetime.now()
+        s.add(row)
+        s.commit()
+        log_audit(company.id, user.id, user.name, "ops_settings", "ops:settings", json.dumps(st, ensure_ascii=False)[:300])
+        return {"ok": True, "settings": st}
+
+
+# ── اللوحات المخصصة
+def _o8_dash(r):
+    return {"id": r.id, "name": r.name, "shared": bool(r.shared), "owner_id": r.owner_id, "cards": json.loads(r.cards_json or "[]"),
+            "updated_at": r.updated_at or r.created_at}
+
+
+@app.get("/ops/dashboards")
+def ops_dashboards(user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, ctx = _o8_ctx(s, user)
+        rows = [r for r in s.exec(select(CompanyOpsDashboard).where(CompanyOpsDashboard.company_id == company.id)).all() if r.owner_id == user.id or r.shared]
+        return {"dashboards": [dict(_o8_dash(r), mine=r.owner_id == user.id) for r in sorted(rows, key=lambda x: x.id)]}
+
+
+@app.post("/ops/dashboards")
+def ops_dashboard_save(data: dict, user: User = Depends(get_current_user)):
+    O = _o8()
+    with Session(engine) as s:
+        company, ctx = _o8_ctx(s, user)
+        name = (data.get("name") or "").strip()[:80]
+        if not name:
+            raise HTTPException(422, "اسم اللوحة مطلوب")
+        cards = data.get("cards") or []
+        if not isinstance(cards, list) or len(cards) > 12:
+            raise HTTPException(422, "اللوحة تقبل حتى 12 بطاقة")
+        clean = []
+        for c in cards:
+            c = {k: c.get(k) for k in ("module", "metric", "dims", "period", "compare", "viz", "title", "branch_id", "start", "end") if isinstance(c, dict)}
+            c.setdefault("dims", [])
+            try:
+                O.validate_card(c)
+            except ValueError as e:
+                raise HTTPException(422, f"بطاقة غير صالحة: {e}")
+            if c["metric"] in _O8_COST_METRICS and not ctx["cost"]:
+                raise HTTPException(403, "لا يمكنك إضافة مؤشر تكلفة العمالة")
+            if c.get("branch_id"):
+                _o8_branch(ctx, c["branch_id"])
+            clean.append(c)
+        if data.get("id"):
+            r = s.get(CompanyOpsDashboard, _o8_int(data["id"]))
+            if not r or r.company_id != company.id:
+                raise HTTPException(404, "اللوحة غير موجودة")
+            if r.owner_id != user.id:
+                raise HTTPException(403, "تعديل اللوحة لصاحبها فقط")
+        else:
+            if len([1 for x in s.exec(select(CompanyOpsDashboard).where(CompanyOpsDashboard.company_id == company.id, CompanyOpsDashboard.owner_id == user.id)).all()]) >= 20:
+                raise HTTPException(422, "الحد 20 لوحة لكل مستخدم")
+            r = CompanyOpsDashboard(company_id=company.id, owner_id=user.id, created_at=datetime.now())
+        r.name, r.shared, r.cards_json, r.updated_at = name, 1 if data.get("shared") and ctx["write"] else 0, json.dumps(clean, ensure_ascii=False), datetime.now()
+        s.add(r)
+        s.commit()
+        s.refresh(r)
+        return {"ok": True, "dashboard": _o8_dash(r)}
+
+
+@app.post("/ops/dashboards/delete")
+def ops_dashboard_delete(data: dict, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, ctx = _o8_ctx(s, user)
+        r = s.get(CompanyOpsDashboard, _o8_int(data.get("id")))
+        if not r or r.company_id != company.id:
+            raise HTTPException(404, "اللوحة غير موجودة")
+        if r.owner_id != user.id and not ctx["manage"]:
+            raise HTTPException(403, "الحذف لصاحب اللوحة أو المالك")
+        s.delete(r)
+        s.commit()
+        return {"ok": True}
+
+
+@app.get("/ops/dashboards/{dash_id}")
+def ops_dashboard_render(dash_id: int, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, ctx = _o8_ctx(s, user)
+        r = s.get(CompanyOpsDashboard, dash_id)
+        if not r or r.company_id != company.id or (r.owner_id != user.id and not r.shared):
+            raise HTTPException(404, "اللوحة غير موجودة")
+        st = _o8_settings(s, company.id)
+        out = []
+        for i, c in enumerate(json.loads(r.cards_json or "[]")):
+            try:
+                out.append({"i": i, "spec": c, "card": _o8_card(s, company, ctx, c, st)})
+            except HTTPException as e:
+                out.append({"i": i, "spec": c, "error": e.detail if isinstance(e.detail, str) else "تعذر عرض البطاقة"})
+        return {"dashboard": _o8_dash(r), "cards": out, "mine": r.owner_id == user.id}
+
+
+# ── التنبيهات
+def _o8_rule(r):
+    return {"id": r.id, "name": r.name, "module": r.module, "metric": r.metric, "op": r.op, "threshold": r.threshold, "period": r.period, "scope": r.scope,
+            "notify_roles": json.loads(r.notify_roles_json or "[]"), "active": bool(r.active), "last_eval_at": r.last_eval_at}
+
+
+def _o8_recipients(s, company, roles, branch_id, cost_metric):
+    out = {company.owner_id} if "owner" in roles else set()
+    for ln in s.exec(select(GovMemberLink).where(GovMemberLink.company_id == company.id, GovMemberLink.status == "active")).all():
+        m = s.get(CompanyMember, ln.member_id)
+        if not m or m.company_id != company.id or m.role not in roles:
+            continue
+        if cost_metric and m.role not in ROLES_SEE_SENSITIVE:
+            continue
+        if branch_id and m.role == "manager" and m.branch_id and m.branch_id != branch_id:
+            continue
+        out.add(ln.user_id)
+    return sorted(out)
+
+
+def _o8_eval_rules(s, company, only=None):
+    """يقيّم القواعد النشطة: لكل (قاعدة، فرع، فترة) تنبيه واحد فقط، ويُشعر المستلمين حسب أدوارهم وفروعهم."""
+    O = _o8()
+    rules = [r for r in s.exec(select(CompanyAlertRule).where(CompanyAlertRule.company_id == company.id, CompanyAlertRule.active == 1)).all()
+             if only is None or r.id in only]
+    if not rules:
+        return {"evaluated": 0, "fired": 0}
+    st = _o8_settings(s, company.id)
+    brs = s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company.id, CompanyBranch.is_active == 1)).all()
+    sysctx = {"role": "owner", "cost": True, "bmap": {b.id: b.name for b in brs}, "allowed": None, "branches": [{"id": b.id, "name": b.name} for b in brs]}
+    byname = {b.name: b.id for b in brs}
+    fired = 0
+    cache = {}
+    for r in rules:
+        p = O.resolve_period("last_month" if r.module == "inventory" else r.period, _o8_today(), compare="none")   # الجرد شهري
+        key = (p["start"], p["end"], r.module)
+        if key not in cache:
+            cache[key] = _o8_data(s, company, sysctx, p["start"], p["end"], _O8_MOD_NEEDS.get(r.module, {"sales"}), None, st)
+        data = cache[key]
+        res = _o8_compute(r.module, ["branch"] if r.scope == "each_branch" else [], data, p["start"], p["end"], sysctx, st)
+        vals = [(byname.get(x["key"][0]), x.get(r.metric)) for x in res["rows"]] if r.scope == "each_branch" else [(None, res["total"].get(r.metric))]
+        pkey = f"{p['start']}..{p['end']}"
+        for bid, v in vals:
+            if not O.check_rule(v, r.op, r.threshold):
+                continue
+            if s.exec(select(CompanyAlertEvent).where(CompanyAlertEvent.company_id == company.id, CompanyAlertEvent.rule_id == r.id,
+                                                      CompanyAlertEvent.branch_id == bid, CompanyAlertEvent.period_key == pkey)).first():
+                continue
+            ev = CompanyAlertEvent(company_id=company.id, rule_id=r.id, branch_id=bid, value=v, threshold=r.threshold, period_key=pkey, created_at=datetime.now())
+            s.add(ev)
+            s.commit()
+            s.refresh(ev)
+            mar = O.MODULES[r.module]["metrics"][r.metric][0]
+            title = f"⚠️ {r.name}: {mar} = {round(v, 2):,} ({O.ALERT_OPS[r.op]} {r.threshold:,})" + (f" — {sysctx['bmap'].get(bid)}" if bid else "")
+            ev.notified = _collab_notify(s, company.id, _o8_recipients(s, company, json.loads(r.notify_roles_json or '["owner"]'), bid, r.metric in _O8_COST_METRICS),
+                                         "risk", title, "company-operations-center.html#alerts", f"opsalert:{ev.id}")
+            s.add(ev)
+            fired += 1
+        r.last_eval_at = datetime.now()
+        s.add(r)
+    s.commit()
+    return {"evaluated": len(rules), "fired": fired}
+
+
+def _o8_lazy_alerts(s, company):
+    last = _O8_LAZY.get(company.id)
+    if last and (datetime.now() - last).total_seconds() < 6 * 3600:
+        return None
+    _O8_LAZY[company.id] = datetime.now()
+    return _o8_eval_rules(s, company)
+
+
+@app.get("/ops/alerts")
+def ops_alerts(user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, ctx = _o8_ctx(s, user)
+        rules = [r for r in s.exec(select(CompanyAlertRule).where(CompanyAlertRule.company_id == company.id)).all() if ctx["cost"] or r.metric not in _O8_COST_METRICS]
+        rmap = {r.id: r for r in rules}
+        evs = []
+        for e in s.exec(select(CompanyAlertEvent).where(CompanyAlertEvent.company_id == company.id).order_by(CompanyAlertEvent.created_at.desc()).limit(200)).all():
+            r = rmap.get(e.rule_id)
+            if not r or (ctx["allowed"] is not None and e.branch_id not in ctx["allowed"]):
+                continue
+            evs.append({"id": e.id, "rule_id": r.id, "rule": r.name, "metric": r.metric, "op": r.op, "value": e.value, "threshold": e.threshold,
+                        "branch": ctx["bmap"].get(e.branch_id) if e.branch_id else "الشركة", "period": e.period_key, "notified": e.notified, "at": e.created_at})
+        return {"rules": [_o8_rule(r) for r in rules], "events": evs, "can_manage": ctx["manage"]}
+
+
+@app.post("/ops/alerts")
+def ops_alert_save(data: dict, user: User = Depends(get_current_user)):
+    O = _o8()
+    with Session(engine) as s:
+        company, ctx = _o8_ctx(s, user, "manage")
+        rule = {k: data.get(k) for k in ("module", "metric", "op", "threshold", "period")}
+        try:
+            O.validate_rule(rule)
+        except ValueError as e:
+            raise HTTPException(422, str(e))
+        roles = [x for x in (data.get("notify_roles") or ["owner"]) if x in ("owner", "manager", "accountant", "executive")] or ["owner"]
+        if data.get("id"):
+            r = s.get(CompanyAlertRule, _o8_int(data["id"]))
+            if not r or r.company_id != company.id:
+                raise HTTPException(404, "القاعدة غير موجودة")
+        else:
+            if len(s.exec(select(CompanyAlertRule).where(CompanyAlertRule.company_id == company.id)).all()) >= 50:
+                raise HTTPException(422, "الحد 50 قاعدة تنبيه")
+            r = CompanyAlertRule(company_id=company.id, created_by=user.name or "", created_at=datetime.now())
+        r.name = (data.get("name") or "").strip()[:100] or O.MODULES[rule["module"]]["metrics"][rule["metric"]][0]
+        r.module, r.metric, r.op, r.threshold, r.period = rule["module"], rule["metric"], rule["op"], float(rule["threshold"]), rule["period"]
+        r.scope = "company" if data.get("scope") == "company" else "each_branch"
+        r.notify_roles_json = json.dumps(roles)
+        r.active = 0 if data.get("active") is False else 1
+        s.add(r)
+        s.commit()
+        s.refresh(r)
+        log_audit(company.id, user.id, user.name, "ops_alert_rule", f"rule:{r.id}", f"{r.metric} {r.op} {r.threshold}")
+        return {"ok": True, "rule": _o8_rule(r)}
+
+
+@app.post("/ops/alerts/delete")
+def ops_alert_delete(data: dict, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, ctx = _o8_ctx(s, user, "manage")
+        r = s.get(CompanyAlertRule, _o8_int(data.get("id")))
+        if not r or r.company_id != company.id:
+            raise HTTPException(404, "القاعدة غير موجودة")
+        s.delete(r)
+        s.commit()
+        log_audit(company.id, user.id, user.name, "ops_alert_rule_delete", f"rule:{r.id}", "")
+        return {"ok": True}
+
+
+@app.post("/ops/alerts/run")
+def ops_alert_run(user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, ctx = _o8_ctx(s, user, "manage")
+        return _o8_eval_rules(s, company)
+
+
+@app.post("/internal/ops/run-due")
+def internal_ops_run_due(_: bool = Depends(verify_admin)):
+    """لمهمة Railway Cron (X-Admin-Key): تقييم قواعد التنبيه لكل الشركات النشطة."""
+    out = []
+    with Session(engine) as s:
+        for c in s.exec(select(Company).where(Company.is_active == 1)).all()[:500]:
+            try:
+                r = _o8_eval_rules(s, c)
+                if r["evaluated"]:
+                    out.append({"company_id": c.id, **r})
+            except Exception as e:
+                out.append({"company_id": c.id, "error": type(e).__name__})
+    return {"ran": out}
+
+
+# ── التوقع اليومي والتخطيط
+def _o8_events(s, cid, start, end):
+    rows = s.exec(select(CompanyEvent).where(CompanyEvent.company_id == cid, CompanyEvent.start_date <= end)).all()
+    out = []
+    for e in rows:
+        ed = e.end_date or e.start_date
+        if ed and ed < start:
+            continue
+        out.append({"id": e.id, "title": e.title, "type": e.type, "start_date": e.start_date, "end_date": ed, "branches": e.branches, "status": e.status,
+                    "expected_pct": getattr(e, "expected_pct", None), "description": e.description, "origin": e.origin, "origin_ref": e.origin_ref})
+    return out
+
+
+def _o8_forecast(s, company, ctx, bid, days, st):
+    O = _o8()
+    today = _o8_today()
+    hist_start = (today - timedelta(days=150)).isoformat()
+    data = _o8_data(s, company, ctx, hist_start, (today + timedelta(days=days)).isoformat(), {"sales", "labour"}, bid, st)
+    ser = O.daily_series([r for r in data["sales"] if r["date"] < today], bid)
+    last = max(ser) if ser else None
+    origin = min(today - timedelta(days=1), last) if last else today - timedelta(days=1)
+    horizon = (today - origin).days - 1 + days
+    evs = _o8_events(s, company.id, (origin - timedelta(days=150)).isoformat(), (today + timedelta(days=days)).isoformat())
+    bname = ctx["bmap"].get(bid)
+    evd = O._event_days(evs, bname, bid)
+    fc = O.forecast_branch(ser, origin, horizon, events_by_day=evd, branch=bname)
+    fc["points"] = [pt for pt in fc.get("points", []) if pt["date"] >= today.isoformat()][:days]
+    fc.update({"origin": origin.isoformat(), "data_lag_days": (today - last).days - 1 if last else None, "branch_id": bid, "branch": bname,
+               "events": [e for e in evs if e["end_date"] >= today.isoformat() and e["status"] != "cancelled" and (not e["branches"] or bname in e["branches"])]})
+    return fc, data, ser
+
+
+@app.get("/ops/forecast")
+def ops_forecast(branch_id: str = "", days: int = 14, user: User = Depends(get_current_user)):
+    """توقع يومي للفرع: القيمة والنطاق والعوامل + تعديلات المدير والاعتماد + الدقة + خطة العمالة + احتياج الشراء."""
+    O = _o8()
+    with Session(engine) as s:
+        company, ctx = _o8_ctx(s, user)
+        st = _o8_settings(s, company.id)
+        if not ctx["branches"]:
+            raise HTTPException(404, "لا توجد فروع ضمن نطاقك")
+        bid = _o8_branch(ctx, branch_id) or ctx["branches"][0]["id"]
+        days = max(1, min(_o8_int(days or st.get("forecast_days") or 14), 28))
+        fc, data, ser = _o8_forecast(s, company, ctx, bid, days, st)
+        today = _o8_today()
+        stored = _o8_forecast_final(s, company.id, {bid}, today.isoformat(), (today + timedelta(days=days)).isoformat())
+        for pt in fc["points"]:
+            r = stored.get((bid, pt["date"]))
+            pt["adjusted"] = r.adjusted if r else None
+            pt["reason"] = r.reason if r else ""
+            pt["status"] = r.status if r else "new"
+            pt["approved_by"] = r.approved_by if r else ""
+            pt["saved_value"] = r.value if r else None
+            pt["final"] = pt["adjusted"] if pt["adjusted"] is not None else pt.get("value")
+        past = _o8_forecast_final(s, company.id, {bid}, (today - timedelta(days=56)).isoformat(), (today - timedelta(days=1)).isoformat())
+        recs = [{"date": d, "actual": ser.get(_D8.fromisoformat(d)), "forecast": r.value, "final": r.adjusted} for (b, d), r in past.items()]
+        acc = O.accuracy(recs)
+        acc["days"] = sorted([dict(x, actual=_r2(x["actual"])) for x in recs], key=lambda x: x["date"])[-28:]
+        planned = _dd8(float)
+        for sh in data["shifts"]:
+            if sh["planned_h"] is not None and sh["date"] >= today:
+                planned[sh["date"].isoformat()] += sh["planned_h"]
+        prof = O.hourly_profile(data["sales"], bid)
+        plan = O.labour_plan([dict(pt, value=pt["final"]) for pt in fc["points"]], float(st.get("target_splh") or 0) or None, dict(planned), prof)
+        inv = s.exec(select(CompanyInventory).where(CompanyInventory.company_id == company.id, CompanyInventory.branch_id == bid)).all()
+        last_per = max((i.period for i in inv if i.period), default=None)
+        on_hand = {i.product_sku: i.closing_qty for i in inv if i.period == last_per}
+        recipes = [_o8_d(r, ("product_sku", "ingredient_sku", "qty_per_unit")) for r in s.exec(select(CompanyRecipe).where(CompanyRecipe.company_id == company.id)).all()]
+        need = O.purchase_need([dict(pt, value=pt["final"]) for pt in fc["points"][:7]], data["sales"], recipes, on_hand, branch_id=bid, products=data["products"])
+        need["on_hand_period"] = last_per
+        return {"forecast": fc, "accuracy": acc, "labour_plan": plan, "target_splh": st.get("target_splh"), "purchase_need": need,
+                "can_edit": ctx["write"], "branches": ctx["branches"], "today": today.isoformat(), "event_types": _O8_EVENT_TYPES}
+
+
+def _r2(v):
+    return None if v is None else round(v, 1)
+
+
+@app.post("/ops/forecast/save")
+def ops_forecast_save(data: dict, user: User = Depends(get_current_user)):
+    """يحفظ توقع النظام (يُعاد حسابه في الخادم — لا يُوثق برقم من المتصفح) مع تعديلات المدير وأسبابها، ويعتمده عند الطلب."""
+    with Session(engine) as s:
+        company, ctx = _o8_ctx(s, user, "write")
+        st = _o8_settings(s, company.id)
+        bid = _o8_branch(ctx, data.get("branch_id"))
+        if not bid:
+            raise HTTPException(422, "حدد الفرع")
+        days = max(1, min(_o8_int(data.get("days") or st.get("forecast_days") or 14), 28))
+        adj = {}
+        for a in data.get("adjustments") or []:
+            d = str(a.get("date") or "")
+            if not re.match(r"^\d{4}-\d{2}-\d{2}$", d):
+                raise HTTPException(422, "تاريخ تعديل غير صالح")
+            if a.get("adjusted") in (None, ""):
+                adj[d] = (None, "")
+                continue
+            try:
+                v = float(a["adjusted"])
+            except (TypeError, ValueError):
+                raise HTTPException(422, "قيمة التعديل رقم")
+            if v < 0 or v > 1e9:
+                raise HTTPException(422, "قيمة التعديل غير منطقية")
+            reason = (a.get("reason") or "").strip()[:300]
+            if not reason:
+                raise HTTPException(422, f"اذكر سبب تعديل توقع {d} — السبب يبني ذاكرة التوقع ويقيس فائدة التعديلات")
+            adj[d] = (v, reason)
+        fc, _, _ = _o8_forecast(s, company, ctx, bid, days, st)
+        if fc.get("status") != "ok":
+            raise HTTPException(422, fc.get("reason_ar") or "لا يمكن إنشاء توقع لهذا الفرع")
+        today = _o8_today().isoformat()
+        prev = _o8_forecast_final(s, company.id, {bid}, today, "9999-12-31")
+        approve = bool(data.get("approve"))
+        saved = 0
+        for pt in fc["points"]:
+            if pt.get("value") is None or pt["date"] < today:
+                continue
+            old = prev.get((bid, pt["date"]))
+            a_val, a_reason = adj.get(pt["date"], (old.adjusted, old.reason) if old else (None, ""))
+            if old:
+                old.superseded = 1
+                s.add(old)
+            row = CompanyForecastDay(company_id=company.id, branch_id=bid, date=pt["date"], base=pt.get("base"), value=pt["value"], lower=pt.get("lower"),
+                                     upper=pt.get("upper"), adjusted=a_val, reason=a_reason or "", confidence=fc.get("confidence", ""),
+                                     factors_json=json.dumps(pt.get("factors") or [], ensure_ascii=False)[:4000], created_by=user.name or "", created_at=datetime.now(),
+                                     status="approved" if approve else "draft", approved_by=(user.name or "") if approve else "", approved_at=datetime.now() if approve else None)
+            s.add(row)
+            saved += 1
+        s.commit()
+        log_audit(company.id, user.id, user.name, "ops_forecast_approve" if approve else "ops_forecast_save", f"branch:{bid}",
+                  f"{saved} يوم · تعديلات {sum(1 for v in adj.values() if v[0] is not None)}")
+        return {"ok": True, "saved": saved, "approved": approve}
+
+
+@app.get("/ops/calendar")
+def ops_calendar(start: str = "", end: str = "", user: User = Depends(get_current_user)):
+    O = _o8()
+    with Session(engine) as s:
+        company, ctx = _o8_ctx(s, user)
+        today = _o8_today()
+        sd = start if re.match(r"^\d{4}-\d{2}-\d{2}$", start or "") else (today - timedelta(days=30)).isoformat()
+        ed = end if re.match(r"^\d{4}-\d{2}-\d{2}$", end or "") else (today + timedelta(days=90)).isoformat()
+        evs = _o8_events(s, company.id, sd, ed)
+        if ctx["restricted"]:
+            names = {b["name"] for b in ctx["branches"]}
+            evs = [e for e in evs if not e["branches"] or any(n in e["branches"] for n in names)]
+        past = _o8_events(s, company.id, (today - timedelta(days=400)).isoformat(), (today - timedelta(days=1)).isoformat())
+        evd = {d: e for d, e in O._event_days(past).items() if d < today}
+        _, ser = _o8_daily(s, company, ctx, _o8_need_dates(list(evd)[:120])) if evd else ({}, {})
+        eff = O.learn_event_effects(ser, evd)
+        return {"events": sorted(evs, key=lambda e: e["start_date"]), "types": _O8_EVENT_TYPES, "learned_effects": eff, "can_edit": ctx["write"],
+                "branches": ctx["branches"], "note_ar": "الأثر المتعلَّم = متوسط فرق مبيعات أيام الأحداث السابقة من نفس النوع عن خط الأساس (يلزم حدثان على الأقل)."}
+
+
+@app.post("/ops/calendar")
+def ops_calendar_add(data: dict, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, ctx = _o8_ctx(s, user, "write")
+        title = (data.get("title") or "").strip()[:150]
+        sd, ed = str(data.get("start_date") or ""), str(data.get("end_date") or data.get("start_date") or "")
+        if not title or not re.match(r"^\d{4}-\d{2}-\d{2}$", sd) or not re.match(r"^\d{4}-\d{2}-\d{2}$", ed):
+            raise HTTPException(422, "العنوان وتاريخ البداية مطلوبان (YYYY-MM-DD)")
+        if ed < sd:
+            raise HTTPException(422, "تاريخ النهاية قبل البداية")
+        if (_D8.fromisoformat(ed) - _D8.fromisoformat(sd)).days > 60:
+            raise HTTPException(422, "مدة الحدث 60 يوماً كحد أقصى")
+        typ = data.get("type") if data.get("type") in _O8_EVENT_TYPES else "other"
+        pct = data.get("expected_pct")
+        if pct not in (None, ""):
+            try:
+                pct = float(pct)
+            except (TypeError, ValueError):
+                raise HTTPException(422, "الأثر المتوقع نسبة رقمية")
+            if not -90 <= pct <= 300:
+                raise HTTPException(422, "الأثر المتوقع بين −90% و+300%")
+        else:
+            pct = None
+        names = []
+        for b in data.get("branches") or []:
+            bid = _o8_branch(ctx, b)
+            if bid:
+                names.append(ctx["bmap"][bid])
+        if ctx["restricted"] and not names:
+            names = [b["name"] for b in ctx["branches"]]
+        e = CompanyEvent(company_id=company.id, title=title, type=typ, origin="internal", start_date=sd, end_date=ed, branches="، ".join(names),
+                         status="expected" if data.get("tentative") else "confirmed", description=(data.get("description") or "")[:1000],
+                         origin_ref="ops8", created_by=user.name or "", created_by_id=user.id, created_at=datetime.now(),
+                         direction="up" if (pct or 0) > 0 else ("down" if (pct or 0) < 0 else "unknown"), expected_pct=pct)
+        s.add(e)
+        s.commit()
+        s.refresh(e)
+        log_audit(company.id, user.id, user.name, "ops_calendar_add", f"event:{e.id}", title)
+        return {"ok": True, "id": e.id}
+
+
+@app.post("/ops/calendar/cancel")
+def ops_calendar_cancel(data: dict, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, ctx = _o8_ctx(s, user, "write")
+        e = s.get(CompanyEvent, _o8_int(data.get("id")))
+        if not e or e.company_id != company.id:
+            raise HTTPException(404, "الحدث غير موجود")
+        if e.origin_ref != "ops8" and not ctx["manage"]:
+            raise HTTPException(403, "إلغاء أحداث مركز الأحداث للمالك — أو ألغه من صفحته")
+        if ctx["restricted"] and e.created_by_id != user.id:
+            raise HTTPException(403, "تلغي الأحداث التي أنشأتها فقط")
+        e.status, e.cancel_reason = "cancelled", (data.get("reason") or "")[:300]
+        s.add(e)
+        s.commit()
+        return {"ok": True}
+
+
+# ── سجل التشغيل
+def _o8_log(l, bmap):
+    return {"id": l.id, "branch_id": l.branch_id, "branch": bmap.get(l.branch_id, "الشركة") if l.branch_id else "الشركة", "date": l.date, "time": l.time,
+            "category": l.category, "severity": l.severity, "title": l.title, "note": l.note, "duration_hours": l.duration_hours, "status": l.status,
+            "resolved_note": l.resolved_note, "resolved_by": l.resolved_by, "resolved_at": l.resolved_at, "author": l.author, "author_id": l.author_id, "created_at": l.created_at}
+
+
+@app.get("/ops/logbook")
+def ops_logbook(start: str = "", end: str = "", branch_id: str = "", category: str = "", status: str = "", user: User = Depends(get_current_user)):
+    O = _o8()
+    with Session(engine) as s:
+        company, ctx = _o8_ctx(s, user)
+        today = _o8_today()
+        sd = start if re.match(r"^\d{4}-\d{2}-\d{2}$", start or "") else (today - timedelta(days=60)).isoformat()
+        ed = end if re.match(r"^\d{4}-\d{2}-\d{2}$", end or "") else today.isoformat()
+        bid = _o8_branch(ctx, branch_id)
+        q = select(CompanyLogEntry).where(CompanyLogEntry.company_id == company.id, CompanyLogEntry.date >= sd, CompanyLogEntry.date <= ed)
+        rows = []
+        for l in s.exec(q).all():
+            if ctx["allowed"] is not None and l.branch_id not in ctx["allowed"]:
+                continue
+            if bid and l.branch_id != bid:
+                continue
+            if category and l.category != category:
+                continue
+            if status and l.status != status:
+                continue
+            rows.append(l)
+        rows.sort(key=lambda l: (l.date, l.time or "", l.id), reverse=True)
+        by_b, comp = _o8_daily(s, company, ctx, _o8_need_dates({l.date for l in rows[:500]}), bid) if rows else ({}, {})
+        imp = O.log_impact([{"id": l.id, "branch_id": l.branch_id, "date": l.date, "category": l.category} for l in rows[:500]], by_b, comp)
+        im = {x["id"]: x for x in imp["entries"]}
+        out = [dict(_o8_log(l, ctx["bmap"]), impact=im.get(l.id)) for l in rows[:500]]
+        counts = _dd8(int)
+        for l in rows:
+            counts[l.category] += 1
+        return {"entries": out, "categories": imp["categories"], "counts": dict(counts), "open": sum(1 for l in rows if l.status == "open"),
+                "range": {"start": sd, "end": ed}, "note_ar": imp["note_ar"], "can_write": ctx["write"], "branches": ctx["branches"],
+                "category_ar": O.LOG_CATEGORIES, "severity_ar": O.LOG_SEVERITY}
+
+
+@app.post("/ops/logbook")
+def ops_logbook_add(data: dict, user: User = Depends(get_current_user)):
+    O = _o8()
+    with Session(engine) as s:
+        company, ctx = _o8_ctx(s, user, "write")
+        title = (data.get("title") or "").strip()[:200]
+        d = str(data.get("date") or _o8_today().isoformat())
+        if not title:
+            raise HTTPException(422, "عنوان الحدث مطلوب")
+        if not re.match(r"^\d{4}-\d{2}-\d{2}$", d) or d > (_o8_today() + timedelta(days=1)).isoformat():
+            raise HTTPException(422, "التاريخ غير صالح (لا يُسجل حدث مستقبلي)")
+        cat = data.get("category") if data.get("category") in O.LOG_CATEGORIES else "other"
+        sev = data.get("severity") if data.get("severity") in O.LOG_SEVERITY else "medium"
+        bid = _o8_branch(ctx, data.get("branch_id"))
+        if ctx["restricted"] and not bid:
+            if len(ctx["branches"]) == 1:
+                bid = ctx["branches"][0]["id"]
+            else:
+                raise HTTPException(422, "حدد الفرع")
+        tm = str(data.get("time") or "")[:5]
+        if tm and not re.match(r"^\d{2}:\d{2}$", tm):
+            raise HTTPException(422, "الوقت بصيغة HH:MM")
+        dur = data.get("duration_hours")
+        try:
+            dur = float(dur) if dur not in (None, "") else None
+        except (TypeError, ValueError):
+            raise HTTPException(422, "المدة بالساعات رقم")
+        if dur is not None and not 0 <= dur <= 72:
+            raise HTTPException(422, "المدة بين 0 و72 ساعة")
+        l = CompanyLogEntry(company_id=company.id, branch_id=bid, date=d, time=tm, category=cat, severity=sev, title=title,
+                            note=(data.get("note") or "")[:2000], duration_hours=dur, author_id=user.id, author=user.name or "", created_at=datetime.now())
+        s.add(l)
+        s.commit()
+        s.refresh(l)
+        if sev == "high":
+            people = _o8_recipients(s, company, ["owner", "manager"], bid, False)
+            _collab_notify(s, company.id, people, "risk", f"📓 {O.LOG_CATEGORIES[cat]}: {title[:90]}" + (f" — {ctx['bmap'].get(bid)}" if bid else ""),
+                           f"company-logbook.html#e{l.id}", f"oplog:{l.id}", exclude=user.id)
+        return {"ok": True, "entry": _o8_log(l, ctx["bmap"])}
+
+
+@app.post("/ops/logbook/resolve")
+def ops_logbook_resolve(data: dict, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, ctx = _o8_ctx(s, user, "write")
+        l = s.get(CompanyLogEntry, _o8_int(data.get("id")))
+        if not l or l.company_id != company.id:
+            raise HTTPException(404, "الحدث غير موجود")
+        if ctx["allowed"] is not None and l.branch_id not in ctx["allowed"]:
+            raise HTTPException(403, "هذا الفرع خارج نطاق صلاحيتك")
+        if l.status == "resolved":
+            raise HTTPException(409, "الحدث مغلق مسبقاً")
+        l.status, l.resolved_note, l.resolved_by, l.resolved_at = "resolved", (data.get("note") or "")[:1000], user.name or "", datetime.now()
+        s.add(l)
+        s.commit()
+        return {"ok": True}
+
+
+@app.post("/ops/logbook/delete")
+def ops_logbook_delete(data: dict, user: User = Depends(get_current_user)):
+    with Session(engine) as s:
+        company, ctx = _o8_ctx(s, user, "write")
+        l = s.get(CompanyLogEntry, _o8_int(data.get("id")))
+        if not l or l.company_id != company.id:
+            raise HTTPException(404, "الحدث غير موجود")
+        if l.author_id != user.id and not ctx["manage"]:
+            raise HTTPException(403, "الحذف لكاتب الحدث أو المالك")
+        s.delete(l)
+        s.commit()
+        log_audit(company.id, user.id, user.name, "ops_log_delete", f"log:{l.id}", l.title[:100])
+        return {"ok": True}
+
+
+# ═══ موصل الذكاء الاصطناعي MCP — قراءة فقط ═══
+_MCP_VERSIONS = ("2025-06-18", "2025-03-26", "2024-11-05")
+_MCP_TOOLS = [
+    {"name": "get_company_context", "description": "Company profile for the API key: name, sector, currency, timezone, branches, latest data date, data coverage. Call first.",
+     "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False}},
+    {"name": "list_metrics", "description": "Catalog of modules, metrics (with Arabic names, units, better direction), dimensions and periods usable in query_metric.",
+     "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False}},
+    {"name": "query_metric", "description": "Compute one metric from Nabbah's governed engine, optionally broken down by up to 2 dimensions, with comparison to the previous or last-year period. "
+                                          "Labour cost metrics are never exposed through MCP (payroll data).",
+     "inputSchema": {"type": "object", "required": ["module", "metric"], "properties": {
+         "module": {"type": "string", "enum": ["sales", "labour", "inventory", "reservations", "reviews"]}, "metric": {"type": "string"},
+         "dims": {"type": "array", "items": {"type": "string"}, "maxItems": 2}, "period": {"type": "string", "enum": ["today", "yesterday", "wtd", "last_week", "mtd", "last_month", "last_7", "last_28", "last_90", "custom"]},
+         "start": {"type": "string", "description": "YYYY-MM-DD when period=custom"}, "end": {"type": "string"}, "compare": {"type": "string", "enum": ["prev", "ly", "none"]},
+         "branch": {"type": "string", "description": "branch name or id (optional)"}}}},
+    {"name": "compare_branches", "description": "Rank all branches on one metric for a period, with change vs comparison period.",
+     "inputSchema": {"type": "object", "required": ["module", "metric"], "properties": {"module": {"type": "string"}, "metric": {"type": "string"}, "period": {"type": "string"}, "compare": {"type": "string"}}}},
+    {"name": "get_daily_flash", "description": "Daily flash: headline KPIs vs comparison, explanation of the sales change (orders vs average ticket), peak window, branch scorecards (RAG vs targets), recent alerts, open logbook items.",
+     "inputSchema": {"type": "object", "properties": {"period": {"type": "string", "enum": ["today", "yesterday", "wtd", "mtd", "last_7"]}}}},
+    {"name": "get_forecast", "description": "Daily sales forecast for a branch with interval, factors (weekday baseline, trend, calendar events), confidence, manager adjustments and accuracy.",
+     "inputSchema": {"type": "object", "properties": {"branch": {"type": "string"}, "days": {"type": "integer", "minimum": 1, "maximum": 28}}}},
+    {"name": "get_logbook", "description": "Operational logbook entries (equipment failures, staff shortages, supply issues, complaints...) with same-day sales impact vs baseline (association, not causation).",
+     "inputSchema": {"type": "object", "properties": {"days": {"type": "integer", "minimum": 1, "maximum": 180}, "branch": {"type": "string"}, "category": {"type": "string"}}}},
+    {"name": "get_reviews_summary", "description": "Customer reviews: average rating, by source/branch, low ratings without response, branch rating drops, keyword themes.",
+     "inputSchema": {"type": "object", "properties": {"period": {"type": "string"}}}},
+    {"name": "get_menu_engineering", "description": "Menu engineering for the latest inventory month: contribution margin per item, popularity, Kasavana-Smith class (star/plowhorse/puzzle/dog) and advice.",
+     "inputSchema": {"type": "object", "properties": {"month": {"type": "string", "description": "YYYY-MM (optional)"}}}},
+    {"name": "get_data_quality", "description": "What Nabbah understood from the data, what is missing, and the impact on analyses (coverage of time, employee, order refs, shifts, recipes...).",
+     "inputSchema": {"type": "object", "properties": {}}},
+]
+
+
+def _mcp_ctx(s, company):
+    brs = s.exec(select(CompanyBranch).where(CompanyBranch.company_id == company.id, CompanyBranch.is_active == 1)).all()
+    return {"role": "viewer", "title": "", "user_id": 0, "name": "MCP", "manage": False, "write": False, "cost": False, "bmap": {b.id: b.name for b in brs},
+            "allowed": None, "restricted": False, "branches": [{"id": b.id, "name": b.name} for b in brs]}
+
+
+def _mcp_branch(ctx, v):
+    if v in (None, ""):
+        return None
+    if str(v).isdigit() and int(v) in ctx["bmap"]:
+        return int(v)
+    for bid, n in ctx["bmap"].items():
+        if str(v).strip() == n:
+            return bid
+    raise HTTPException(404, f"فرع غير معروف: {v}")
+
+
+def _mcp_call(s, company, name, args):
+    O = _o8()
+    ctx = _mcp_ctx(s, company)
+    st = _o8_settings(s, company.id)
+    args = args or {}
+    if name == "get_company_context":
+        last = s.exec(select(CompanySale).where(CompanySale.company_id == company.id).order_by(CompanySale.date.desc()).limit(1)).first()
+        data = _o8_data(s, company, ctx, (_o8_today() - timedelta(days=28)).isoformat(), _o8_today().isoformat(), {"sales"})
+        return {"company": company.name, "sector": getattr(company, "sector", ""), "currency": getattr(company, "currency", "SAR") or "SAR", "timezone": "Asia/Riyadh",
+                "week_starts": "Sunday", "today": _o8_today().isoformat(), "branches": ctx["branches"], "latest_sales_date": last.date if last else None,
+                "coverage_last_28d": O.coverage_sales(data["sales"]), "modules": list(O.MODULES), "read_only": True,
+                "note": "All numbers come from Nabbah's governed engine. 'null' means not available (never zero). Labour cost is not exposed via MCP."}
+    if name == "list_metrics":
+        cat = {k: {"ar": m["ar"], "dims": m["dims"], "metrics": {mk: {"ar": v[0], "unit": v[1], "better": v[2]} for mk, v in m["metrics"].items() if mk not in _O8_COST_METRICS}}
+                for k, m in O.MODULES.items()}
+        cat.update({"_periods": O.PERIODS_AR, "_compare": O.COMPARE_AR})
+        return cat
+    if name in ("query_metric", "compare_branches"):
+        spec = {"module": args.get("module"), "metric": args.get("metric"), "dims": ["branch"] if name == "compare_branches" else (args.get("dims") or []),
+                "period": args.get("period") or "last_7", "compare": args.get("compare") or "prev", "viz": "table", "start": args.get("start"), "end": args.get("end"),
+                "branch_id": _mcp_branch(ctx, args.get("branch"))}
+        if spec["metric"] in _O8_COST_METRICS:
+            raise HTTPException(403, "Labour cost metrics are not available via MCP")
+        c = _o8_card(s, company, ctx, spec, st)
+        return {k: c[k] for k in ("metric", "metric_ar", "unit", "direction", "dims", "rows", "total", "prev_total", "change_pct", "period", "branch", "note_ar", "truncated")}
+    if name == "get_daily_flash":
+        return _mcp_flash(s, company, ctx, args.get("period") or "yesterday")
+    if name == "get_forecast":
+        bid = _mcp_branch(ctx, args.get("branch")) or (ctx["branches"][0]["id"] if ctx["branches"] else None)
+        if not bid:
+            raise HTTPException(404, "No branches")
+        days = max(1, min(_o8_int(args.get("days") or 7), 28))
+        fc, _, _ = _o8_forecast(s, company, ctx, bid, days, st)
+        stored = _o8_forecast_final(s, company.id, {bid}, _o8_today().isoformat(), "9999-12-31")
+        for pt in fc.get("points", []):
+            r = stored.get((bid, pt["date"]))
+            pt["manager_adjusted"] = r.adjusted if r else None
+            pt["status"] = r.status if r else "not_saved"
+        return {k: fc.get(k) for k in ("status", "branch", "points", "confidence", "backtest", "method_ar", "events", "data_lag_days", "reason_ar")}
+    if name == "get_logbook":
+        days = max(1, min(_o8_int(args.get("days") or 30), 180))
+        bid = _mcp_branch(ctx, args.get("branch"))
+        sd = (_o8_today() - timedelta(days=days)).isoformat()
+        rows = [l for l in s.exec(select(CompanyLogEntry).where(CompanyLogEntry.company_id == company.id, CompanyLogEntry.date >= sd)).all()
+                if (not bid or l.branch_id == bid) and (not args.get("category") or l.category == args.get("category"))]
+        rows = sorted(rows, key=lambda x: x.date, reverse=True)[:200]
+        by_b, comp = _o8_daily(s, company, ctx, _o8_need_dates({l.date for l in rows}), bid) if rows else ({}, {})
+        imp = O.log_impact([{"id": l.id, "branch_id": l.branch_id, "date": l.date, "category": l.category} for l in rows], by_b, comp)
+        im = {x["id"]: x for x in imp["entries"]}
+        return {"entries": [{"date": l.date, "branch": ctx["bmap"].get(l.branch_id, "company"), "category": O.LOG_CATEGORIES.get(l.category, l.category), "title": l.title,
+                             "note": l.note[:500], "status": l.status, "impact_pct": (im.get(l.id) or {}).get("impact_pct")} for l in sorted(rows, key=lambda x: x.date, reverse=True)[:200]],
+                "category_stats": imp["categories"], "note": imp["note_ar"]}
+    if name == "get_reviews_summary":
+        p = _o8_period(O, args.get("period") or "last_28", compare="prev")
+        data = _o8_data(s, company, ctx, (_o8_today() - timedelta(days=150)).isoformat(), _o8_today().isoformat(), {"reviews"})
+        low = float(st.get("low_rating") or 3)
+        ins = O.reviews_insights(data["reviews"], _o8_today(), low=low)
+        ins["pending"] = [dict(x, text=x["text"][:200]) for x in ins["pending"][:20]]
+        return {"period": p, "summary": O.reviews_breakdown(data["reviews"], [], p["start"], p["end"], low=low)["total"],
+                "by_source": O.reviews_breakdown(data["reviews"], ["source"], p["start"], p["end"], low=low)["rows"],
+                "by_branch": O.reviews_breakdown(data["reviews"], ["branch"], p["start"], p["end"], low=low)["rows"], "insights": ins}
+    if name == "get_menu_engineering":
+        res = _mcp_menu(s, company, ctx, st, args.get("month") or "")
+        return res
+    if name == "get_data_quality":
+        data = _o8_data(s, company, ctx, (_o8_today() - timedelta(days=90)).isoformat(), _o8_today().isoformat(), {"sales", "labour", "inventory", "reservations", "reviews"}, None, st)
+        rec_skus = {r["product_sku"] for r in data["recipes"]}
+        return O.data_health(O.coverage_sales(data["sales"]), len(data["shifts"]), len(data["recipes"]), len(data["inventory"]), len(data["reservations"]),
+                             len(data["reviews"]), len({k for k, v in data["products"].items() if v.get("cost")} | rec_skus), len(data["products"]))
+    raise HTTPException(404, f"Unknown tool: {name}")
+
+
+def _mcp_flash(s, company, ctx, period):
+    O = _o8()
+    st = _o8_settings(s, company.id)
+    p = _o8_period(O, period if period in ("today", "yesterday", "wtd", "mtd", "last_7") else "yesterday")
+    lo = min(p["start"], p["prev_start"] or p["start"])
+    data = _o8_data(s, company, ctx, lo, p["end"], {"sales", "labour", "inventory", "reservations", "reviews"}, None, st,
+                    win={"reviews": ((_D8.fromisoformat(p["end"]) - timedelta(days=59)).isoformat(), p["end"]),
+                         "inventory": ((_D8.fromisoformat(p["end"]).replace(day=1) - timedelta(days=40)).isoformat(), p["end"])})
+    cur = O.sales_kpis(data["sales"], p["start"], p["end"])
+    prev = O.sales_kpis(data["sales"], p["prev_start"], p["prev_end"]) if p["prev_start"] else None
+    lab = O.labour_breakdown(data["shifts"], data["sales"], [], p["start"], p["end"], show_cost=False)["total"]
+    sc = _o8_branch_scores(s, company, ctx, data, p, st)
+    for r in sc["rows"]:
+        r["cells"].pop("col_pct", None)
+    return {"period": p, "sales": cur, "previous": prev, "explain": O.explain_change(cur, prev), "labour": {k: lab.get(k) for k in ("actual_hours", "planned_hours", "splh", "overtime_hours", "absence_rate")},
+            "peak": O.peak_insight(data["sales"], p["start"], p["end"]), "scorecards": sc["rows"]}
+
+
+def _mcp_menu(s, company, ctx, st, month):
+    O = _o8()
+    today = _o8_today()
+    em = month if re.match(r"^\d{4}-\d{2}$", month or "") else today.strftime("%Y-%m")
+    y, m = int(em[:4]), int(em[5:])
+    end = (_D8(y + (m == 12), m % 12 + 1, 1) - timedelta(days=1)).isoformat()
+    data = _o8_data(s, company, ctx, em + "-01", end, {"sales", "inventory"}, None, st)
+    costs = O.unit_costs(data["inventory"], data["products"], data["purchases"])
+    me = O.menu_engineering(data["sales"], data["products"], data["recipes"], costs, em + "-01", end, commission=st.get("channel_commission") or {})
+    me["items"] = me["items"][:150]
+    me["month"] = em
+    return me
+
+
+def _mcp_rpc(msg, company_id, env):
+    """رسالة JSON-RPC واحدة → استجابة (أو None للإشعارات)."""
+    if not isinstance(msg, dict) or msg.get("jsonrpc") != "2.0" or not isinstance(msg.get("method"), str):
+        return {"jsonrpc": "2.0", "id": msg.get("id") if isinstance(msg, dict) else None, "error": {"code": -32600, "message": "Invalid Request"}}
+    mid, method, params = msg.get("id"), msg["method"], msg.get("params") or {}
+    if "id" not in msg:
+        return None                                   # إشعار (notifications/initialized…) — لا استجابة
+    if method == "initialize":
+        want = str(params.get("protocolVersion") or "")
+        return {"jsonrpc": "2.0", "id": mid, "result": {"protocolVersion": want if want in _MCP_VERSIONS else _MCP_VERSIONS[0],
+                                                        "capabilities": {"tools": {"listChanged": False}}, "serverInfo": {"name": "nabbah-operations", "version": "8.0"},
+                                                        "instructions": "Nabbah (نبّاه) read-only business intelligence for a Saudi company. Call get_company_context first, then list_metrics. "
+                                                                        "Numbers are computed by Nabbah's governed engine; null = not available. Answer in the user's language, cite periods and comparisons."}}
+    if method == "ping":
+        return {"jsonrpc": "2.0", "id": mid, "result": {}}
+    if method == "tools/list":
+        return {"jsonrpc": "2.0", "id": mid, "result": {"tools": _MCP_TOOLS}}
+    if method == "tools/call":
+        name = params.get("name")
+        if name not in {t["name"] for t in _MCP_TOOLS}:
+            return {"jsonrpc": "2.0", "id": mid, "error": {"code": -32602, "message": f"Unknown tool: {name}"}}
+        if env == "sandbox":
+            res, err = {"sandbox": True, "note": "Sandbox keys do not read company data — use a live key with ai.read scope."}, False
+        else:
+            try:
+                with Session(engine) as s:
+                    company = s.get(Company, company_id)
+                    res, err = _mcp_call(s, company, name, params.get("arguments") or {}), False
+            except HTTPException as e:
+                res, err = {"error": e.detail if isinstance(e.detail, str) else str(e.detail)}, True
+            except Exception as e:
+                _logger.error(f"mcp tool {name} failed: {type(e).__name__}: {str(e)[:150]}")
+                res, err = {"error": "internal error"}, True
+        txt = json.dumps(res, ensure_ascii=False, default=lambda x: x.isoformat() if hasattr(x, "isoformat") else str(x))
+        out = {"content": [{"type": "text", "text": txt[:200000]}], "isError": err}
+        if not err:
+            out["structuredContent"] = json.loads(txt) if len(txt) <= 200000 else {"truncated": True}
+        return {"jsonrpc": "2.0", "id": mid, "result": out}
+    return {"jsonrpc": "2.0", "id": mid, "error": {"code": -32601, "message": f"Method not found: {method}"}}
+
+
+@app.post("/mcp")
+async def mcp_endpoint(request: Request):
+    """خادم MCP (Streamable HTTP، استجابات JSON) للقراءة فقط. المصادقة بمفتاح API بصلاحية ai.read — نفس حدود الاستخدام والتسجيل."""
+    from fastapi.responses import JSONResponse as _JR, Response as _Resp
+    from starlette.concurrency import run_in_threadpool as _rtp
+    raw = await request.body()
+
+    def run():
+        t0 = time.perf_counter()
+        ctx, status = None, 200
+        try:
+            if len(raw) > 1_000_000:
+                raise _ApiErr(413, "الطلب أكبر من 1MB")
+            ctx = _api_ctx(request, "ai.read")
+            try:
+                msg = json.loads(raw.decode("utf-8"))
+            except Exception:
+                status = 400
+                return _JR({"jsonrpc": "2.0", "id": None, "error": {"code": -32700, "message": "Parse error"}}, status_code=400)
+            if isinstance(msg, list):
+                res = [r for r in (_mcp_rpc(m, ctx["company_id"], ctx["env"]) for m in msg[:20]) if r is not None]
+                if not res:
+                    status = 202
+                    return _Resp(status_code=202)
+                return _JR(res, headers={"MCP-Protocol-Version": _MCP_VERSIONS[0]})
+            r = _mcp_rpc(msg, ctx["company_id"], ctx["env"])
+            if r is None:
+                status = 202
+                return _Resp(status_code=202)
+            return _JR(r, headers={"MCP-Protocol-Version": _MCP_VERSIONS[0]})
+        except _ApiErr as e:
+            status = e.status
+            return _JR({"jsonrpc": "2.0", "id": None, "error": {"code": -32001, "message": e.detail}}, status_code=e.status, headers=e.headers)
+        finally:
+            try:
+                ip = _client_ip(request)
+                c = ctx or getattr(request.state, "nb_api", None) or {}
+                with Session(engine) as s:
+                    s.add(APIUsage(company_id=c.get("company_id"), key_id=c.get("key_id"), app_id=c.get("app_id"), env=c.get("env", ""), method="POST", route="/mcp",
+                                   status=status, ms=round((time.perf_counter() - t0) * 1000, 1), ip=_sec_engine().mask_ip(ip) if ip else "", created_at=datetime.now()))
+                    s.commit()
+            except Exception as _e:
+                _logger.error(f"mcp usage log failed: {type(_e).__name__}")
+    return await _rtp(run)
+
+
+@app.get("/mcp")
+def mcp_get():
+    """لا يدعم هذا الخادم بث SSE — الاتصال عبر POST فقط (مسموح في مواصفة Streamable HTTP)."""
+    from fastapi.responses import JSONResponse as _JR
+    return _JR({"error": "Use POST with JSON-RPC 2.0 (MCP Streamable HTTP, JSON responses). Authorization: Bearer nbk_… (scope ai.read)."}, status_code=405,
+               headers={"Allow": "POST"})
+
+
 @app.get("/company/executive-intelligence")
 def company_executive_intelligence(request: Request, user: User = Depends(get_current_user),
                                    period: Optional[str] = None, ai: int = 0):
@@ -26114,7 +27750,7 @@ def files_check(_: bool = Depends(verify_admin)):
         "company-data-quality.html", "company-predictions.html", "company-risks.html",
         "company-board.html", "company-root-cause.html", "company-benchmarks.html",
         "company-upload.html", "company-memory.html", "company-decisions.html",
-        "company-monthly-report.html", "company-monthly-intelligence.html", "company-board-intelligence.html", "company-executive-report-intelligence.html", "company-customer-intelligence.html", "company-branch-intelligence.html", "company-competitor-intelligence.html", "company-events-intelligence.html", "company-assistant.html", "company-security.html", "company-integrations.html", "company-developers.html", "company-group.html", "company-governance.html", "company-collaboration.html", "company-brand.html", "partner-portal.html", "partner-admin.html", "company-autonomy.html",
+        "company-monthly-report.html", "company-monthly-intelligence.html", "company-board-intelligence.html", "company-executive-report-intelligence.html", "company-customer-intelligence.html", "company-branch-intelligence.html", "company-competitor-intelligence.html", "company-events-intelligence.html", "company-assistant.html", "company-security.html", "company-integrations.html", "company-developers.html", "company-group.html", "company-governance.html", "company-collaboration.html", "company-brand.html", "partner-portal.html", "partner-admin.html", "company-autonomy.html", "company-operations-center.html", "company-forecast-planner.html", "company-logbook.html",
         "nabbah-data-template.xlsx",
     ]
     missing, present = [], []
