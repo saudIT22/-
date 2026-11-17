@@ -90,7 +90,7 @@
   textarea{width:100%;background:var(--card,#0d1512);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:10px;padding:8px;font-family:inherit}
   .b.grey{background:rgba(148,163,184,.15);color:#94a3b8}
   table.heat th{font-size:11px;padding:4px} table.heat td{border:1px solid var(--line,#1d2c24)}
-  input[type=date],input[type=month],input[type=time]{color-scheme:dark}
+  input[type=date],input[type=month],input[type=time]{color-scheme:dark} input[type=range]{accent-color:#14b8a6}
   @media(max-width:760px){.bar{flex-wrap:wrap}.tiles[style]{grid-template-columns:repeat(2,minmax(0,1fr))!important}.kv{grid-template-columns:1fr!important}.grid2,.fg{grid-template-columns:1fr!important}.barrow .t{flex-basis:90px}.barrow .x{flex-basis:96px}}
 </style>
 </head>
@@ -198,11 +198,29 @@
   function vEntries(){if(!L.entries.length)return `<div class="state">لا أحداث في الفترة.${L.can_write?" سجّل أول حدث من «+ تسجيل حدث».":""}</div>`;
     return L.entries.map(e=>`<div class="itm ${e.status==="resolved"?"low":SEV[e.severity]}" id="E${e.id}"><h4>${esc(e.title)} ${badge(L.category_ar[e.category]||e.category,"grey")} ${badge(L.severity_ar[e.severity]||e.severity,SEV[e.severity])} ${e.status==="resolved"?badge("مغلق","low"):badge("مفتوح","medium")}</h4>
       <div class="muted">${esc(e.branch)} · ${dd(e.date)}${e.time?" "+esc(e.time):""}${e.duration_hours!=null?" · المدة "+n(e.duration_hours,1)+" س":""} · سجّله ${esc(e.author||"—")}</div>
-      ${e.note?`<p style="margin:6px 0;white-space:pre-wrap">${esc(e.note)}</p>`:""}<div style="margin:6px 0">الأثر في يومه: ${imp(e.impact)}</div>
+      ${e.note?`<p style="margin:6px 0;white-space:pre-wrap">${esc(e.note)}</p>`:""}<div style="margin:6px 0">الأثر في يومه: ${imp(e.impact)}</div>${win(e.window)}${atts(e)}
       ${e.status==="resolved"?`<div class="muted">✔ أُغلق بواسطة ${esc(e.resolved_by||"")} ${dt(e.resolved_at)}${e.resolved_note?" — "+esc(e.resolved_note):""}</div>`:""}
-      ${L.can_write?`<div class="cta">${e.status==="open"?`<button class="btn ghost" data-res="${e.id}">✔ إغلاق</button>`:""}<button class="btn ghost red" data-del="${e.id}">حذف</button></div>`:""}</div>`).join("");}
+      ${L.can_write?`<div class="cta">${e.status==="open"?`<button class="btn ghost" data-res="${e.id}">✔ إغلاق</button>`:""}${(e.attachments||[]).length<5?`<button class="btn ghost" data-att="${e.id}">📎 إرفاق صورة/PDF</button>`:""}<button class="btn ghost red" data-del="${e.id}">حذف</button></div>`:""}</div>`).join("")
+      +`<input type="file" id="attF" accept="image/jpeg,image/png,image/webp,application/pdf" style="display:none">`;}
+  const win=w=>!w?"":(w.available?`<div style="margin:4px 0">الأثر خلال ساعات الحدث (${esc(w.hours[0])}–${esc(w.hours[w.hours.length-1])}): <span class="${w.delta<0?"neg":"pos"}"><b>${w.delta_pct>0?"+":""}${n(w.delta_pct,1)}%</b></span> <span class="muted">مبيعات ${n(w.actual)} مقابل معتاد ${n(w.baseline)} لنفس الساعات (${n(w.weeks)} أسابيع)</span></div>`
+      :`<div class="muted" style="margin:4px 0">الأثر بالساعة: ${esc(w.reason_ar)}</div>`);
+  const atts=e=>!(e.attachments||[]).length?"":`<div style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0">${e.attachments.map(a=>`<span class="b grey" style="display:inline-flex;gap:6px;align-items:center">
+      <a href="#" data-view="${a.id}" style="color:inherit">${a.mime==="application/pdf"?"📄":"🖼️"} ${esc(a.filename)}</a><span class="muted">${n(a.size/1024,0)}KB</span>${L.can_write?`<a href="#" data-adel="${a.id}" title="حذف المرفق" style="color:#ef4444">✕</a>`:""}</span>`).join("")}</div>`;
+  function shrink(file){return new Promise((res,rej)=>{if(file.type==="application/pdf"){if(file.size>1.5e6)return rej(new Error("ملف PDF أكبر من 1.5MB"));const fr=new FileReader();fr.onload=()=>res(fr.result);fr.onerror=()=>rej(new Error("تعذرت قراءة الملف"));fr.readAsDataURL(file);return;}
+    const img=new Image();const u=URL.createObjectURL(file);img.onload=()=>{const k=Math.min(1,1600/Math.max(img.width,img.height));const c=document.createElement("canvas");c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);
+      c.getContext("2d").drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(u);let q=0.82,d=c.toDataURL("image/jpeg",q);while(d.length>1.9e6&&q>0.4){q-=0.12;d=c.toDataURL("image/jpeg",q);}res(d);};
+    img.onerror=()=>rej(new Error("صورة غير صالحة"));img.src=u;});}
   function wEntries(){document.querySelectorAll("[data-res]").forEach(b=>b.onclick=()=>{const t=prompt("ما الذي تم؟ (اختياري)","");if(t===null)return;btnRun(b,api("/ops/logbook/resolve",{id:Number(b.dataset.res),note:t}),()=>load());});
-    document.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{if(confirm("حذف الحدث نهائياً؟"))btnRun(b,api("/ops/logbook/delete",{id:Number(b.dataset.del)}),()=>load());});}
+    document.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{if(confirm("حذف الحدث نهائياً؟"))btnRun(b,api("/ops/logbook/delete",{id:Number(b.dataset.del)}),()=>load());});
+    let attFor=null;const F=$("attF");
+    document.querySelectorAll("[data-att]").forEach(b=>b.onclick=()=>{attFor=Number(b.dataset.att);F.value="";F.click();});
+    if(F)F.onchange=()=>{const f=F.files[0];if(!f||!attFor)return;const b=document.querySelector(`[data-att="${attFor}"]`);if(b){b.disabled=true;b.textContent="جارٍ الرفع…";}
+      shrink(f).then(d=>api("/ops/logbook/attach",{entry_id:attFor,filename:f.type==="application/pdf"?f.name:f.name.replace(/\.[^.]+$/,"")+".jpg",data:d})).then(()=>load())
+        .catch(e=>{alert(e.message);if(b){b.disabled=false;b.textContent="📎 إرفاق صورة/PDF";}});};
+    document.querySelectorAll("[data-view]").forEach(a=>a.onclick=ev=>{ev.preventDefault();const w=window.open("","_blank");
+      fetch("/ops/logbook/attachment/"+a.dataset.view,{headers:{Authorization:"Bearer "+TOKEN}}).then(r=>{if(!r.ok)throw new Error("HTTP "+r.status);return r.blob();})
+        .then(bl=>{const u=URL.createObjectURL(bl);if(w)w.location=u;else location.href=u;}).catch(e=>{if(w)w.close();alert(e.message);});});
+    document.querySelectorAll("[data-adel]").forEach(a=>a.onclick=ev=>{ev.preventDefault();if(confirm("حذف المرفق؟"))api("/ops/logbook/attachment/delete",{id:Number(a.dataset.adel)}).then(()=>load()).catch(e=>alert(e.message));});}
   function vImpact(){const cs=L.categories;const cnt=Object.entries(L.counts).sort((a,b)=>b[1]-a[1]);
     return panel("📊 متوسط الأثر حسب الفئة",cs.length?tbl(["الفئة","الحالات","متوسط الأثر","الوسيط","أيام سلبية"],cs.map(c=>`<tr><td><b>${esc(c.ar)}</b></td><td>${n(c.n)}</td><td class="${c.avg_pct<0?"neg":"pos"}">${c.avg_pct>0?"+":""}${n(c.avg_pct,1)}%</td>
       <td class="${c.median_pct<0?"neg":"pos"}">${c.median_pct>0?"+":""}${n(c.median_pct,1)}%</td><td>${n(c.negative_share)}%</td></tr>`))+`<p class="muted">${esc(L.note_ar)} تظهر الفئة عند 3 حالات على الأقل لها مبيعات في يومها.</p>`:na("يلزم 3 حالات على الأقل من نفس الفئة لها مبيعات مسجلة في يومها"))+
@@ -212,7 +230,7 @@
       <label>الفئة<select id="nC">${opts(L.category_ar,"equipment")}</select></label><label>الخطورة<select id="nS">${opts(L.severity_ar,"medium")}</select></label>
       <label>التاريخ<input id="nD" type="date" value="${today}" max="${today}"></label><label>الوقت<input id="nH" type="time"></label>
       <label>الفرع<select id="nB">${L.branches.length>1?`<option value="">الشركة (بلا فرع)</option>`:""}${L.branches.map(b=>`<option value="${b.id}">${esc(b.name)}</option>`).join("")}</select></label><label>المدة (ساعات)<input id="nU" type="number" min="0" max="72" step="0.5"></label>
-      <label class="full">التفاصيل<textarea id="nN" rows="3" maxlength="2000"></textarea></label></div><p class="muted">الخطورة العالية تُشعر المالك ومدير الفرع فوراً.</p>
+      <label class="full">التفاصيل<textarea id="nN" rows="3" maxlength="2000"></textarea></label></div><p class="muted">الخطورة العالية تُشعر المالك ومدير الفرع فوراً. سجّل الوقت والمدة ليحسب نبّاه الأثر خلال ساعات الحدث نفسها، وأرفق صورة بعد الحفظ.</p>
       <div class="cta"><button class="btn" id="nGo">حفظ</button><button class="btn ghost" id="nX">إلغاء</button></div>${msgEl("nMsg")}`);$("nX").onclick=close;
     $("nGo").onclick=()=>btnRun($("nGo"),api("/ops/logbook",{title:val("nT"),category:val("nC"),severity:val("nS"),date:val("nD"),time:val("nH"),branch_id:val("nB")||null,duration_hours:val("nU"),note:val("nN")}),
       r=>{close();location.hash="e"+r.entry.id;load();},"nMsg");};

@@ -90,7 +90,7 @@
   textarea{width:100%;background:var(--card,#0d1512);color:inherit;border:1px solid var(--line,#1d2c24);border-radius:10px;padding:8px;font-family:inherit}
   .b.grey{background:rgba(148,163,184,.15);color:#94a3b8}
   table.heat th{font-size:11px;padding:4px} table.heat td{border:1px solid var(--line,#1d2c24)}
-  input[type=date],input[type=month],input[type=time]{color-scheme:dark}
+  input[type=date],input[type=month],input[type=time]{color-scheme:dark} input[type=range]{accent-color:#14b8a6}
   @media(max-width:760px){.bar{flex-wrap:wrap}.tiles[style]{grid-template-columns:repeat(2,minmax(0,1fr))!important}.kv{grid-template-columns:1fr!important}.grid2,.fg{grid-template-columns:1fr!important}.barrow .t{flex-basis:90px}.barrow .x{flex-basis:96px}}
 </style>
 </head>
@@ -187,9 +187,9 @@
 
   if(!TOKEN){location.href="login.html";return;}
   let META=null;const F={period:"yesterday",compare:"prev",branch:"",start:"",end:""};
-  const TABS=[["overview","🧭 الملخص اليومي"],["sales","🛒 ماذا بعت"],["timing","🕒 متى بعت"],["employees","🧑‍💼 من باع"],["labour","👥 العمالة"],["inventory","📦 المخزون والقائمة"],
-              ["guests","⭐ الضيوف"],["builder","🧩 البطاقات واللوحات"],["alerts","🔔 التنبيهات والمستهدفات"],["data","🔌 البيانات وربط الذكاء"]];
-  const DEF={overview:"yesterday",sales:"last_7",timing:"last_28",employees:"last_28",labour:"last_7",guests:"last_28"};
+  let TABS=[["overview","🧭 الملخص اليومي"],["sales","🛒 ماذا بعت"],["timing","🕒 متى بعت"],["employees","🧑‍💼 من باع"],["labour","👥 العمالة"],["inventory","📦 المخزون والقائمة"],
+              ["guests","⭐ الضيوف"],["bench","📐 المقارنات الداخلية"],["builder","🧩 البطاقات واللوحات"],["alerts","🔔 التنبيهات والمستهدفات"],["data","🔌 البيانات وربط الذكاء"]];
+  const DEF={overview:"yesterday",sales:"last_7",timing:"last_28",employees:"last_28",labour:"last_7",guests:"last_28",bench:"last_28"};
   const NOFILTER=["inventory","builder","alerts","data"];
   const qs=extra=>{const p=new URLSearchParams({period:F.period,compare:F.compare,branch_id:F.branch||""});if(F.period==="custom"){p.set("start",F.start);p.set("end",F.end);}
     Object.entries(extra||{}).forEach(([k,v])=>p.set(k,v));return p.toString();};
@@ -399,10 +399,23 @@
         <div class="flag medium">الموصلات المخصصة في Claude.ai وChatGPT تتطلب تسجيل دخول OAuth، وهذا غير مدعوم بعد في نبّاه. الربط الحالي يعمل مع الأدوات التي تقبل ترويسة Authorization.</div>
         <p class="muted">لا تلصق المفتاح في محادثة أو لقطة شاشة. كل طلب مسجّل في سجل استخدام المفتاح، ويخضع لحدود الاستخدام، ويمكن إلغاؤه فوراً.</p>`);}
 
-  const VIEW={overview:vOverview,sales:vSales,timing:vTiming,employees:vEmployees,labour:vLabour,inventory:vInventory,guests:vGuests,builder:vBuilder,alerts:vAlerts,data:vData};
+  // ═════ المقارنات الداخلية (المرحلة 9)
+  const ST9={worse:["أسوأ من المعتاد","critical"],better:["أفضل من المعتاد","low"],stable:["مستقر","grey"]};
+  const idx=v=>v==null?"—":`<span class="${v<85?"neg":(v>115?"pos":"")}"><b>${n(v,0)}</b></span>`;
+  function vBench(){return api("/intel/benchmarks?"+qs()).then(b=>{
+    const hist=tbl(["المؤشر","الشهر","القيمة","متوسط الأشهر السابقة","التغير","الحكم"],b.history.map(h=>`<tr><td><b>${esc(h.ar)}</b></td><td>${esc(h.month)}</td><td>${n(h.value,1)}</td><td class="muted">${n(h.hist_avg,1)} (${n(h.months)} أشهر)</td><td>${h.change_pct==null?"—":(h.change_pct>0?"+":"")+n(h.change_pct,1)+"%"}</td><td>${h.status?badge(ST9[h.status][0],ST9[h.status][1]):"—"}</td></tr>`),"يلزم شهران على الأقل من البيانات");
+    const br=tbl(["الفرع","صافي المبيعات","الطلبات","متوسط الطلب","المبيعات/ساعة عمل",...(META.me.cost?["تكلفة العمالة %"]:[])],b.branches.map(r=>`<tr><td><b>${esc(r.branch)}</b></td><td>${n(r.net_sales)}</td><td>${n(r.orders)}</td><td>${n(r.aov,1)}</td><td>${n(r.splh,0)}</td>${META.me.cost?`<td>${r.col_pct==null?"—":n(r.col_pct,1)+"%"}</td>`:""}</tr>`),"لا مبيعات في الفترة");
+    const em=tbl(["الموظف","الدور","المبيعات","الساعات","المبيعات/ساعة","متوسط الدور","المؤشر (100 = متوسط الدور)"],b.employees.map(r=>`<tr><td><b>${esc(r.employee)}</b></td><td>${esc(r.role)}</td><td>${n(r.sales)}</td><td>${n(r.hours,1)}</td><td>${n(r.sph,0)}</td><td class="muted">${n(r.role_avg,0)} (${n(r.peers)} موظف)</td><td>${idx(r.index)}</td></tr>`),"يلزم ربط اسم الموظف في المبيعات بنفس الاسم في الورديات");
+    const pr=tbl(["المنتج","الفئة","هامش الوحدة","متوسط الفئة","المؤشر","تكلفة المكونات %","متوسط الفئة"],b.products.slice(0,80).map(r=>`<tr><td><b>${esc(r.item)}</b></td><td>${esc(r.category)}</td><td>${n(r.cm_unit,2)}</td><td class="muted">${n(r.cat_cm,2)}</td><td>${idx(r.cm_index)}</td><td>${r.food_cost_pct==null?"—":n(r.food_cost_pct,1)+"%"}</td><td class="muted">${r.cat_food_cost_pct==null?"—":n(r.cat_food_cost_pct,1)+"%"}</td></tr>`),"يلزم تكلفة المنتجات أو الوصفات");
+    return `<div class="flag low">${esc(b.note_ar)}</div>`+panel("📅 هذا الشهر مقابل تاريخك",hist)+panel("🏬 الفروع جنباً إلى جنب",br,` <span class="muted">${esc(b.period.ar)}</span>`)+
+      panel("🧑‍💼 الموظف مقابل متوسط دوره",em+`<p class="muted">المؤشر أقل من 85 أو أعلى من 115 يستحق النظر — مؤشر للمراجعة والتدريب لا للحكم على الأشخاص.</p>`)+panel("🍽️ المنتج مقابل فئته",pr);});}
+
+  const VIEW={overview:vOverview,sales:vSales,timing:vTiming,employees:vEmployees,labour:vLabour,inventory:vInventory,guests:vGuests,bench:vBench,builder:vBuilder,alerts:vAlerts,data:vData};
   const WIRE={timing:wTiming,inventory:wInventory,guests:wGuests,builder:wBuilder,alerts:wAlerts};
   $("ov").onclick=e=>{if(e.target===$("ov"))close();};
-  api("/ops/meta").then(m=>{META=m;
+  Promise.all([api("/ops/meta"),api("/company/modules").catch(()=>({}))]).then(([m,mod])=>{META=m;
+    const hid=(mod&&mod.hidden_ops_tabs)||[];if(hid.length)TABS=TABS.filter(t=>!hid.includes(t[0]));
+    const rn=(mod&&mod.rename)||{};if(rn.menu)TABS=TABS.map(t=>t[0]==="inventory"?[t[0],"📦 المخزون و"+rn.menu]:t);
     $("fPeriod").innerHTML=opts(m.periods,F.period);$("fCompare").innerHTML=opts(m.compare,F.compare);
     $("fBranch").innerHTML=(m.branches.length>1||!m.me.restricted?`<option value="">كل الفروع${m.me.restricted?" المتاحة":""}</option>`:"")+m.branches.map(b=>`<option value="${b.id}">${esc(b.name)}</option>`).join("");
     F.branch=$("fBranch").value;

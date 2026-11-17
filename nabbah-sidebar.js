@@ -15,6 +15,8 @@
     ]},
     { icon: "🎯", label: "مركز القيادة", items: [
       { label: "مركز القيادة التنفيذي", href: "company-command-center.html" },
+      { label: "نبض الشركة وقيمة نبّاه", href: "company-pulse.html" },
+      { label: "لماذا تغيّر الربح؟", href: "company-profit-why.html" },
       { label: "صحة الشركة", href: "company-health.html" },
       { label: "الأهداف والنتائج", href: "company-goals-intelligence.html" },
       { label: "التقرير التنفيذي", href: "company-executive-report-intelligence.html" },
@@ -24,6 +26,7 @@
     ]},
     { icon: "💰", label: "المالية", items: [
       { label: "الوحدة المالية", href: "company-financial-intelligence.html" },
+      { label: "مسار المال والمطابقة", href: "company-money-trail.html" },
       { label: "مركز استرداد الأموال", href: "company-leakage-intelligence.html" },
       { label: "الضرائب والزكاة", href: "company-tax-intelligence.html" },
       { label: "إدخال البيانات المالية", href: "company-finance.html" },
@@ -47,6 +50,7 @@
       { label: "مركز التشغيل اليومي", href: "company-operations-center.html" },
       { label: "التوقعات والعمالة والتقويم", href: "company-forecast-planner.html" },
       { label: "سجل التشغيل", href: "company-logbook.html" },
+      { label: "محاكي الفرع", href: "company-branch-simulator.html" },
       { label: "وحدة العمليات", href: "company-ops-analytics.html" },
       { label: "إدخال بيانات العمليات", href: "company-ops.html" },
       { label: "ذكاء المقارنة بين الفروع", href: "company-branch-intelligence.html" },
@@ -216,6 +220,27 @@
   sb.querySelectorAll(".nbItem").forEach(a => {
     a.addEventListener("click", () => setTimeout(closeSb, 100));
   });
+
+  // المرحلة 9 — تطبيق قابل للتثبيت (PWA) + إخفاء الأقسام غير المناسبة لقطاع الشركة (عرض فقط؛ الصلاحيات في الخادم)
+  try {
+    if (!document.querySelector('link[rel="manifest"]')) {
+      const ml = document.createElement("link"); ml.rel = "manifest"; ml.href = "/manifest.webmanifest"; document.head.appendChild(ml);
+      const tc = document.createElement("meta"); tc.name = "theme-color"; tc.content = "#0f766e"; document.head.appendChild(tc);
+      const ai = document.createElement("link"); ai.rel = "apple-touch-icon"; ai.href = "/icon-192.png"; document.head.appendChild(ai);
+    }
+    if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(() => {});
+    const tk9 = localStorage.getItem("nabbah_token");
+    if (tk9) {
+      fetch("/company/modules", { headers: { Authorization: "Bearer " + tk9 } }).then(r => r.ok ? r.json() : null).then(j => {
+        const hid = (j && j.hidden_pages) || [];
+        if (!hid.length) return;
+        sb.querySelectorAll(".nbItem").forEach(a => {
+          const h = (a.getAttribute("href") || "").split("#")[0];
+          if (hid.indexOf(h) >= 0 && !a.classList.contains("active")) a.style.display = "none";
+        });
+      }).catch(() => {});
+    }
+  } catch (e) {}
 
   // 6.6 — الهوية المخصصة المعتمدة (طبقة عرض فقط): الاسم والشعار واللون وتذييل الطباعة. لا تُطبّق إن لم توجد.
   try {
