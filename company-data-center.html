@@ -47,6 +47,7 @@
       <button class="btn" id="previewBtn"></button>
       <span id="upMsg" class="muted"></span>
     </div>
+    <div class="muted" id="wbHint" style="margin-top:8px">📚 تقدر ترفع <b>ملف Excel شامل واحد بعدة أوراق</b> (ورقة للمبيعات، ورقة للموظفين، ورقة للمخزون…) — نبّاه يتعرف على كل ورقة ويعتمدها كلها بضغطة. اترك النوع على «تلقائي».</div>
     <div id="result"></div>
   </div>
 
@@ -144,6 +145,62 @@
     const f=$("file").files[0], t=$("dtype").value;
     if(!t){$("dtype").value="auto";}
     if(!f){$("upMsg").className="muted err";$("upMsg").textContent=tr("dc.choose");return;}
+    if((t||"auto")==="auto"&&/\.(xlsx|xlsm)$/i.test(f.name)){workbook(f,"0");return;}
+    singleUpload(f,t);
+  };
+  // ── الملف الشامل: Excel بعدة أوراق — كل ورقة نوع بيانات، تُجهَّز معاً وتُعتمد بضغطة واحدة بالترتيب الصحيح
+  function workbook(f,create){
+    const fd=new FormData();fd.append("file",f);fd.append("create_branches",create);
+    $("upMsg").className="muted";$("upMsg").textContent=L()==="ar"?"جارٍ قراءة كل الأوراق والتحقق منها… (الملف الكبير يأخذ دقيقة)":"Reading and validating every sheet…";
+    $("previewBtn").disabled=true;step=2;drawSteps();$("result").innerHTML="";
+    fetch("/company/datasets/preview-workbook",{method:"POST",headers:H,body:fd}).then(async r=>{
+      const d=await r.json().catch(()=>({}));$("previewBtn").disabled=false;
+      if(r.status===422&&d.detail&&d.detail.single){singleUpload(f,"auto");return;}
+      if(!r.ok){$("upMsg").className="muted err";step=1;drawSteps();$("upMsg").textContent=(typeof d.detail==="string"?d.detail:(d.detail&&d.detail.message_ar)||tr("dc.error"))+(r.status>=500?` (HTTP ${r.status})`:"");return;}
+      $("upMsg").textContent="";
+      if(d.needs_branches){showBranches(f,d);return;}
+      showWorkbook(d);
+    }).catch(()=>{$("previewBtn").disabled=false;$("upMsg").className="muted err";$("upMsg").textContent=tr("dc.error");});
+  }
+  function showBranches(f,d){
+    step=2;drawSteps();
+    $("result").innerHTML=`<div style="margin-top:14px;border:1px solid #f5b301;border-radius:12px;padding:14px">
+      <b>${L()==="ar"?"الملف يذكر فروعاً غير مسجلة في شركتك":"The file mentions branches not registered in your company"}:</b>
+      <div style="margin:8px 0">${d.needs_branches.map(b=>`<span class="b partial" style="margin:3px">${esc(b)}</span>`).join(" ")}</div>
+      ${d.existing_branches.length?`<div class="muted">${L()==="ar"?"فروعك الحالية":"Your branches"}: ${d.existing_branches.map(esc).join("، ")}</div>`:""}
+      <div class="muted" style="margin-top:6px">${L()==="ar"?"إن كانت هذه أسماء مختلفة لفروعك الحالية، عدّل عمود «الفرع» في الملف ليطابقها ثم أعد الرفع. وإن كانت فروعاً جديدة فأنشئها بضغطة.":"If these are your existing branches under other names, fix the Branch column and re-upload; if they are new, create them."}</div>
+      <div style="margin-top:10px">${d.can_create?`<button class="btn" id="mkBr">${L()==="ar"?"أنشئ الفروع وتابع":"Create branches and continue"}</button>`:`<span class="err">${L()==="ar"?"إنشاء الفروع لمالك الشركة فقط":"Only the company owner can create branches"}</span>`}</div>
+      <div style="margin-top:12px" class="muted">${L()==="ar"?"الأوراق التي تعرّف عليها نبّاه":"Sheets recognised"}: ${d.sheets.filter(x=>x.type).map(x=>esc(x.sheet)+" ← "+esc(x.label)).join(" · ")}</div></div>`;
+    const b=$("mkBr");if(b)b.onclick=()=>workbook(f,"1");
+  }
+  function showWorkbook(d){
+    step=3;drawSteps();
+    const ok=d.sheets.filter(x=>x.dataset), ready=ok.filter(x=>x.quality.gate!=="BLOCK");
+    const tot=ok.reduce((a,x)=>a+x.dataset.valid_rows,0), rej=ok.reduce((a,x)=>a+x.dataset.rejected_rows,0);
+    $("result").innerHTML=`<div style="margin-top:14px">
+      ${d.branches_created&&d.branches_created.length?`<div class="ok" style="margin-bottom:8px">✔ ${L()==="ar"?"أُنشئت الفروع":"Branches created"}: ${d.branches_created.map(esc).join("، ")}</div>`:""}
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:8px"><b>${L()==="ar"?"ملف شامل":"Workbook"}: ${esc(d.file)}</b>
+        <span class="muted">${ok.length} ${L()==="ar"?"ورقة جاهزة":"sheets ready"} · <span class="ok">${num(tot)} ${L()==="ar"?"صف صالح":"valid rows"}</span> · <span class="${rej?"err":""}">${num(rej)} ${L()==="ar"?"مرفوض":"rejected"}</span></span></div>
+      <div class="tbl"><table><thead><tr><th>${L()==="ar"?"الورقة":"Sheet"}</th><th>${tr("dc.type")}</th><th>${tr("dc.rows")}</th><th>${tr("dc.valid")}</th><th>${tr("dc.rejected")}</th><th>${tr("dc.quality")}</th><th></th></tr></thead><tbody>
+      ${d.sheets.map(x=>x.dataset?`<tr><td><b>${esc(x.sheet)}</b></td><td>${esc(x.label)}</td><td>${num(x.dataset.total_rows)}</td><td class="ok">${num(x.dataset.valid_rows)}</td><td class="${x.dataset.rejected_rows?"err":""}">${num(x.dataset.rejected_rows)}</td><td><span class="b ${x.quality.gate}">${x.quality.overall_score}%</span></td><td><a href="#" data-det="${x.dataset.id}" class="muted">${L()==="ar"?"التفاصيل":"Details"}</a></td></tr>`
+        :`<tr><td><b>${esc(x.sheet)}</b></td><td colspan="6" class="${x.error_ar?"err":"muted"}">${esc(x.error_ar||x.skip_ar||"")}</td></tr>`).join("")}
+      </tbody></table></div>
+      <div style="margin-top:14px">${ready.length?`<button class="btn" id="impAll">${L()==="ar"?`اعتماد الكل (${ready.length} ورقة)`:`Import all (${ready.length} sheets)`}</button>`:""}
+        <span class="muted" style="margin-inline-start:8px">${L()==="ar"?"تُعتمد الصفوف الصالحة فقط وبالترتيب الصحيح (الأقسام ← الموظفون، المنتجات ← الوصفات…).":"Only valid rows are imported, in dependency order."}</span>
+        <div id="impMsg" class="muted" style="margin-top:8px"></div></div></div>`;
+    document.querySelectorAll("[data-det]").forEach(a=>a.onclick=e=>{e.preventDefault();detail(+a.dataset.det);});
+    const b=$("impAll");if(b)b.onclick=()=>{b.disabled=true;$("impMsg").className="muted";$("impMsg").textContent=L()==="ar"?"جارٍ الاعتماد…":"Importing…";
+      fetch("/company/datasets/import-batch",{method:"POST",headers:Object.assign({"Content-Type":"application/json"},H),body:JSON.stringify({ids:ready.map(x=>x.dataset.id)})}).then(async r=>{
+        const j=await r.json().catch(()=>({}));
+        if(!r.ok){b.disabled=false;$("impMsg").className="muted err";$("impMsg").textContent=(typeof j.detail==="string"?j.detail:tr("dc.error"));return;}
+        step=4;drawSteps();const bad=j.results.filter(x=>!["imported","partial"].includes(x.status));
+        $("impMsg").className="muted "+(bad.length?"err":"ok");
+        $("impMsg").innerHTML=`✔ ${L()==="ar"?"اعتُمد":"Imported"} ${num(j.imported_total)} ${L()==="ar"?"صف في":"rows into"} ${j.results.length-bad.length} ${L()==="ar"?"ورقة":"sheets"}`+
+          (bad.length?`<div>${bad.map(x=>esc((state.types[x.type]||{}).ar||x.type)+": "+esc(x.reason_ar||x.status)).join("<br>")}</div>`:"")+
+          `<div style="margin-top:6px"><a href="company-pulse.html" style="color:var(--mint,#10b981)">${L()==="ar"?"افتح نبض الشركة ←":"Open company pulse →"}</a></div>`;load();
+      }).catch(()=>{b.disabled=false;$("impMsg").className="muted err";$("impMsg").textContent=tr("dc.error");});};
+  }
+  function singleUpload(f,t){
     const fd=new FormData();fd.append("file",f);fd.append("dataset_type",t||"auto");
     $("upMsg").className="muted";$("upMsg").textContent=tr("dc.uploading");$("previewBtn").disabled=true;step=2;drawSteps();
     fetch("/company/datasets/preview",{method:"POST",headers:H,body:fd}).then(async r=>{
@@ -158,7 +215,7 @@
         return;}
       $("upMsg").textContent="";showPreview(d);
     }).catch(()=>{$("previewBtn").disabled=false;$("upMsg").className="muted err";$("upMsg").textContent=tr("dc.error");});
-  };
+  }
   function showPreview(d){
     step=3;drawSteps();
     const q=d.quality, ds=d.dataset;

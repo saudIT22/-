@@ -6777,6 +6777,28 @@ def _dataset_json(d, role=None):
 def _read_any_table(data, filename, ing):
     """يقرأ CSV/Excel بشمولية: كل الأوراق، ويختار صف العناوين الحقيقي (قد تسبقه عناوين تقرير)
     بمطابقة محرك الاستيعاب لكل الأنواع، ويلتقط السنة من العنوان أو اسم الملف."""
+    sheets = _read_sheets(data, filename)
+    best = None
+    for title, all_rows in sheets:
+        for i, row in enumerate(all_rows[:15]):
+            cells = ["" if c is None else str(c).strip() for c in row]
+            if sum(1 for c in cells if c) < 2:
+                continue
+            score = max((len(ing.map_columns(cells, t)["mapping"]) for t in ing.DATASET_TYPES), default=0)
+            if best is None or score > best[0]:
+                best = (score, title, i, all_rows)
+    if not best:
+        return [], [], None, None
+    _, title, hidx, all_rows = best
+    headers = ["" if c is None else str(c).strip() for c in all_rows[hidx]]
+    rows = [r for r in all_rows[hidx + 1:] if any(c is not None and str(c).strip() != "" for c in r)]
+    above = " ".join(str(c) for r in all_rows[:hidx] for c in r if c is not None)
+    year_hint = ing.year_hint_from(above, title, filename) if hasattr(ing, "year_hint_from") else None
+    return headers, rows, year_hint, title
+
+
+def _read_sheets(data, filename):
+    """كل أوراق الملف كما هي: [(اسم الورقة، الصفوف)]."""
     name = (filename or "").lower()
     sheets = []
     if name.endswith(".csv"):
@@ -6805,23 +6827,7 @@ def _read_any_table(data, filename, ing):
             raise HTTPException(400, "تعذّر قراءة ملف Excel. تأكد أنه غير محمي بكلمة مرور وأنه .xlsx")
     else:
         raise HTTPException(400, "الصيغ المدعومة: CSV أو Excel (.csv .xlsx .xlsm). ملفات .xls القديمة: احفظها كـ .xlsx")
-    best = None
-    for title, all_rows in sheets:
-        for i, row in enumerate(all_rows[:15]):
-            cells = ["" if c is None else str(c).strip() for c in row]
-            if sum(1 for c in cells if c) < 2:
-                continue
-            score = max((len(ing.map_columns(cells, t)["mapping"]) for t in ing.DATASET_TYPES), default=0)
-            if best is None or score > best[0]:
-                best = (score, title, i, all_rows)
-    if not best:
-        return [], [], None, None
-    _, title, hidx, all_rows = best
-    headers = ["" if c is None else str(c).strip() for c in all_rows[hidx]]
-    rows = [r for r in all_rows[hidx + 1:] if any(c is not None and str(c).strip() != "" for c in r)]
-    above = " ".join(str(c) for r in all_rows[:hidx] for c in r if c is not None)
-    year_hint = ing.year_hint_from(above, title, filename) if hasattr(ing, "year_hint_from") else None
-    return headers, rows, year_hint, title
+    return sheets
 
 
 @app.get("/company/datasets")
@@ -6866,74 +6872,223 @@ async def company_dataset_preview(file: UploadFile = File(...), dataset_type: st
             raise HTTPException(400, "تعذّر قراءة الملف. تأكد أنه CSV أو Excel صالح.")
         if not headers or not rows:
             raise HTTPException(422, "الملف فارغ أو لم نجد فيه صف عناوين وبيانات تحته")
-        if len(rows) > MAX_STAGING_ROWS:
-            parts = -(-len(rows) // MAX_STAGING_ROWS)
-            raise HTTPException(422, f"الملف فيه {len(rows):,} صفاً والحد {MAX_STAGING_ROWS:,} في الرفعة الواحدة — "
-                                     f"قسّمه إلى {parts} ملفات وارفعها تباعاً (لن يتكرر شيء: المكرر يُكشف تلقائياً)")
+        return _dc_stage(s, company, user, role, ing, cm, headers, rows, year_hint, sheet, file.filename, dataset_type)
+
+
+def _dc_stage(s, company, user, role, ing, cm, headers, rows, year_hint, sheet, filename, dataset_type):
+    """تجهيز ورقة/ملف واحد للمراجعة (كشف النوع، ربط الأعمدة، التحقق، الحفظ المؤقت) — مشترك بين الرفع العادي والملف الشامل."""
+    file = type("F", (), {"filename": filename})()
+    if len(rows) > MAX_STAGING_ROWS:
+        parts = -(-len(rows) // MAX_STAGING_ROWS)
+        raise HTTPException(422, f"الملف فيه {len(rows):,} صفاً والحد {MAX_STAGING_ROWS:,} في الرفعة الواحدة — "
+                                 f"قسّمه إلى {parts} ملفات وارفعها تباعاً (لن يتكرر شيء: المكرر يُكشف تلقائياً)")
+    names, ids = _branch_lookup(s, company.id)
+    single_branch = next(iter(ids)) if len(ids) == 1 else None
+    # كشف نوع الملف تلقائياً — ومنع رفع ملف بنوع خاطئ يرفض كل صفوفه
+    ranking = ing.detect_type(headers, branch_default=bool(single_branch)) if hasattr(ing, "detect_type") else []
+    chosen_by_user = dataset_type != "auto"
+    if not chosen_by_user:
+        if ranking and ranking[0].get("needs_branch"):
+            raise HTTPException(422, {
+                "message_ar": f"هذا ملف «{ranking[0]['ar']}» لكن ينقصه عمود «الفرع»، ولشركتك أكثر من فرع. "
+                              f"أضف عموداً باسم «الفرع» فيه اسم الفرع كما هو مسجّل في نبّاه ({'، '.join(list(names)[:5])}).",
+                "message_en": f"This is a {ranking[0]['en']} file but it has no Branch column and your company has "
+                              "several branches. Add a Branch column.", "suggestions": ranking[:3]})
+        best = next((x for x in ranking if x["complete"]), None)
+        if not best:
+            top = ranking[0] if ranking else {}
+            raise HTTPException(422, {
+                "message_ar": "لم نتعرف على نوع الملف. أقرب نوع: «" + top.get("ar", "—") + "» وتنقصه الأعمدة: "
+                              + "، ".join(top.get("missing_required", [])) + ". اختر النوع يدوياً أو أضف الأعمدة الناقصة.",
+                "message_en": "Could not recognise the file type. Closest: " + top.get("en", "—") + " — missing: "
+                              + ", ".join(top.get("missing_required", [])),
+                "suggestions": ranking[:3]})
+        dataset_type = best["type"]
+    mapped = ing.map_columns(headers, dataset_type)
+    missing_now = [f for f in mapped["missing_required"] if not (f == "branch_id" and single_branch)]
+    if chosen_by_user and missing_now:
+        better = next((x for x in ranking if x["complete"] and x["type"] != dataset_type), None)
+        if better:
+            raise HTTPException(422, {
+                "message_ar": f"هذا الملف يبدو «{better['ar']}» وليس «{cm.ENTITIES[dataset_type]['ar']}» "
+                              f"(تنقصه: {', '.join(missing_now)}). اختر «{better['ar']}» أو «تلقائي» وأعد الرفع.",
+                "message_en": f"This file looks like {better['en']}, not {cm.ENTITIES[dataset_type]['en']}. "
+                              f"Choose {better['en']} or Auto and upload again.",
+                "suggested_type": better["type"], "suggestions": ranking[:3]})
+    try:
+        validation = ing.validate_rows(rows, mapped["mapping"], dataset_type, branch_names=names,
+                                       headers=headers, default_branch_id=single_branch, year_hint=year_hint)
+    except TypeError:     # محرك أقدم بلا الوسائط الجديدة
+        validation = ing.validate_rows(rows, mapped["mapping"], dataset_type, branch_names=names)
+    quality = ing.assess_quality(validation, dataset_type)
+    periods = sorted({r.get("period") or (r.get("date") or "")[:7] for r in validation["valid"] if r.get("period") or r.get("date")})
+    branches = sorted({ids.get(r.get("branch_id"), "") for r in validation["valid"] if r.get("branch_id")})
+    d = CompanyDataset(company_id=company.id, dataset_type=dataset_type, source_file=(file.filename or "")[:200],
+                       period=", ".join(periods[:6]), branches=", ".join(b for b in branches if b)[:200],
+                       total_rows=validation["total"], valid_rows=validation["valid_count"],
+                       rejected_rows=validation["rejected_count"], quality_score=quality["overall_score"],
+                       quality_gate=quality["gate"], status="validated",
+                       mapping_json=json.dumps({str(k): v for k, v in mapped["mapping"].items()}, ensure_ascii=False),
+                       staging_json=json.dumps(validation["valid"], ensure_ascii=False, default=str),
+                       errors_json=json.dumps(validation["rejected"][:200], ensure_ascii=False, default=str),
+                       uploaded_by=user.name or user.email)
+    s.add(d); s.commit(); s.refresh(d)
+    log_audit(company.id, user.id, user.name, "dataset_preview", f"dataset:{d.id}",
+              f"type={dataset_type} rows={validation['total']} valid={validation['valid_count']}")
+    return {"dataset": _dataset_json(d, role), "headers": headers,
+            "mapping": {headers[i]: f for i, f in mapped["mapping"].items() if i < len(headers)},
+            "unmapped": mapped["unmapped"], "missing_required": missing_now,
+            "fields": mapped["fields"], "required": mapped["required"],
+            "sample": validation["valid"][:10], "rejected_sample": validation["rejected"][:20],
+            "quality": quality, "detected_type": dataset_type, "auto_detected": not chosen_by_user,
+            "detected_label": cm.ENTITIES[dataset_type]["ar"],
+            "default_branch_used": bool(single_branch and "branch_id" in mapped["missing_required"]),
+            "warnings": validation.get("warnings", [])[:20], "warning_count": validation.get("warning_count", 0),
+            "year_hint": year_hint, "sheet": sheet, "skipped_totals": len(validation.get("skipped_totals", [])),
+            "extra_columns": validation.get("extra_columns", [])}
+
+
+# ═══ الملف الشامل: ملف Excel واحد بعدة أوراق — كل ورقة نوع بيانات، تُجهَّز معاً وتُعتمد بالترتيب الصحيح ═══
+_DC_ORDER = ("department", "employee", "product", "supplier", "customer", "recipe", "sale", "purchase", "inventory", "shift", "reservation",
+             "review", "settlement", "cash_movement", "receivable", "expense", "tax_invoice", "operation_order", "process_event",
+             "operational_issue", "job_opening")
+_DC_MAX_SHEETS = 30
+
+
+def _dc_sheet_tables(sheets, ing, single_branch):
+    """لكل ورقة: صف العناوين الحقيقي ونوعها المكتمل (أو سبب التخطي)."""
+    out = []
+    for title, all_rows in sheets[:_DC_MAX_SHEETS]:
+        best = None
+        for i, row in enumerate(all_rows[:15]):
+            cells = ["" if c is None else str(c).strip() for c in row]
+            if sum(1 for c in cells if c) < 2:
+                continue
+            rk = ing.detect_type(cells, branch_default=bool(single_branch))
+            comp = [x for x in rk if x["complete"]]
+            tn = ing._norm(title or "")
+            # اسم الورقة يحسم التشابه (مثل «الموردون» و«العملاء» وكلاهما فيه «الاسم» فقط)
+            by_title = [x for x in comp if any(ing._norm(w) in tn for w in (x["ar"].split(" (")[0], *(getattr(ing, "TYPE_HINTS", {}).get(x["type"]) or ())) if len(ing._norm(w)) >= 3)]
+            top = (by_title or comp or [None])[0]
+            if top and (best is None or top["score"] > best[0]["score"]):
+                best = (top, i, cells)
+        if not best:
+            out.append({"sheet": title, "skip_ar": "لم نتعرف على نوع بيانات مكتمل في هذه الورقة (ورقة شرح أو أعمدة ناقصة)"})
+            continue
+        top, hidx, headers = best
+        rows = [r for r in all_rows[hidx + 1:] if any(c is not None and str(c).strip() != "" for c in r)]
+        if not rows:
+            out.append({"sheet": title, "skip_ar": "الورقة بلا صفوف بيانات"})
+            continue
+        above = " ".join(str(c) for r in all_rows[:hidx] for c in r if c is not None)
+        out.append({"sheet": title, "type": top["type"], "headers": headers, "rows": rows,
+                    "year_hint": ing.year_hint_from(above, title, "") if hasattr(ing, "year_hint_from") else None})
+    return out
+
+
+@app.post("/company/datasets/preview-workbook")
+async def company_dataset_preview_workbook(file: UploadFile = File(...), create_branches: str = Form("0"), user: User = Depends(get_current_user)):
+    """ملف شامل: يجهّز كل ورقة كدفعة مستقلة للمراجعة. الفروع غير المسجلة: تُعرض للمالك ليُنشئها بضغطة (لا تُنشأ بصمت)."""
+    ing, cm = _load_p24("ingestion"), _load_p24("canonical_model")
+    if ing is None or cm is None:
+        raise HTTPException(503, "محرّك استيعاب البيانات غير متاح — " + _p23_diagnostic())
+    if not (file.filename or "").lower().endswith((".xlsx", ".xlsm")):
+        raise HTTPException(422, {"single": True, "message_ar": "الملف الشامل يكون Excel بعدة أوراق"})
+    data = await file.read()
+    with Session(engine) as s:
+        company, role = _data_scope(s, user, "edit")
+        sheets = _read_sheets(data, file.filename)
         names, ids = _branch_lookup(s, company.id)
         single_branch = next(iter(ids)) if len(ids) == 1 else None
-        # كشف نوع الملف تلقائياً — ومنع رفع ملف بنوع خاطئ يرفض كل صفوفه
-        ranking = ing.detect_type(headers, branch_default=bool(single_branch)) if hasattr(ing, "detect_type") else []
-        chosen_by_user = dataset_type != "auto"
-        if not chosen_by_user:
-            if ranking and ranking[0].get("needs_branch"):
-                raise HTTPException(422, {
-                    "message_ar": f"هذا ملف «{ranking[0]['ar']}» لكن ينقصه عمود «الفرع»، ولشركتك أكثر من فرع. "
-                                  f"أضف عموداً باسم «الفرع» فيه اسم الفرع كما هو مسجّل في نبّاه ({'، '.join(list(names)[:5])}).",
-                    "message_en": f"This is a {ranking[0]['en']} file but it has no Branch column and your company has "
-                                  "several branches. Add a Branch column.", "suggestions": ranking[:3]})
-            best = next((x for x in ranking if x["complete"]), None)
-            if not best:
-                top = ranking[0] if ranking else {}
-                raise HTTPException(422, {
-                    "message_ar": "لم نتعرف على نوع الملف. أقرب نوع: «" + top.get("ar", "—") + "» وتنقصه الأعمدة: "
-                                  + "، ".join(top.get("missing_required", [])) + ". اختر النوع يدوياً أو أضف الأعمدة الناقصة.",
-                    "message_en": "Could not recognise the file type. Closest: " + top.get("en", "—") + " — missing: "
-                                  + ", ".join(top.get("missing_required", [])),
-                    "suggestions": ranking[:3]})
-            dataset_type = best["type"]
-        mapped = ing.map_columns(headers, dataset_type)
-        missing_now = [f for f in mapped["missing_required"] if not (f == "branch_id" and single_branch)]
-        if chosen_by_user and missing_now:
-            better = next((x for x in ranking if x["complete"] and x["type"] != dataset_type), None)
-            if better:
-                raise HTTPException(422, {
-                    "message_ar": f"هذا الملف يبدو «{better['ar']}» وليس «{cm.ENTITIES[dataset_type]['ar']}» "
-                                  f"(تنقصه: {', '.join(missing_now)}). اختر «{better['ar']}» أو «تلقائي» وأعد الرفع.",
-                    "message_en": f"This file looks like {better['en']}, not {cm.ENTITIES[dataset_type]['en']}. "
-                                  f"Choose {better['en']} or Auto and upload again.",
-                    "suggested_type": better["type"], "suggestions": ranking[:3]})
-        try:
-            validation = ing.validate_rows(rows, mapped["mapping"], dataset_type, branch_names=names,
-                                           headers=headers, default_branch_id=single_branch, year_hint=year_hint)
-        except TypeError:     # محرك أقدم بلا الوسائط الجديدة
-            validation = ing.validate_rows(rows, mapped["mapping"], dataset_type, branch_names=names)
-        quality = ing.assess_quality(validation, dataset_type)
-        periods = sorted({r.get("period") or (r.get("date") or "")[:7] for r in validation["valid"] if r.get("period") or r.get("date")})
-        branches = sorted({ids.get(r.get("branch_id"), "") for r in validation["valid"] if r.get("branch_id")})
-        d = CompanyDataset(company_id=company.id, dataset_type=dataset_type, source_file=(file.filename or "")[:200],
-                           period=", ".join(periods[:6]), branches=", ".join(b for b in branches if b)[:200],
-                           total_rows=validation["total"], valid_rows=validation["valid_count"],
-                           rejected_rows=validation["rejected_count"], quality_score=quality["overall_score"],
-                           quality_gate=quality["gate"], status="validated",
-                           mapping_json=json.dumps({str(k): v for k, v in mapped["mapping"].items()}, ensure_ascii=False),
-                           staging_json=json.dumps(validation["valid"], ensure_ascii=False, default=str),
-                           errors_json=json.dumps(validation["rejected"][:200], ensure_ascii=False, default=str),
-                           uploaded_by=user.name or user.email)
-        s.add(d); s.commit(); s.refresh(d)
-        log_audit(company.id, user.id, user.name, "dataset_preview", f"dataset:{d.id}",
-                  f"type={dataset_type} rows={validation['total']} valid={validation['valid_count']}")
-        return {"dataset": _dataset_json(d, role), "headers": headers,
-                "mapping": {headers[i]: f for i, f in mapped["mapping"].items() if i < len(headers)},
-                "unmapped": mapped["unmapped"], "missing_required": missing_now,
-                "fields": mapped["fields"], "required": mapped["required"],
-                "sample": validation["valid"][:10], "rejected_sample": validation["rejected"][:20],
-                "quality": quality, "detected_type": dataset_type, "auto_detected": not chosen_by_user,
-                "detected_label": cm.ENTITIES[dataset_type]["ar"],
-                "default_branch_used": bool(single_branch and "branch_id" in mapped["missing_required"]),
-                "warnings": validation.get("warnings", [])[:20], "warning_count": validation.get("warning_count", 0),
-                "year_hint": year_hint, "sheet": sheet, "skipped_totals": len(validation.get("skipped_totals", [])),
-                "extra_columns": validation.get("extra_columns", [])}
+        tables = _dc_sheet_tables(sheets, ing, single_branch)
+        usable = [t for t in tables if t.get("type")]
+        if len(usable) < 2:
+            raise HTTPException(422, {"single": True, "message_ar": "الملف فيه نوع بيانات واحد — يُرفع بالطريقة العادية"})
+        # الفروع المذكورة في الأوراق وغير المسجلة
+        known = {ing._norm(k) for k in names}
+        missing = {}
+        for t in usable:
+            mp = ing.map_columns(t["headers"], t["type"])["mapping"]
+            bcol = next((i for i, f in mp.items() if f == "branch_id"), None)
+            if bcol is None:
+                continue
+            for r in t["rows"]:
+                v = r[bcol] if bcol < len(r) else None
+                v = "" if v is None else str(v).strip()
+                if v and ing._norm(v) not in known:
+                    missing[ing._norm(v)] = v
+        if missing:
+            is_owner = company.owner_id == user.id
+            if create_branches != "1" or not is_owner:
+                return {"needs_branches": sorted(missing.values())[:50], "can_create": is_owner, "existing_branches": sorted(names)[:50],
+                        "sheets": [{"sheet": t["sheet"], "type": t.get("type"), "label": cm.ENTITIES[t["type"]]["ar"] if t.get("type") else None,
+                                    "rows": len(t.get("rows") or []), "skip_ar": t.get("skip_ar")} for t in tables]}
+            if len(missing) > 50:
+                raise HTTPException(422, "أكثر من 50 فرعاً غير مسجل — تأكد من عمود «الفرع»")
+            for v in sorted(missing.values()):
+                lat, lng = geocode_city(v, company.id + len(v) + 7)
+                s.add(CompanyBranch(company_id=company.id, name=v[:120], city="", branch_type="standalone", lat=lat, lng=lng))
+            s.commit()
+            log_audit(company.id, user.id, user.name, "branches_from_workbook", "company:branches", "، ".join(sorted(missing.values()))[:300])
+        out = []
+        for t in sorted(tables, key=lambda x: _DC_ORDER.index(x["type"]) if x.get("type") in _DC_ORDER else 99):
+            if not t.get("type"):
+                out.append({"sheet": t["sheet"], "skip_ar": t["skip_ar"]})
+                continue
+            try:
+                r = _dc_stage(s, company, user, role, ing, cm, t["headers"], t["rows"], t["year_hint"], t["sheet"],
+                              f"{(file.filename or '')[:150]} › {t['sheet']}"[:200], t["type"])
+                out.append({"sheet": t["sheet"], "type": r["detected_type"], "label": r["detected_label"], "dataset": r["dataset"],
+                            "quality": {"gate": r["quality"]["gate"], "overall_score": r["quality"]["overall_score"]},
+                            "rejected_sample": r["rejected_sample"][:5], "missing_required": r["missing_required"],
+                            "extra_columns": r.get("extra_columns", [])[:10]})
+            except HTTPException as e:
+                d_ = e.detail
+                out.append({"sheet": t["sheet"], "type": t["type"], "label": cm.ENTITIES[t["type"]]["ar"],
+                            "error_ar": d_.get("message_ar") if isinstance(d_, dict) else str(d_)})
+        log_audit(company.id, user.id, user.name, "workbook_preview", "datasets:workbook",
+                  f"file={(file.filename or '')[:80]} sheets={len(tables)} staged={sum(1 for x in out if x.get('dataset'))}")
+        return {"workbook": True, "file": file.filename, "sheets": out, "branches_created": sorted(missing.values()) if missing else []}
+
+
+@app.post("/company/datasets/import-batch")
+def company_dataset_import_batch(data: dict, user: User = Depends(get_current_user)):
+    """اعتماد عدة دفعات بالترتيب الصحيح (الأقسام قبل الموظفين، المنتجات قبل الوصفات…). الدفعة المحجوبة بالجودة تُتخطى بسبب واضح."""
+    ids_ = data.get("ids") or []
+    if not isinstance(ids_, list) or not ids_ or len(ids_) > _DC_MAX_SHEETS:
+        raise HTTPException(422, f"حدد بين 1 و{_DC_MAX_SHEETS} دفعة")
+    with Session(engine) as s:
+        company, role = _data_scope(s, user, "edit")
+        ds = []
+        for i in ids_:
+            try:
+                d = s.get(CompanyDataset, int(i))
+            except (TypeError, ValueError):
+                raise HTTPException(422, "معرّف دفعة غير صالح")
+            if not d or d.company_id != company.id:
+                raise HTTPException(404, "دفعة غير موجودة")
+            ds.append(d)
+        ds.sort(key=lambda d: _DC_ORDER.index(d.dataset_type) if d.dataset_type in _DC_ORDER else 99)
+        res = []
+        for d in ds:
+            if d.status in ("imported", "partial"):
+                res.append({"id": d.id, "type": d.dataset_type, "status": "skipped", "reason_ar": "معتمدة مسبقاً"})
+                continue
+            if d.quality_gate == "BLOCK":
+                res.append({"id": d.id, "type": d.dataset_type, "status": "blocked", "reason_ar": "جودة غير كافية — صحّح الورقة وأعد الرفع"})
+                continue
+            try:
+                r = _dataset_import_core(s, company, d, user.id, user.name)
+                res.append({"id": d.id, "type": d.dataset_type, "status": r["status"], "imported": r["imported"], "updated": r["updated"],
+                            "rejected": r["rejected"]})
+            except HTTPException as e:
+                s.rollback()
+                res.append({"id": d.id, "type": d.dataset_type, "status": "failed", "reason_ar": str(e.detail)[:200]})
+            except Exception as e:
+                s.rollback()
+                _logger.error(f"batch import failed for {d.id}: {type(e).__name__}: {str(e)[:150]}")
+                res.append({"id": d.id, "type": d.dataset_type, "status": "failed", "reason_ar": f"خطأ أثناء الاعتماد: {type(e).__name__}"})
+        return {"results": res, "imported_total": sum(x.get("imported") or 0 for x in res)}
 
 
 @app.post("/company/datasets/{dataset_id}/validate")
@@ -7027,7 +7182,7 @@ def company_dataset_import(dataset_id: int, user: User = Depends(get_current_use
         d = s.get(CompanyDataset, dataset_id)
         if not d or d.company_id != company.id:
             raise HTTPException(404, "الملف غير موجود")
-        if d.status == "imported":
+        if d.status in ("imported", "partial"):          # «جزئي» = صفوفه الصالحة اعتُمدت فعلاً — إعادة الاعتماد تكررها
             raise HTTPException(409, "تم اعتماد هذه البيانات مسبقاً")
         if d.quality_gate == "BLOCK":
             raise HTTPException(422, {"message_ar": "جودة البيانات غير كافية للاعتماد — صحّح الأخطاء وأعد الرفع",
