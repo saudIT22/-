@@ -13,6 +13,20 @@
     { icon: "⌂", label: "الرئيسية", items: [
       { label: "اللوحة", href: "company-dashboard.html" },
     ]},
+    // اختصارات الخدمات — مفتوحة دائماً أعلى الشريط (الخدمات نفسها موجودة أيضاً في مجموعاتها)
+    { icon: "⚡", label: "الخدمات", pinned: true, items: [
+      { icon: "💓", label: "نبض الشركة وقيمة نبّاه", href: "company-pulse.html", isNew: true },
+      { icon: "🧭", label: "مركز التشغيل اليومي", href: "company-operations-center.html" },
+      { icon: "💸", label: "مسار المال والمطابقة", href: "company-money-trail.html", isNew: true },
+      { icon: "🌳", label: "لماذا تغيّر الربح؟", href: "company-profit-why.html", isNew: true },
+      { icon: "🧪", label: "محاكي الفرع", href: "company-branch-simulator.html", isNew: true },
+      { icon: "📈", label: "التوقعات والعمالة", href: "company-forecast-planner.html" },
+      { icon: "📓", label: "سجل التشغيل", href: "company-logbook.html" },
+      { icon: "🤖", label: "الذكاء المستقل (الوكلاء)", href: "company-autonomy.html" },
+      { icon: "💬", label: "المساعد الذكي", href: "company-assistant.html" },
+      { icon: "🗄️", label: "مركز البيانات", href: "company-data-center.html" },
+      { icon: "🔌", label: "مركز التكاملات", href: "company-integrations.html" },
+    ]},
     { icon: "🎯", label: "مركز القيادة", items: [
       { label: "مركز القيادة التنفيذي", href: "company-command-center.html" },
       { label: "نبض الشركة وقيمة نبّاه", href: "company-pulse.html" },
@@ -150,6 +164,10 @@
     .nbGrp.open .nbGrpH .ar{transform:rotate(90deg)}
     .nbGrpItems{max-height:0;overflow:hidden;transition:max-height .25s}
     .nbGrp.open .nbGrpItems{max-height:400px}
+    .nbGrp.pinned.open .nbGrpItems{max-height:none}
+    .nbGrp.pinned .nbGrpH{color:#10b981}
+    .nbGrp.pinned .nbItem{display:flex;align-items:center;padding-right:24px}
+    .nbNew{margin-right:auto;margin-left:4px;font-size:10px;font-weight:800;color:#062b1c;background:#10b981;border-radius:999px;padding:1px 7px}
     .nbItem{display:block;padding:9px 18px 9px 42px;font-size:12.5px;color:#8ba396;text-decoration:none;transition:.12s;position:relative}
     .nbItem:hover{color:#10b981;background:rgba(16,185,129,.05)}
     .nbItem.active{color:#10b981;font-weight:700;background:rgba(16,185,129,.09)}
@@ -170,11 +188,13 @@
   function buildGroup(g) {
     const items = g.items.map(it => {
       const active = it.href.toLowerCase() === here ? " active" : "";
-      return `<a class="nbItem${active}" href="${it.href}">${it.label}</a>`;
+      const ic = it.icon ? `<span style="margin-left:7px">${it.icon}</span>` : "";
+      const nw = it.isNew ? `<span class="nbNew">جديد</span>` : "";
+      return `<a class="nbItem${active}" href="${it.href}">${ic}${it.label}${nw}</a>`;
     }).join("");
-    // نفتح المجموعة التي تحتوي الصفحة الحالية
+    // نفتح المجموعة التي تحتوي الصفحة الحالية — ومجموعة الاختصارات مفتوحة دائماً
     const hasActive = g.items.some(it => it.href.toLowerCase() === here);
-    return `<div class="nbGrp${hasActive ? " open" : ""}">
+    return `<div class="nbGrp${hasActive || g.pinned ? " open" : ""}${g.pinned ? " pinned" : ""}">
       <div class="nbGrpH"><span class="ic">${g.icon}</span><span>${g.label}</span><span class="ar">▶</span></div>
       <div class="nbGrpItems">${items}</div>
     </div>`;
@@ -234,7 +254,7 @@
       fetch("/company/modules", { headers: { Authorization: "Bearer " + tk9 } }).then(r => r.ok ? r.json() : null).then(j => {
         const hid = (j && j.hidden_pages) || [];
         if (!hid.length) return;
-        sb.querySelectorAll(".nbItem").forEach(a => {
+        document.querySelectorAll("#nbSidebar .nbItem, .nav-groups .nav-item").forEach(a => {
           const h = (a.getAttribute("href") || "").split("#")[0];
           if (hid.indexOf(h) >= 0 && !a.classList.contains("active")) a.style.display = "none";
         });
